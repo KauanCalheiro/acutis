@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Acutis Recorder</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, sans-serif;
+            width: 220px;
+        }
+
+        .popup {
+            padding: 16px;
+        }
+
+        .name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .version {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 12px;
+        }
+
+        .status {
+            font-size: 13px;
+        }
+
+        .status.connected {
+            color: #22c55e;
+        }
+
+        .status.disconnected {
+            color: #9ca3af;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app"></div>
+    <script type="module" src="./main.ts"></script>
+</body>
+
+</html>
