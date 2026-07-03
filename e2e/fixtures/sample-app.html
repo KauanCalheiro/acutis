@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Acutis Store</title>
+<style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 40px auto; }
+    label { display: block; margin-top: 12px; }
+    input { display: block; width: 100%; padding: 6px; margin-top: 4px; }
+    button { margin-top: 16px; padding: 8px 16px; }
+    li { margin: 8px 0; }
+    .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<section id="login-view" class="hidden">
+    <h1>Entrar na Acutis Store</h1>
+    <form id="login-form" aria-label="Formulário de login">
+        <label for="name">Nome completo</label>
+        <input id="name" name="name" data-testid="login-name" placeholder="Seu nome" />
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" data-testid="login-email" placeholder="voce@exemplo.com" />
+        <label for="password">Senha</label>
+        <input id="password" name="password" type="password" data-testid="login-password" placeholder="Sua senha" />
+        <label>
+            <input id="remember" name="remember" type="checkbox" data-testid="login-remember" />
+            Lembrar de mim
+        </label>
+        <button id="sign-in" type="submit" data-testid="login-submit" aria-label="Entrar">Entrar</button>
+    </form>
+</section>
+
+<section id="catalog-view" class="hidden">
+    <h1 data-testid="catalog-title">Catálogo</h1>
+    <p id="welcome" data-testid="catalog-welcome">Bem-vindo de volta!</p>
+    <label for="search">Buscar produto</label>
+    <input id="search" name="search" data-testid="catalog-search" placeholder="Digite pra filtrar" />
+    <ul aria-label="Lista de produtos">
+        <li><button id="product-keyboard" data-testid="product-keyboard">Teclado mecânico</button></li>
+        <li><button id="product-mouse" data-testid="product-mouse">Mouse sem fio</button></li>
+        <li><button id="product-monitor" data-testid="product-monitor">Monitor 27"</button></li>
+    </ul>
+    <div id="product-detail" data-testid="product-detail" class="hidden">
+        <h2 id="detail-name" data-testid="product-detail-name"></h2>
+        <button id="add-to-cart" data-testid="product-add-to-cart" aria-label="Adicionar ao carrinho">Adicionar ao carrinho</button>
+    </div>
+    <button id="logout" data-testid="catalog-logout" aria-label="Sair">Sair</button>
+</section>
+
+<script>
+    const view = location.pathname === '/app' ? 'catalog-view' : 'login-view'
+    document.getElementById(view).classList.remove('hidden')
+
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+        e.preventDefault()
+        location.href = '/app'
+    })
+
+    document.querySelectorAll('ul button[data-testid^="product-"]').forEach((item) => {
+        item.addEventListener('click', () => {
+            document.getElementById('detail-name').textContent = item.textContent
+            document.getElementById('product-detail').classList.remove('hidden')
+        })
+    })
+
+    document.getElementById('logout').addEventListener('click', () => {
+        location.href = '/'
+    })
+</script>
+
+</body>
+</html>
