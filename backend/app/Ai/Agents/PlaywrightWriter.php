@@ -8,7 +8,7 @@ use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Promptable;
 
-#[Model('gemma-3-27b-it')]
+#[Model('gemma-4-31b-it')]
 class PlaywrightWriter implements Agent, HasStructuredOutput
 {
     use Promptable;
