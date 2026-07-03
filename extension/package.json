@@ -7,7 +7,8 @@
     "dev": "vite build --watch",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "vite build && playwright test"
   },
   "dependencies": {
     "@medv/finder": "^3.1.0",
@@ -15,6 +16,7 @@
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "2.0.0-beta.26",
+    "@playwright/test": "^1.61.1",
     "@types/chrome": "^0.0.268",
     "@types/node": "^22.0.0",
     "@vitejs/plugin-vue": "^5.0.0",
