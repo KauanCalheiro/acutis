@@ -1,0 +1,38 @@
+<?php
+
+namespace App\Data\V1\Recording;
+
+use Spatie\LaravelData\Data;
+
+class RecordingData extends Data
+{
+    public function __construct(
+        public string $baseUrl,
+        public array $events,
+        public ?string $sessionId = null,
+        public ?string $recordedAt = null,
+        public ?string $video = null,
+    ) {}
+
+    public static function rules(): array
+    {
+        return [
+            'baseUrl' => ['required', 'string', 'url'],
+            'events' => ['required', 'array', 'min:1'],
+            'events.*.type' => ['required', 'string'],
+            'events.*.url' => ['required', 'string'],
+        ];
+    }
+
+    public static function messages(): array
+    {
+        return [
+            'baseUrl.required' => 'A URL base da gravação é obrigatória.',
+            'baseUrl.url' => 'A URL base deve ser uma URL válida.',
+            'events.required' => 'A gravação precisa conter ao menos um evento.',
+            'events.min' => 'A gravação precisa conter ao menos um evento.',
+            'events.*.type.required' => 'Todo evento precisa de um tipo.',
+            'events.*.url.required' => 'Todo evento precisa da URL em que ocorreu.',
+        ];
+    }
+}
