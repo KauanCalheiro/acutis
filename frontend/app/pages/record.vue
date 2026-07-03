@@ -6,13 +6,16 @@ interface RecorderEvent {
   label?: string | null
   value?: string | null
   selectors?: { dataTestId?: string | null, text?: string | null, cssStable?: string | null } | null
+  sessionId?: string | null
 }
 
+const hydrated = ref(false)
 const extensionReady = ref(false)
 const recording = ref(false)
 const wsConnected = ref(false)
 const errorMsg = ref<string | null>(null)
 const events = ref<RecorderEvent[]>([])
+const videoSessionId = ref<string | null>(null)
 
 let socket: WebSocket | null = null
 
@@ -23,6 +26,7 @@ function send(type: string) {
 function start() {
   errorMsg.value = null
   events.value = []
+  videoSessionId.value = null
   send('START_RECORDING')
 }
 
@@ -53,6 +57,7 @@ function onMessage(raw: string) {
       break
     case 'recorder:stop':
       recording.value = false
+      videoSessionId.value = data.sessionId ?? null
       break
     default:
       if (data.event.startsWith('recorder:')) events.value.unshift(data)
@@ -78,12 +83,18 @@ function describe(e: RecorderEvent): string {
   return s?.dataTestId || s?.text || s?.cssStable || e.label || e.url || ''
 }
 
-onMounted(connect)
+onMounted(() => {
+  hydrated.value = true
+  connect()
+})
 onBeforeUnmount(() => socket?.close())
 </script>
 
 <template>
-  <UContainer class="py-8 space-y-6">
+  <UContainer
+    class="py-8 space-y-6"
+    :data-hydrated="hydrated"
+  >
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold">
         Gravação
@@ -122,6 +133,7 @@ onBeforeUnmount(() => socket?.close())
 
     <div class="flex gap-3">
       <UButton
+        data-testid="record-start"
         :disabled="recording"
         icon="i-lucide-circle"
         color="error"
@@ -130,6 +142,7 @@ onBeforeUnmount(() => socket?.close())
         Gravar
       </UButton>
       <UButton
+        data-testid="record-stop"
         :disabled="!recording"
         icon="i-lucide-square"
         color="neutral"
@@ -159,6 +172,7 @@ onBeforeUnmount(() => socket?.close())
 
       <ul
         v-else
+        data-testid="record-events"
         class="space-y-2"
       >
         <li
@@ -178,6 +192,19 @@ onBeforeUnmount(() => socket?.close())
           </span>
         </li>
       </ul>
+    </UCard>
+
+    <UCard v-if="videoSessionId">
+      <template #header>
+        <span class="font-medium">Vídeo gravado</span>
+      </template>
+
+      <video
+        data-testid="record-video"
+        :src="`/recording/${videoSessionId}`"
+        controls
+        class="w-full rounded"
+      />
     </UCard>
   </UContainer>
 </template>
