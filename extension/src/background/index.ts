@@ -1,5 +1,6 @@
 import type { RecordingEvent } from '@/types/recording'
 import { injectRecorder } from './inject'
+import { waitForSignal } from './waitForSignal'
 
 // Service worker: conecta ao frontend por WS (o frontend comanda START/STOP),
 // abre a aba anônima, injeta o recorder a cada navegação e repassa os eventos.
@@ -141,19 +142,32 @@ async function handleStopRecording(): Promise<void> {
 
     const winId = recordingWindowId
     const tabId = activeTabId
+    const wasCapturing = captureStarted
 
     isRecording = false
     recordingStarted = false
     activeTabId = null
     recordingWindowId = null
 
+    let stopMessageSent = false
     if (tabId !== null) {
-        try { chrome.tabs.sendMessage(tabId, { type: 'STOP' }) } catch { /* aba já fechada */ }
+        try {
+            chrome.tabs.sendMessage(tabId, { type: 'STOP' })
+            stopMessageSent = true
+        } catch { /* aba já fechada */ }
+    }
+    if (wasCapturing && stopMessageSent) {
+        await waitForSignal(
+            (l) => chrome.runtime.onMessage.addListener(l),
+            (l) => chrome.runtime.onMessage.removeListener(l),
+            (msg: { type: string }) => msg.type === 'VIDEO_READY' || msg.type === 'VIDEO_FAILED',
+            8000,
+        )
     }
     if (winId !== null) {
         try { await chrome.windows.remove(winId) } catch { /* janela já fechada */ }
     }
-    if (!captureStarted) {
+    if (!wasCapturing) {
         sendToNuxt({ event: 'recorder:stop', sessionId: null })
     }
 }
