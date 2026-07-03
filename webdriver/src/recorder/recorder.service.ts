@@ -95,4 +95,10 @@ export class RecorderService {
         const page = await this.waitForPage()
         await page.click(selector)
     }
+
+    async debugFill(selector: string, value: string): Promise<void> {
+        const page = await this.waitForPage()
+        await page.fill(selector, value)
+        await page.locator(selector).blur()
+    }
 }

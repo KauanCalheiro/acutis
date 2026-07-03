@@ -26,4 +26,11 @@ export class DebugController {
         await this.recorderService.debugClick(selector)
         return { ok: true }
     }
+
+    @Post('fill')
+    async fill(@Body('selector') selector: string, @Body('value') value: string): Promise<{ ok: true }> {
+        this.ensureTestMode()
+        await this.recorderService.debugFill(selector, value)
+        return { ok: true }
+    }
 }
