@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "playwright test"
+    "test": "pnpm --dir ../extension build && playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1"
