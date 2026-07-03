@@ -33,7 +33,7 @@ export class RecorderService {
         this.ready = false
         await this.videoService.ensureDir()
 
-        const browser = await chromium.launch({ headless: false })
+        const browser = await chromium.launch()
         this.context = await browser.newContext()
         this.page = await this.context.newPage()
 

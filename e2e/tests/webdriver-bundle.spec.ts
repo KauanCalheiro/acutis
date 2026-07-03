@@ -22,7 +22,7 @@ test.describe('webdriver recorder bundle', { tag: ['@write', '@recording'] }, ()
 
         const capturedEvents: unknown[] = []
 
-        const browser = await chromium.launch({ headless: false })
+        const browser = await chromium.launch()
         const context = await browser.newContext()
         const page = await context.newPage()
 
