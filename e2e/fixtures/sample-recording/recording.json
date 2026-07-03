@@ -1,0 +1,280 @@
+{
+    "sessionId": "7b9a3531-4964-4c8e-a0bb-daa10c55563b",
+    "baseUrl": "http://127.0.0.1:52346",
+    "recordedAt": "2026-07-03T23:04:42.345Z",
+    "video": "recording.webm",
+    "events": [
+        {
+            "type": "navigate",
+            "timestamp": 1783119883174,
+            "url": "http://127.0.0.1:52346/",
+            "selectors": null,
+            "label": "Acutis Store",
+            "value": null,
+            "tagName": null,
+            "innerText": null
+        },
+        {
+            "type": "fill",
+            "timestamp": 1783119883404,
+            "url": "http://127.0.0.1:52346/",
+            "selectors": {
+                "dataTestId": "login-name",
+                "dataCy": null,
+                "ariaLabel": null,
+                "ariaRole": null,
+                "id": "name",
+                "name": "name",
+                "placeholder": "Seu nome",
+                "cssStable": "#name",
+                "xpath": "/html[1]/body[1]/section[1]/form[1]/input[1]",
+                "text": null,
+                "finder": "#name"
+            },
+            "label": "Nome completo",
+            "value": "Ana Souza",
+            "tagName": "input",
+            "innerText": null
+        },
+        {
+            "type": "fill",
+            "timestamp": 1783119883414,
+            "url": "http://127.0.0.1:52346/",
+            "selectors": {
+                "dataTestId": "login-email",
+                "dataCy": null,
+                "ariaLabel": null,
+                "ariaRole": null,
+                "id": "email",
+                "name": "email",
+                "placeholder": "voce@exemplo.com",
+                "cssStable": "#email",
+                "xpath": "/html[1]/body[1]/section[1]/form[1]/input[2]",
+                "text": null,
+                "finder": "#email"
+            },
+            "label": "Email",
+            "value": "ana.souza@exemplo.com",
+            "tagName": "input",
+            "innerText": null
+        },
+        {
+            "type": "fill",
+            "timestamp": 1783119883428,
+            "url": "http://127.0.0.1:52346/",
+            "selectors": {
+                "dataTestId": "login-password",
+                "dataCy": null,
+                "ariaLabel": null,
+                "ariaRole": null,
+                "id": "password",
+                "name": "password",
+                "placeholder": "Sua senha",
+                "cssStable": "#password",
+                "xpath": "/html[1]/body[1]/section[1]/form[1]/input[3]",
+                "text": null,
+                "finder": "#password"
+            },
+            "label": "Senha",
+            "value": "••••",
+            "tagName": "input",
+            "innerText": null
+        },
+        {
+            "type": "click",
+            "timestamp": 1783119883461,
+            "url": "http://127.0.0.1:52346/",
+            "selectors": {
+                "dataTestId": "login-remember",
+                "dataCy": null,
+                "ariaLabel": null,
+                "ariaRole": null,
+                "id": "remember",
+                "name": "remember",
+                "placeholder": null,
+                "cssStable": "#remember",
+                "xpath": "/html[1]/body[1]/section[1]/form[1]/label[4]/input[1]",
+                "text": null,
+                "finder": "#remember"
+            },
+            "label": "Lembrar de mim",
+            "value": null,
+            "tagName": "input",
+            "innerText": null
+        },
+        {
+            "type": "fill",
+            "timestamp": 1783119883461,
+            "url": "http://127.0.0.1:52346/",
+            "selectors": {
+                "dataTestId": "login-remember",
+                "dataCy": null,
+                "ariaLabel": null,
+                "ariaRole": null,
+                "id": "remember",
+                "name": "remember",
+                "placeholder": null,
+                "cssStable": "#remember",
+                "xpath": "/html[1]/body[1]/section[1]/form[1]/label[4]/input[1]",
+                "text": null,
+                "finder": "#remember"
+            },
+            "label": "Lembrar de mim",
+            "value": "on",
+            "tagName": "input",
+            "innerText": null
+        },
+        {
+            "type": "click",
+            "timestamp": 1783119883493,
+            "url": "http://127.0.0.1:52346/",
+            "selectors": {
+                "dataTestId": "login-submit",
+                "dataCy": null,
+                "ariaLabel": "Entrar",
+                "ariaRole": null,
+                "id": "sign-in",
+                "name": null,
+                "placeholder": null,
+                "cssStable": "#sign-in",
+                "xpath": "/html[1]/body[1]/section[1]/form[1]/button[1]",
+                "text": "Entrar",
+                "finder": "#sign-in"
+            },
+            "label": "Entrar",
+            "value": null,
+            "tagName": "button",
+            "innerText": "Entrar"
+        },
+        {
+            "type": "submit",
+            "timestamp": 1783119883494,
+            "url": "http://127.0.0.1:52346/",
+            "selectors": {
+                "dataTestId": null,
+                "dataCy": null,
+                "ariaLabel": "Formulário de login",
+                "ariaRole": null,
+                "id": "login-form",
+                "name": null,
+                "placeholder": null,
+                "cssStable": "#login-form",
+                "xpath": "/html[1]/body[1]/section[1]/form[1]",
+                "text": "Nome completo\n        \n        Email\n        \n        Senha\n        \n        \n            \n            Lembrar de mim\n        \n        Entrar",
+                "finder": "#login-form"
+            },
+            "label": "Formulário de login",
+            "value": null,
+            "tagName": "form",
+            "innerText": "Nome completo\nEmail\nSenha\nLembrar de mim\nEntrar"
+        },
+        {
+            "type": "navigate",
+            "timestamp": 1783119883509,
+            "url": "http://127.0.0.1:52346/app",
+            "selectors": null,
+            "label": "Acutis Store",
+            "value": null,
+            "tagName": null,
+            "innerText": null
+        },
+        {
+            "type": "fill",
+            "timestamp": 1783119883520,
+            "url": "http://127.0.0.1:52346/app",
+            "selectors": {
+                "dataTestId": "catalog-search",
+                "dataCy": null,
+                "ariaLabel": null,
+                "ariaRole": null,
+                "id": "search",
+                "name": "search",
+                "placeholder": "Digite pra filtrar",
+                "cssStable": "#search",
+                "xpath": "/html[1]/body[1]/section[2]/input[1]",
+                "text": null,
+                "finder": "#search"
+            },
+            "label": "Buscar produto",
+            "value": "teclado",
+            "tagName": "input",
+            "innerText": null
+        },
+        {
+            "type": "click",
+            "timestamp": 1783119883557,
+            "url": "http://127.0.0.1:52346/app",
+            "selectors": {
+                "dataTestId": "product-keyboard",
+                "dataCy": null,
+                "ariaLabel": null,
+                "ariaRole": null,
+                "id": "product-keyboard",
+                "name": null,
+                "placeholder": null,
+                "cssStable": "#product-keyboard",
+                "xpath": "/html[1]/body[1]/section[2]/ul[1]/li[1]/button[1]",
+                "text": "Teclado mecânico",
+                "finder": "#product-keyboard"
+            },
+            "label": "Teclado mecânico",
+            "value": null,
+            "tagName": "button",
+            "innerText": "Teclado mecânico"
+        },
+        {
+            "type": "click",
+            "timestamp": 1783119883589,
+            "url": "http://127.0.0.1:52346/app",
+            "selectors": {
+                "dataTestId": "product-add-to-cart",
+                "dataCy": null,
+                "ariaLabel": "Adicionar ao carrinho",
+                "ariaRole": null,
+                "id": "add-to-cart",
+                "name": null,
+                "placeholder": null,
+                "cssStable": "#add-to-cart",
+                "xpath": "/html[1]/body[1]/section[2]/div[1]/button[1]",
+                "text": "Adicionar ao carrinho",
+                "finder": "#add-to-cart"
+            },
+            "label": "Adicionar ao carrinho",
+            "value": null,
+            "tagName": "button",
+            "innerText": "Adicionar ao carrinho"
+        },
+        {
+            "type": "click",
+            "timestamp": 1783119883623,
+            "url": "http://127.0.0.1:52346/app",
+            "selectors": {
+                "dataTestId": "catalog-logout",
+                "dataCy": null,
+                "ariaLabel": "Sair",
+                "ariaRole": null,
+                "id": "logout",
+                "name": null,
+                "placeholder": null,
+                "cssStable": "#logout",
+                "xpath": "/html[1]/body[1]/section[2]/button[1]",
+                "text": "Sair",
+                "finder": "#logout"
+            },
+            "label": "Sair",
+            "value": null,
+            "tagName": "button",
+            "innerText": "Sair"
+        },
+        {
+            "type": "navigate",
+            "timestamp": 1783119883639,
+            "url": "http://127.0.0.1:52346/",
+            "selectors": null,
+            "label": "Acutis Store",
+            "value": null,
+            "tagName": null,
+            "innerText": null
+        }
+    ]
+}
