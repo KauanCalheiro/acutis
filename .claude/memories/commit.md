@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Fazer git commit — mensagem semântica, 1 linha ≤72, inglês, sem conjunção (and/e/&) nem Co-Author; nunca na main
+description: Fazer git commit/branch/PR/merge — nunca commitar na main, branch por funcionalidade, merge sempre via squash com descrição detalhada
 metadata:
   type: feedback
 ---
@@ -17,3 +17,11 @@ Commits devem ser semânticos e de uma única linha curta. Sem co-author do Clau
 - **Nunca** incluir `Co-Authored-By: Claude` ou similar
 - **Nunca** usar conjunção (`and`/`e`/`&`) na mensagem — se precisar, são dois commits separados (commit unitário por coisa feita)
 - **Sempre** em inglês — mensagem, prefixo e descrição
+
+## Branch e merge
+
+- Uma branch dedicada por funcionalidade (não misturar features não relacionadas na mesma branch).
+- Ao concluir, abrir PR e mergear em `main` via **squash** (`gh pr merge --squash`) — não merge commit simples, não commits individuais soltos em `main`.
+- Mensagem do squash commit: a funcionalidade/comportamento entregue (não "várias correções").
+- Descrição do merge/PR: detalhada, funciona como documentação do que foi feito e por quê — não só um resumo de uma linha.
+- Merge é automático (sem esperar aprovação) a menos que o usuário peça revisão manual explicitamente para aquele PR.

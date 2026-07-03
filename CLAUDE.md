@@ -10,7 +10,7 @@ Instruções persistentes ficam em `./.claude/memories/`. Antes de qualquer aç�
 | [frontend.md](.claude/memories/frontend.md) | índice | criar/editar componente, página, tela, formulário (→ props, style, table, icons, tdd) |
 | [extension.md](.claude/memories/extension.md) | índice | mexer em background, content script, offscreen ou popup da extensão Chrome (→ tdd) |
 | [schema.md](.claude/memories/schema.md) | reference | antes de migration/model/recurso — fonte de verdade das tabelas (DBML) |
-| [commit.md](.claude/memories/commit.md) | feedback | fazer git commit — semântico, 1 linha, inglês, sem conjunção/Co-Author, nunca na main |
+| [commit.md](.claude/memories/commit.md) | feedback | fazer git commit/branch/PR/merge — nunca na main, branch por feature, squash merge com descrição detalhada |
 | [comments.md](.claude/memories/comments.md) | feedback | escrever/revisar qualquer código — nunca comentar, renomear em vez de comentar |
 | [branches.md](.claude/memories/branches.md) | feedback | depois de mergear PR, ou ao pedir limpeza — apagar branch órfã local/remota |
 | [tdd.md](.claude/memories/tdd.md) | feedback | qualquer feature/bugfix — red/green/refactor, teste antes do código |
