@@ -1,10 +1,12 @@
-import { defineEventHandler, getRouterParam, readRawBody, createError } from 'h3'
+import { defineEventHandler, getRouterParam, readRawBody, createError, handleCors } from 'h3'
 import { writeFile, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
 const TMP_DIR = join(process.cwd(), '.tmp', 'recordings')
 
 export default defineEventHandler(async (event) => {
+    handleCors(event, { origin: '*', methods: ['POST'] })
+
     const id = getRouterParam(event, 'id')!
     if (!/^[a-f0-9-]{36}$/.test(id)) throw createError({ statusCode: 400 })
 
