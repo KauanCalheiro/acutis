@@ -1,5 +1,6 @@
 import type { RecordingEvent } from '@/types/recording'
 import { injectRecorder } from './inject'
+import { createVideoCaptureCoordinator } from './videoCaptureCoordinator'
 
 // Service worker: conecta ao frontend por WS (o frontend comanda START/STOP),
 // abre a aba anônima, injeta o recorder a cada navegação e repassa os eventos.
@@ -20,6 +21,48 @@ let recordingStarted = false
 let recordingWindowId: number | null = null
 let heartbeatInterval: number | null = null
 let reconnectTimeout: number | null = null
+let currentSessionId: string | null = null
+let offscreenCreated = false
+let captureStarted = false
+
+const videoCapture = createVideoCaptureCoordinator((streamId, sessionId) => {
+    chrome.runtime.sendMessage({ type: 'START_CAPTURE', streamId, sessionId, frontendUrl })
+})
+
+function getTabCaptureStreamId(targetTabId: number): Promise<string> {
+    return new Promise((resolve, reject) => {
+        chrome.tabCapture.getMediaStreamId({ targetTabId }, (streamId) => {
+            if (chrome.runtime.lastError || !streamId) reject(chrome.runtime.lastError ?? new Error('sem streamId'))
+            else resolve(streamId)
+        })
+    })
+}
+
+async function createOffscreenIfNeeded(): Promise<void> {
+    if (offscreenCreated) return
+    const documentAlreadyOpen = await (chrome as any).offscreen.hasDocument().catch(() => false)
+    if (documentAlreadyOpen) {
+        offscreenCreated = true
+        videoCapture.markOffscreenReady()
+        return
+    }
+    await (chrome as any).offscreen.createDocument({
+        url: chrome.runtime.getURL('src/offscreen.html'),
+        reasons: ['USER_MEDIA'],
+        justification: 'Captura de vídeo da aba gravada',
+    })
+    offscreenCreated = true
+}
+
+async function startVideoCapture(tabId: number): Promise<void> {
+    try {
+        await createOffscreenIfNeeded()
+        const streamId = await getTabCaptureStreamId(tabId)
+        videoCapture.startCapture(streamId, currentSessionId!)
+    } catch (e) {
+        console.error('[acutis] startVideoCapture falhou:', e)
+    }
+}
 
 function isOpen(): boolean {
     return !!ws && ws.readyState === WebSocket.OPEN
@@ -129,6 +172,9 @@ async function handleStartRecording(): Promise<void> {
     activeTabId = tab.id
     isRecording = true
     recordingStarted = false
+    currentSessionId = crypto.randomUUID()
+    captureStarted = false
+    videoCapture.reset()
     // aba abre em about:blank; ao navegar para uma página http(s) o recorder é injetado
 }
 
@@ -149,7 +195,11 @@ async function handleStopRecording(): Promise<void> {
     if (winId !== null) {
         try { await chrome.windows.remove(winId) } catch { /* janela já fechada */ }
     }
-    sendToNuxt({ event: 'recorder:stop' })
+    if (captureStarted) {
+        chrome.runtime.sendMessage({ type: 'STOP_CAPTURE' })
+    } else {
+        sendToNuxt({ event: 'recorder:stop', sessionId: null })
+    }
 }
 
 chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
@@ -162,6 +212,10 @@ chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
         if (!recordingStarted) {
             recordingStarted = true
             sendToNuxt({ event: 'recorder:started' })
+        }
+        if (!captureStarted) {
+            captureStarted = true
+            void startVideoCapture(tabId)
         }
     }).catch(() => { /* páginas restritas */ })
 })
@@ -214,6 +268,28 @@ chrome.runtime.onMessage.addListener((message: { type: string; event?: Recording
         ws = null
         sendResponse({ ok: true, connected: false })
         return false
+    }
+})
+
+chrome.runtime.onMessage.addListener((msg: { type: string; sessionId?: string }) => {
+    if (msg.type === 'OFFSCREEN_READY') {
+        videoCapture.markOffscreenReady()
+    }
+
+    if (msg.type === 'VIDEO_READY') {
+        sendToNuxt({ event: 'recorder:stop', sessionId: msg.sessionId ?? null })
+        void (chrome as any).offscreen.closeDocument().catch(() => {})
+        offscreenCreated = false
+        captureStarted = false
+        videoCapture.markVideoReady()
+    }
+
+    if (msg.type === 'VIDEO_FAILED') {
+        sendToNuxt({ event: 'recorder:stop', sessionId: null })
+        void (chrome as any).offscreen.closeDocument().catch(() => {})
+        offscreenCreated = false
+        captureStarted = false
+        videoCapture.markVideoFailed()
     }
 })
 

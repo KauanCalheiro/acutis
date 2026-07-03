@@ -17,6 +17,11 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     minify: false,
+    rollupOptions: {
+      input: {
+        offscreen: resolve(__dirname, 'src/offscreen.html'),
+      },
+    },
   },
   define: {
     __APP_VERSION__: JSON.stringify('2.0.0'),
