@@ -8,7 +8,8 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "vite build && playwright test"
+    "test:e2e": "vite build && playwright test",
+    "test:e2e:manual": "vite build && PLAYWRIGHT_MANUAL=1 playwright test --grep @manual"
   },
   "dependencies": {
     "@medv/finder": "^3.1.0",
