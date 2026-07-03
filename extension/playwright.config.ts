@@ -5,4 +5,7 @@ export default defineConfig({
     timeout: 30_000,
     fullyParallel: false,
     retries: 0,
+    workers: 3,
+    reporter: [['list'], ['html', { open: 'never' }]],
+    grepInvert: process.env.PLAYWRIGHT_MANUAL ? undefined : /@manual/,
 })

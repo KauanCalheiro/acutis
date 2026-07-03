@@ -5,6 +5,7 @@ import { usePillState } from './pill/usePillState'
 import { useOverlay } from './pill/useOverlay'
 import { useRecorderEvents } from './pill/useRecorderEvents'
 import { useAssertMode } from './pill/useAssertMode'
+import { createVideoRecordingGate, startScreenCapture, stopScreenCapture } from './pill/useVideoRecording'
 
 declare const self: Window & typeof globalThis & { __acutisRecorderLoaded?: boolean }
 
@@ -17,6 +18,7 @@ if (self.__acutisRecorderLoaded) {
 
 let hostElement: HTMLDivElement | null = null
 let keepAliveObserver: MutationObserver | null = null
+let stopVideoCapture: (() => Promise<void>) | null = null
 
 function ensureAttached(): void {
   if (!hostElement) return
@@ -25,7 +27,7 @@ function ensureAttached(): void {
   if (hostElement.parentElement !== parent) parent.appendChild(hostElement)
 }
 
-function startRecorder(): void {
+function startRecorder(sessionId: string, frontendUrl: string): void {
   if (hostElement) {
     ensureAttached()
     return
@@ -35,6 +37,25 @@ function startRecorder(): void {
   const { setHostElement, activate, deactivate } = useOverlay()
   const { dispatch, buildBaseEvent, buildNavigateEvent } = useRecorderEvents()
   const { handleElementClick } = useAssertMode()
+
+  let activeCapture: Awaited<ReturnType<typeof startScreenCapture>> | null = null
+  const videoGate = createVideoRecordingGate(async () => {
+    try {
+      activeCapture = await startScreenCapture()
+      chrome.runtime.sendMessage({ type: 'VIDEO_CAPTURE_STARTED', sessionId })
+    } catch (e) {
+      console.error('[acutis] startScreenCapture failed', e)
+      chrome.runtime.sendMessage({ type: 'VIDEO_FAILED' })
+    }
+  })
+  stopVideoCapture = async () => {
+    if (!activeCapture) {
+      chrome.runtime.sendMessage({ type: 'VIDEO_FAILED' })
+      return
+    }
+    const uploaded = await stopScreenCapture(activeCapture, sessionId, frontendUrl)
+    chrome.runtime.sendMessage({ type: uploaded ? 'VIDEO_READY' : 'VIDEO_FAILED', sessionId })
+  }
 
   hostElement = document.createElement('div')
   hostElement.id = '__acutis_host'
@@ -84,6 +105,7 @@ function startRecorder(): void {
   dispatch(buildNavigateEvent())
 
   document.addEventListener('click', (e) => {
+    videoGate.handleClick()
     if (!(e.target instanceof Element) || isHostEvent(e)) return
     if (captureMode.value === 'assert') {
       e.stopPropagation(); e.preventDefault()
@@ -125,14 +147,16 @@ function startRecorder(): void {
 }
 
 function installListener(): void {
-  // @ts-ignore
-  chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === 'START') {
-      startRecorder()
+  chrome.runtime.onMessage.addListener((message: { type: string; sessionId?: string; frontendUrl?: string }) => {
+    if (message.type === 'START' && message.sessionId && message.frontendUrl) {
+      startRecorder(message.sessionId, message.frontendUrl)
     }
     if (message.type === 'STOP') {
-      // @ts-ignore
-      chrome.runtime.sendMessage({ type: 'RECORDER_STOPPED' })
+      const stop = stopVideoCapture
+      stopVideoCapture = null
+      void Promise.resolve(stop?.()).finally(() => {
+        chrome.runtime.sendMessage({ type: 'RECORDER_STOPPED' })
+      })
       keepAliveObserver?.disconnect()
       keepAliveObserver = null
       hostElement?.remove()
@@ -140,8 +164,12 @@ function installListener(): void {
     }
   })
 
-  // @ts-ignore
-  chrome.runtime.sendMessage({ type: 'RECORDER_QUERY_ACTIVE' }, (response: { active?: boolean } | undefined) => {
-    if (response?.active) startRecorder()
-  })
+  chrome.runtime.sendMessage(
+    { type: 'RECORDER_QUERY_ACTIVE' },
+    (response: { active?: boolean; sessionId?: string; frontendUrl?: string } | undefined) => {
+      if (response?.active && response.sessionId && response.frontendUrl) {
+        startRecorder(response.sessionId, response.frontendUrl)
+      }
+    },
+  )
 }

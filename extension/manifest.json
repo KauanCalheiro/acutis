@@ -3,14 +3,8 @@
   "name": "Acutis Recorder",
   "version": "1.0.0",
   "description": "Grava interações do navegador e transmite ao Acutis.",
-  "permissions": ["tabs", "windows", "scripting", "storage", "activeTab", "alarms", "tabCapture", "offscreen"],
+  "permissions": ["tabs", "windows", "scripting", "storage", "activeTab", "alarms"],
   "host_permissions": ["<all_urls>"],
-  "web_accessible_resources": [
-    {
-      "resources": ["src/offscreen.html"],
-      "matches": ["<all_urls>"]
-    }
-  ],
   "incognito": "spanning",
   "background": {
     "service_worker": "src/background/index.ts",
