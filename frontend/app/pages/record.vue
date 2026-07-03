@@ -69,7 +69,7 @@ function onMessage(raw: string) {
   }
 }
 
-const WEBDRIVER_URL = 'http://localhost:4000'
+const WEBDRIVER_URL = useRuntimeConfig().public.webdriverUrl
 
 function connect() {
   socket = new WebSocket(`${WEBDRIVER_URL.replace('http', 'ws')}/ws`)
