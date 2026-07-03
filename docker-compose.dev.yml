@@ -11,7 +11,7 @@ services:
     build: frontend/docker/development
     command: sh -c "pnpm install && pnpm dev --host 0.0.0.0"
     environment:
-      NUXT_PUBLIC_WEBDRIVER_URL: http://localhost:24000
+      NUXT_PUBLIC_WEBDRIVER_URL: ${NUXT_PUBLIC_WEBDRIVER_URL:-http://localhost:24000}
     ports:
       - "23000:3000"
     volumes:
@@ -25,7 +25,7 @@ services:
       - path: webdriver/.env
         required: false
     environment:
-      CORS_ORIGIN: http://localhost:23000
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:23000}
       WEBDRIVER_TEST_MODE: "1"
     init: true
     ports:
