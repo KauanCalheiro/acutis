@@ -17,6 +17,12 @@ export default defineNuxtConfig({
 
   compatibilityDate: '2026-06-30',
 
+  runtimeConfig: {
+    public: {
+      webdriverUrl: 'http://localhost:4000'
+    }
+  },
+
   nitro: {
     experimental: {
       websocket: true
