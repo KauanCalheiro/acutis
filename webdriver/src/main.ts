@@ -10,7 +10,7 @@ async function bootstrap(): Promise<void> {
     app.useWebSocketAdapter(new AcutisWsAdapter(app))
 
     app.enableCors({
-        origin: CORS_ORIGIN,
+        origin: CORS_ORIGIN.split(','),
         methods: ['GET', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type'],
     })
