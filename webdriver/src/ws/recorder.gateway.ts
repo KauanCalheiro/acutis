@@ -1,0 +1,40 @@
+import {
+    ConnectedSocket,
+    SubscribeMessage,
+    WebSocketGateway,
+    type OnGatewayConnection,
+} from '@nestjs/websockets'
+import type { WebSocket } from 'ws'
+import { RecorderService } from '../recorder/recorder.service.js'
+import { safeSend } from './send.js'
+
+@WebSocketGateway({ path: '/ws' })
+export class RecorderGateway implements OnGatewayConnection {
+    constructor(
+        private readonly recorderService: RecorderService,
+    ) { }
+
+    handleConnection(ws: WebSocket): void {
+        safeSend(ws, { event: 'recorder:hello', recording: this.recorderService.isRecording() })
+    }
+
+    @SubscribeMessage('WHO')
+    handleWho(@ConnectedSocket() ws: WebSocket): void {
+        safeSend(ws, { event: 'recorder:hello', recording: this.recorderService.isRecording() })
+    }
+
+    @SubscribeMessage('START_RECORDING')
+    async handleStart(@ConnectedSocket() ws: WebSocket): Promise<void> {
+        await this.recorderService.start(
+            (event) => safeSend(ws, { event: `recorder:${event.type}`, ...event }),
+            (recordingStartedAt) => safeSend(ws, { event: 'recorder:started', recordingStartedAt }),
+            () => { void this.handleStop(ws) },
+        )
+    }
+
+    @SubscribeMessage('STOP_RECORDING')
+    async handleStop(@ConnectedSocket() ws: WebSocket): Promise<void> {
+        const { sessionId } = await this.recorderService.stop()
+        safeSend(ws, { event: 'recorder:stop', sessionId })
+    }
+}

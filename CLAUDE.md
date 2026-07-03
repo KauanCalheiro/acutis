@@ -2,13 +2,13 @@
 
 ## Memory Catalog
 
-Instruções persistentes ficam em `./.claude/memories/`. Antes de qualquer ação em um domínio, ler o arquivo correspondente — as regras vivem lá, não aqui. `backend.md`, `frontend.md`, `extension.md` e `e2e.md` são **índices**: levam às sub-memórias específicas (ler o índice primeiro).
+Instruções persistentes ficam em `./.claude/memories/`. Antes de qualquer ação em um domínio, ler o arquivo correspondente — as regras vivem lá, não aqui. `backend.md`, `frontend.md`, `webdriver.md` e `e2e.md` são **índices**: levam às sub-memórias específicas (ler o índice primeiro).
 
 | Arquivo | Tipo | Ler quando |
 |---------|------|------------|
 | [backend.md](.claude/memories/backend.md) | índice | mexer em API, controller, model, migration, recurso (→ patterns, filters, conventions, tdd) |
 | [frontend.md](.claude/memories/frontend.md) | índice | criar/editar componente, página, tela, formulário (→ props, style, table, icons, tdd) |
-| [extension.md](.claude/memories/extension.md) | índice | mexer em background, content script, offscreen ou popup da extensão Chrome (→ tdd) |
+| [webdriver.md](.claude/memories/webdriver.md) | índice | mexer no serviço webdriver (gateway/recorder/video NestJS, ou a pill/UI injetável) (→ tdd) |
 | [schema.md](.claude/memories/schema.md) | reference | antes de migration/model/recurso — fonte de verdade das tabelas (DBML) |
 | [commit.md](.claude/memories/commit.md) | feedback | fazer git commit/branch/PR/merge — nunca na main, branch por feature, squash merge com descrição detalhada |
 | [comments.md](.claude/memories/comments.md) | feedback | escrever/revisar qualquer código — nunca comentar, renomear em vez de comentar |
