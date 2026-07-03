@@ -1,0 +1,327 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.pill {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 999px;
+  padding: 6px 10px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  font-family: 'Poppins', system-ui, sans-serif;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff4444;
+  margin: 0 6px 0 2px;
+  flex-shrink: 0;
+  animation: rec-pulse 1.4s ease-in-out infinite;
+}
+
+.dot.paused {
+  background: rgba(255, 255, 255, 0.3);
+  animation: none;
+}
+
+@keyframes rec-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+.sep {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.btn:hover { background: rgba(255, 255, 255, 0.15); }
+.btn.active { background: rgba(255, 255, 255, 0.3); }
+
+.btn-stop { background: rgba(239, 68, 68, 0.15); }
+.btn-stop:hover { background: rgba(239, 68, 68, 0.45); }
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: 'Poppins', system-ui, sans-serif;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 6px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.btn:hover .tooltip { opacity: 1; }
+
+.pill-anchor {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  display: flex;
+}
+
+.assert-popover {
+  --popover-bg: #ffffff;
+  --popover-border: rgba(0, 0, 0, 0.1);
+  --popover-divider: rgba(0, 0, 0, 0.07);
+  --popover-text: #111111;
+  --popover-muted: rgba(0, 0, 0, 0.45);
+  --popover-option-border: rgba(0, 0, 0, 0.1);
+  --popover-option-hover: rgba(0, 0, 0, 0.05);
+  --popover-option-selected-bg: #111111;
+  --popover-option-selected-text: #ffffff;
+  --popover-input-border: rgba(0, 0, 0, 0.15);
+  --popover-input-border-focus: #111111;
+  --popover-btn-cancel-border: rgba(0, 0, 0, 0.15);
+  --popover-btn-cancel-hover: rgba(0, 0, 0, 0.05);
+  --popover-btn-confirm-bg: #111111;
+  --popover-btn-confirm-text: #ffffff;
+  --popover-btn-confirm-hover: #333333;
+  --popover-tag-bg: rgba(0, 0, 0, 0.07);
+
+  position: fixed;
+  width: 320px;
+  background: var(--popover-bg);
+  border: 1px solid var(--popover-border);
+  border-radius: 14px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-family: 'Poppins', system-ui, sans-serif;
+  color: var(--popover-text);
+  z-index: 2147483646;
+  pointer-events: auto;
+  transform-origin: bottom center;
+}
+
+@media (prefers-color-scheme: dark) {
+  .assert-popover {
+    --popover-bg: #1a1a1a;
+    --popover-border: rgba(255, 255, 255, 0.1);
+    --popover-divider: rgba(255, 255, 255, 0.07);
+    --popover-text: #f0f0f0;
+    --popover-muted: rgba(255, 255, 255, 0.45);
+    --popover-option-border: rgba(255, 255, 255, 0.1);
+    --popover-option-hover: rgba(255, 255, 255, 0.06);
+    --popover-option-selected-bg: #ffffff;
+    --popover-option-selected-text: #000000;
+    --popover-input-border: rgba(255, 255, 255, 0.15);
+    --popover-input-border-focus: #ffffff;
+    --popover-btn-cancel-border: rgba(255, 255, 255, 0.15);
+    --popover-btn-cancel-hover: rgba(255, 255, 255, 0.07);
+    --popover-btn-confirm-bg: #ffffff;
+    --popover-btn-confirm-text: #000000;
+    --popover-btn-confirm-hover: #e8e8e8;
+    --popover-tag-bg: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.popover-enter-active { animation: popover-in 0.14s ease; }
+.popover-leave-active { animation: popover-in 0.1s ease reverse; }
+@keyframes popover-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.popover-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.popover-arrow.place-above {
+  bottom: -11px;
+  border-left: 11px solid transparent;
+  border-right: 11px solid transparent;
+  border-top: 11px solid var(--popover-bg);
+}
+.popover-arrow.place-below {
+  top: -11px;
+  border-left: 11px solid transparent;
+  border-right: 11px solid transparent;
+  border-bottom: 11px solid var(--popover-bg);
+}
+
+.popover-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--popover-divider);
+}
+.popover-element-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  background: var(--popover-tag-bg);
+  border-radius: 4px;
+  flex-shrink: 0;
+  font-family: monospace;
+}
+.popover-element-label {
+  flex: 1;
+  font-size: 12px;
+  color: var(--popover-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.popover-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--popover-text);
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 2px;
+  flex-shrink: 0;
+  opacity: 0.4;
+  transition: opacity 0.12s;
+}
+.popover-close:hover { opacity: 0.9; }
+
+.popover-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 12px 14px;
+}
+.popover-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 4px;
+  border: 1.5px solid var(--popover-option-border);
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--popover-text);
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-size: 10.5px;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.3;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.popover-option:hover { background: var(--popover-option-hover); }
+.popover-option.selected {
+  background: var(--popover-option-selected-bg);
+  color: var(--popover-option-selected-text);
+  border-color: var(--popover-option-selected-bg);
+}
+.popover-option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+.popover-option-icon svg { width: 16px; height: 16px; color: inherit; }
+
+.popover-value-wrap {
+  padding: 0 14px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.18s ease, padding-bottom 0.18s ease;
+}
+.popover-value-wrap.visible {
+  max-height: 54px;
+  padding-bottom: 8px;
+}
+.popover-value-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid var(--popover-input-border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'Poppins', system-ui, sans-serif;
+  outline: none;
+  background: transparent;
+  color: var(--popover-text);
+  transition: border-color 0.14s;
+  box-sizing: border-box;
+}
+.popover-value-input::placeholder { color: var(--popover-muted); }
+.popover-value-input:focus { border-color: var(--popover-input-border-focus); }
+
+.popover-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--popover-divider);
+}
+.popover-footer-btn {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: 'Poppins', system-ui, sans-serif;
+  cursor: pointer;
+  transition: background 0.14s, opacity 0.14s;
+  border: 1.5px solid transparent;
+}
+.popover-btn-cancel {
+  background: transparent;
+  border-color: var(--popover-btn-cancel-border);
+  color: var(--popover-text);
+}
+.popover-btn-cancel:hover { background: var(--popover-btn-cancel-hover); }
+.popover-btn-confirm {
+  background: var(--popover-btn-confirm-bg);
+  color: var(--popover-btn-confirm-text);
+  border-color: var(--popover-btn-confirm-bg);
+}
+.popover-btn-confirm:not(:disabled):hover { background: var(--popover-btn-confirm-hover); }
+.popover-btn-confirm:disabled { opacity: 0.35; cursor: default; }

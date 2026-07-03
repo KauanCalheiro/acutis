@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "pnpm --dir ../extension build && playwright test"
+    "test": "pnpm --dir ../webdriver build:ui && pnpm --dir ../webdriver build && playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1"

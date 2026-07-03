@@ -7,6 +7,8 @@ interface RecorderEvent {
   value?: string | null
   selectors?: { dataTestId?: string | null, text?: string | null, cssStable?: string | null } | null
   sessionId?: string | null
+  timestamp?: number
+  recordingStartedAt?: number
 }
 
 const hydrated = ref(false)
@@ -16,6 +18,8 @@ const wsConnected = ref(false)
 const errorMsg = ref<string | null>(null)
 const events = ref<RecorderEvent[]>([])
 const videoSessionId = ref<string | null>(null)
+const recordingStartedAt = ref<number | null>(null)
+const videoEl = ref<HTMLVideoElement | null>(null)
 
 let socket: WebSocket | null = null
 
@@ -50,6 +54,7 @@ function onMessage(raw: string) {
       break
     case 'recorder:started':
       recording.value = true
+      recordingStartedAt.value = data.recordingStartedAt ?? null
       break
     case 'recorder:error':
       errorMsg.value = (data as { error?: string }).error ?? 'Erro na extensão.'
@@ -64,12 +69,13 @@ function onMessage(raw: string) {
   }
 }
 
+const WEBDRIVER_URL = 'http://localhost:4000'
+
 function connect() {
-  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
-  socket = new WebSocket(`${proto}//${location.host}/_ws?source=frontend`)
+  socket = new WebSocket(`${WEBDRIVER_URL.replace('http', 'ws')}/ws`)
   socket.onopen = () => {
     wsConnected.value = true
-    send('WHO') // pergunta se a extensão está conectada
+    send('WHO')
   }
   socket.onclose = () => {
     wsConnected.value = false
@@ -81,6 +87,17 @@ function connect() {
 function describe(e: RecorderEvent): string {
   const s = e.selectors
   return s?.dataTestId || s?.text || s?.cssStable || e.label || e.url || ''
+}
+
+function videoOffsetSeconds(e: RecorderEvent): number | null {
+  if (!recordingStartedAt.value || !e.timestamp) return null
+  return (e.timestamp - recordingStartedAt.value) / 1000
+}
+
+function seekTo(e: RecorderEvent): void {
+  const offset = videoOffsetSeconds(e)
+  if (offset === null || !videoEl.value) return
+  videoEl.value.currentTime = Math.max(0, offset)
 }
 
 onMounted(() => {
@@ -104,13 +121,13 @@ onBeforeUnmount(() => socket?.close())
           :color="wsConnected ? 'success' : 'neutral'"
           variant="subtle"
         >
-          {{ wsConnected ? 'Relay conectado' : 'Relay offline' }}
+          {{ wsConnected ? 'Webdriver conectado' : 'Webdriver offline' }}
         </UBadge>
         <UBadge
           :color="extensionReady ? 'success' : 'error'"
           variant="subtle"
         >
-          {{ extensionReady ? 'Extensão conectada' : 'Extensão não detectada' }}
+          {{ extensionReady ? 'Sessão pronta' : 'Aguardando webdriver' }}
         </UBadge>
       </div>
     </div>
@@ -119,8 +136,8 @@ onBeforeUnmount(() => socket?.close())
       v-if="!extensionReady"
       color="warning"
       variant="subtle"
-      title="Extensão não conectada"
-      description="Instale a extensão (chrome://extensions → Load unpacked → extension/dist) e habilite o acesso ao modo anônimo."
+      title="Webdriver não conectado"
+      description="Suba o serviço (cd webdriver && pnpm dev) antes de gravar."
     />
 
     <UAlert
@@ -178,7 +195,9 @@ onBeforeUnmount(() => socket?.close())
         <li
           v-for="(e, i) in events"
           :key="i"
-          class="text-sm font-mono flex gap-3"
+          class="text-sm font-mono flex gap-3 items-center"
+          :class="{ 'cursor-pointer hover:underline': videoOffsetSeconds(e) !== null }"
+          @click="seekTo(e)"
         >
           <UBadge
             variant="subtle"
@@ -190,6 +209,12 @@ onBeforeUnmount(() => socket?.close())
             {{ describe(e) }}
             <template v-if="e.value"> = {{ e.value }}</template>
           </span>
+          <span
+            v-if="videoOffsetSeconds(e) !== null"
+            class="text-xs text-muted shrink-0"
+          >
+            {{ videoOffsetSeconds(e)!.toFixed(1) }}s
+          </span>
         </li>
       </ul>
     </UCard>
@@ -200,8 +225,9 @@ onBeforeUnmount(() => socket?.close())
       </template>
 
       <video
+        ref="videoEl"
         data-testid="record-video"
-        :src="`/recording/${videoSessionId}`"
+        :src="`${WEBDRIVER_URL}/recording/${videoSessionId}`"
         controls
         class="w-full rounded"
       />
