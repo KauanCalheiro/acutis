@@ -5,7 +5,7 @@ metadata:
   type: feedback
 ---
 
-Testes cross-tool (extensão + frontend + backend) vivem em `e2e/` na raiz do monorepo. Convenções universais de TDD em [[tdd]]; specs isoladas de cada ferramenta ficam nas próprias pastas (`extension/e2e/`, futuramente testes de unidade do backend/frontend).
+Testes cross-tool (webdriver + frontend + backend) vivem em `e2e/` na raiz do monorepo. Convenções universais de TDD em [[tdd]]; testes de unidade de cada ferramenta ficam nas próprias pastas (`webdriver/src/ui/**/*.spec.ts` via Vitest, futuramente backend/frontend). Convenções específicas de teste do webdriver (evitar duas sessões CDP no mesmo navegador, endpoints de debug) em [[webdriver-tdd]].
 
 ## Tags
 
@@ -23,11 +23,11 @@ Permite filtrar (`playwright test --grep @write`) sem depender de convenção de
 
 ### `@manual`
 
-Teste que precisa de interação humana real (ex.: gesto de usuário que o Chrome exige e não dá pra simular via API, tipo clicar no ícone da extensão pra conceder `activeTab`) marca `@manual` **no teste**, além das tags do `describe`:
+Teste que precisa de interação humana real (algo que nenhuma API/flag consegue simular) marca `@manual` **no teste**, além das tags do `describe`:
 
 ```ts
-test.describe('offscreen video capture', { tag: ['@write', '@recording'] }, () => {
-    test('records the tab and uploads the video', { tag: ['@manual'] }, async () => { ... })
+test.describe('some flow', { tag: ['@write', '@recording'] }, () => {
+    test('needs a real human step', { tag: ['@manual'] }, async () => { ... })
 })
 ```
 
