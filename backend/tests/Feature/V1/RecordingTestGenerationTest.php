@@ -94,6 +94,37 @@ it('prompts the playwright writer with the generated gherkin and the events', fu
     );
 });
 
+it('annotates noticeable pauses between events in the playwright prompt', function () {
+    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login']]);
+    PlaywrightWriter::fake([['playwright' => 'spec']]);
+
+    $payload = recordingPayload();
+    $payload['events'][1]['timestamp'] = $payload['events'][0]['timestamp'] + 500;
+    $payload['events'][2]['timestamp'] = $payload['events'][1]['timestamp'] + 4700;
+
+    postJson('/api/v1/recordings/tests', $payload)->assertOk();
+
+    PlaywrightWriter::assertPrompted(
+        fn ($prompt) => str_contains($prompt->prompt, 'Pausas notáveis')
+            && str_contains($prompt->prompt, '4.7s')
+    );
+});
+
+it('omits the pause section when events flow without noticeable gaps', function () {
+    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login']]);
+    PlaywrightWriter::fake([['playwright' => 'spec']]);
+
+    $payload = recordingPayload();
+    $payload['events'][1]['timestamp'] = $payload['events'][0]['timestamp'] + 500;
+    $payload['events'][2]['timestamp'] = $payload['events'][1]['timestamp'] + 800;
+
+    postJson('/api/v1/recordings/tests', $payload)->assertOk();
+
+    PlaywrightWriter::assertPrompted(
+        fn ($prompt) => ! str_contains($prompt->prompt, 'Pausas notáveis')
+    );
+});
+
 it('rejects a recording without events', function () {
     GherkinWriter::fake();
     PlaywrightWriter::fake();

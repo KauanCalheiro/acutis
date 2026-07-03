@@ -25,6 +25,12 @@ class PlaywrightWriter implements Agent, HasStructuredOutput
         - Inclua expect de URL após cada navegação registrada nos eventos.
         - Valores de senha chegam mascarados como •••• — use process.env ou um placeholder nomeado, nunca o valor mascarado.
         - Importe apenas de @playwright/test.
+
+        Esperas:
+        - Nunca use waitForTimeout nem esperas de tempo fixo; sempre espere uma condição.
+        - Após cada evento navigate, aguarde a nova página com await page.waitForURL(...) antes da próxima interação.
+        - Se o prompt listar "Pausas notáveis", o usuário esperou a página carregar ou hidratar naquele ponto: antes da ação correspondente, aguarde o elemento alvo com await expect(locator).toBeVisible().
+        - No restante, confie no auto-wait do Playwright — não adicione esperas redundantes.
         INSTRUCTIONS;
     }
 
