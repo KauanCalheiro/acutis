@@ -16,16 +16,17 @@ class StreamReporter {
     }
 
     onTestBegin(test) {
-        emit({ event: 'test:started', title: test.title, file: test.location && test.location.file })
+        emit({ event: 'test', id: test.id, title: test.title, status: 'pending' })
     }
 
     onTestEnd(test, result) {
         const passed = result.status === 'passed'
 
         emit({
-            event: passed ? 'test:passed' : 'test:failed',
+            event: 'test',
+            id: test.id,
             title: test.title,
-            status: result.status,
+            status: passed ? 'success' : 'failed',
             durationMs: result.duration,
             error: passed ? null : firstError(result.errors),
         })
