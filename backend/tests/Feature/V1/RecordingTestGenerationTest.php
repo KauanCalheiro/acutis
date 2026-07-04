@@ -171,7 +171,8 @@ it('runs the generated spec against the execution url and reports the passing ru
         ]);
 
     Http::assertSent(fn ($request) => str_contains($request->url(), '/runner/spec')
-        && str_contains($request['spec'], "page.goto('http://host.docker.internal:52346/')"));
+        && str_contains($request['spec'], "page.goto('http://host.docker.internal:52346/')")
+        && $request['baseUrl'] === 'http://host.docker.internal:52346');
 });
 
 it('feeds the runner error back to the playwright writer and retries until it passes', function () {

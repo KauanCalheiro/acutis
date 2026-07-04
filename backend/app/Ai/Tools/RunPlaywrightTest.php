@@ -6,10 +6,10 @@ use Illuminate\Support\Facades\Http;
 
 class RunPlaywrightTest
 {
-    public function run(string $spec): PlaywrightRunResult
+    public function run(string $spec, ?string $baseUrl = null): PlaywrightRunResult
     {
         $result = Http::timeout(120)
-            ->post(acutis()->webdriverUrl.'/runner/spec', ['spec' => $spec])
+            ->post(acutis()->webdriverUrl.'/runner/spec', ['spec' => $spec, 'baseUrl' => $baseUrl])
             ->throw()
             ->json();
 

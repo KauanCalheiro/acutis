@@ -8,7 +8,7 @@ use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Promptable;
 
-#[Model('gemma-4-31b-it')]
+#[Model('gemini-2.5-flash-lite')]
 class GherkinWriter implements Agent, HasStructuredOutput
 {
     use Promptable;
