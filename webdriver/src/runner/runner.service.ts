@@ -1,46 +1,69 @@
 import { Injectable } from '@nestjs/common'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { RUNNER_DIR } from '../config/paths.js'
 
 export interface RunResult {
     passed: boolean
     output: string
+    storageState?: unknown
+}
+
+export interface RunOptions {
+    baseUrl?: string
+    env?: Record<string, string>
 }
 
 const RUN_TIMEOUT_MS = 60_000
+const STORAGE_STATE_FILE = 'storage-state.json'
 const WEBDRIVER_ROOT = resolve(import.meta.dirname, '../..')
 
 @Injectable()
 export class RunnerService {
-    async run(spec: string, baseUrl?: string): Promise<RunResult> {
+    async run(spec: string, options: RunOptions = {}): Promise<RunResult> {
         const dir = join(RUNNER_DIR, randomUUID())
         await mkdir(dir, { recursive: true })
         await writeFile(join(dir, 'generated.spec.ts'), spec)
 
-        if (baseUrl) {
+        if (options.baseUrl) {
             await writeFile(join(dir, 'playwright.config.ts'), [
                 "import { defineConfig } from '@playwright/test'",
                 '',
-                `export default defineConfig({ use: { baseURL: ${JSON.stringify(baseUrl)} } })`,
+                `export default defineConfig({ use: { baseURL: ${JSON.stringify(options.baseUrl)} } })`,
                 '',
             ].join('\n'))
         }
 
         try {
-            return await this.execPlaywright(dir)
+            const result = await this.execPlaywright(dir, options.env)
+            const storageState = await this.readStorageState(dir)
+
+            return storageState === undefined ? result : { ...result, storageState }
         } finally {
             await rm(dir, { recursive: true, force: true })
         }
     }
 
-    private execPlaywright(dir: string): Promise<RunResult> {
+    private async readStorageState(dir: string): Promise<unknown> {
+        try {
+            return JSON.parse(await readFile(join(dir, STORAGE_STATE_FILE), 'utf8'))
+        } catch {
+            return undefined
+        }
+    }
+
+    private execPlaywright(dir: string, env?: Record<string, string>): Promise<RunResult> {
         return new Promise((resolvePromise) => {
             const child = spawn('npx', ['playwright', 'test', '--reporter=line'], {
                 cwd: dir,
-                env: { ...process.env, PLAYWRIGHT_HTML_OPEN: 'never', NODE_PATH: join(WEBDRIVER_ROOT, 'node_modules') },
+                env: {
+                    ...process.env,
+                    ...env,
+                    PLAYWRIGHT_HTML_OPEN: 'never',
+                    NODE_PATH: join(WEBDRIVER_ROOT, 'node_modules'),
+                },
             })
 
             let output = ''
