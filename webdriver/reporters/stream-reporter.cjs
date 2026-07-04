@@ -20,15 +20,19 @@ class StreamReporter {
     }
 
     onTestEnd(test, result) {
-        const passed = result.status === 'passed'
+        const status = result.status === 'passed'
+            ? 'success'
+            : result.status === 'skipped'
+                ? 'skipped'
+                : 'failed'
 
         emit({
             event: 'test',
             id: test.id,
             title: test.title,
-            status: passed ? 'success' : 'failed',
+            status,
             durationMs: result.duration,
-            error: passed ? null : firstError(result.errors),
+            error: status === 'failed' ? firstError(result.errors) : null,
         })
     }
 
