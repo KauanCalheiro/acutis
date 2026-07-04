@@ -32,4 +32,15 @@ export class RunnerController {
 
         return this.snapshotService.capture(url)
     }
+
+    @Post('project')
+    async project(
+        @Body('path') path: string,
+        @Body('spec') spec?: string,
+        @Body('grep') grep?: string,
+    ): Promise<RunResult> {
+        this.ensureTestMode()
+
+        return this.runnerService.runProject(path, { spec, grep })
+    }
 }

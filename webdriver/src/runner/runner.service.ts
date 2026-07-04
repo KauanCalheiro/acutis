@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { RUNNER_DIR } from '../config/paths.js'
 
@@ -37,12 +37,32 @@ export class RunnerService {
         }
 
         try {
-            const result = await this.execPlaywright(dir, options.env)
+            const result = await this.execPlaywright(dir, ['--reporter=line'], options.env)
             const storageState = await this.readStorageState(dir)
 
             return storageState === undefined ? result : { ...result, storageState }
         } finally {
             await rm(dir, { recursive: true, force: true })
+        }
+    }
+
+    async runProject(dir: string, options: { spec?: string; grep?: string } = {}): Promise<RunResult> {
+        await this.ensureNodeModules(dir)
+
+        const args: string[] = []
+        if (options.spec) args.push(options.spec)
+        if (options.grep) args.push('--grep', options.grep)
+
+        return this.execPlaywright(dir, args)
+    }
+
+    private async ensureNodeModules(dir: string): Promise<void> {
+        const link = join(dir, 'node_modules')
+
+        try {
+            await access(link)
+        } catch {
+            await symlink(join(WEBDRIVER_ROOT, 'node_modules'), link, 'dir')
         }
     }
 
@@ -54,9 +74,9 @@ export class RunnerService {
         }
     }
 
-    private execPlaywright(dir: string, env?: Record<string, string>): Promise<RunResult> {
+    private execPlaywright(dir: string, args: string[] = [], env?: Record<string, string>): Promise<RunResult> {
         return new Promise((resolvePromise) => {
-            const child = spawn('npx', ['playwright', 'test', '--reporter=line'], {
+            const child = spawn('npx', ['playwright', 'test', ...args], {
                 cwd: dir,
                 env: {
                     ...process.env,
