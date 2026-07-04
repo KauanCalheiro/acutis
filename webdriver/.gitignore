@@ -2,5 +2,6 @@ node_modules
 .tmp
 dist
 dist-ui
+test-results
 
 .pnpm-store
