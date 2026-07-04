@@ -3,7 +3,8 @@ import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { access, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
-import { RUNNER_DIR } from '../config/paths.js'
+import { RUNNER_DIR, STREAM_REPORTER_PATH } from '../config/paths.js'
+import type { RunEvent } from '../types/run.js'
 
 export interface RunResult {
     passed: boolean
@@ -17,7 +18,9 @@ export interface RunOptions {
 }
 
 const RUN_TIMEOUT_MS = 60_000
+const PROJECT_RUN_TIMEOUT_MS = 300_000
 const STORAGE_STATE_FILE = 'storage-state.json'
+const STREAM_MARKER = '@@ACUTIS_RUN@@'
 const WEBDRIVER_ROOT = resolve(import.meta.dirname, '../..')
 
 @Injectable()
@@ -54,6 +57,54 @@ export class RunnerService {
         if (options.grep) args.push('--grep', options.grep)
 
         return this.execPlaywright(dir, args, await this.readDotenv(dir))
+    }
+
+    async streamProject(
+        dir: string,
+        options: { spec?: string; grep?: string },
+        onEvent: (event: RunEvent) => void,
+    ): Promise<RunResult> {
+        await this.ensureNodeModules(dir)
+        const env = await this.readDotenv(dir)
+
+        const args = [`--reporter=${STREAM_REPORTER_PATH}`]
+        if (options.spec) args.push(options.spec)
+        if (options.grep) args.push('--grep', options.grep)
+
+        return new Promise((resolvePromise) => {
+            const child = spawn('npx', ['playwright', 'test', ...args], {
+                cwd: dir,
+                env: { ...process.env, ...env, PLAYWRIGHT_HTML_OPEN: 'never', NODE_PATH: join(WEBDRIVER_ROOT, 'node_modules') },
+            })
+
+            let output = ''
+            let buffer = ''
+
+            child.stdout.on('data', (chunk: Buffer) => {
+                const text = chunk.toString()
+                output += text
+                buffer += text
+
+                const lines = buffer.split('\n')
+                buffer = lines.pop() ?? ''
+
+                for (const line of lines) {
+                    const marker = line.indexOf(STREAM_MARKER)
+                    if (marker < 0) continue
+                    try {
+                        onEvent(JSON.parse(line.slice(marker + STREAM_MARKER.length)) as RunEvent)
+                    } catch { /* linha parcial/ruído */ }
+                }
+            })
+            child.stderr.on('data', (chunk: Buffer) => { output += chunk.toString() })
+
+            const timer = setTimeout(() => child.kill('SIGKILL'), PROJECT_RUN_TIMEOUT_MS)
+
+            child.on('close', (code) => {
+                clearTimeout(timer)
+                resolvePromise({ passed: code === 0, output })
+            })
+        })
     }
 
     private async readDotenv(dir: string): Promise<Record<string, string>> {
