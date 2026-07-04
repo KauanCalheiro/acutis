@@ -53,7 +53,24 @@ export class RunnerService {
         if (options.spec) args.push(options.spec)
         if (options.grep) args.push('--grep', options.grep)
 
-        return this.execPlaywright(dir, args)
+        return this.execPlaywright(dir, args, await this.readDotenv(dir))
+    }
+
+    private async readDotenv(dir: string): Promise<Record<string, string>> {
+        let raw: string
+        try {
+            raw = await readFile(join(dir, '.env'), 'utf8')
+        } catch {
+            return {}
+        }
+
+        const env: Record<string, string> = {}
+        for (const line of raw.split('\n')) {
+            const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/)
+            if (match) env[match[1]] = match[2].trim().replace(/^["']|["']$/g, '')
+        }
+
+        return env
     }
 
     private async ensureNodeModules(dir: string): Promise<void> {

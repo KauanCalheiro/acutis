@@ -213,6 +213,9 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
             "import { test, expect } from '@playwright/test'\ntest('soma @smoke', () => { expect(1 + 1).toBe(2) })\n")
         await writeFile(join(dir, 'tests', 'broken.spec.ts'),
             "import { test, expect } from '@playwright/test'\ntest('quebrado', () => { expect(1).toBe(2) })\n")
+        await writeFile(join(dir, '.env'), 'PROJECT_SECRET=from-dotenv\n')
+        await writeFile(join(dir, 'tests', 'env.spec.ts'),
+            "import { test, expect } from '@playwright/test'\ntest('le o .env do projeto @env', () => { expect(process.env.PROJECT_SECRET).toBe('from-dotenv') })\n")
 
         const run = async (data: Record<string, string>) =>
             (await request.post(`${RUNNER_URL}/runner/project`, { data: { path: dir, ...data }, timeout: 120_000 })).json()
@@ -226,5 +229,8 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
 
         const single = await run({ spec: 'tests/smoke.spec.ts' })
         expect(single.passed).toBe(true)
+
+        const withEnv = await run({ grep: '@env' })
+        expect(withEnv.passed).toBe(true)
     })
 })
