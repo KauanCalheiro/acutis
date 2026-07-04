@@ -8,7 +8,7 @@ use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Promptable;
 
-#[Model('gemma-4-31b-it')]
+#[Model('gemini-2.5-flash-lite')]
 class PlaywrightWriter implements Agent, HasStructuredOutput
 {
     use Promptable;
@@ -22,6 +22,7 @@ class PlaywrightWriter implements Agent, HasStructuredOutput
         - Implemente exatamente o cenário descrito no Gherkin; os eventos são a fonte de seletores e valores.
         - Prioridade de seletor: dataTestId (page.getByTestId) > id (page.locator('#...')) > finder.
         - Estruture com test.describe e test.step espelhando os passos do Gherkin.
+        - Navegue sempre com URL absoluta construída a partir da URL base fornecida — nunca page.goto('/') relativo.
         - Inclua expect de URL após cada navegação registrada nos eventos.
         - Valores de senha chegam mascarados como •••• — use process.env ou um placeholder nomeado, nunca o valor mascarado.
         - Importe apenas de @playwright/test.
