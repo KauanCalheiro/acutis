@@ -233,4 +233,52 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         const withEnv = await run({ grep: '@env' })
         expect(withEnv.passed).toBe(true)
     })
+
+    test('streams run progress over a websocket', async () => {
+        test.setTimeout(120_000)
+
+        const { mkdtemp, mkdir, writeFile } = await import('node:fs/promises')
+        const { tmpdir } = await import('node:os')
+        const { join } = await import('node:path')
+
+        const dir = await mkdtemp(join(tmpdir(), 'acutis-stream-'))
+        await mkdir(join(dir, 'tests'), { recursive: true })
+        await writeFile(join(dir, 'playwright.config.ts'),
+            "import { defineConfig } from '@playwright/test'\nexport default defineConfig({ testDir: './tests' })\n")
+        await writeFile(join(dir, 'tests', 'ok.spec.ts'),
+            "import { test, expect } from '@playwright/test'\ntest('passa', () => { expect(1).toBe(1) })\n")
+        await writeFile(join(dir, 'tests', 'nok.spec.ts'),
+            "import { test, expect } from '@playwright/test'\ntest('falha', () => { expect(1).toBe(2) })\n")
+
+        const events: Array<Record<string, unknown>> = []
+        const ws = new WebSocket(`${RUNNER_URL.replace('http', 'ws')}/runs`)
+        ws.addEventListener('message', (e) => events.push(JSON.parse(String(e.data))))
+        await new Promise<void>((r) => ws.addEventListener('open', () => r()))
+
+        ws.send(JSON.stringify({ type: 'START_RUN', path: dir }))
+
+        await new Promise<void>((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error('run did not finish in time')), 90_000)
+            ws.addEventListener('message', () => {
+                if (events.some((e) => e.event === 'run:finished')) {
+                    clearTimeout(timer)
+                    resolve()
+                }
+            })
+        })
+        ws.close()
+
+        const kinds = events.map((e) => e.event)
+        expect(kinds).toContain('run:started')
+        expect(kinds).toContain('test:started')
+        expect(kinds).toContain('test:passed')
+        expect(kinds).toContain('test:failed')
+
+        const failure = events.find((e) => e.event === 'test:failed')
+        expect(failure?.title).toBe('falha')
+        expect(String(failure?.error)).toContain('expect')
+
+        const finished = events.find((e) => e.event === 'run:finished')
+        expect(finished?.passed).toBe(false)
+    })
 })
