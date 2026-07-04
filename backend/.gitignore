@@ -25,3 +25,6 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Catálogo de projetos em runtime (criado pelo backend em ~/.acutis, montado via ./backend:/app)
+.acutis/
