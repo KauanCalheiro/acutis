@@ -249,6 +249,8 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
             "import { test, expect } from '@playwright/test'\ntest('passa', () => { expect(1).toBe(1) })\n")
         await writeFile(join(dir, 'tests', 'nok.spec.ts'),
             "import { test, expect } from '@playwright/test'\ntest('falha', () => { expect(1).toBe(2) })\n")
+        await writeFile(join(dir, 'tests', 'skip.spec.ts'),
+            "import { test } from '@playwright/test'\ntest.skip('pulado', () => {})\n")
 
         const res = await request.post(`${RUNNER_URL}/runner/project/stream`, { data: { path: dir }, timeout: 90_000 })
         expect(res.ok()).toBe(true)
@@ -263,6 +265,9 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         const failure = tests.find((e) => e.status === 'failed')
         expect(failure?.title).toBe('falha')
         expect(String(failure?.error)).toContain('expect')
+
+        const skipped = tests.find((e) => e.status === 'skipped')
+        expect(skipped?.title).toBe('pulado')
 
         const pending = tests.find((e) => e.status === 'pending' && e.title === 'falha')
         expect(pending?.id).toBe(failure?.id)
