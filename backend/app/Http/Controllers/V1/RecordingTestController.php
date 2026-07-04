@@ -5,12 +5,12 @@ namespace App\Http\Controllers\V1;
 use App\Action\GenerateTestsFromRecording;
 use App\Data\V1\Recording\RecordingData;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\JsonResponse;
+use App\Http\Resources\V1\GeneratedTestsResource;
 
 class RecordingTestController extends Controller
 {
-    public function store(RecordingData $data): JsonResponse
+    public function store(RecordingData $data): GeneratedTestsResource
     {
-        return response()->json(GenerateTestsFromRecording::run($data));
+        return GeneratedTestsResource::make(GenerateTestsFromRecording::run($data));
     }
 }

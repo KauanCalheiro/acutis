@@ -10,6 +10,7 @@ use App\Data\V1\Auth\CreateAuthProjectData;
 use App\Data\V1\Project\CloneProjectData;
 use App\Data\V1\Project\CreateProjectData;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\V1\CreatedAuthProjectResource;
 use App\Http\Resources\V1\ProjectResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -61,9 +62,8 @@ class ProjectController extends Controller
 
     public function auth(CreateAuthProjectData $data): JsonResponse
     {
-        return response()->json(
-            CreateAuthenticatedProject::run($data),
-            Response::HTTP_CREATED,
-        );
+        return CreatedAuthProjectResource::make(CreateAuthenticatedProject::run($data))
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
     }
 }
