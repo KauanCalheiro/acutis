@@ -5,15 +5,18 @@ namespace App\Http\Controllers\V1;
 use App\Action\CloneProjectFromGit;
 use App\Action\CreateProjectFromTemplate;
 use App\Action\ListProjects;
+use App\Action\RunProject;
 use App\Action\WriteAuthSetupToProject;
 use App\Action\WriteTestToProject;
 use App\Data\V1\Auth\AuthSetupData;
 use App\Data\V1\Project\CloneProjectData;
 use App\Data\V1\Project\CreateProjectData;
+use App\Data\V1\Project\RunProjectData;
 use App\Data\V1\Recording\RecordingData;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\GeneratedAuthSetupResource;
 use App\Http\Resources\V1\ProjectResource;
+use App\Http\Resources\V1\ProjectRunResource;
 use App\Http\Resources\V1\ProjectTestResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -71,5 +74,10 @@ class ProjectController extends Controller
     public function tests(string $project, RecordingData $data): ProjectTestResource
     {
         return ProjectTestResource::make(WriteTestToProject::run($project, $data));
+    }
+
+    public function run(string $project, RunProjectData $data): ProjectRunResource
+    {
+        return ProjectRunResource::make(RunProject::run($project, $data->spec, $data->grep));
     }
 }

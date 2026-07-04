@@ -1,3 +1,5 @@
 
 .playwright-mcp/
 .env
+/.acutis/*
+!/.acutis/.gitkeep
