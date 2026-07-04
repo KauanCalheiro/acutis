@@ -2,11 +2,11 @@
 @import "@nuxt/ui";
 
 @theme static {
-  --font-sans: "Public Sans", sans-serif;
+  --font-sans: 'Poppins', sans-serif;
 }
 
 :root {
-  --ui-radius: 0.25rem;
+  --ui-radius: 0.5rem;
 }
 
 @layer base {
