@@ -19,9 +19,13 @@
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.16.0",
+    "@nuxt/test-utils": "^4.0.3",
     "@types/node": "^26.1.0",
+    "@vue/test-utils": "^2.4.11",
     "eslint": "^10.6.0",
+    "happy-dom": "^20.10.6",
     "typescript": "^6.0.3",
+    "vitest": "^4.1.9",
     "vue-tsc": "^3.3.5"
   },
   "packageManager": "pnpm@11.9.0"
