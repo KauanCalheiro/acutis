@@ -1,4 +1,5 @@
-import { Body, Controller, ForbiddenException, Post } from '@nestjs/common'
+import { Body, Controller, ForbiddenException, Post, Res } from '@nestjs/common'
+import type { ServerResponse } from 'node:http'
 import { RunnerService, type RunResult } from './runner.service.js'
 import { SnapshotService, type Snapshot } from './snapshot.service.js'
 
@@ -42,5 +43,30 @@ export class RunnerController {
         this.ensureTestMode()
 
         return this.runnerService.runProject(path, { spec, grep })
+    }
+
+    @Post('project/stream')
+    async projectStream(
+        @Res() res: ServerResponse,
+        @Body('path') path?: string,
+        @Body('spec') spec?: string,
+        @Body('grep') grep?: string,
+    ): Promise<void> {
+        if (process.env.WEBDRIVER_TEST_MODE !== '1') {
+            res.statusCode = 403
+            res.end(JSON.stringify({ message: 'runner endpoints only available with WEBDRIVER_TEST_MODE=1' }))
+
+            return
+        }
+
+        res.setHeader('Content-Type', 'application/x-ndjson')
+
+        await this.runnerService.streamProject(
+            path ?? '',
+            { spec, grep },
+            (event) => res.write(`${JSON.stringify(event)}\n`),
+        )
+
+        res.end()
     }
 }

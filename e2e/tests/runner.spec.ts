@@ -234,7 +234,7 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         expect(withEnv.passed).toBe(true)
     })
 
-    test('streams run progress over a websocket', async () => {
+    test('streams run progress as ndjson over http', async ({ request }) => {
         test.setTimeout(120_000)
 
         const { mkdtemp, mkdir, writeFile } = await import('node:fs/promises')
@@ -250,24 +250,10 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         await writeFile(join(dir, 'tests', 'nok.spec.ts'),
             "import { test, expect } from '@playwright/test'\ntest('falha', () => { expect(1).toBe(2) })\n")
 
-        const events: Array<Record<string, unknown>> = []
-        const ws = new WebSocket(`${RUNNER_URL.replace('http', 'ws')}/runs`)
-        ws.addEventListener('message', (e) => events.push(JSON.parse(String(e.data))))
-        await new Promise<void>((r) => ws.addEventListener('open', () => r()))
+        const res = await request.post(`${RUNNER_URL}/runner/project/stream`, { data: { path: dir }, timeout: 90_000 })
+        expect(res.ok()).toBe(true)
 
-        ws.send(JSON.stringify({ type: 'START_RUN', path: dir }))
-
-        await new Promise<void>((resolve, reject) => {
-            const timer = setTimeout(() => reject(new Error('run did not finish in time')), 90_000)
-            ws.addEventListener('message', () => {
-                if (events.some((e) => e.event === 'run:finished')) {
-                    clearTimeout(timer)
-                    resolve()
-                }
-            })
-        })
-        ws.close()
-
+        const events = (await res.text()).split('\n').filter(Boolean).map((line) => JSON.parse(line))
         const kinds = events.map((e) => e.event)
         expect(kinds).toContain('run:started')
         expect(kinds).toContain('test:started')
