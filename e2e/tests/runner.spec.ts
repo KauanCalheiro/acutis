@@ -190,6 +190,9 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
             const testIds = body.elements.map((e: { testId: string | null }) => e.testId)
             expect(testIds).toContain('login-user')
             expect(testIds).toContain('login-submit')
+
+            const userField = body.elements.find((e: { testId: string | null }) => e.testId === 'login-user')
+            expect(userField.selector).toBe('[data-testid="login-user"]')
         } finally {
             await new Promise<void>((r) => server.close(() => r()))
         }

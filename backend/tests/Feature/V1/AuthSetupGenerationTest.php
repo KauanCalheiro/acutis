@@ -79,6 +79,55 @@ it('injects the credentials as env into the runner without leaking them in the s
     });
 });
 
+it('treats a passing run with empty session state as not authenticated and retries', function () {
+    fakeSnapshot();
+    AuthSetupWriter::fake([
+        ['authSetup' => 'atalho que não loga'],
+        ['authSetup' => 'login de verdade'],
+    ]);
+    Http::fake([
+        '*/runner/spec' => Http::sequence()
+            ->push(['passed' => true, 'output' => 'ok', 'storageState' => ['cookies' => [], 'origins' => []]])
+            ->push(['passed' => true, 'output' => 'ok', 'storageState' => ['cookies' => [['name' => 'session']], 'origins' => []]]),
+    ]);
+
+    postJson('/api/v1/auth-setups', authPayload())
+        ->assertOk()
+        ->assertJson([
+            'authSetup' => 'login de verdade',
+            'testRun' => ['executed' => true, 'passed' => true, 'attempts' => 2],
+            'storageCaptured' => true,
+        ]);
+
+    AuthSetupWriter::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, 'sessão'));
+});
+
+it('counts localStorage-only session state as captured', function () {
+    fakeSnapshot();
+    AuthSetupWriter::fake([['authSetup' => 'login via token']]);
+    Http::fake(['*/runner/spec' => Http::response([
+        'passed' => true, 'output' => 'ok',
+        'storageState' => ['cookies' => [], 'origins' => [['origin' => 'https://x.test', 'localStorage' => [['name' => 'token', 'value' => 'abc']]]]],
+    ])]);
+
+    postJson('/api/v1/auth-setups', authPayload())
+        ->assertOk()
+        ->assertJson(['storageCaptured' => true, 'testRun' => ['passed' => true]]);
+});
+
+it('reports empty session after all attempts as not captured and not passed', function () {
+    fakeSnapshot();
+    AuthSetupWriter::fake([['authSetup' => 'a'], ['authSetup' => 'b'], ['authSetup' => 'c']]);
+    Http::fake(['*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok', 'storageState' => ['cookies' => [], 'origins' => []]])]);
+
+    postJson('/api/v1/auth-setups', authPayload())
+        ->assertOk()
+        ->assertJson([
+            'testRun' => ['executed' => true, 'passed' => false, 'attempts' => 3],
+            'storageCaptured' => false,
+        ]);
+});
+
 it('feeds the runner failure back to the auth writer and retries', function () {
     fakeSnapshot();
     AuthSetupWriter::fake([
@@ -88,7 +137,7 @@ it('feeds the runner failure back to the auth writer and retries', function () {
     Http::fake([
         '*/runner/spec' => Http::sequence()
             ->push(['passed' => false, 'output' => 'Error: timeout no seletor #login'])
-            ->push(['passed' => true, 'output' => 'ok', 'storageState' => ['cookies' => []]]),
+            ->push(['passed' => true, 'output' => 'ok', 'storageState' => ['cookies' => [['name' => 'session']]]]),
     ]);
 
     postJson('/api/v1/auth-setups', authPayload())
