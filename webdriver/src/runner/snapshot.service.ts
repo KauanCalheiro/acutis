@@ -7,6 +7,7 @@ export interface SnapshotElement {
     id: string | null
     name: string | null
     testId: string | null
+    selector: string
     placeholder: string | null
     ariaLabel: string | null
     text: string | null
@@ -36,13 +37,26 @@ export class SnapshotService {
                     const attr = (name: string) => el.getAttribute(name)
 
                     const rect = el.getBoundingClientRect()
+                    const dataTestId = attr('data-testid')
+                    const dataTest = attr('data-test')
+                    const dataCy = attr('data-cy')
+                    const name = attr('name')
+
+                    let selector: string
+                    if (dataTestId) selector = `[data-testid="${dataTestId}"]`
+                    else if (dataTest) selector = `[data-test="${dataTest}"]`
+                    else if (dataCy) selector = `[data-cy="${dataCy}"]`
+                    else if (el.id) selector = `#${el.id}`
+                    else if (name) selector = `${el.tagName.toLowerCase()}[name="${name}"]`
+                    else selector = el.tagName.toLowerCase()
 
                     return {
                         tag: el.tagName.toLowerCase(),
                         type: attr('type'),
                         id: el.id || null,
-                        name: attr('name'),
-                        testId: attr('data-testid') ?? attr('data-test') ?? attr('data-cy'),
+                        name,
+                        testId: dataTestId ?? dataTest ?? dataCy,
+                        selector,
                         placeholder: attr('placeholder'),
                         ariaLabel: attr('aria-label'),
                         text: (el.textContent ?? '').trim().slice(0, 80) || null,

@@ -32,11 +32,12 @@ class GenerateAuthSetup
             $attempts++;
 
             $result = app(RunPlaywrightTest::class)->run($authSetup, $input->executionUrl, $env);
+            $captured = $this->hasSession($result->storageState);
 
-            if ($result->passed) {
+            if ($result->passed && $captured) {
                 return new GeneratedAuthSetupData(
                     authSetup: $authSetup,
-                    storageCaptured: $result->storageState !== null,
+                    storageCaptured: true,
                     testRun: new TestRunData(executed: true, passed: true, attempts: $attempts),
                 );
             }
@@ -49,18 +50,45 @@ class GenerateAuthSetup
                         executed: true,
                         passed: false,
                         attempts: $attempts,
-                        error: $result->output,
+                        error: $result->passed
+                            ? 'O login executou sem erro mas nenhum estado de sessão (cookie ou localStorage) foi capturado.'
+                            : $result->output,
                     ),
                 );
             }
 
+            $feedback = $result->passed
+                ? 'O teste passou mas nenhum cookie ou localStorage de sessão foi salvo — o login provavelmente não ocorreu. '
+                    .'Não use page.context().storageState como checagem de existência nem retorne cedo: esse método sempre grava, mesmo sem login. '
+                    .'Execute o login completo e só então salve o estado.'
+                : "Erro da execução:\n{$result->output}";
+
             $authSetup = StructuredOutput::field(app(AuthSetupWriter::class)->prompt(
-                "O setup de autenticação abaixo falhou ao executar. Corrija-o."
+                "O setup de autenticação abaixo não autenticou. Corrija-o."
                     ."\n\nURL de login: {$input->loginUrl}"
-                    ."\n\nErro da execução:\n{$result->output}"
+                    ."\n\n{$feedback}"
                     ."\n\nSetup com falha:\n{$authSetup}"
                     ."\n\nSnapshot da página de login:\n{$snapshot}",
             ), 'authSetup');
         }
+    }
+
+    private function hasSession(mixed $state): bool
+    {
+        if (! is_array($state)) {
+            return false;
+        }
+
+        if (! empty($state['cookies'])) {
+            return true;
+        }
+
+        foreach ($state['origins'] ?? [] as $origin) {
+            if (! empty($origin['localStorage'])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
