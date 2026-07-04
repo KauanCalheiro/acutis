@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\V1;
 
 use App\Action\CloneProjectFromGit;
+use App\Action\CreateAuthenticatedProject;
 use App\Action\CreateProjectFromTemplate;
 use App\Action\ListProjects;
+use App\Data\V1\Auth\CreateAuthProjectData;
 use App\Data\V1\Project\CloneProjectData;
 use App\Data\V1\Project\CreateProjectData;
 use App\Http\Controllers\Controller;
@@ -55,5 +57,13 @@ class ProjectController extends Controller
         return ProjectResource::make($project)
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
+    }
+
+    public function auth(CreateAuthProjectData $data): JsonResponse
+    {
+        return response()->json(
+            CreateAuthenticatedProject::run($data),
+            Response::HTTP_CREATED,
+        );
     }
 }

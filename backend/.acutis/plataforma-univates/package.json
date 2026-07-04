@@ -1,0 +1,9 @@
+{
+  "name": "plataforma-univates",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "latest"
+  }
+}
