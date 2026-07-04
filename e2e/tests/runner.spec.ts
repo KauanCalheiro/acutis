@@ -108,4 +108,90 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
             await new Promise<void>((r) => server.close(() => r()))
         }
     })
+
+    test('injects env variables into the spec process', async ({ request }) => {
+        test.setTimeout(120_000)
+
+        const envSpec = `
+            import { test, expect } from '@playwright/test'
+            test('reads an injected env var', () => {
+                expect(process.env.AUTH_USER).toBe('733787')
+            })
+        `
+
+        const res = await request.post(`${RUNNER_URL}/runner/spec`, {
+            data: { spec: envSpec, env: { AUTH_USER: '733787' } },
+            timeout: 90_000,
+        })
+
+        expect(res.ok()).toBe(true)
+        expect((await res.json()).passed).toBe(true)
+    })
+
+    test('returns the storage state a spec produces', async ({ request }) => {
+        test.setTimeout(120_000)
+
+        const { createServer } = await import('node:http')
+        const server = createServer((_req, res) => {
+            res.writeHead(200, { 'Content-Type': 'text/html' })
+            res.end('<!doctype html><html><body>ok</body></html>')
+        })
+        await new Promise<void>((r) => server.listen(0, r))
+        const { port } = server.address() as { port: number }
+
+        const stateSpec = `
+            import { test } from '@playwright/test'
+            test('logs in and saves storage state', async ({ page, context }) => {
+                await page.goto('/')
+                await context.addCookies([{ name: 'acutis_session', value: 'tok-abc', url: 'http://127.0.0.1:${port}' }])
+                await context.storageState({ path: 'storage-state.json' })
+            })
+        `
+
+        try {
+            const res = await request.post(`${RUNNER_URL}/runner/spec`, {
+                data: { spec: stateSpec, baseUrl: `http://127.0.0.1:${port}` },
+                timeout: 90_000,
+            })
+
+            expect(res.ok()).toBe(true)
+            const body = await res.json()
+            expect(body.passed).toBe(true)
+            expect(body.storageState).toBeTruthy()
+            expect(JSON.stringify(body.storageState)).toContain('acutis_session')
+        } finally {
+            await new Promise<void>((r) => server.close(() => r()))
+        }
+    })
+
+    test('captures interactive elements from a page snapshot', async ({ request }) => {
+        test.setTimeout(120_000)
+
+        const { createServer } = await import('node:http')
+        const server = createServer((_req, res) => {
+            res.writeHead(200, { 'Content-Type': 'text/html' })
+            res.end('<!doctype html><html><head><title>Login</title></head><body>'
+                + '<input id="user" name="user" data-testid="login-user" placeholder="usuário" />'
+                + '<button data-testid="login-submit">Entrar</button>'
+                + '</body></html>')
+        })
+        await new Promise<void>((r) => server.listen(0, r))
+        const { port } = server.address() as { port: number }
+
+        try {
+            const res = await request.post(`${RUNNER_URL}/runner/snapshot`, {
+                data: { url: `http://127.0.0.1:${port}/` },
+                timeout: 90_000,
+            })
+
+            expect(res.ok()).toBe(true)
+            const body = await res.json()
+            expect(body.title).toBe('Login')
+            const testIds = body.elements.map((e: { testId: string | null }) => e.testId)
+            expect(testIds).toContain('login-user')
+            expect(testIds).toContain('login-submit')
+        } finally {
+            await new Promise<void>((r) => server.close(() => r()))
+        }
+    })
 })
