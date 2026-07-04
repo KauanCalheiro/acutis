@@ -3,15 +3,18 @@
 namespace App\Http\Controllers\V1;
 
 use App\Action\CloneProjectFromGit;
-use App\Action\CreateAuthenticatedProject;
 use App\Action\CreateProjectFromTemplate;
 use App\Action\ListProjects;
-use App\Data\V1\Auth\CreateAuthProjectData;
+use App\Action\WriteAuthSetupToProject;
+use App\Action\WriteTestToProject;
+use App\Data\V1\Auth\AuthSetupData;
 use App\Data\V1\Project\CloneProjectData;
 use App\Data\V1\Project\CreateProjectData;
+use App\Data\V1\Recording\RecordingData;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\V1\CreatedAuthProjectResource;
+use App\Http\Resources\V1\GeneratedAuthSetupResource;
 use App\Http\Resources\V1\ProjectResource;
+use App\Http\Resources\V1\ProjectTestResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -60,10 +63,13 @@ class ProjectController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function auth(CreateAuthProjectData $data): JsonResponse
+    public function auth(string $project, AuthSetupData $data): GeneratedAuthSetupResource
     {
-        return CreatedAuthProjectResource::make(CreateAuthenticatedProject::run($data))
-            ->response()
-            ->setStatusCode(Response::HTTP_CREATED);
+        return GeneratedAuthSetupResource::make(WriteAuthSetupToProject::run($project, $data));
+    }
+
+    public function tests(string $project, RecordingData $data): ProjectTestResource
+    {
+        return ProjectTestResource::make(WriteTestToProject::run($project, $data));
     }
 }
