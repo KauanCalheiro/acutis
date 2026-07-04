@@ -4,6 +4,7 @@ namespace App\Action;
 
 use App\Ai\Agents\GherkinWriter;
 use App\Ai\Agents\PlaywrightWriter;
+use App\Ai\StructuredOutput;
 use App\Ai\Tools\RunPlaywrightTest;
 use App\Data\V1\Recording\GeneratedTestsData;
 use App\Data\V1\Recording\RecordingData;
@@ -25,14 +26,14 @@ class GenerateTestsFromRecording
             JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
         );
 
-        $gherkin = app(GherkinWriter::class)->prompt(
+        $gherkin = StructuredOutput::field(app(GherkinWriter::class)->prompt(
             "URL base: {$recording->baseUrl}\n\nEventos gravados:\n{$events}",
-        )['gherkin'];
+        ), 'gherkin');
 
-        $playwright = app(PlaywrightWriter::class)->prompt(
+        $playwright = StructuredOutput::field(app(PlaywrightWriter::class)->prompt(
             "URL base: {$recording->baseUrl}\n\nCenário Gherkin:\n{$gherkin}\n\nEventos gravados:\n{$events}"
                 .$this->noticeablePauses($recording->events),
-        )['playwright'];
+        ), 'playwright');
 
         $testRun = null;
 
@@ -75,13 +76,13 @@ class GenerateTestsFromRecording
                 )];
             }
 
-            $playwright = app(PlaywrightWriter::class)->prompt(
+            $playwright = StructuredOutput::field(app(PlaywrightWriter::class)->prompt(
                 "O teste Playwright abaixo falhou ao executar. Corrija o spec mantendo a URL base {$recording->baseUrl}."
                     ."\n\nErro da execução:\n{$result->output}"
                     ."\n\nSpec com falha:\n{$playwright}"
                     ."\n\nCenário Gherkin:\n{$gherkin}"
                     ."\n\nEventos gravados:\n{$events}",
-            )['playwright'];
+            ), 'playwright');
         }
     }
 

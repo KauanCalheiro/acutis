@@ -3,8 +3,16 @@
 use App\Ai\Agents\GherkinWriter;
 use App\Ai\Agents\PlaywrightWriter;
 use Illuminate\Support\Facades\Http;
+use Laravel\Ai\Responses\Data\Meta;
+use Laravel\Ai\Responses\Data\Usage;
+use Laravel\Ai\Responses\StructuredTextResponse;
 
 use function Pest\Laravel\postJson;
+
+function fencedStructuredResponse(string $fencedText): StructuredTextResponse
+{
+    return new StructuredTextResponse([], $fencedText, new Usage, new Meta('gemini', 'gemma-4-31b-it'));
+}
 
 function recordingPayload(array $overrides = []): array
 {
@@ -124,6 +132,18 @@ it('omits the pause section when events flow without noticeable gaps', function 
     PlaywrightWriter::assertPrompted(
         fn ($prompt) => ! str_contains($prompt->prompt, 'Pausas notáveis')
     );
+});
+
+it('parses the structured output even when the model wraps it in code fences', function () {
+    GherkinWriter::fake([fencedStructuredResponse("```json\n{\"gherkin\": \"Funcionalidade: Login\"}\n```")]);
+    PlaywrightWriter::fake([fencedStructuredResponse("{\"playwright\": \"spec limpo\"}\n```")]);
+
+    postJson('/api/v1/recordings/tests', recordingPayload())
+        ->assertOk()
+        ->assertJson([
+            'gherkin' => 'Funcionalidade: Login',
+            'playwright' => 'spec limpo',
+        ]);
 });
 
 it('does not call the runner when no execution url is given', function () {
