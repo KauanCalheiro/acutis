@@ -21,6 +21,15 @@ test('generated spec that fails on purpose', () => {
 })
 `
 
+const RELATIVE_URL_SPEC = `
+import { test, expect } from '@playwright/test'
+
+test('generated spec navigating with a relative url', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('#btn')).toBeVisible()
+})
+`
+
 async function waitForWebdriver(): Promise<void> {
     for (let i = 0; i < 50; i++) {
         try {
@@ -73,5 +82,30 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         const body = await res.json()
         expect(body.passed).toBe(false)
         expect(body.output).toContain('generated spec that fails on purpose')
+    })
+
+    test('resolves relative navigation against the provided base url', async ({ request }) => {
+        test.setTimeout(120_000)
+
+        const { createServer } = await import('node:http')
+        const server = createServer((_req, res) => {
+            res.writeHead(200, { 'Content-Type': 'text/html' })
+            res.end('<!doctype html><html><body><button id="btn">Click me</button></body></html>')
+        })
+        await new Promise<void>((r) => server.listen(0, r))
+        const { port } = server.address() as { port: number }
+
+        try {
+            const res = await request.post(`${RUNNER_URL}/runner/spec`, {
+                data: { spec: RELATIVE_URL_SPEC, baseUrl: `http://127.0.0.1:${port}` },
+                timeout: 90_000,
+            })
+
+            expect(res.ok()).toBe(true)
+            const body = await res.json()
+            expect(body.passed).toBe(true)
+        } finally {
+            await new Promise<void>((r) => server.close(() => r()))
+        }
     })
 })

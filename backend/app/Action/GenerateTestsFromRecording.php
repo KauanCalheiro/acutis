@@ -61,6 +61,7 @@ class GenerateTestsFromRecording
 
             $result = app(RunPlaywrightTest::class)->run(
                 str_replace($recording->baseUrl, $recording->executionUrl, $playwright),
+                $recording->executionUrl,
             );
 
             if ($result->passed) {

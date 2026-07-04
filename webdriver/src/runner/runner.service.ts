@@ -15,10 +15,19 @@ const WEBDRIVER_ROOT = resolve(import.meta.dirname, '../..')
 
 @Injectable()
 export class RunnerService {
-    async run(spec: string): Promise<RunResult> {
+    async run(spec: string, baseUrl?: string): Promise<RunResult> {
         const dir = join(RUNNER_DIR, randomUUID())
         await mkdir(dir, { recursive: true })
         await writeFile(join(dir, 'generated.spec.ts'), spec)
+
+        if (baseUrl) {
+            await writeFile(join(dir, 'playwright.config.ts'), [
+                "import { defineConfig } from '@playwright/test'",
+                '',
+                `export default defineConfig({ use: { baseURL: ${JSON.stringify(baseUrl)} } })`,
+                '',
+            ].join('\n'))
+        }
 
         try {
             return await this.execPlaywright(dir)

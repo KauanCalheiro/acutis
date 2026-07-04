@@ -14,9 +14,9 @@ export class RunnerController {
     }
 
     @Post('spec')
-    async spec(@Body('spec') spec: string): Promise<RunResult> {
+    async spec(@Body('spec') spec: string, @Body('baseUrl') baseUrl?: string): Promise<RunResult> {
         this.ensureTestMode()
 
-        return this.runnerService.run(spec)
+        return this.runnerService.run(spec, baseUrl)
     }
 }
