@@ -16,6 +16,7 @@ vendor/bin/pint --dirty --format agent
 
 ## Responses
 
+- **Toda resposta de controller retorna um Resource** (`app/Http/Resources/V1/{X}Resource`) — nunca `response()->json($data)` cru, nem devolver um objeto Spatie Data direto. Vale também pros endpoints de IA (geração de teste, auth setup): o retorno da Action é embrulhado num Resource. Resources aninham (`ProjectResource::make(...)` dentro de outro) e reusam parciais (`TestRunResource`). Campo opcional: `$this->x ? XResource::make($this->x) : null`.
 - `JsonResource::withoutWrapping()` ativo globalmente — respostas sem `data` wrapper, exceto paginação (que usa `data` + `links` + `meta`)
 - `store` retorna status 201; `destroy` retorna 204 (`response()->noContent()`)
 
