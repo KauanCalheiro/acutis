@@ -66,7 +66,7 @@ it('returns 404 for a project that does not exist', function () {
 it('proxies the run stream as server-sent events', function () {
     Http::fake([
         '*/runner/project/stream' => Http::response(
-            "{\"event\":\"run:started\",\"total\":1}\n{\"event\":\"test:passed\",\"title\":\"ok\"}\n{\"event\":\"run:finished\",\"passed\":true}\n"
+            "{\"event\":\"run:started\",\"total\":1}\n{\"event\":\"test\",\"id\":\"a1\",\"title\":\"Acessando a página inicial\",\"status\":\"pending\"}\n{\"event\":\"test\",\"id\":\"a1\",\"title\":\"Acessando a página inicial\",\"status\":\"success\",\"durationMs\":120}\n{\"event\":\"run:finished\",\"passed\":true}\n"
         ),
     ]);
     $slug = bareProject();
@@ -77,6 +77,8 @@ it('proxies the run stream as server-sent events', function () {
 
     $content = $response->streamedContent();
     expect($content)->toContain('data: {"event":"run:started","total":1}')
+        ->toContain('"status":"pending"')
+        ->toContain('"status":"success"')
         ->toContain('data: {"event":"run:finished","passed":true}');
 
     Http::assertSent(fn ($request) => str_contains($request->url(), '/runner/project/stream')

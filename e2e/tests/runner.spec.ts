@@ -254,15 +254,18 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         expect(res.ok()).toBe(true)
 
         const events = (await res.text()).split('\n').filter(Boolean).map((line) => JSON.parse(line))
-        const kinds = events.map((e) => e.event)
-        expect(kinds).toContain('run:started')
-        expect(kinds).toContain('test:started')
-        expect(kinds).toContain('test:passed')
-        expect(kinds).toContain('test:failed')
+        expect(events.map((e) => e.event)).toContain('run:started')
 
-        const failure = events.find((e) => e.event === 'test:failed')
+        const tests = events.filter((e) => e.event === 'test')
+        expect(tests.some((e) => e.status === 'pending')).toBe(true)
+        expect(tests.some((e) => e.status === 'success')).toBe(true)
+
+        const failure = tests.find((e) => e.status === 'failed')
         expect(failure?.title).toBe('falha')
         expect(String(failure?.error)).toContain('expect')
+
+        const pending = tests.find((e) => e.status === 'pending' && e.title === 'falha')
+        expect(pending?.id).toBe(failure?.id)
 
         const finished = events.find((e) => e.event === 'run:finished')
         expect(finished?.passed).toBe(false)
