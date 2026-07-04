@@ -6,6 +6,7 @@ final class AcutisConfig
 {
     public function __construct(
         public readonly string $projectsPath,
+        public readonly string $webdriverUrl,
     ) {}
 
     /** Constrói a partir da config atual (lê a cada chamada — respeita overrides em runtime/testes). */
@@ -13,6 +14,7 @@ final class AcutisConfig
     {
         return new self(
             projectsPath: (string) config('acutis.projects.path'),
+            webdriverUrl: (string) config('acutis.webdriver.url'),
         );
     }
 }

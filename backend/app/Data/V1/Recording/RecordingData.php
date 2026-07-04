@@ -12,6 +12,7 @@ class RecordingData extends Data
         public ?string $sessionId = null,
         public ?string $recordedAt = null,
         public ?string $video = null,
+        public ?string $executionUrl = null,
     ) {}
 
     public static function rules(): array
@@ -21,6 +22,7 @@ class RecordingData extends Data
             'events' => ['required', 'array', 'min:1'],
             'events.*.type' => ['required', 'string'],
             'events.*.url' => ['required', 'string'],
+            'executionUrl' => ['nullable', 'string', 'url'],
         ];
     }
 
@@ -33,6 +35,7 @@ class RecordingData extends Data
             'events.min' => 'A gravação precisa conter ao menos um evento.',
             'events.*.type.required' => 'Todo evento precisa de um tipo.',
             'events.*.url.required' => 'Todo evento precisa da URL em que ocorreu.',
+            'executionUrl.url' => 'A URL de execução deve ser uma URL válida.',
         ];
     }
 }
