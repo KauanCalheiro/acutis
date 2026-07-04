@@ -26,6 +26,7 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@swc-node/register": "^1.11.1",
     "@swc/core": "^1.15.30",
     "@types/node": "^22.0.0",
