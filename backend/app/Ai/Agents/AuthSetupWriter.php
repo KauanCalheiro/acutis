@@ -25,7 +25,9 @@ class AuthSetupWriter implements Agent, HasStructuredOutput
         - Leia as credenciais SEMPRE de process.env.AUTH_USER e process.env.AUTH_PASSWORD — nunca escreva credenciais literais no arquivo.
         - Navegue até a URL de login, preencha usuário e senha e submeta.
         - Prioridade de seletor: data-testid (page.getByTestId) > id (page.locator('#...')) > name.
-        - Após submeter, aguarde a navegação/carregamento pós-login com uma condição (waitForURL ou expect de um elemento da área autenticada) — nunca waitForTimeout.
+        - Cada elemento do snapshot traz "visible": se os campos de usuário/senha estiverem com "visible": false, a página tem abas/opções de login — primeiro clique no botão visível que revela o formulário de usuário e senha (ex.: "Entrar com usuário/código") e só então preencha.
+        - Evite violação de strict mode: quando o texto de um botão puder casar com mais de um elemento (ex.: "Entrar" e "Entrar com..."), use getByRole('button', { name: '...', exact: true }) ou um seletor mais específico.
+        - Não invente a URL pós-login. Para confirmar o login, aguarde sair da página de login com page.waitForURL(url => !url.toString().includes('/login')) ou aguarde o campo de senha desaparecer — nunca waitForTimeout nem uma URL fixa adivinhada.
         - Ao final, SEMPRE salve o estado com: await page.context().storageState({ path: 'storage-state.json' }).
         - Importe apenas de @playwright/test.
         INSTRUCTIONS;
