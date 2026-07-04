@@ -2,8 +2,17 @@
 
 use App\Ai\Agents\GherkinWriter;
 use App\Ai\Agents\PlaywrightWriter;
+use Illuminate\Support\Facades\Http;
+use Laravel\Ai\Responses\Data\Meta;
+use Laravel\Ai\Responses\Data\Usage;
+use Laravel\Ai\Responses\StructuredTextResponse;
 
 use function Pest\Laravel\postJson;
+
+function fencedStructuredResponse(string $fencedText): StructuredTextResponse
+{
+    return new StructuredTextResponse([], $fencedText, new Usage, new Meta('gemini', 'gemma-4-31b-it'));
+}
 
 function recordingPayload(array $overrides = []): array
 {
@@ -123,6 +132,97 @@ it('omits the pause section when events flow without noticeable gaps', function 
     PlaywrightWriter::assertPrompted(
         fn ($prompt) => ! str_contains($prompt->prompt, 'Pausas notáveis')
     );
+});
+
+it('parses the structured output even when the model wraps it in code fences', function () {
+    GherkinWriter::fake([fencedStructuredResponse("```json\n{\"gherkin\": \"Funcionalidade: Login\"}\n```")]);
+    PlaywrightWriter::fake([fencedStructuredResponse("{\"playwright\": \"spec limpo\"}\n```")]);
+
+    postJson('/api/v1/recordings/tests', recordingPayload())
+        ->assertOk()
+        ->assertJson([
+            'gherkin' => 'Funcionalidade: Login',
+            'playwright' => 'spec limpo',
+        ]);
+});
+
+it('does not call the runner when no execution url is given', function () {
+    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login']]);
+    PlaywrightWriter::fake([['playwright' => 'spec']]);
+    Http::fake();
+
+    postJson('/api/v1/recordings/tests', recordingPayload())
+        ->assertOk()
+        ->assertJson(['testRun' => null]);
+
+    Http::assertNothingSent();
+});
+
+it('runs the generated spec against the execution url and reports the passing run', function () {
+    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login']]);
+    PlaywrightWriter::fake([['playwright' => "await page.goto('http://127.0.0.1:52346/')"]]);
+    Http::fake(['*/runner/spec' => Http::response(['passed' => true, 'output' => '1 passed'])]);
+
+    postJson('/api/v1/recordings/tests', recordingPayload(['executionUrl' => 'http://host.docker.internal:52346']))
+        ->assertOk()
+        ->assertJson([
+            'playwright' => "await page.goto('http://127.0.0.1:52346/')",
+            'testRun' => ['executed' => true, 'passed' => true, 'attempts' => 1, 'error' => null],
+        ]);
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/runner/spec')
+        && str_contains($request['spec'], "page.goto('http://host.docker.internal:52346/')"));
+});
+
+it('feeds the runner error back to the playwright writer and retries until it passes', function () {
+    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login']]);
+    PlaywrightWriter::fake([
+        ['playwright' => 'broken spec'],
+        ['playwright' => 'fixed spec'],
+    ]);
+    Http::fake([
+        '*/runner/spec' => Http::sequence()
+            ->push(['passed' => false, 'output' => 'Error: locator not found #missing'])
+            ->push(['passed' => true, 'output' => '1 passed']),
+    ]);
+
+    postJson('/api/v1/recordings/tests', recordingPayload(['executionUrl' => 'http://host.docker.internal:52346']))
+        ->assertOk()
+        ->assertJson([
+            'playwright' => 'fixed spec',
+            'testRun' => ['executed' => true, 'passed' => true, 'attempts' => 2, 'error' => null],
+        ]);
+
+    PlaywrightWriter::assertPrompted(
+        fn ($prompt) => str_contains($prompt->prompt, 'Error: locator not found #missing')
+            && str_contains($prompt->prompt, 'broken spec')
+    );
+});
+
+it('gives up after three failing attempts and reports the last error', function () {
+    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login']]);
+    PlaywrightWriter::fake([
+        ['playwright' => 'attempt one'],
+        ['playwright' => 'attempt two'],
+        ['playwright' => 'attempt three'],
+    ]);
+    Http::fake(['*/runner/spec' => Http::response(['passed' => false, 'output' => 'Error: still broken'])]);
+
+    postJson('/api/v1/recordings/tests', recordingPayload(['executionUrl' => 'http://host.docker.internal:52346']))
+        ->assertOk()
+        ->assertJson([
+            'playwright' => 'attempt three',
+            'testRun' => ['executed' => true, 'passed' => false, 'attempts' => 3, 'error' => 'Error: still broken'],
+        ]);
+});
+
+it('rejects an invalid execution url', function () {
+    GherkinWriter::fake();
+    PlaywrightWriter::fake();
+
+    postJson('/api/v1/recordings/tests', recordingPayload(['executionUrl' => 'not-a-url']))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['executionUrl']);
 });
 
 it('rejects a recording without events', function () {
