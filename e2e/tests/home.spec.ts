@@ -192,6 +192,7 @@ test.describe('project creation', { tag: ['@write', '@project'] }, () => {
         const clonedCard = page.getByTestId('projeto-card').filter({ hasText: 'clonado-do-git' })
         await expect(clonedCard).toHaveCount(1)
         await expect(clonedCard.getByTestId('projeto-origem')).toHaveText('Git')
+        await expect(clonedCard).toContainText(`${tmpProjects}/clonado-do-git`)
     })
 
     test('rejects an empty repository url client-side', async ({ page }) => {
