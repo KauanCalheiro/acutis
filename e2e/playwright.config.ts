@@ -5,7 +5,7 @@ export default defineConfig({
     timeout: 30_000,
     fullyParallel: false,
     retries: 0,
-    workers: 3,
+    workers: 1,
     reporter: [['list'], ['html', { open: 'never' }]],
     use: {
         baseURL: 'http://localhost:3000',

@@ -53,6 +53,12 @@ Quando o teste depende de dado do **backend Laravel/DB**, usar um banco dedicado
 
 Testes que só envolvem extensão + arquivo local (ex.: vídeo/eventos de gravação) não têm banco envolvido — não se aplica.
 
+## Backend por suíte — porta 4200 compartilhada
+
+Suítes que precisam de backend sobem o próprio `php artisan serve` **sempre na 4200** (o `NUXT_API_ACUTIS_URL` do webServer é fixo), via helper `e2e/support/backend.ts` (`startBackend(env)` → retorna `stop`). O helper espera a porta liberar antes de subir, e o `stop` espera o processo morrer + porta livre. Sem isso a suíte seguinte conversa com o backend anterior sem perceber — já aconteceu de testes `@write` renomearem/apagarem as **fixtures reais** por causa disso. Pelo mesmo motivo o config usa `workers: 1` (dois workers disputariam a porta); se o tempo da suíte doer, a saída é porta por arquivo de spec, não voltar a vários workers.
+
+Testes rodam **headless** (default do Playwright) — não passar `headless: false` sem necessidade real.
+
 ## Organização de arquivo
 
 Um arquivo de spec por domínio, mesmo que fique grande — não dividir os testes do mesmo domínio em vários arquivos só pra deixar menor. `test.describe` + tags já dão a organização interna necessária.
