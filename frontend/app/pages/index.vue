@@ -57,14 +57,12 @@ const createOpen = ref(false)
         data-testid="projeto-busca"
         icon="i-ic-round-search"
         placeholder="Buscar projeto..."
-        size="lg"
         class="flex-1 min-w-48"
       />
       <UButton
         data-testid="projeto-adicionar"
         label="Adicionar"
         trailing-icon="i-ic-round-add"
-        size="lg"
         @click="createOpen = true"
       />
     </div>
