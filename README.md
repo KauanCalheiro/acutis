@@ -13,5 +13,5 @@ Portas publicadas no host (altas de propósito, pra não colidir com nada — ex
 | Serviço | Host | Interna | Nota pro proxy |
 |---------|------|---------|----------------|
 | frontend (Nuxt) | `23000` | 3000 | app principal; WebSocket habilitado (HMR do Vite) |
-| webdriver (NestJS) | `24000` | 4000 | precisa de WebSocket upgrade em `/ws`; ao trocar o domínio, ajustar `NUXT_PUBLIC_WEBDRIVER_URL` (frontend) e `CORS_ORIGIN` (webdriver) no compose |
+| webdriver (NestJS) | `24000` | 4000 | precisa de WebSocket upgrade em `/ws`; ao trocar o domínio, ajustar `NUXT_PUBLIC_WEBDRIVER_ACUTIS_URL` (frontend) e `CORS_ORIGIN` (webdriver) no compose |
 | backend (Laravel) | `28000` | 8000 | API REST |

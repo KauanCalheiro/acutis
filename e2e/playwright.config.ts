@@ -19,7 +19,7 @@ export default defineConfig({
         timeout: 60_000,
         env: {
             ...process.env,
-            NUXT_API_URL: 'http://localhost:4200',
+            NUXT_API_ACUTIS_URL: 'http://localhost:4200',
         },
     },
 })

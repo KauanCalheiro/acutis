@@ -19,9 +19,9 @@ function createClient(baseURL: string) {
 }
 
 export function useClients(event: H3Event) {
-  const { apiUrl } = useRuntimeConfig(event)
+  const { api } = useRuntimeConfig(event)
 
   return {
-    acutis: createClient(apiUrl)
+    acutis: createClient(api.acutis.url)
   }
 }

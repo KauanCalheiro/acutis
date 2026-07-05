@@ -12,9 +12,17 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
-    apiUrl: 'http://localhost:8000',
+    api: {
+      acutis: {
+        url: 'http://localhost:8000'
+      }
+    },
     public: {
-      webdriverUrl: 'http://localhost:4000'
+      webdriver: {
+        acutis: {
+          url: 'http://localhost:4000'
+        }
+      }
     }
   },
 
