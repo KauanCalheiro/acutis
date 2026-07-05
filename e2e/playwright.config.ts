@@ -17,5 +17,9 @@ export default defineConfig({
         url: 'http://localhost:3000',
         reuseExistingServer: !process.env.CI,
         timeout: 60_000,
+        env: {
+            ...process.env,
+            NUXT_API_URL: 'http://localhost:4200',
+        },
     },
 })
