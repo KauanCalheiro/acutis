@@ -18,7 +18,19 @@ const providers = {
   }
 } as const
 
-const provider = computed(() => (project.provider ? providers[project.provider] : null))
+const origin = computed(() => {
+  if (project.provider) return providers[project.provider]
+  if (project.repository) {
+    return {
+      label: 'Git',
+      icon: 'i-simple-icons-git'
+    }
+  }
+  return {
+    label: 'Local',
+    icon: 'i-ic-round-computer'
+  }
+})
 </script>
 
 <template>
@@ -27,16 +39,17 @@ const provider = computed(() => (project.provider ? providers[project.provider] 
       <p class="font-semibold truncate">
         {{ project.name }}
       </p>
-      <p class="text-sm text-muted truncate">
-        {{ project.repository ?? project.path }}
+      <p
+        class="text-sm text-muted truncate"
+        :title="project.repository ?? undefined"
+      >
+        {{ project.path }}
       </p>
       <UBadge
-        v-if="provider"
-        color="neutral"
-        variant="outline"
-        :icon="provider.icon"
-        :label="provider.label"
+        :icon="origin.icon"
+        :label="origin.label"
         class="self-start"
+        data-testid="projeto-origem"
       />
     </div>
   </UCard>

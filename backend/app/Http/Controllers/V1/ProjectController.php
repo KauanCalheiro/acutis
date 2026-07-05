@@ -5,16 +5,19 @@ namespace App\Http\Controllers\V1;
 use App\Action\CloneProjectFromGit;
 use App\Action\CreateProjectFromTemplate;
 use App\Action\ListProjects;
+use App\Action\ProbeGitRepository;
 use App\Action\RunProject;
 use App\Action\WriteAuthSetupToProject;
 use App\Action\WriteTestToProject;
 use App\Data\V1\Auth\AuthSetupData;
 use App\Data\V1\Project\CloneProjectData;
 use App\Data\V1\Project\CreateProjectData;
+use App\Data\V1\Project\ProbeGitData;
 use App\Data\V1\Project\RunProjectData;
 use App\Data\V1\Recording\RecordingData;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\GeneratedAuthSetupResource;
+use App\Http\Resources\V1\GitProbeResource;
 use App\Http\Resources\V1\ProjectResource;
 use App\Http\Resources\V1\ProjectRunResource;
 use App\Http\Resources\V1\ProjectTestResource;
@@ -58,6 +61,11 @@ class ProjectController extends Controller
         return ProjectResource::make($project)
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
+    }
+
+    public function probe(ProbeGitData $data): GitProbeResource
+    {
+        return GitProbeResource::make(['public' => ProbeGitRepository::run($data->url)]);
     }
 
     public function clone(CloneProjectData $data): JsonResponse

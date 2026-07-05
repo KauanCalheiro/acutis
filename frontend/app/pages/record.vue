@@ -69,7 +69,7 @@ function onMessage(raw: string) {
   }
 }
 
-const WEBDRIVER_URL = useRuntimeConfig().public.webdriverUrl
+const WEBDRIVER_URL = useRuntimeConfig().public.webdriver.acutis.url
 
 function connect() {
   socket = new WebSocket(`${WEBDRIVER_URL.replace('http', 'ws')}/ws`)
