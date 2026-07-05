@@ -52,7 +52,7 @@ const items = [
 
 <template>
   <aside
-    class="sticky top-6 my-6 mr-3 flex h-[calc(100vh-3rem)] shrink-0 flex-col justify-between overflow-hidden rounded-r-xl border-y border-r border-default bg-default p-3 transition-[width] duration-300"
+    class="sticky top-6 my-16 mr-3 flex h-[calc(100vh-8rem)] shrink-0 flex-col justify-between overflow-hidden rounded-r-xl border-y border-r border-default bg-accented/50 p-3 transition-[width] duration-300"
     :class="expanded ? 'w-56' : 'w-18'"
   >
     <div class="flex flex-col gap-6">
@@ -92,7 +92,10 @@ const items = [
             active-color="primary"
             block
             :square="!expanded"
-            class="justify-start"
+            :class="{
+              'justify-center': !expanded,
+              'justify-start': expanded
+            }"
             :data-testid="item.testid"
           />
         </UTooltip>
