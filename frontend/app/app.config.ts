@@ -6,133 +6,42 @@ export default defineAppConfig({
     },
     button: {
       defaultVariants: {
-        size: 'xl',
+        size: 'xl'
       },
+      compoundVariants: [
+        {
+          color: 'neutral',
+          variant: 'soft',
+          class: 'bg-accented/75 hover:bg-accented active:bg-accented'
+        }
+      ]
     },
     badge: {
       defaultVariants: {
-        size: 'xl',
-        variant: 'soft'
-      },
-      compoundVariants: [
-        {
-          color: 'primary',
-          variant: 'soft',
-          class: 'bg-primary/25'
-        },
-        {
-          color: 'secondary',
-          variant: 'soft',
-          class: 'bg-secondary/25'
-        },
-        {
-          color: 'success',
-          variant: 'soft',
-          class: 'bg-success/25'
-        },
-        {
-          color: 'info',
-          variant: 'soft',
-          class: 'bg-info/25'
-        },
-        {
-          color: 'warning',
-          variant: 'soft',
-          class: 'bg-warning/25'
-        },
-        {
-          color: 'error',
-          variant: 'soft',
-          class: 'bg-error/25'
-        }
-      ]
+        size: 'xl'
+      }
     },
     kbd: {
       defaultVariants: {
-        size: 'xl',
-        variant: 'soft'
-      },
-      compoundVariants: [
-        {
-          color: 'primary',
-          variant: 'soft',
-          class: 'bg-primary/25'
-        },
-        {
-          color: 'secondary',
-          variant: 'soft',
-          class: 'bg-secondary/25'
-        },
-        {
-          color: 'success',
-          variant: 'soft',
-          class: 'bg-success/25'
-        },
-        {
-          color: 'info',
-          variant: 'soft',
-          class: 'bg-info/25'
-        },
-        {
-          color: 'warning',
-          variant: 'soft',
-          class: 'bg-warning/25'
-        },
-        {
-          color: 'error',
-          variant: 'soft',
-          class: 'bg-error/25'
-        }
-      ]
+        size: 'xl'
+      }
     },
     alert: {
       defaultVariants: {
         variant: 'soft'
+      }
+    },
+    card: {
+      defaultVariants: {
+        variant: 'soft'
       },
-      compoundVariants: [
-        {
-          color: 'primary',
-          variant: 'soft',
-          class: {
-            root: 'bg-primary/25'
-          }
-        },
-        {
-          color: 'secondary',
-          variant: 'soft',
-          class: {
-            root: 'bg-secondary/25'
-          }
-        },
-        {
-          color: 'success',
-          variant: 'soft',
-          class: {
-            root: 'bg-success/25'
-          }
-        },
-        {
-          color: 'info',
-          variant: 'soft',
-          class: {
-            root: 'bg-info/25'
-          }
-        },
-        {
-          color: 'warning',
-          variant: 'soft',
-          class: {
-            root: 'bg-warning/25'
-          }
-        },
-        {
-          color: 'error',
-          variant: 'soft',
-          class: {
-            root: 'bg-error/25'
+      variants: {
+        variant: {
+          soft: {
+            root: 'bg-elevated divide-y divide-default'
           }
         }
-      ]
+      }
     },
     input: {
       defaultVariants: {
