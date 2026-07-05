@@ -64,6 +64,20 @@ test.describe('projects home', { tag: ['@read', '@project'] }, () => {
         await expect(page.getByTestId('projeto-card').first().getByTestId('projeto-origem')).toHaveText('Local')
     })
 
+    test('shows one of the rotating taglines', async ({ page }) => {
+        const tagline = await page.getByTestId('projeto-frase').innerText()
+        expect(tagline.trim()).not.toBe('')
+
+        const seen = new Set([tagline])
+        for (let i = 0; i < 15 && seen.size === 1; i++) {
+            await page.reload()
+            await page.locator('[data-hydrated="true"]').waitFor()
+            seen.add(await page.getByTestId('projeto-frase').innerText())
+        }
+
+        expect(seen.size).toBeGreaterThan(1)
+    })
+
     test('search filters projects server-side', async ({ page }) => {
         await test.step('type a unique term in the search input', async () => {
             await page.getByTestId('projeto-busca').fill('zumbi')

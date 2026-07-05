@@ -44,6 +44,24 @@ const projects = computed(() => data.value?.data ?? [])
 const total = computed(() => data.value?.meta.total ?? 0)
 
 const createOpen = ref(false)
+
+const taglines = [
+  'Testar na mão é coisa do passado',
+  'Seu último deploy foi um ato de fé?',
+  'Ou você acha os bugs, ou seus usuários acham',
+  '"Funciona na minha máquina" não é teste',
+  'Deploy sem teste é roleta-russa',
+  'Sexta-feira, 17h. Confia no deploy?',
+  'Quem não testa, testa em produção',
+  'Seus usuários não são seu QA',
+  'Coragem é dar deploy sem isso aqui',
+  'Bugs não se escondem de quem grava tudo',
+]
+
+const tagline = useState(
+  'home-tagline',
+  () => taglines[Math.floor(Math.random() * taglines.length)],
+)
 </script>
 
 <template>
@@ -51,7 +69,14 @@ const createOpen = ref(false)
     :data-hydrated="hydrated"
     class="py-6 lg:py-10"
   >
-    <div class="flex flex-wrap items-center gap-4">
+    <h1
+      class="text-2xl font-bold mb-4"
+      data-testid="projeto-frase"
+    >
+      {{ tagline }}
+    </h1>
+
+    <div class="flex flex-wrap items-center gap-4 mb-8">
       <UInput
         v-model="search"
         data-testid="projeto-busca"
@@ -71,10 +96,6 @@ const createOpen = ref(false)
       v-model:open="createOpen"
       @saved="refresh()"
     />
-
-    <h1 class="text-2xl font-bold mt-8 mb-4">
-      Acesse seus projetos
-    </h1>
 
     <div
       v-if="status === 'pending'"
