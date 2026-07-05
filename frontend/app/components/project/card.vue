@@ -43,8 +43,6 @@ const origin = computed(() => {
         {{ project.repository ?? project.path }}
       </p>
       <UBadge
-        variant="soft"
-        size="lg"
         :icon="origin.icon"
         :label="origin.label"
         class="self-start"
