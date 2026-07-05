@@ -62,6 +62,43 @@ const tagline = useState(
   'home-tagline',
   () => taglines[Math.floor(Math.random() * taglines.length)],
 )
+
+const typed = ref(tagline.value ?? '')
+let typing = true
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+async function typewriterLoop() {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  while (typing) {
+    await sleep(6000)
+    if (!typing) return
+
+    const others = taglines.filter(phrase => phrase !== typed.value)
+    const next = others[Math.floor(Math.random() * others.length)] ?? ''
+
+    if (reduced) {
+      typed.value = next
+      continue
+    }
+
+    while (typing && typed.value.length > 0) {
+      typed.value = typed.value.slice(0, -1)
+      await sleep(25)
+    }
+
+    for (let i = 1; typing && i <= next.length; i++) {
+      typed.value = next.slice(0, i)
+      await sleep(55)
+    }
+  }
+}
+
+onMounted(typewriterLoop)
+onBeforeUnmount(() => {
+  typing = false
+})
 </script>
 
 <template>
@@ -70,10 +107,13 @@ const tagline = useState(
     class="py-6 lg:py-10"
   >
     <h1
-      class="text-2xl font-bold text-center mb-10"
+      class="text-3xl lg:text-4xl font-bold text-center mb-10"
       data-testid="projeto-frase"
     >
-      {{ tagline }}
+      {{ typed }}<span
+        class="animate-pulse font-light text-muted"
+        aria-hidden="true"
+      >|</span>
     </h1>
 
     <div class="flex flex-wrap items-center gap-4 mb-8">

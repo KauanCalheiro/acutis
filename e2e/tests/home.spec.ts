@@ -78,6 +78,17 @@ test.describe('projects home', { tag: ['@read', '@project'] }, () => {
         expect(seen.size).toBeGreaterThan(1)
     })
 
+    test('retypes a new tagline in place without reloading', async ({ page }) => {
+        const first = await page.getByTestId('projeto-frase').innerText()
+
+        await expect
+            .poll(async () => {
+                const current = await page.getByTestId('projeto-frase').innerText()
+                return current !== first && current.length > 10
+            }, { timeout: 20000 })
+            .toBe(true)
+    })
+
     test('search filters projects server-side', async ({ page }) => {
         await test.step('type a unique term in the search input', async () => {
             await page.getByTestId('projeto-busca').fill('zumbi')
