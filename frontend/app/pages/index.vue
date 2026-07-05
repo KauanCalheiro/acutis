@@ -36,12 +36,14 @@ const query = computed(() => ({
   'page[size]': PAGE_SIZE
 }))
 
-const { data, status } = await useFetch<ProjectsResponse>('/api/projects', {
+const { data, status, refresh } = await useFetch<ProjectsResponse>('/api/projects', {
   query
 })
 
 const projects = computed(() => data.value?.data ?? [])
 const total = computed(() => data.value?.meta.total ?? 0)
+
+const createOpen = ref(false)
 </script>
 
 <template>
@@ -63,9 +65,14 @@ const total = computed(() => data.value?.meta.total ?? 0)
         label="Adicionar"
         trailing-icon="i-ic-round-add"
         size="lg"
-        disabled
+        @click="createOpen = true"
       />
     </div>
+
+    <ProjectFormModal
+      v-model:open="createOpen"
+      @saved="refresh()"
+    />
 
     <h1 class="text-2xl font-bold mt-8 mb-4">
       Acesse seus projetos
