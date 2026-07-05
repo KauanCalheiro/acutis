@@ -207,6 +207,26 @@ test.describe('project creation', { tag: ['@write', '@project'] }, () => {
         await expect(page.getByTestId('projeto-form')).toContainText('O token é obrigatório para autenticação por token.')
     })
 
+    test('detects a public repository automatically', async ({ page }) => {
+        await test.step('fill the url of an accessible repository', async () => {
+            await page.getByTestId('projeto-form-tab-git').click()
+            await page.getByTestId('projeto-form-url').fill(tmpGitRepo)
+        })
+
+        await expect(page.getByTestId('projeto-form-publico')).toBeVisible({ timeout: 15000 })
+        await expect(page.getByTestId('projeto-form-auth')).toBeHidden()
+    })
+
+    test('preselects token auth for an inaccessible https repository', async ({ page }) => {
+        await test.step('fill an https url that rejects anonymous access', async () => {
+            await page.getByTestId('projeto-form-tab-git').click()
+            await page.getByTestId('projeto-form-url').fill('https://localhost:9/privado.git')
+        })
+
+        await expect(page.getByTestId('projeto-form-token')).toBeVisible({ timeout: 15000 })
+        await expect(page.getByTestId('projeto-form-publico')).toBeHidden()
+    })
+
     test('shows the backend error when cloning into an existing name', async ({ page }) => {
         await test.step('clone with the name of an existing project', async () => {
             await page.getByTestId('projeto-form-tab-git').click()

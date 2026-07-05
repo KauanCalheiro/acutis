@@ -54,6 +54,41 @@ const authItems = [
 const saving = ref(false)
 const serverError = ref<string>()
 
+const probe = ref<'idle' | 'checking' | 'public' | 'private'>('idle')
+let probeTimer: ReturnType<typeof setTimeout> | undefined
+
+watch(() => cloneState.url, (url) => {
+  probe.value = 'idle'
+  clearTimeout(probeTimer)
+  if (url.trim()) probeTimer = setTimeout(probeRepository, 500)
+})
+
+function preselectAuth(url: string): CloneProject['auth'] {
+  if (url.startsWith('https://') || url.startsWith('http://')) return 'token'
+  if (url.startsWith('git@') || url.startsWith('ssh://')) return 'ssh_key'
+  return cloneState.auth
+}
+
+async function probeRepository() {
+  const url = cloneState.url.trim()
+  probe.value = 'checking'
+
+  try {
+    const result = await $fetch<{ public: boolean }>('/api/projects/probe', {
+      method: 'POST',
+      body: {
+        url,
+      },
+    })
+    if (url !== cloneState.url.trim()) return
+
+    probe.value = result.public ? 'public' : 'private'
+    cloneState.auth = result.public ? 'public' : preselectAuth(url)
+  } catch {
+    if (url === cloneState.url.trim()) probe.value = 'idle'
+  }
+}
+
 watch([() => templateState.name, () => cloneState.url, () => cloneState.name, tab], () => {
   serverError.value = undefined
 })
@@ -174,6 +209,7 @@ function onSubmitClone(event: FormSubmitEvent<CloneProject>) {
         >
           <UInput
             v-model="cloneState.url"
+            :loading="probe === 'checking'"
             data-testid="projeto-form-url"
             placeholder="https://github.com/usuario/repositorio.git"
             class="w-full"
@@ -206,7 +242,18 @@ function onSubmitClone(event: FormSubmitEvent<CloneProject>) {
           />
         </UFormField>
 
+        <UBadge
+          v-if="probe === 'public'"
+          color="success"
+          variant="soft"
+          icon="i-ic-round-public"
+          data-testid="projeto-form-publico"
+        >
+          Repositório público — sem autenticação
+        </UBadge>
+
         <UFormField
+          v-else
           label="Autenticação"
           name="auth"
         >
