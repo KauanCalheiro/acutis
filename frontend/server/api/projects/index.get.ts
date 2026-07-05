@@ -1,8 +1,7 @@
 export default defineEventHandler((event) => {
-  const { apiUrl } = useRuntimeConfig(event)
+  const { acutis } = useClients(event)
 
-  return $fetch('/api/v1/projects', {
-    baseURL: apiUrl,
+  return acutis('/api/v1/projects', {
     query: getQuery(event)
   })
 })
