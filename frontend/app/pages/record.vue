@@ -119,13 +119,11 @@ onBeforeUnmount(() => socket?.close())
       <div class="flex items-center gap-2">
         <UBadge
           :color="wsConnected ? 'success' : 'neutral'"
-          variant="subtle"
         >
           {{ wsConnected ? 'Webdriver conectado' : 'Webdriver offline' }}
         </UBadge>
         <UBadge
           :color="extensionReady ? 'success' : 'error'"
-          variant="subtle"
         >
           {{ extensionReady ? 'Sessão pronta' : 'Aguardando webdriver' }}
         </UBadge>
