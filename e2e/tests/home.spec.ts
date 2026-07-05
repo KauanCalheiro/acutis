@@ -1,51 +1,21 @@
 import { test, expect } from '@playwright/test'
-import { spawn, type ChildProcess } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { cpSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { startBackend } from '../support/backend'
 
-const BACKEND_DIR = resolve(import.meta.dirname, '../../backend')
 const FIXTURES_DIR = resolve(import.meta.dirname, '../fixtures/projects')
-const BACKEND_URL = 'http://localhost:4200'
-const FIXTURE_COUNT = 8
-
-let backend: ChildProcess
-
-async function fetchProjectsTotal(): Promise<number | null> {
-    try {
-        const res = await fetch(`${BACKEND_URL}/api/v1/projects`)
-        if (!res.ok) return null
-        const body = await res.json()
-        return body.meta.total
-    } catch {
-        return null
-    }
-}
-
-async function waitForBackend(): Promise<void> {
-    for (let i = 0; i < 50; i++) {
-        const total = await fetchProjectsTotal()
-        if (total === FIXTURE_COUNT) return
-        if (total !== null) {
-            throw new Error(`backend on ${BACKEND_URL} returned ${total} projects instead of the ${FIXTURE_COUNT} fixtures; stale server on the port?`)
-        }
-        await new Promise((r) => setTimeout(r, 200))
-    }
-    throw new Error('backend did not become healthy in time')
-}
 
 test.describe('projects home', { tag: ['@read', '@project'] }, () => {
+    let stopBackend: () => Promise<void>
+
     test.beforeAll(async () => {
-        backend = spawn('php', ['artisan', 'serve', '--port=4200'], {
-            cwd: BACKEND_DIR,
-            stdio: 'ignore',
-            env: { ...process.env, ACUTIS_PROJECTS_PATH: FIXTURES_DIR },
-        })
-        await waitForBackend()
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: FIXTURES_DIR })
     })
 
-    test.afterAll(() => {
-        backend.kill()
+    test.afterAll(async () => {
+        await stopBackend()
     })
 
     test.beforeEach(async ({ page }) => {
@@ -117,7 +87,7 @@ test.describe('projects home', { tag: ['@read', '@project'] }, () => {
 })
 
 test.describe('project creation', { tag: ['@write', '@project'] }, () => {
-    let writeBackend: ChildProcess
+    let stopBackend: () => Promise<void>
     let tmpProjects: string
     let tmpGitRepo: string
 
@@ -143,16 +113,11 @@ test.describe('project creation', { tag: ['@write', '@project'] }, () => {
             await new Promise((resolveExit) => git.on('exit', resolveExit))
         }
 
-        writeBackend = spawn('php', ['artisan', 'serve', '--port=4200'], {
-            cwd: BACKEND_DIR,
-            stdio: 'ignore',
-            env: { ...process.env, ACUTIS_PROJECTS_PATH: tmpProjects },
-        })
-        await waitForBackend()
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
 
-    test.afterAll(() => {
-        writeBackend.kill()
+    test.afterAll(async () => {
+        await stopBackend()
         rmSync(tmpProjects, { recursive: true, force: true })
         rmSync(resolve(tmpGitRepo, '..'), { recursive: true, force: true })
     })

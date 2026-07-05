@@ -7,50 +7,32 @@ interface ProjectCard {
 
 const { project } = defineProps<ProjectCard>()
 
-const providers = {
-  github: {
-    label: 'GitHub',
-    icon: 'i-simple-icons-github'
-  },
-  gitlab: {
-    label: 'GitLab',
-    icon: 'i-simple-icons-gitlab'
-  }
-} as const
-
-const origin = computed(() => {
-  if (project.provider) return providers[project.provider]
-  if (project.repository) {
-    return {
-      label: 'Git',
-      icon: 'i-simple-icons-git'
-    }
-  }
-  return {
-    label: 'Local',
-    icon: 'i-ic-round-computer'
-  }
-})
+const origin = computed(() => projectOrigin(project))
 </script>
 
 <template>
-  <UCard data-testid="projeto-card">
-    <div class="flex flex-col gap-2">
-      <p class="font-semibold truncate">
-        {{ project.name }}
-      </p>
-      <p
-        class="text-sm text-muted truncate"
-        :title="project.repository ?? undefined"
-      >
-        {{ project.path }}
-      </p>
-      <UBadge
-        :icon="origin.icon"
-        :label="origin.label"
-        class="self-start"
-        data-testid="projeto-origem"
-      />
-    </div>
-  </UCard>
+  <NuxtLink :to="`/projects/${project.slug}`">
+    <UCard
+      data-testid="projeto-card"
+      class="transition-colors hover:bg-accented/75"
+    >
+      <div class="flex flex-col gap-2">
+        <p class="font-semibold truncate">
+          {{ project.name }}
+        </p>
+        <p
+          class="text-sm text-muted truncate"
+          :title="project.repository ?? undefined"
+        >
+          {{ project.path }}
+        </p>
+        <UBadge
+          :icon="origin.icon"
+          :label="origin.label"
+          class="self-start"
+          data-testid="projeto-origem"
+        />
+      </div>
+    </UCard>
+  </NuxtLink>
 </template>
