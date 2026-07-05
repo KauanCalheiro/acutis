@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test'
 import { spawn, type ChildProcess } from 'node:child_process'
-import { resolve } from 'node:path'
+import { cpSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
 
 const BACKEND_DIR = resolve(import.meta.dirname, '../../backend')
 const FIXTURES_DIR = resolve(import.meta.dirname, '../fixtures/projects')
@@ -79,6 +81,87 @@ test.describe('projects home', { tag: ['@read', '@project'] }, () => {
     test('search without matches shows the empty state', async ({ page }) => {
         await test.step('type a term that matches nothing', async () => {
             await page.getByTestId('projeto-busca').fill('xyznope')
+        })
+
+        await expect(page.getByTestId('projeto-vazio')).toBeVisible()
+    })
+})
+
+test.describe('project creation', { tag: ['@write', '@project'] }, () => {
+    let writeBackend: ChildProcess
+    let tmpProjects: string
+
+    test.beforeAll(async () => {
+        tmpProjects = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
+        cpSync(FIXTURES_DIR, tmpProjects, { recursive: true })
+
+        writeBackend = spawn('php', ['artisan', 'serve', '--port=4200'], {
+            cwd: BACKEND_DIR,
+            stdio: 'ignore',
+            env: { ...process.env, ACUTIS_PROJECTS_PATH: tmpProjects },
+        })
+        await waitForBackend()
+    })
+
+    test.afterAll(() => {
+        writeBackend.kill()
+        rmSync(tmpProjects, { recursive: true, force: true })
+    })
+
+    test.beforeEach(async ({ page }) => {
+        await test.step('open home and wait for hydration', async () => {
+            await page.goto('/')
+            await page.locator('[data-hydrated="true"]').waitFor()
+        })
+
+        await test.step('open the creation modal', async () => {
+            await page.getByTestId('projeto-adicionar').click()
+            await page.getByTestId('projeto-form-nome').waitFor()
+        })
+    })
+
+    test('creates a project from the template', async ({ page }) => {
+        await test.step('fill the name and save', async () => {
+            await page.getByTestId('projeto-form-nome').fill('Meu Projeto Novo')
+            await page.getByTestId('projeto-form-salvar').click()
+        })
+
+        await expect(page.getByTestId('projeto-form-nome')).toBeHidden()
+
+        await test.step('search for the new project', async () => {
+            await page.getByTestId('projeto-busca').fill('meu projeto')
+        })
+
+        await expect(page.getByTestId('projeto-card').filter({ hasText: 'Meu Projeto Novo' })).toHaveCount(1)
+    })
+
+    test('rejects an empty name client-side', async ({ page }) => {
+        await page.getByTestId('projeto-form-salvar').click()
+
+        await expect(page.getByTestId('projeto-form')).toContainText('O nome é obrigatório.')
+        await expect(page.getByTestId('projeto-form-nome')).toBeVisible()
+    })
+
+    test('shows the backend error for a duplicate name', async ({ page }) => {
+        await test.step('fill the name of an existing project and save', async () => {
+            await page.getByTestId('projeto-form-nome').fill('Alpha Store')
+            await page.getByTestId('projeto-form-salvar').click()
+        })
+
+        await expect(page.getByTestId('projeto-form')).toContainText('Já existe um projeto com este nome.')
+        await expect(page.getByTestId('projeto-form-nome')).toBeVisible()
+    })
+
+    test('cancel closes the modal without creating', async ({ page }) => {
+        await test.step('fill a name but cancel', async () => {
+            await page.getByTestId('projeto-form-nome').fill('Projeto Cancelado')
+            await page.getByTestId('projeto-form-cancelar').click()
+        })
+
+        await expect(page.getByTestId('projeto-form-nome')).toBeHidden()
+
+        await test.step('search for the cancelled project', async () => {
+            await page.getByTestId('projeto-busca').fill('cancelado')
         })
 
         await expect(page.getByTestId('projeto-vazio')).toBeVisible()
