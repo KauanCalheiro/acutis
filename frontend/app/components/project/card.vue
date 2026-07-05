@@ -39,8 +39,11 @@ const origin = computed(() => {
       <p class="font-semibold truncate">
         {{ project.name }}
       </p>
-      <p class="text-sm text-muted truncate">
-        {{ project.repository ?? project.path }}
+      <p
+        class="text-sm text-muted truncate"
+        :title="project.repository ?? undefined"
+      >
+        {{ project.path }}
       </p>
       <UBadge
         :icon="origin.icon"
