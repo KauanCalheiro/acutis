@@ -112,6 +112,21 @@ it('paginates with page[size] and page[number]', function () {
         ->assertJsonPath('meta.total', 5);
 });
 
+it('does not inherit the remote of an enclosing repository', function () {
+    // projects.path dentro de um repo git pai (como fixtures versionadas)
+    $parent = config('acutis.projects.path');
+    File::ensureDirectoryExists($parent);
+    (new Process(['git', 'init', '-q'], $parent))->mustRun();
+    (new Process(['git', 'remote', 'add', 'origin', 'https://github.com/acme/parent.git'], $parent))->mustRun();
+
+    makeProjectDir('Plain Project', 'plain-project');
+
+    getJson('/api/v1/projects')
+        ->assertOk()
+        ->assertJsonPath('data.0.repository', null)
+        ->assertJsonPath('data.0.provider', null);
+});
+
 it('detects the git provider from the remote', function () {
     $dir = config('acutis.projects.path').'/with-remote';
     makeProjectDir('With Remote', 'with-remote');
