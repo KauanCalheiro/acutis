@@ -18,7 +18,8 @@ export default defineAppConfig({
     },
     badge: {
       defaultVariants: {
-        size: 'xl'
+        size: 'lg',
+        variant: 'soft'
       }
     },
     kbd: {
