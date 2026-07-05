@@ -3,7 +3,8 @@ const pinned = useCookie<boolean>('navbar-expanded', {
   default: () => false,
 })
 const hovering = ref(false)
-const expanded = computed(() => pinned.value || hovering.value)
+const colorPickerOpen = ref(false)
+const expanded = computed(() => pinned.value || hovering.value || colorPickerOpen.value)
 
 const colors = {
   red: 'bg-red-500',
@@ -108,6 +109,7 @@ const items = [
 
     <div class="flex flex-col gap-2">
       <UPopover
+        v-model:open="colorPickerOpen"
         :content="{
           side: 'right',
         }"

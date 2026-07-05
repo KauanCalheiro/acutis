@@ -42,6 +42,20 @@ test.describe('theme primary color', { tag: ['@write', '@theme'] }, () => {
         await expect.poll(() => primaryColor(page)).not.toBe(before)
     })
 
+    test('keeps the navbar expanded while the picker is open', async ({ page }) => {
+        await test.step('open the picker from the hovered navbar', async () => {
+            await page.getByTestId('navbar-cor').click()
+            await page.getByTestId('cor-green').waitFor()
+        })
+
+        await test.step('move the mouse away from the navbar', async () => {
+            await page.mouse.move(640, 400)
+        })
+
+        await expect(page.getByTestId('navbar-projetos')).toContainText('Projetos')
+        await expect(page.getByTestId('cor-green')).toBeVisible()
+    })
+
     test('keeps the chosen color after reload', async ({ page }) => {
         const before = await primaryColor(page)
 
