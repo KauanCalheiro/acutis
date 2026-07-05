@@ -77,7 +77,6 @@ async function remove() {
             icon="i-ic-round-arrow-back"
             variant="ghost"
             color="neutral"
-            size="sm"
             to="/"
             data-testid="projeto-voltar"
           />
