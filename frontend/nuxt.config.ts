@@ -11,17 +11,14 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
-  routeRules: {
-    '/': { prerender: true }
-  },
-
-  compatibilityDate: '2026-06-30',
-
   runtimeConfig: {
+    apiUrl: 'http://localhost:8000',
     public: {
       webdriverUrl: 'http://localhost:4000'
     }
   },
+
+  compatibilityDate: '2026-06-30',
 
   nitro: {
     experimental: {
