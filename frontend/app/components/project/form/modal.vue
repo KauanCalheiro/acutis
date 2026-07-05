@@ -57,9 +57,14 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   <UModal
     v-model:open="open"
     title="Criar projeto"
+    :ui="{
+      content: 'divide-y-0',
+      footer: 'justify-end',
+    }"
   >
     <template #body>
       <UForm
+        id="projeto-form"
         :schema="schema"
         :state="state"
         data-testid="projeto-form"
@@ -78,23 +83,24 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             class="w-full"
           />
         </UFormField>
-
-        <div class="flex justify-end gap-2">
-          <UButton
-            label="Cancelar"
-            color="neutral"
-            variant="ghost"
-            data-testid="projeto-form-cancelar"
-            @click="open = false"
-          />
-          <UButton
-            label="Salvar"
-            type="submit"
-            :loading="saving"
-            data-testid="projeto-form-salvar"
-          />
-        </div>
       </UForm>
+    </template>
+
+    <template #footer>
+      <UButton
+        label="Cancelar"
+        color="neutral"
+        variant="ghost"
+        data-testid="projeto-form-cancelar"
+        @click="open = false"
+      />
+      <UButton
+        label="Salvar"
+        type="submit"
+        form="projeto-form"
+        :loading="saving"
+        data-testid="projeto-form-salvar"
+      />
     </template>
   </UModal>
 </template>
