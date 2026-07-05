@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import * as z from 'zod'
-import type { FormSubmitEvent } from '@nuxt/ui'
+import type { FormSubmitEvent, TabsItem } from '@nuxt/ui'
+import { cloneProjectSchema, createProjectSchema, type CloneProject, type CreateProject } from '#shared/schemas/project'
 
 const open = defineModel<boolean>('open', {
   default: false,
@@ -10,46 +10,105 @@ const emit = defineEmits<{
   saved: []
 }>()
 
-const schema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, 'O nome é obrigatório.')
-    .max(255, 'O nome não pode ter mais de 255 caracteres.'),
-})
+const tabs: TabsItem[] = [
+  {
+    label: 'Template',
+    value: 'template',
+  },
+  {
+    label: 'Git',
+    value: 'git',
+  },
+]
 
-type Schema = z.output<typeof schema>
+const tab = ref('template')
 
-const state = reactive({
+const templateState = reactive({
   name: '',
 })
+
+const cloneState = reactive({
+  url: '',
+  name: '',
+  branch: '',
+  auth: 'public' as CloneProject['auth'],
+  token: '',
+  ssh_key: '',
+})
+
+const authItems = [
+  {
+    label: 'Público',
+    value: 'public',
+  },
+  {
+    label: 'Token',
+    value: 'token',
+  },
+  {
+    label: 'Chave SSH',
+    value: 'ssh_key',
+  },
+]
 
 const saving = ref(false)
 const serverError = ref<string>()
 
-watch(() => state.name, () => {
+watch([() => templateState.name, () => cloneState.url, () => cloneState.name, tab], () => {
   serverError.value = undefined
 })
 
-async function onSubmit(event: FormSubmitEvent<Schema>) {
+function extractServerError(error: unknown): string {
+  const err = error as { data?: { data?: { message?: string, errors?: Record<string, string[]> } } }
+  const errors = err.data?.data?.errors
+
+  return errors?.[Object.keys(errors)[0] ?? '']?.[0]
+    ?? err.data?.data?.message
+    ?? 'Não foi possível criar o projeto.'
+}
+
+async function save(request: Promise<unknown>) {
   saving.value = true
 
   try {
-    await $fetch('/api/projects', {
-      method: 'POST',
-      body: {
-        name: event.data.name,
-      },
-    })
+    await request
     open.value = false
-    state.name = ''
+    templateState.name = ''
+    cloneState.url = ''
+    cloneState.name = ''
+    cloneState.branch = ''
+    cloneState.auth = 'public'
+    cloneState.token = ''
+    cloneState.ssh_key = ''
     emit('saved')
   } catch (error) {
-    const err = error as { data?: { data?: { errors?: Record<string, string[]> } } }
-    serverError.value = err.data?.data?.errors?.name?.[0] ?? 'Não foi possível criar o projeto.'
+    serverError.value = extractServerError(error)
   } finally {
     saving.value = false
   }
+}
+
+function onSubmitTemplate(event: FormSubmitEvent<CreateProject>) {
+  return save($fetch('/api/projects', {
+    method: 'POST',
+    body: {
+      name: event.data.name,
+    },
+  }))
+}
+
+function onSubmitClone(event: FormSubmitEvent<CloneProject>) {
+  return save($fetch('/api/projects/clone', {
+    method: 'POST',
+    body: {
+      url: event.data.url,
+      name: event.data.name || undefined,
+      branch: event.data.branch || undefined,
+      auth: event.data.auth,
+      token: event.data.token || undefined,
+      ssh_key: event.data.ssh_key || undefined,
+    },
+  }))
 }
 </script>
 
@@ -63,13 +122,27 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     }"
   >
     <template #body>
+      <UTabs
+        v-model="tab"
+        :items="tabs"
+        :content="false"
+        class="mb-4 w-full"
+      >
+        <template #default="{ item }">
+          <span :data-testid="`projeto-form-tab-${item.value}`">
+            {{ item.label }}
+          </span>
+        </template>
+      </UTabs>
+
       <UForm
+        v-if="tab === 'template'"
         id="projeto-form"
-        :schema="schema"
-        :state="state"
+        :schema="createProjectSchema"
+        :state="templateState"
         data-testid="projeto-form"
         class="flex flex-col gap-4"
-        @submit="onSubmit"
+        @submit="onSubmitTemplate"
       >
         <UFormField
           label="Nome"
@@ -77,9 +150,98 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           :error="serverError"
         >
           <UInput
-            v-model="state.name"
+            v-model="templateState.name"
             data-testid="projeto-form-nome"
             placeholder="Nome do projeto"
+            class="w-full"
+          />
+        </UFormField>
+      </UForm>
+
+      <UForm
+        v-else
+        id="projeto-form"
+        :schema="cloneProjectSchema"
+        :state="cloneState"
+        data-testid="projeto-form"
+        class="flex flex-col gap-4"
+        @submit="onSubmitClone"
+      >
+        <UFormField
+          label="URL do repositório"
+          name="url"
+          :error="serverError"
+        >
+          <UInput
+            v-model="cloneState.url"
+            data-testid="projeto-form-url"
+            placeholder="https://github.com/usuario/repositorio.git"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          label="Nome"
+          name="name"
+          hint="Opcional"
+        >
+          <UInput
+            v-model="cloneState.name"
+            data-testid="projeto-form-git-nome"
+            placeholder="Derivado da URL"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          label="Branch"
+          name="branch"
+          hint="Opcional"
+        >
+          <UInput
+            v-model="cloneState.branch"
+            data-testid="projeto-form-branch"
+            placeholder="Branch padrão do repositório"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          label="Autenticação"
+          name="auth"
+        >
+          <USelect
+            v-model="cloneState.auth"
+            :items="authItems"
+            data-testid="projeto-form-auth"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          v-if="cloneState.auth === 'token'"
+          label="Token"
+          name="token"
+        >
+          <UInput
+            v-model="cloneState.token"
+            type="password"
+            data-testid="projeto-form-token"
+            placeholder="Token de acesso ao repositório"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          v-if="cloneState.auth === 'ssh_key'"
+          label="Chave SSH"
+          name="ssh_key"
+        >
+          <UTextarea
+            v-model="cloneState.ssh_key"
+            :rows="5"
+            data-testid="projeto-form-ssh"
+            placeholder="Chave privada com acesso ao repositório"
             class="w-full"
           />
         </UFormField>
