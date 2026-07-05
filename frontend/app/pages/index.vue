@@ -105,6 +105,7 @@ const total = computed(() => data.value?.meta.total ?? 0)
       <UPagination
         v-model:page="page"
         data-testid="projeto-paginacao"
+        variant="soft"
         :total="total"
         :items-per-page="PAGE_SIZE"
       />
