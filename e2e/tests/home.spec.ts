@@ -60,6 +60,10 @@ test.describe('projects home', { tag: ['@read', '@project'] }, () => {
         await expect(page.getByTestId('projeto-card').first()).toContainText('Alpha Store')
     })
 
+    test('local projects show the local origin badge', async ({ page }) => {
+        await expect(page.getByTestId('projeto-card').first().getByTestId('projeto-origem')).toHaveText('Local')
+    })
+
     test('search filters projects server-side', async ({ page }) => {
         await test.step('type a unique term in the search input', async () => {
             await page.getByTestId('projeto-busca').fill('zumbi')
@@ -185,7 +189,9 @@ test.describe('project creation', { tag: ['@write', '@project'] }, () => {
             await page.getByTestId('projeto-busca').fill('clonado')
         })
 
-        await expect(page.getByTestId('projeto-card').filter({ hasText: 'clonado-do-git' })).toHaveCount(1)
+        const clonedCard = page.getByTestId('projeto-card').filter({ hasText: 'clonado-do-git' })
+        await expect(clonedCard).toHaveCount(1)
+        await expect(clonedCard.getByTestId('projeto-origem')).toHaveText('Git')
     })
 
     test('rejects an empty repository url client-side', async ({ page }) => {
