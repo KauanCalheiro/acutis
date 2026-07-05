@@ -18,4 +18,17 @@ class Git
 
         return $process->isSuccessful() ? (trim($process->getOutput()) ?: null) : null;
     }
+
+    /** Branch atual, ou null se o diretório em si não for um repositório git. */
+    public static function branch(string $path): ?string
+    {
+        if (! is_dir($path.'/.git')) {
+            return null;
+        }
+
+        $process = new Process(['git', '-C', $path, 'rev-parse', '--abbrev-ref', 'HEAD']);
+        $process->run();
+
+        return $process->isSuccessful() ? (trim($process->getOutput()) ?: null) : null;
+    }
 }

@@ -4,8 +4,11 @@ namespace App\Http\Controllers\V1;
 
 use App\Action\CloneProjectFromGit;
 use App\Action\CreateProjectFromTemplate;
+use App\Action\DeleteProject;
 use App\Action\ListProjects;
 use App\Action\ProbeGitRepository;
+use App\Action\ShowProject;
+use App\Action\UpdateProject;
 use App\Action\RunProject;
 use App\Action\WriteAuthSetupToProject;
 use App\Action\WriteTestToProject;
@@ -13,11 +16,13 @@ use App\Data\V1\Auth\AuthSetupData;
 use App\Data\V1\Project\CloneProjectData;
 use App\Data\V1\Project\CreateProjectData;
 use App\Data\V1\Project\ProbeGitData;
+use App\Data\V1\Project\UpdateProjectData;
 use App\Data\V1\Project\RunProjectData;
 use App\Data\V1\Recording\RecordingData;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\GeneratedAuthSetupResource;
 use App\Http\Resources\V1\GitProbeResource;
+use App\Http\Resources\V1\ProjectShowResource;
 use App\Http\Resources\V1\ProjectResource;
 use App\Http\Resources\V1\ProjectRunResource;
 use App\Http\Resources\V1\ProjectTestResource;
@@ -61,6 +66,23 @@ class ProjectController extends Controller
         return ProjectResource::make($project)
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
+    }
+
+    public function show(string $project): ProjectShowResource
+    {
+        return ProjectShowResource::make(ShowProject::run($project));
+    }
+
+    public function update(string $project, UpdateProjectData $data): ProjectResource
+    {
+        return ProjectResource::make(UpdateProject::run($project, $data->name));
+    }
+
+    public function destroy(string $project): Response
+    {
+        DeleteProject::run($project);
+
+        return response()->noContent();
     }
 
     public function probe(ProbeGitData $data): GitProbeResource
