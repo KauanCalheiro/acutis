@@ -54,7 +54,7 @@ const items = [
 
 <template>
   <aside
-    class="sticky top-6 my-16 mr-3 flex h-[calc(100vh-8rem)] shrink-0 flex-col justify-between overflow-hidden rounded-r-xl border-y border-r border-default bg-accented/50 p-3 transition-[width] duration-300"
+    class="sticky top-6 my-6 lg:top-10 lg:my-10 mr-3 flex h-[calc(100vh-3rem)] lg:h-[calc(100vh-5rem)] shrink-0 flex-col justify-between overflow-hidden rounded-r-xl border-y border-r border-default bg-accented/50 p-3 transition-[width] duration-300"
     :class="expanded ? 'w-56' : 'w-18'"
     @mouseenter="hovering = true"
     @mouseleave="hovering = false"
