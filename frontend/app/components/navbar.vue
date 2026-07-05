@@ -1,7 +1,9 @@
 <script setup lang="ts">
-const expanded = useCookie<boolean>('navbar-expanded', {
+const pinned = useCookie<boolean>('navbar-expanded', {
   default: () => false,
 })
+const hovering = ref(false)
+const expanded = computed(() => pinned.value || hovering.value)
 
 const colors = {
   red: 'bg-red-500',
@@ -54,6 +56,8 @@ const items = [
   <aside
     class="sticky top-6 my-16 mr-3 flex h-[calc(100vh-8rem)] shrink-0 flex-col justify-between overflow-hidden rounded-r-xl border-y border-r border-default bg-accented/50 p-3 transition-[width] duration-300"
     :class="expanded ? 'w-56' : 'w-18'"
+    @mouseenter="hovering = true"
+    @mouseleave="hovering = false"
   >
     <div class="flex flex-col gap-6">
       <NuxtLink
@@ -138,12 +142,12 @@ const items = [
         data-testid="navbar-tema"
       />
       <UButton
-        :icon="expanded ? 'i-ic-round-chevron-left' : 'i-ic-round-chevron-right'"
+        :icon="pinned ? 'i-ic-round-chevron-left' : 'i-ic-round-chevron-right'"
         variant="ghost"
         color="neutral"
         block
         data-testid="navbar-alternar"
-        @click="expanded = !expanded"
+        @click="pinned = !pinned"
       />
     </div>
   </aside>

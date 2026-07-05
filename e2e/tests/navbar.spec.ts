@@ -24,7 +24,22 @@ test.describe('app navbar', { tag: ['@read', '@navbar'] }, () => {
         await expect(page.getByTestId('navbar-gravacao')).toContainText('Gravação')
 
         await page.getByTestId('navbar-alternar').click()
+        await page.mouse.move(640, 400)
         await expect(page.getByTestId('navbar-projetos')).not.toContainText('Projetos')
+    })
+
+    test('expands on hover and collapses when the mouse leaves', async ({ page }) => {
+        await page.getByTestId('navbar-logo').hover()
+        await expect(page.getByTestId('navbar-projetos')).toContainText('Projetos')
+
+        await page.mouse.move(640, 400)
+        await expect(page.getByTestId('navbar-projetos')).not.toContainText('Projetos')
+    })
+
+    test('stays expanded after the mouse leaves when pinned', async ({ page }) => {
+        await page.getByTestId('navbar-alternar').click()
+        await page.mouse.move(640, 400)
+        await expect(page.getByTestId('navbar-projetos')).toContainText('Projetos')
     })
 
     test('keeps the expanded state after reload', async ({ page }) => {
