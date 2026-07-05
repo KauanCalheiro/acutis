@@ -90,10 +90,29 @@ test.describe('projects home', { tag: ['@read', '@project'] }, () => {
 test.describe('project creation', { tag: ['@write', '@project'] }, () => {
     let writeBackend: ChildProcess
     let tmpProjects: string
+    let tmpGitRepo: string
 
     test.beforeAll(async () => {
         tmpProjects = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
         cpSync(FIXTURES_DIR, tmpProjects, { recursive: true })
+
+        tmpGitRepo = join(mkdtempSync(join(tmpdir(), 'acutis-git-')), 'clonado-do-git')
+        for (const args of [
+            ['init', tmpGitRepo],
+            ['-C', tmpGitRepo, 'commit', '--allow-empty', '-m', 'init'],
+        ]) {
+            const git = spawn('git', args, {
+                stdio: 'ignore',
+                env: {
+                    ...process.env,
+                    GIT_AUTHOR_NAME: 'e2e',
+                    GIT_AUTHOR_EMAIL: 'e2e@test',
+                    GIT_COMMITTER_NAME: 'e2e',
+                    GIT_COMMITTER_EMAIL: 'e2e@test',
+                },
+            })
+            await new Promise((resolveExit) => git.on('exit', resolveExit))
+        }
 
         writeBackend = spawn('php', ['artisan', 'serve', '--port=4200'], {
             cwd: BACKEND_DIR,
@@ -106,6 +125,7 @@ test.describe('project creation', { tag: ['@write', '@project'] }, () => {
     test.afterAll(() => {
         writeBackend.kill()
         rmSync(tmpProjects, { recursive: true, force: true })
+        rmSync(resolve(tmpGitRepo, '..'), { recursive: true, force: true })
     })
 
     test.beforeEach(async ({ page }) => {
@@ -150,6 +170,53 @@ test.describe('project creation', { tag: ['@write', '@project'] }, () => {
 
         await expect(page.getByTestId('projeto-form')).toContainText('Já existe um projeto com este nome.')
         await expect(page.getByTestId('projeto-form-nome')).toBeVisible()
+    })
+
+    test('clones a project from a git repository', async ({ page }) => {
+        await test.step('switch to the git tab and fill the repository url', async () => {
+            await page.getByTestId('projeto-form-tab-git').click()
+            await page.getByTestId('projeto-form-url').fill(tmpGitRepo)
+            await page.getByTestId('projeto-form-salvar').click()
+        })
+
+        await expect(page.getByTestId('projeto-form-url')).toBeHidden({ timeout: 15000 })
+
+        await test.step('search for the cloned project', async () => {
+            await page.getByTestId('projeto-busca').fill('clonado')
+        })
+
+        await expect(page.getByTestId('projeto-card').filter({ hasText: 'clonado-do-git' })).toHaveCount(1)
+    })
+
+    test('rejects an empty repository url client-side', async ({ page }) => {
+        await page.getByTestId('projeto-form-tab-git').click()
+        await page.getByTestId('projeto-form-salvar').click()
+
+        await expect(page.getByTestId('projeto-form')).toContainText('A URL do repositório é obrigatória.')
+    })
+
+    test('requires the token when token auth is selected', async ({ page }) => {
+        await test.step('fill the url and pick token auth', async () => {
+            await page.getByTestId('projeto-form-tab-git').click()
+            await page.getByTestId('projeto-form-url').fill('https://example.com/repo.git')
+            await page.getByTestId('projeto-form-auth').click()
+            await page.getByRole('option', { name: 'Token' }).click()
+            await page.getByTestId('projeto-form-salvar').click()
+        })
+
+        await expect(page.getByTestId('projeto-form')).toContainText('O token é obrigatório para autenticação por token.')
+    })
+
+    test('shows the backend error when cloning into an existing name', async ({ page }) => {
+        await test.step('clone with the name of an existing project', async () => {
+            await page.getByTestId('projeto-form-tab-git').click()
+            await page.getByTestId('projeto-form-url').fill(tmpGitRepo)
+            await page.getByTestId('projeto-form-git-nome').fill('Alpha Store')
+            await page.getByTestId('projeto-form-salvar').click()
+        })
+
+        await expect(page.getByTestId('projeto-form')).toContainText('Já existe um projeto com este nome.')
+        await expect(page.getByTestId('projeto-form-url')).toBeVisible()
     })
 
     test('cancel closes the modal without creating', async ({ page }) => {
