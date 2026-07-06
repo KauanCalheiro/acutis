@@ -40,4 +40,4 @@ Start-Process "chrome" -ArgumentList "--remote-debugging-port=9222","--user-data
 
 Sem `RECORDER_CDP_URL` (ex.: rodando o webdriver direto no host), o recorder abre o próprio Chromium headed.
 
-> **TODO:** abrir o Chrome na mão é atrito de DX. O plano de longo prazo é empacotar o recorder para rodar no host (companion `acutis-recorder` ou app desktop Electron/Tauri embutindo frontend + webdriver), eliminando este passo. Pensar melhor na estratégia de empacotamento antes da release.
+> **TODO ([#56](https://github.com/KauanCalheiro/acutis/issues/56)):** abrir o Chrome na mão é atrito de DX. O plano de longo prazo é empacotar o recorder para rodar no host (companion `acutis-recorder` ou app desktop Electron/Tauri embutindo frontend + webdriver), eliminando este passo. Pensar melhor na estratégia de empacotamento antes da release.
