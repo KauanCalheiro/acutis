@@ -36,6 +36,12 @@ test.describe('app navbar', { tag: ['@read', '@navbar'] }, () => {
         await expect(page.getByTestId('navbar-projetos')).not.toContainText('Projetos')
     })
 
+    test('does not expand when hovering the bottom controls', async ({ page }) => {
+        await page.getByTestId('navbar-cor').hover()
+
+        await expect(page.getByTestId('navbar-projetos')).not.toContainText('Projetos')
+    })
+
     test('stays expanded after the mouse leaves when pinned', async ({ page }) => {
         await page.getByTestId('navbar-alternar').click()
         await page.mouse.move(640, 400)
