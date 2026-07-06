@@ -118,20 +118,21 @@ function rerecord() {
     v-model:open="open"
     title="Revise seus eventos"
     :dismissable="false"
+    wide
   >
     <template #body>
-      <div class="flex flex-col gap-6">
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <video
           v-if="state.videoSessionId"
           ref="videoEl"
           data-testid="revisao-video"
           :src="`${url}/recording/${state.videoSessionId}`"
           controls
-          class="w-full rounded-lg"
+          class="w-full self-start rounded-lg lg:sticky lg:top-0 lg:col-span-3"
           @timeupdate="currentTime = ($event.target as HTMLVideoElement).currentTime"
         />
 
-        <div>
+        <div class="lg:col-span-2">
           <p class="mb-3 font-semibold">
             Timeline dos eventos
           </p>
@@ -177,6 +178,7 @@ function rerecord() {
           color="error"
           variant="soft"
           :description="generateError"
+          class="lg:col-span-5"
         />
       </div>
     </template>
