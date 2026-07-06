@@ -73,8 +73,9 @@ async function remove() {
     <div class="flex items-start justify-between gap-4">
       <div class="flex flex-col gap-1 min-w-0">
         <div class="flex items-center gap-2">
-          <UButton
+          <BaseButtonIcon
             icon="i-ic-round-arrow-back"
+            label="Voltar"
             variant="ghost"
             color="neutral"
             to="/"
@@ -112,15 +113,17 @@ async function remove() {
       </div>
 
       <div class="flex gap-2 shrink-0">
-        <UButton
+        <BaseButtonIcon
           icon="i-ic-round-delete"
+          label="Remover projeto"
           color="error"
           variant="soft"
           data-testid="projeto-remover"
           @click="removeOpen = true"
         />
-        <UButton
+        <BaseButtonIcon
           icon="i-ic-round-edit"
+          label="Renomear projeto"
           color="neutral"
           variant="soft"
           data-testid="projeto-editar"
