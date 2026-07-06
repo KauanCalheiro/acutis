@@ -282,7 +282,8 @@ function onSubmitClone(event: FormSubmitEvent<CloneProject>) {
         >
           <UTextarea
             v-model="cloneState.ssh_key"
-            :rows="5"
+            :rows="3"
+            autoresize
             data-testid="projeto-form-ssh"
             placeholder="Chave privada com acesso ao repositório"
             class="w-full"

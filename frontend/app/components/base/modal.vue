@@ -10,7 +10,7 @@ const {
   title = '',
   description = '',
   dismissable = true,
-  closable = true
+  closable = false
 } = defineProps<BaseModal>()
 
 const open = defineModel<boolean>('open', {
@@ -27,6 +27,7 @@ const open = defineModel<boolean>('open', {
     :close="closable"
     :ui="{
       content: 'divide-y-0',
+      title: 'text-xl',
       footer: 'justify-end'
     }"
   >
