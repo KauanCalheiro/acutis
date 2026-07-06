@@ -12,6 +12,8 @@ export interface StopResult {
     sessionId: string | null
 }
 
+const RECORDING_VIEWPORT = { width: 1280, height: 720 }
+
 @Injectable()
 export class RecorderService {
     private browser: Browser | null = null
@@ -55,6 +57,7 @@ export class RecorderService {
             this.context = await this.browser.newContext()
         }
         this.page = await this.context.newPage()
+        await this.page.setViewportSize(RECORDING_VIEWPORT)
 
         await this.page.exposeFunction('__acutisReportEvent', onEvent)
         await this.page.exposeFunction('__acutisRequestStop', onRequestStop)
@@ -71,7 +74,7 @@ export class RecorderService {
             if (frame.url() === 'about:blank') return
             this.screencastStarted = true
             const recordingStartedAt = Date.now()
-            void this.page.screencast.start({ path: videoPath }).then(() => onStarted(recordingStartedAt))
+            void this.page.screencast.start({ path: videoPath, size: RECORDING_VIEWPORT }).then(() => onStarted(recordingStartedAt))
         })
     }
 

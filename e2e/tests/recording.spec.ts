@@ -119,6 +119,14 @@ test.describe('recording view', { tag: ['@write', '@recording'] }, () => {
             )
         })
 
+        await test.step('assert the video renders at the recorder viewport size', async () => {
+            const size = await page.getByTestId('record-video').evaluate((el) => {
+                const video = el as HTMLVideoElement
+                return { width: video.videoWidth, height: video.videoHeight }
+            })
+            expect(size).toEqual({ width: 1280, height: 720 })
+        })
+
         await test.step('assert the video is directly servable from the webdriver', async () => {
             const src = await page.getByTestId('record-video').getAttribute('src')
             const response = await request.get(src!)
