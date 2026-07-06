@@ -28,6 +28,7 @@ const open = defineModel<boolean>('open', {
     :ui="{
       content: 'divide-y-0',
       title: 'text-xl',
+      body: '[mask-image:linear-gradient(to_bottom,black_calc(100%-1.25rem),transparent)]',
       footer: 'justify-end'
     }"
   >
