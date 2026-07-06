@@ -5,7 +5,7 @@ metadata:
   type: feedback
 ---
 
-Depois que um PR é mergeado em `main`, apagar **todas** as branches que não são `main` (local e remota) — não só a que acabou de ser mergeada. Não deixar acumular branch morta.
+Depois que um PR é mergeado em `main`, apagar **todas** as branches que não são `main` (local e remota) — não só a que acabou de ser mergeada. Não deixar acumular branch morta. Fluxo completo de commit/branch/PR/merge em [commit](commit.md).
 
 **Why:** branch órfã confunde qual é o trabalho ativo e polui `git branch -a`.
 

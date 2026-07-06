@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { RecorderEvent } from '~/composables/webdriver'
+import type { TestDraft } from '~/types/project'
 
 interface ScenarioReviewModal {
   slug: string
@@ -17,6 +18,28 @@ const emit = defineEmits<{
 }>()
 
 const { state, url } = useWebdriver()
+
+function emptyDraft(): TestDraft {
+  return { title: '', tags: [], path: '', gherkin: '', playwright: '' }
+}
+
+const step = ref<'review' | 'loading' | 'edit'>('review')
+const draft = ref<TestDraft>(emptyDraft())
+const error = ref<string | null>(null)
+
+watch(open, (isOpen) => {
+  if (isOpen) {
+    step.value = 'review'
+    draft.value = emptyDraft()
+    error.value = null
+  }
+})
+
+const modalTitle = computed(() => {
+  if (step.value === 'loading') return 'Gerando cenário'
+  if (step.value === 'edit') return 'Revise os contextos'
+  return 'Revise seus eventos'
+})
 
 const videoEl = ref<HTMLVideoElement | null>(null)
 const currentTime = ref(0)
@@ -61,8 +84,7 @@ function seekTo(event: RecorderEvent) {
   currentTime.value = offset
 }
 
-const generating = ref(false)
-const generateError = ref<string | null>(null)
+const submitting = ref(false)
 
 const baseUrl = computed(() => {
   const first = timeline.value.find(event => event.url)
@@ -76,15 +98,15 @@ const baseUrl = computed(() => {
 
 async function generate() {
   if (!baseUrl.value) {
-    generateError.value = 'Nenhuma navegação registrada na gravação.'
+    error.value = 'Nenhuma navegação registrada na gravação.'
     return
   }
 
-  generating.value = true
-  generateError.value = null
+  error.value = null
+  step.value = 'loading'
 
   try {
-    await $fetch(`/api/projects/${slug}/tests`, {
+    draft.value = await $fetch<TestDraft>(`/api/projects/${slug}/tests/draft`, {
       method: 'POST',
       body: {
         baseUrl: baseUrl.value,
@@ -98,12 +120,30 @@ async function generate() {
         })),
       },
     })
+    step.value = 'edit'
+  } catch {
+    error.value = 'Não foi possível gerar o cenário. Tente novamente.'
+    step.value = 'review'
+  }
+}
+
+async function commit() {
+  if (!draft.value) return
+
+  submitting.value = true
+  error.value = null
+
+  try {
+    await $fetch(`/api/projects/${slug}/tests`, {
+      method: 'POST',
+      body: draft.value,
+    })
     open.value = false
     emit('generated')
   } catch {
-    generateError.value = 'Não foi possível gerar o cenário. Tente novamente.'
+    error.value = 'Não foi possível salvar o cenário. Tente novamente.'
   } finally {
-    generating.value = false
+    submitting.value = false
   }
 }
 
@@ -116,12 +156,22 @@ function rerecord() {
 <template>
   <BaseModal
     v-model:open="open"
-    title="Revise seus eventos"
+    :title="modalTitle"
     :dismissable="false"
     wide
   >
     <template #body>
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-5">
+      <ScenarioReviewLoading v-if="step === 'loading'" />
+
+      <ScenarioReviewContexts
+        v-else-if="step === 'edit'"
+        v-model:draft="draft"
+      />
+
+      <div
+        v-else
+        class="grid grid-cols-1 gap-6 lg:grid-cols-5"
+      >
         <video
           v-if="state.videoSessionId"
           ref="videoEl"
@@ -172,39 +222,59 @@ function rerecord() {
             </li>
           </ol>
         </div>
-
-        <UAlert
-          v-if="generateError"
-          color="error"
-          variant="soft"
-          :description="generateError"
-          class="lg:col-span-5"
-        />
       </div>
+
+      <UAlert
+        v-if="error"
+        color="error"
+        variant="soft"
+        :description="error"
+        class="mt-4"
+      />
     </template>
 
-    <template #footer>
-      <UButton
-        label="Gravar novamente"
-        color="neutral"
-        variant="soft"
-        class="mr-auto"
-        data-testid="revisao-regravar"
-        @click="rerecord"
-      />
-      <UButton
-        label="Cancelar"
-        color="neutral"
-        variant="ghost"
-        data-testid="revisao-cancelar"
-        @click="open = false"
-      />
-      <UButton
-        label="Gerar cenário"
-        :loading="generating"
-        data-testid="revisao-gerar"
-        @click="generate"
-      />
+    <template
+      v-if="step !== 'loading'"
+      #footer
+    >
+      <template v-if="step === 'edit'">
+        <UButton
+          label="Cancelar"
+          color="neutral"
+          variant="ghost"
+          data-testid="contexto-cancelar"
+          @click="open = false"
+        />
+        <UButton
+          label="Enviar"
+          :loading="submitting"
+          data-testid="contexto-enviar"
+          @click="commit"
+        />
+      </template>
+
+      <template v-else>
+        <UButton
+          label="Gravar novamente"
+          color="neutral"
+          variant="soft"
+          class="mr-auto"
+          data-testid="revisao-regravar"
+          @click="rerecord"
+        />
+        <UButton
+          label="Cancelar"
+          color="neutral"
+          variant="ghost"
+          data-testid="revisao-cancelar"
+          @click="open = false"
+        />
+        <UButton
+          label="Gerar cenário"
+          data-testid="revisao-gerar"
+          @click="generate"
+        />
+      </template>
     </template>
   </BaseModal>
 </template>

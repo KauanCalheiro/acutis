@@ -28,4 +28,4 @@ Testes SEMPRE antes do código de produção. Sem exceção. Aplica-se ao backen
 
 ## Stack
 
-Backend (Laravel): Pest v4 + SQLite in-memory → [[tdd-backend]]
+Backend (Laravel): Pest v4 + SQLite in-memory → [backend-tdd](backend-tdd.md)

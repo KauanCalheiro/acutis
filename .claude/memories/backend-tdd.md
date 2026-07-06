@@ -1,11 +1,11 @@
 ---
-name: tdd-backend
+name: backend-tdd
 description: Testar backend Laravel — escrever feature test Pest ANTES do código em backend/app; SQLite in-memory, CRUD V1
 metadata:
   type: feedback
 ---
 
-Especificações de stack para TDD no backend. Convenções universais em [[tdd]].
+Especificações de stack para TDD no backend. Convenções universais em [tdd](tdd.md).
 
 ## Setup
 
@@ -46,5 +46,5 @@ it('description', function () {
 
 ## Gotchas
 
-- Route model binding com plurais PT-BR singulariza errado — se o teste retorna 404 inesperado, verificar se a rota tem `->parameters([...])` correto (ver [[backend-patterns]])
+- Route model binding com plurais PT-BR singulariza errado — se o teste retorna 404 inesperado, verificar se a rota tem `->parameters([...])` correto (ver [backend-action](backend-action.md))
 - `assertSoftDeleted` verifica `deleted_at` não-nulo, não ausência da linha

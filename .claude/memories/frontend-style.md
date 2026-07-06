@@ -5,7 +5,7 @@ metadata:
   type: feedback
 ---
 
-Sub-memória de [[frontend]].
+Regra de comentários em [comments](comments.md).
 
 **Sempre quebrar linha**: objetos e arrays ficam multi-linha, **uma propriedade/item por linha**, mesmo curtos. Nada de objeto inline `{ a: 1, b: 2 }`.
 

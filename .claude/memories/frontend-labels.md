@@ -5,8 +5,6 @@ metadata:
   type: feedback
 ---
 
-Sub-memória de [[frontend]].
-
 Botões e ações usam **verbo no infinitivo**, tom consistente: `Filtrar`, `Ordenar`, `Limpar`, `Salvar`, `Excluir`, `Adicionar`, `Cancelar`.
 
 - **Não** usar substantivo em botão de ação (ex.: ❌ `Filtros` → ✅ `Filtrar`).

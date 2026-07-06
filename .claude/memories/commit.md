@@ -25,3 +25,4 @@ Commits devem ser semânticos e de uma única linha curta. Sem co-author do Clau
 - Mensagem do squash commit: a funcionalidade/comportamento entregue (não "várias correções").
 - Descrição do merge/PR: detalhada, funciona como documentação do que foi feito e por quê — não só um resumo de uma linha.
 - Merge é automático (sem esperar aprovação) a menos que o usuário peça revisão manual explicitamente para aquele PR.
+- Depois do merge, limpar as branches órfãs — ver [branches](branches.md).

@@ -19,3 +19,11 @@ export interface ProjectDetail extends Project {
   updated_at: string
   scenarios: Scenario[]
 }
+
+export interface TestDraft {
+  title: string
+  tags: string[]
+  path: string
+  gherkin: string
+  playwright: string
+}

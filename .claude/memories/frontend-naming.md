@@ -5,8 +5,6 @@ metadata:
   type: feedback
 ---
 
-Sub-memória de [[frontend]].
-
 **Variante/contexto de um componente = subpasta, não sufixo no arquivo.**
 
 - ❌ `categoria/tabelaMobile.vue`, `categoria/tabelaDesktop.vue`

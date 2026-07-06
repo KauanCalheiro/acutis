@@ -5,8 +5,6 @@ metadata:
   type: feedback
 ---
 
-Sub-memória de [[frontend]].
-
 Ícones **da aplicação** usam **Google Material Icons** (`@iconify-json/ic`, prefixo `i-ic-*`). **SEMPRE a variante `round`** (filled + arredondado): `i-ic-round-<nome>` (ex.: `i-ic-round-swap-vert`). Nunca `baseline`/`sharp`. Variantes existentes: `baseline`, `round`, `outline`, `sharp`, `twotone`.
 
 - Os **defaults internos do Nuxt UI ficam como vêm** (não sobrescrever `app.config` `ui.icons`).

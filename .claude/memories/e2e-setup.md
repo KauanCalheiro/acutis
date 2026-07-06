@@ -5,8 +5,6 @@ metadata:
   type: feedback
 ---
 
-Sub-memória de [[e2e]].
-
 ## Hidratação
 
 O HTML do SSR do Nuxt chega "parecendo" interativo antes do Vue hidratar no cliente — clicar cedo demais não faz nada (o listener ainda não existe), mas não dá erro. Toda página precisa expor um marcador de hidratação pronta, e o teste espera esse marcador antes do primeiro clique/preenchimento:

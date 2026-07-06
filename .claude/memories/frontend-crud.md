@@ -5,8 +5,6 @@ metadata:
   type: feedback
 ---
 
-Sub-memória de [[frontend]].
-
 Padrão para criar/editar/remover um recurso na listagem:
 
 - **Form modal (criar + editar no mesmo)**: `components/<recurso>/form/modal.vue` → `<RecursoFormModal>`. `v-model:open`, prop `<recurso>?` (preenche = editar, null = criar), emit `saved`. Decide POST (`/api/<recurso>`) vs PUT (`/api/<recurso>/:id`) por `isEdit`. Botões `Salvar`/`Cancelar`.
@@ -16,4 +14,4 @@ Padrão para criar/editar/remover um recurso na listagem:
 - **Após salvar/remover**: `refresh()` do `useFetch`.
 - **Rotas proxy** (Nitro): `server/api/<recurso>/index.post.ts`, `[id].put.ts`, `[id].delete.ts` — cada uma `useApiClient(event).protocolo()` → backend `/api/v1/<recurso>`.
 
-Mutações via UI → testes E2E com tag `@write` (ver [[e2e-tags]]).
+Mutações via UI → testes E2E com tag `@write` (ver [e2e-tags](e2e-tags.md)).

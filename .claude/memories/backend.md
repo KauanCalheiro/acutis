@@ -1,6 +1,6 @@
 ---
 name: backend
-description: Backend Laravel — LER 1º ao criar/editar API, controller, model, migration, recurso; índice → patterns, filters, conventions, tdd
+description: Backend Laravel — LER 1º ao criar/editar API, controller, model, migration, recurso; índice → model, contracts, action, filters, conventions, tdd
 metadata:
   type: feedback
 ---
@@ -9,10 +9,12 @@ metadata:
 
 | Arquivo | Assunto |
 |---------|---------|
-| [[backend-patterns]] | Padrões por camada: Schema, Entrada, Persistência, Saída, Controller, Rota |
-| [[backend-filters]] | QueryBuilder, filtros, paginação JSON API |
-| [[backend-conventions]] | Pint, wrapping, estrutura de pastas, restrições |
-| [[tdd-backend]] | Ciclo TDD — teste antes da implementação |
+| [backend-model](backend-model.md) | Schema, migration, Model + Factory (PHP attributes) |
+| [backend-contracts](backend-contracts.md) | Entrada (`{Resource}Data`) e Saída (`{Resource}Resource`) |
+| [backend-action](backend-action.md) | Action (lógica de negócio), Controller, Rota |
+| [backend-filters](backend-filters.md) | QueryBuilder, filtros, paginação JSON API |
+| [backend-conventions](backend-conventions.md) | Pint, wrapping, estrutura de pastas, restrições |
+| [backend-tdd](backend-tdd.md) | Ciclo TDD — teste antes da implementação |
 
 ---
 
@@ -39,11 +41,8 @@ HTTP Response
 
 TDD obriga o teste primeiro. Dependências técnicas ditam o resto:
 
-1. **Teste** — cobre o contrato HTTP de ponta a ponta (red) → [[tdd-backend]]
-2. **Migration** — derivada do [[schema]] → [[backend-patterns]]
-3. **Model + Factory** — persistência + dados de teste → [[backend-patterns]]
-4. **Data** — contrato de entrada → [[backend-patterns]]
-5. **Resource** — contrato de saída → [[backend-patterns]]
-6. **Controller** — orquestra entrada → model → saída → [[backend-patterns]]
-7. **Rota** — expõe o controller (atenção ao gotcha PT-BR) → [[backend-patterns]]
-8. **Pint + commits** — [[backend-conventions]] + [[commit]]
+1. **Teste** — cobre o contrato HTTP de ponta a ponta (red) → [backend-tdd](backend-tdd.md)
+2. **Migration + Model + Factory** — derivados do [schema](schema.md) → [backend-model](backend-model.md)
+3. **Data / Resource** — contrato de entrada e saída → [backend-contracts](backend-contracts.md)
+4. **Action + Controller + Rota** — orquestra entrada → model → saída (atenção ao gotcha PT-BR) → [backend-action](backend-action.md)
+5. **Pint + commits** — [backend-conventions](backend-conventions.md) + [commit](commit.md)

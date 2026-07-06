@@ -5,7 +5,7 @@ metadata:
   type: feedback
 ---
 
-Padrão obrigatório para `index` de qualquer controller. Ver [[backend-patterns]] para contexto do Controller.
+Padrão obrigatório para `index` de qualquer controller. Ver [backend-action](backend-action.md) para contexto do Controller.
 
 ## QueryBuilder — padrão index
 

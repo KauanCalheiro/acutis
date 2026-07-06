@@ -241,8 +241,24 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
         await expect(page.getByTestId('cenario-card')).toHaveCount(2)
     })
 
-    test('generate posts the recording to the project tests endpoint', async ({ page }) => {
-        let posted: { baseUrl?: string, events?: Array<{ type?: string }> } | null = null
+    test('drafts the scenario, lets the user edit the contexts, then posts the edited draft', async ({ page }) => {
+        let drafted: { baseUrl?: string, events?: Array<{ type?: string }> } | null = null
+        await page.route('**/api/projects/alpha-store/tests/draft', async (route) => {
+            drafted = route.request().postDataJSON()
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    title: 'Fluxo gravado',
+                    tags: ['@read'],
+                    path: 'fluxo-gravado',
+                    gherkin: '@read\nFuncionalidade: Fluxo gravado\n  Cenário: clica',
+                    playwright: "import { test } from '@playwright/test' // spec",
+                }),
+            })
+        })
+
+        let posted: { title?: string, path?: string, tags?: string[] } | null = null
         await page.route('**/api/projects/alpha-store/tests', async (route) => {
             posted = route.request().postDataJSON()
             await route.fulfill({
@@ -252,11 +268,26 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
             })
         })
 
-        await page.getByTestId('revisao-gerar').click()
+        await test.step('generate switches to the loading step and requests a draft', async () => {
+            await page.getByTestId('revisao-gerar').click()
+            await expect(page.getByTestId('contexto-carregando')).toBeVisible()
+        })
+
+        await test.step('the editable contexts appear seeded with the AI draft', async () => {
+            await expect(page.getByTestId('contexto-titulo')).toHaveValue('Fluxo gravado', { timeout: 10_000 })
+            await expect(page.getByTestId('contexto-path')).toHaveValue('fluxo-gravado')
+        })
+
+        await test.step('the user edits the title before sending', async () => {
+            await page.getByTestId('contexto-titulo').fill('Fluxo revisado')
+            await page.getByTestId('contexto-enviar').click()
+        })
 
         await expect(page.getByTestId('revisao-video')).toBeHidden({ timeout: 10_000 })
-        expect(posted!.baseUrl).toBe(scenarioBaseUrl)
-        expect(posted!.events!.some((e) => e.type === 'click')).toBe(true)
+        expect(drafted!.baseUrl).toBe(scenarioBaseUrl)
+        expect(drafted!.events!.some((e) => e.type === 'click')).toBe(true)
+        expect(posted!.title).toBe('Fluxo revisado')
+        expect(posted!.path).toBe('fluxo-gravado')
     })
 })
 

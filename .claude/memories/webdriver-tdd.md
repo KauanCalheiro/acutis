@@ -5,9 +5,9 @@ metadata:
   type: feedback
 ---
 
-Convenções universais de TDD em [[tdd]]. Nunca implementar o webdriver sem teste antes — sem exceção.
+Convenções universais de TDD em [tdd](tdd.md). Nunca implementar o webdriver sem teste antes — sem exceção.
 
-**Why:** o webdriver substitui a extensão Chrome (removida) por Playwright controlando o navegador direto — `recordVideo`/`page.screencast` gravam sem pedir permissão nenhuma (canal de automação, não API web), e a UI/pill é injetada via `context.addInitScript`. Dois bugs reais só apareceram escrevendo o teste E2E de ponta a ponta antes de considerar terminado: (1) `page.goto('about:blank')` redundante no `start()` corria contra a navegação real disparada pelo teste — duas navegações concorrentes na mesma página; (2) `this.page` ficava setado antes de `exposeFunction`/`addInitScript` terminarem, deixando uma janela de corrida onde o teste podia navegar antes do script estar de fato registrado. Os dois só ficaram visíveis rodando a suíte várias vezes seguidas, não numa única execução.
+**Why:** o webdriver controla o navegador direto via Playwright (`recordVideo`/`page.screencast`, UI/pill injetada via `context.addInitScript`). Já apareceram dois bugs reais de corrida (navegação dupla concorrente; `this.page` setado antes do `addInitScript` terminar) — nenhum dos dois aparecia numa única execução do E2E, só rodando a suíte várias vezes seguidas.
 
 ## Setup
 

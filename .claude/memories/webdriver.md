@@ -5,13 +5,13 @@ metadata:
   type: feedback
 ---
 
-Índice do webdriver (NestJS, Playwright real controlando o navegador; UI/pill em `src/ui/` via Vite+Vue). Ler a sub-memória do assunto antes de mexer. Estrutura de pastas em [[structure]].
+Índice do webdriver (NestJS, Playwright real controlando o navegador; UI/pill em `src/ui/` via Vite+Vue). Ler a sub-memória do assunto antes de mexer. Estrutura de pastas em [structure-webdriver](structure-webdriver.md).
 
 ## Sub-memórias
 
 | Arquivo | Assunto |
 |---------|---------|
-| [[webdriver-tdd]] | Teste SEMPRE antes da implementação — Vitest (UI/pill) + Playwright (E2E real, sem extensão de navegador) |
+| [webdriver-tdd](webdriver-tdd.md) | Teste SEMPRE antes da implementação — Vitest (UI/pill) + Playwright (E2E real, sem extensão de navegador) |
 
 ## Gotchas
 

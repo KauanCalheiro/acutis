@@ -5,7 +5,7 @@ metadata:
   type: feedback
 ---
 
-Convenções que se aplicam a qualquer mudança no `backend/`. Ver [[backend]] para o fluxo de criação.
+Convenções para qualquer mudança em `backend/`. Ver [backend](backend.md).
 
 ## Formatação
 
@@ -38,7 +38,7 @@ vendor/bin/pint --dirty --format agent
 app/Http/Controllers/V1/   ← controllers da v1
 app/Http/Resources/V1/     ← resources da v1
 app/Data/V1/{Resource}/    ← Spatie Data (DTOs) por recurso
-app/Action/                ← lógica de negócio (AsAction) → [[backend-patterns]]
+app/Action/                ← lógica de negócio (AsAction) → [backend-action](backend-action.md)
 app/Enums/                 ← enums de domínio
 app/Support/               ← helpers/resolvers (AcutisConfig, Git)
 tests/Feature/V1/          ← testes de feature da v1
@@ -47,10 +47,4 @@ routes/api/v1.php          ← rotas da v1
 
 Não criar pastas base novas sem aprovação.
 
-## Referências
-
-- `backend/CLAUDE.md` — Boost guidelines completas
-- [[backend-patterns]] — detalhe de cada camada
-- [[backend-filters]] — QueryBuilder e paginação
-- [[tdd-backend]] — ciclo TDD
-- [[commit]] — convenção de commits
+Guidelines completas do Boost em `backend/CLAUDE.md`. Nunca comentar código — ver [comments](comments.md).

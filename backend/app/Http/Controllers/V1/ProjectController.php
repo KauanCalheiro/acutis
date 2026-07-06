@@ -11,7 +11,8 @@ use App\Action\ShowProject;
 use App\Action\UpdateProject;
 use App\Action\RunProject;
 use App\Action\WriteAuthSetupToProject;
-use App\Action\WriteTestToProject;
+use App\Action\GenerateTestsFromRecording;
+use App\Action\WriteDraftToProject;
 use App\Data\V1\Auth\AuthSetupData;
 use App\Data\V1\Project\CloneProjectData;
 use App\Data\V1\Project\CreateProjectData;
@@ -19,6 +20,8 @@ use App\Data\V1\Project\ProbeGitData;
 use App\Data\V1\Project\UpdateProjectData;
 use App\Data\V1\Project\RunProjectData;
 use App\Data\V1\Recording\RecordingData;
+use App\Data\V1\Recording\TestDraftData;
+use App\Data\V1\Recording\WriteTestData;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\GeneratedAuthSetupResource;
 use App\Http\Resources\V1\GitProbeResource;
@@ -26,6 +29,9 @@ use App\Http\Resources\V1\ProjectShowResource;
 use App\Http\Resources\V1\ProjectResource;
 use App\Http\Resources\V1\ProjectRunResource;
 use App\Http\Resources\V1\ProjectTestResource;
+use App\Http\Resources\V1\TestDraftResource;
+use App\Support\TestArtifact;
+use Illuminate\Support\Str;
 use App\Support\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -104,9 +110,25 @@ class ProjectController extends Controller
         return GeneratedAuthSetupResource::make(WriteAuthSetupToProject::run($project, $data));
     }
 
-    public function tests(string $project, RecordingData $data): ProjectTestResource
+    public function testsDraft(string $project, RecordingData $data): TestDraftResource
     {
-        return ProjectTestResource::make(WriteTestToProject::run($project, $data));
+        $path = Project::path($project);
+
+        $generated = GenerateTestsFromRecording::run($data);
+        $title = TestArtifact::title($generated->gherkin);
+
+        return TestDraftResource::make(new TestDraftData(
+            title: $title,
+            tags: TestArtifact::tags($generated->gherkin),
+            path: TestArtifact::uniquePath($path, Str::slug($title) ?: 'teste'),
+            gherkin: $generated->gherkin,
+            playwright: $generated->playwright,
+        ));
+    }
+
+    public function tests(string $project, WriteTestData $data): ProjectTestResource
+    {
+        return ProjectTestResource::make(WriteDraftToProject::run($project, $data));
     }
 
     public function run(string $project, RunProjectData $data): ProjectRunResource
