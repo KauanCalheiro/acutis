@@ -29,6 +29,9 @@ services:
     environment:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:23000}
       WEBDRIVER_TEST_MODE: "1"
+      RECORDER_CDP_URL: ${RECORDER_CDP_URL:-http://host.docker.internal:9222}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     init: true
     ports:
       - "24000:4000"

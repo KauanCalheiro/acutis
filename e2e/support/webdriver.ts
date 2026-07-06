@@ -30,13 +30,13 @@ async function waitHealthy(): Promise<void> {
 }
 
 /** Sobe o webdriver em modo teste na 4000 e devolve o stop que espera a porta liberar. */
-export async function startWebdriver(): Promise<() => Promise<void>> {
+export async function startWebdriver(env: Record<string, string> = {}): Promise<() => Promise<void>> {
     await waitPortFree()
 
     const proc = spawn('node', ['dist/main.js'], {
         cwd: WEBDRIVER_DIR,
         stdio: 'ignore',
-        env: { ...process.env, WEBDRIVER_TEST_MODE: '1' },
+        env: { ...process.env, WEBDRIVER_TEST_MODE: '1', ...env },
     })
 
     await waitHealthy()

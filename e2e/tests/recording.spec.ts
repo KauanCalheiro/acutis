@@ -5,6 +5,9 @@ import { resolve, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { startBackend } from '../support/backend'
 import { startWebdriver, WEBDRIVER_URL } from '../support/webdriver'
+import { chromium } from '@playwright/test'
+import type { ChildProcess } from 'node:child_process'
+import { spawn } from 'node:child_process'
 
 const FIXTURE_HTML = readFileSync(resolve(import.meta.dirname, '../fixtures/page.html'))
 
@@ -246,5 +249,145 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
         await expect(page.getByTestId('revisao-video')).toBeHidden({ timeout: 10_000 })
         expect(posted!.baseUrl).toBe(scenarioBaseUrl)
         expect(posted!.events!.some((e) => e.type === 'click')).toBe(true)
+    })
+})
+
+test.describe('recording over cdp against a host chrome', { tag: ['@write', '@recording'] }, () => {
+    const CDP_PORT = 9223
+    let cdpFixtureServer: Server
+    let cdpBaseUrl: string
+    let chromeProcess: ChildProcess
+    let chromeProfile: string
+    let stopCdpWebdriver: () => Promise<void>
+
+    test.beforeAll(async () => {
+        cdpFixtureServer = createServer((_req, res) => {
+            res.writeHead(200, { 'Content-Type': 'text/html' })
+            res.end(FIXTURE_HTML)
+        })
+        await new Promise<void>((r) => cdpFixtureServer.listen(0, r))
+        const { port } = cdpFixtureServer.address() as { port: number }
+        cdpBaseUrl = `http://127.0.0.1:${port}`
+
+        chromeProfile = mkdtempSync(join(tmpdir(), 'acutis-chrome-'))
+        chromeProcess = spawn(chromium.executablePath(), [
+            `--remote-debugging-port=${CDP_PORT}`,
+            `--user-data-dir=${chromeProfile}`,
+            '--headless=new',
+            '--no-first-run',
+            '--no-default-browser-check',
+            'about:blank',
+        ], { stdio: 'ignore' })
+
+        await expect(async () => {
+            const res = await fetch(`http://127.0.0.1:${CDP_PORT}/json/version`)
+            expect(res.ok).toBe(true)
+        }).toPass({ timeout: 15_000 })
+
+        stopCdpWebdriver = await startWebdriver({ RECORDER_CDP_URL: `http://127.0.0.1:${CDP_PORT}` })
+    })
+
+    test.afterAll(async () => {
+        await stopCdpWebdriver()
+        const exited = new Promise((r) => chromeProcess.once('exit', r))
+        chromeProcess.kill('SIGKILL')
+        await exited
+        rmSync(chromeProfile, { recursive: true, force: true })
+        await new Promise<void>((r) => cdpFixtureServer.close(() => r()))
+    })
+
+    test('records through the host browser and keeps it open after stopping', async ({ request }) => {
+        const gateway = await connectGateway()
+
+        try {
+            await test.step('start recording against the host chrome', async () => {
+                gateway.send('START_RECORDING')
+            })
+
+            await test.step('drive the recorded tab via the debug endpoints', async () => {
+                const goto = await request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: cdpBaseUrl } })
+                expect(goto.ok()).toBe(true)
+                const click = await request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#btn' } })
+                expect(click.ok()).toBe(true)
+            })
+
+            await test.step('assert the click event flows through the gateway', async () => {
+                await gateway.waitForMessage((m) => m.event === 'recorder:click')
+            })
+
+            const stopMessage = await test.step('stop and receive the video session', async () => {
+                gateway.send('STOP_RECORDING')
+                return gateway.waitForMessage((m) => m.event === 'recorder:stop')
+            })
+
+            await test.step('assert the video was captured over cdp', async () => {
+                expect(stopMessage.sessionId).toBeTruthy()
+                const video = await request.get(`${WEBDRIVER_URL}/recording/${stopMessage.sessionId}`)
+                expect(video.ok()).toBe(true)
+                expect(video.headers()['content-type']).toBe('video/webm')
+            })
+
+            await test.step('assert the host chrome survived the recording session', async () => {
+                const version = await fetch(`http://127.0.0.1:${CDP_PORT}/json/version`)
+                expect(version.ok).toBe(true)
+            })
+        } finally {
+            gateway.close()
+        }
+    })
+})
+
+test.describe('recording error when the host chrome is unreachable', { tag: ['@write', '@recording'] }, () => {
+    let stopBadWebdriver: () => Promise<void>
+    let stopBackend: () => Promise<void>
+
+    test.beforeAll(async () => {
+        stopBadWebdriver = await startWebdriver({ RECORDER_CDP_URL: 'http://127.0.0.1:9997' })
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: resolve(import.meta.dirname, '../fixtures/projects') })
+    })
+
+    test.afterAll(async () => {
+        await stopBadWebdriver()
+        await stopBackend()
+    })
+
+    test('surfaces a clear error on the project page and resets the button', async ({ page }) => {
+        await test.step('open the project page and wait for the webdriver connection', async () => {
+            await page.goto('/projects/alpha-store')
+            await page.locator('[data-hydrated="true"]').waitFor()
+            await expect(page.getByTestId('cenario-novo')).toBeEnabled({ timeout: 10_000 })
+        })
+
+        await page.getByTestId('cenario-novo').click()
+
+        await expect(page.getByTestId('webdriver-erro')).toContainText('Chrome', { timeout: 10_000 })
+        await expect(page.getByTestId('cenario-novo')).toBeVisible()
+    })
+
+    test('offers a copyable per-os chrome command that reopens the current page', async ({ page }) => {
+        await test.step('trigger the connection error', async () => {
+            await page.goto('/projects/alpha-store')
+            await page.locator('[data-hydrated="true"]').waitFor()
+            await expect(page.getByTestId('cenario-novo')).toBeEnabled({ timeout: 10_000 })
+            await page.getByTestId('cenario-novo').click()
+            await expect(page.getByTestId('webdriver-erro')).toBeVisible({ timeout: 10_000 })
+        })
+
+        await test.step('assert the command targets the debug port and lands back on this page', async () => {
+            await expect(page.getByTestId('webdriver-comando')).toContainText('remote-debugging-port=9222')
+            await expect(page.getByTestId('webdriver-comando')).toContainText('/projects/alpha-store')
+        })
+
+        await test.step('assert switching os swaps the command', async () => {
+            await page.getByRole('tab', { name: 'Windows' }).click()
+            await expect(page.getByTestId('webdriver-comando')).toContainText('Start-Process')
+        })
+
+        await test.step('copy the command to the clipboard', async () => {
+            await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+            await page.getByTestId('webdriver-copiar').click()
+            const copied = await page.evaluate(() => navigator.clipboard.readText())
+            expect(copied).toContain('remote-debugging-port=9222')
+        })
     })
 })

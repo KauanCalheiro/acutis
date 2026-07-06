@@ -25,11 +25,18 @@ export class RecorderGateway implements OnGatewayConnection {
 
     @SubscribeMessage('START_RECORDING')
     async handleStart(@ConnectedSocket() ws: WebSocket): Promise<void> {
-        await this.recorderService.start(
-            (event) => safeSend(ws, { event: `recorder:${event.type}`, ...event }),
-            (recordingStartedAt) => safeSend(ws, { event: 'recorder:started', recordingStartedAt }),
-            () => { void this.handleStop(ws) },
-        )
+        try {
+            await this.recorderService.start(
+                (event) => safeSend(ws, { event: `recorder:${event.type}`, ...event }),
+                (recordingStartedAt) => safeSend(ws, { event: 'recorder:started', recordingStartedAt }),
+                () => { void this.handleStop(ws) },
+            )
+        } catch (error) {
+            safeSend(ws, {
+                event: 'recorder:error',
+                error: error instanceof Error ? error.message : 'Erro ao iniciar a gravação.',
+            })
+        }
     }
 
     @SubscribeMessage('STOP_RECORDING')
