@@ -149,10 +149,8 @@ test.describe('project creation', { tag: ['@write', '@project'] }, () => {
         await expect(page.getByTestId('projeto-card').filter({ hasText: 'Meu Projeto Novo' })).toHaveCount(1)
     })
 
-    test('closes the modal with the header close button', async ({ page }) => {
-        await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click()
-
-        await expect(page.getByTestId('projeto-form-nome')).toBeHidden()
+    test('hides the header close button when the modal has a cancel action', async ({ page }) => {
+        await expect(page.getByRole('dialog').getByRole('button', { name: 'Close' })).toHaveCount(0)
     })
 
     test('rejects an empty name client-side', async ({ page }) => {

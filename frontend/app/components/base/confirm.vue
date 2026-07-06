@@ -30,8 +30,15 @@ const emit = defineEmits<{
   <BaseModal
     v-model:open="open"
     :title="title"
-    :description="description"
   >
+    <template #body>
+      <div class="flex min-h-24 items-center justify-center text-center">
+        <p class="text-lg text-muted">
+          {{ description }}
+        </p>
+      </div>
+    </template>
+
     <template #footer>
       <UButton
         label="Cancelar"
