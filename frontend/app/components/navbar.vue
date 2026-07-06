@@ -55,12 +55,14 @@ const items = [
 
 <template>
   <aside
-    class="sticky top-6 my-6 lg:top-10 lg:my-10 mr-3 flex h-[calc(100vh-3rem)] lg:h-[calc(100vh-5rem)] shrink-0 flex-col justify-between overflow-hidden rounded-r-xl border-y border-r border-default bg-accented/50 p-3 transition-[width] duration-300"
+    class="sticky top-6 my-6 lg:top-10 lg:my-10 mr-3 flex h-[calc(100vh-3rem)] lg:h-[calc(100vh-5rem)] shrink-0 flex-col justify-between overflow-hidden rounded-r-xl bg-accented/50 p-3 shadow-[6px_0_10px_-6px_rgb(0_0_0/0.12)] dark:shadow-[6px_0_10px_-6px_rgb(0_0_0/0.55)] transition-[width] duration-300"
     :class="expanded ? 'w-56' : 'w-18'"
-    @mouseenter="hovering = true"
     @mouseleave="hovering = false"
   >
-    <div class="flex flex-col gap-6">
+    <div
+      class="flex flex-col gap-6"
+      @mouseenter="hovering = true"
+    >
       <NuxtLink
         to="/"
         class="flex items-center gap-3 overflow-hidden"
