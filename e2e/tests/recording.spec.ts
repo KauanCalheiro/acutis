@@ -1,27 +1,16 @@
 import { test, expect } from '@playwright/test'
 import { createServer, type Server } from 'node:http'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { spawn, type ChildProcess } from 'node:child_process'
+import { readFileSync, cpSync, mkdtempSync, rmSync } from 'node:fs'
+import { resolve, join } from 'node:path'
+import { tmpdir } from 'node:os'
+import { startBackend } from '../support/backend'
+import { startWebdriver, WEBDRIVER_URL } from '../support/webdriver'
 
 const FIXTURE_HTML = readFileSync(resolve(import.meta.dirname, '../fixtures/page.html'))
-const WEBDRIVER_DIR = resolve(import.meta.dirname, '../../webdriver')
-const WEBDRIVER_URL = 'http://localhost:4000'
-
-async function waitForWebdriver(): Promise<void> {
-    for (let i = 0; i < 50; i++) {
-        try {
-            const res = await fetch(`${WEBDRIVER_URL}/health`)
-            if (res.ok) return
-        } catch { /* ainda subindo */ }
-        await new Promise((r) => setTimeout(r, 200))
-    }
-    throw new Error('webdriver did not become healthy in time')
-}
 
 let fixtureServer: Server
 let fixtureBaseUrl: string
-let webdriverProcess: ChildProcess
+let stopWebdriver: () => Promise<void>
 
 type GatewayMessage = { event: string } & Record<string, unknown>
 
@@ -74,16 +63,11 @@ test.describe('recording view', { tag: ['@write', '@recording'] }, () => {
         const { port } = fixtureServer.address() as { port: number }
         fixtureBaseUrl = `http://127.0.0.1:${port}`
 
-        webdriverProcess = spawn('node', ['dist/main.js'], {
-            cwd: WEBDRIVER_DIR,
-            stdio: 'ignore',
-            env: { ...process.env, WEBDRIVER_TEST_MODE: '1' },
-        })
-        await waitForWebdriver()
+        stopWebdriver = await startWebdriver()
     })
 
     test.afterAll(async () => {
-        webdriverProcess.kill()
+        await stopWebdriver()
         await new Promise<void>((r) => fixtureServer.close(() => r()))
     })
 
@@ -171,5 +155,96 @@ test.describe('recording view', { tag: ['@write', '@recording'] }, () => {
         } finally {
             gateway.close()
         }
+    })
+})
+
+test.describe('scenario recording from the project page', { tag: ['@write', '@recording'] }, () => {
+    let scenarioFixtureServer: Server
+    let scenarioBaseUrl: string
+    let stopScenarioWebdriver: () => Promise<void>
+    let stopBackend: () => Promise<void>
+    let tmpProjects: string
+
+    test.beforeAll(async () => {
+        scenarioFixtureServer = createServer((_req, res) => {
+            res.writeHead(200, { 'Content-Type': 'text/html' })
+            res.end(FIXTURE_HTML)
+        })
+        await new Promise<void>((r) => scenarioFixtureServer.listen(0, r))
+        const { port } = scenarioFixtureServer.address() as { port: number }
+        scenarioBaseUrl = `http://127.0.0.1:${port}`
+
+        stopScenarioWebdriver = await startWebdriver()
+
+        tmpProjects = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
+        cpSync(resolve(import.meta.dirname, '../fixtures/projects'), tmpProjects, { recursive: true })
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
+    })
+
+    test.afterAll(async () => {
+        await stopScenarioWebdriver()
+        await stopBackend()
+        rmSync(tmpProjects, { recursive: true, force: true })
+        await new Promise<void>((r) => scenarioFixtureServer.close(() => r()))
+    })
+
+    test.beforeEach(async ({ page }) => {
+        await test.step('open the project page and wait for the webdriver connection', async () => {
+            await page.goto('/projects/alpha-store')
+            await page.locator('[data-hydrated="true"]').waitFor()
+            await expect(page.getByTestId('cenario-novo')).toBeEnabled({ timeout: 10_000 })
+        })
+
+        await test.step('start recording straight from the new scenario button', async () => {
+            await page.getByTestId('cenario-novo').click()
+            await expect(page.getByTestId('cenario-parar')).toBeVisible({ timeout: 10_000 })
+        })
+
+        await test.step('interact with the recorded browser via the debug endpoints', async () => {
+            const goto = await page.request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: scenarioBaseUrl } })
+            expect(goto.ok()).toBe(true)
+            const click = await page.request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#btn' } })
+            expect(click.ok()).toBe(true)
+        })
+
+        await test.step('stop recording and land on the review modal', async () => {
+            await page.getByTestId('cenario-parar').click()
+            await expect(page.getByTestId('revisao-video')).toBeVisible({ timeout: 10_000 })
+        })
+    })
+
+    test('reviews the recording with video and event timeline', async ({ page }) => {
+        await expect(page.getByTestId('revisao-evento').filter({ hasText: 'Click me' })).toBeVisible()
+
+        await test.step('clicking an event seeks the video and marks it as current', async () => {
+            const item = page.getByTestId('revisao-evento').filter({ hasText: 'Click me' })
+            await item.click()
+            await expect(item).toHaveAttribute('data-current', 'true')
+        })
+    })
+
+    test('cancel dismisses the review without creating a scenario', async ({ page }) => {
+        await page.getByTestId('revisao-cancelar').click()
+
+        await expect(page.getByTestId('revisao-video')).toBeHidden()
+        await expect(page.getByTestId('cenario-card')).toHaveCount(2)
+    })
+
+    test('generate posts the recording to the project tests endpoint', async ({ page }) => {
+        let posted: { baseUrl?: string, events?: Array<{ type?: string }> } | null = null
+        await page.route('**/api/projects/alpha-store/tests', async (route) => {
+            posted = route.request().postDataJSON()
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ spec: 'tests/x.spec.ts', feature: 'features/x.feature', gherkin: '', playwright: '', testRun: null }),
+            })
+        })
+
+        await page.getByTestId('revisao-gerar').click()
+
+        await expect(page.getByTestId('revisao-video')).toBeHidden({ timeout: 10_000 })
+        expect(posted!.baseUrl).toBe(scenarioBaseUrl)
+        expect(posted!.events!.some((e) => e.type === 'click')).toBe(true)
     })
 })

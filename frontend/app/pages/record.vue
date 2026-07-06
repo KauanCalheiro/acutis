@@ -1,88 +1,20 @@
 <script setup lang="ts">
-interface RecorderEvent {
-  event: string
-  type?: string
-  url?: string
-  label?: string | null
-  value?: string | null
-  selectors?: { dataTestId?: string | null, text?: string | null, cssStable?: string | null } | null
-  sessionId?: string | null
-  timestamp?: number
-  recordingStartedAt?: number
-}
+import type { RecorderEvent } from '~/composables/webdriver'
 
 const hydrated = ref(false)
-const extensionReady = ref(false)
-const recording = ref(false)
-const wsConnected = ref(false)
-const errorMsg = ref<string | null>(null)
-const events = ref<RecorderEvent[]>([])
-const videoSessionId = ref<string | null>(null)
-const recordingStartedAt = ref<number | null>(null)
+onMounted(() => {
+  hydrated.value = true
+})
+
+const { state, url: WEBDRIVER_URL, startRecording: start, stopRecording: stop } = useWebdriver()
+
+const wsConnected = computed(() => state.value.connected)
+const extensionReady = computed(() => state.value.extensionReady)
+const recording = computed(() => state.value.recording)
+const errorMsg = computed(() => state.value.error)
+const videoSessionId = computed(() => state.value.videoSessionId)
+const events = computed(() => [...state.value.events].reverse())
 const videoEl = ref<HTMLVideoElement | null>(null)
-
-let socket: WebSocket | null = null
-
-function send(type: string) {
-  if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type }))
-}
-
-function start() {
-  errorMsg.value = null
-  events.value = []
-  videoSessionId.value = null
-  send('START_RECORDING')
-}
-
-function stop() {
-  send('STOP_RECORDING')
-  recording.value = false
-}
-
-function onMessage(raw: string) {
-  let data: RecorderEvent
-  try {
-    data = JSON.parse(raw)
-  } catch {
-    return
-  }
-  if (!data.event) return
-
-  switch (data.event) {
-    case 'recorder:hello':
-      extensionReady.value = true
-      break
-    case 'recorder:started':
-      recording.value = true
-      recordingStartedAt.value = data.recordingStartedAt ?? null
-      break
-    case 'recorder:error':
-      errorMsg.value = (data as { error?: string }).error ?? 'Erro na extensão.'
-      recording.value = false
-      break
-    case 'recorder:stop':
-      recording.value = false
-      videoSessionId.value = data.sessionId ?? null
-      break
-    default:
-      if (data.event.startsWith('recorder:')) events.value.unshift(data)
-  }
-}
-
-const WEBDRIVER_URL = useRuntimeConfig().public.webdriver.acutis.url
-
-function connect() {
-  socket = new WebSocket(`${WEBDRIVER_URL.replace('http', 'ws')}/ws`)
-  socket.onopen = () => {
-    wsConnected.value = true
-    send('WHO')
-  }
-  socket.onclose = () => {
-    wsConnected.value = false
-    extensionReady.value = false
-  }
-  socket.onmessage = msg => onMessage(msg.data)
-}
 
 function describe(e: RecorderEvent): string {
   const s = e.selectors
@@ -90,8 +22,8 @@ function describe(e: RecorderEvent): string {
 }
 
 function videoOffsetSeconds(e: RecorderEvent): number | null {
-  if (!recordingStartedAt.value || !e.timestamp) return null
-  return (e.timestamp - recordingStartedAt.value) / 1000
+  if (!state.value.recordingStartedAt || !e.timestamp) return null
+  return (e.timestamp - state.value.recordingStartedAt) / 1000
 }
 
 function seekTo(e: RecorderEvent): void {
@@ -99,12 +31,6 @@ function seekTo(e: RecorderEvent): void {
   if (offset === null || !videoEl.value) return
   videoEl.value.currentTime = Math.max(0, offset)
 }
-
-onMounted(() => {
-  hydrated.value = true
-  connect()
-})
-onBeforeUnmount(() => socket?.close())
 </script>
 
 <template>

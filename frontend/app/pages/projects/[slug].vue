@@ -9,7 +9,7 @@ onMounted(() => {
   hydrated.value = true
 })
 
-const { data: project, error } = await useFetch<ProjectDetail>(`/api/projects/${slug.value}`)
+const { data: project, error, refresh } = await useFetch<ProjectDetail>(`/api/projects/${slug.value}`)
 
 if (error.value || !project.value) {
   throw createError({
@@ -46,6 +46,17 @@ function tagColor(tag: string) {
 const renameOpen = ref(false)
 const removeOpen = ref(false)
 const removing = ref(false)
+
+const { state: webdriver, startRecording, stopRecording } = useWebdriver()
+const reviewOpen = ref(false)
+
+watch(() => webdriver.value.videoSessionId, (sessionId) => {
+  if (sessionId) reviewOpen.value = true
+})
+
+function stopAndReview() {
+  stopRecording()
+}
 
 function onRenamed(newSlug: string) {
   navigateTo(`/projects/${newSlug}`)
@@ -141,12 +152,30 @@ async function remove() {
         class="flex-1 min-w-48"
       />
       <UButton
+        v-if="!webdriver.recording"
         data-testid="cenario-novo"
         label="Novo cenário"
         trailing-icon="i-ic-round-add"
-        to="/record"
+        :disabled="!webdriver.connected"
+        @click="startRecording"
+      />
+      <UButton
+        v-else
+        data-testid="cenario-parar"
+        label="Parar gravação"
+        trailing-icon="i-ic-round-stop"
+        color="error"
+        class="animate-pulse"
+        @click="stopAndReview"
       />
     </div>
+
+    <ScenarioReviewModal
+      v-model:open="reviewOpen"
+      :slug="slug"
+      @generated="refresh()"
+      @rerecord="startRecording"
+    />
 
     <div
       v-if="scenarios.length"
