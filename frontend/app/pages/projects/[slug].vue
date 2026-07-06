@@ -170,6 +170,15 @@ async function remove() {
       />
     </div>
 
+    <UAlert
+      v-if="webdriver.error"
+      color="error"
+      variant="soft"
+      data-testid="webdriver-erro"
+      :description="webdriver.error"
+      class="mb-8"
+    />
+
     <ScenarioReviewModal
       v-model:open="reviewOpen"
       :slug="slug"
