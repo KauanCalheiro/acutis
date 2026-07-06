@@ -42,6 +42,18 @@ test.describe('app navbar', { tag: ['@read', '@navbar'] }, () => {
         await expect(page.getByTestId('navbar-projetos')).not.toContainText('Projetos')
     })
 
+    test('expands when hovering the empty middle area', async ({ page }) => {
+        const logo = await page.getByTestId('navbar-logo').boundingBox()
+        const colorButton = await page.getByTestId('navbar-cor').boundingBox()
+
+        await page.mouse.move(
+            logo!.x + logo!.width / 2,
+            (logo!.y + logo!.height + colorButton!.y) / 2,
+        )
+
+        await expect(page.getByTestId('navbar-projetos')).toContainText('Projetos')
+    })
+
     test('stays expanded after the mouse leaves when pinned', async ({ page }) => {
         await page.getByTestId('navbar-alternar').click()
         await page.mouse.move(640, 400)
