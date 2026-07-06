@@ -27,14 +27,10 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <UModal
+  <BaseModal
     v-model:open="open"
     :title="title"
     :description="description"
-    :ui="{
-      content: 'divide-y-0',
-      footer: 'justify-end'
-    }"
   >
     <template #footer>
       <UButton
@@ -52,5 +48,5 @@ const emit = defineEmits<{
         @click="emit('confirm')"
       />
     </template>
-  </UModal>
+  </BaseModal>
 </template>

@@ -148,13 +148,9 @@ function onSubmitClone(event: FormSubmitEvent<CloneProject>) {
 </script>
 
 <template>
-  <UModal
+  <BaseModal
     v-model:open="open"
     title="Criar projeto"
-    :ui="{
-      content: 'divide-y-0',
-      footer: 'justify-end',
-    }"
   >
     <template #body>
       <UTabs
@@ -311,5 +307,5 @@ function onSubmitClone(event: FormSubmitEvent<CloneProject>) {
         data-testid="projeto-form-salvar"
       />
     </template>
-  </UModal>
+  </BaseModal>
 </template>
