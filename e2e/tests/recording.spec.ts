@@ -363,4 +363,31 @@ test.describe('recording error when the host chrome is unreachable', { tag: ['@w
         await expect(page.getByTestId('webdriver-erro')).toContainText('Chrome', { timeout: 10_000 })
         await expect(page.getByTestId('cenario-novo')).toBeVisible()
     })
+
+    test('offers a copyable per-os chrome command that reopens the current page', async ({ page }) => {
+        await test.step('trigger the connection error', async () => {
+            await page.goto('/projects/alpha-store')
+            await page.locator('[data-hydrated="true"]').waitFor()
+            await expect(page.getByTestId('cenario-novo')).toBeEnabled({ timeout: 10_000 })
+            await page.getByTestId('cenario-novo').click()
+            await expect(page.getByTestId('webdriver-erro')).toBeVisible({ timeout: 10_000 })
+        })
+
+        await test.step('assert the command targets the debug port and lands back on this page', async () => {
+            await expect(page.getByTestId('webdriver-comando')).toContainText('remote-debugging-port=9222')
+            await expect(page.getByTestId('webdriver-comando')).toContainText('/projects/alpha-store')
+        })
+
+        await test.step('assert switching os swaps the command', async () => {
+            await page.getByRole('tab', { name: 'Windows' }).click()
+            await expect(page.getByTestId('webdriver-comando')).toContainText('Start-Process')
+        })
+
+        await test.step('copy the command to the clipboard', async () => {
+            await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+            await page.getByTestId('webdriver-copiar').click()
+            const copied = await page.evaluate(() => navigator.clipboard.readText())
+            expect(copied).toContain('remote-debugging-port=9222')
+        })
+    })
 })
