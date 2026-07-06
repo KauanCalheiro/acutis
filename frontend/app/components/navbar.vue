@@ -4,7 +4,17 @@ const pinned = useCookie<boolean>('navbar-expanded', {
 })
 const hovering = ref(false)
 const colorPickerOpen = ref(false)
-const expanded = computed(() => pinned.value || hovering.value || colorPickerOpen.value)
+const pickerKeepsExpanded = ref(false)
+
+watch(colorPickerOpen, (open) => {
+  if (open) pickerKeepsExpanded.value = pinned.value || hovering.value
+})
+
+const expanded = computed(() =>
+  pinned.value
+  || hovering.value
+  || (colorPickerOpen.value && pickerKeepsExpanded.value),
+)
 
 const colors = {
   red: 'bg-red-500',
