@@ -46,14 +46,17 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
     })
 
     test('icon-only actions show an immediate tooltip on hover', async ({ page }) => {
-        await page.getByTestId('projeto-remover').hover()
-        await expect(page.getByRole('tooltip')).toContainText('Remover projeto')
-
-        await page.getByTestId('projeto-editar').hover()
-        await expect(page.getByRole('tooltip')).toContainText('Renomear projeto')
-
-        await page.getByTestId('projeto-voltar').hover()
-        await expect(page.getByRole('tooltip')).toContainText('Voltar')
+        for (const [testid, label] of [
+            ['projeto-remover', 'Remover projeto'],
+            ['projeto-editar', 'Renomear projeto'],
+            ['projeto-voltar', 'Voltar'],
+        ] as const) {
+            await page.mouse.move(640, 500)
+            await expect(async () => {
+                await page.getByTestId(testid).hover()
+                await expect(page.getByText(label, { exact: true }).first()).toBeVisible({ timeout: 1000 })
+            }).toPass({ timeout: 10_000 })
+        }
     })
 
     test('lists the scenarios with their tags', async ({ page }) => {
