@@ -46,7 +46,7 @@ it('writes the generated spec and feature into the project folder', function () 
 
     $response = postJson("/api/v1/projects/{$slug}/tests", recordingPayload())
         ->assertOk()
-        ->assertJsonPath('gherkin', "Funcionalidade: Login do Usuário\n  Cenário: entra")
+        ->assertJsonPath('gherkin', "@read\nFuncionalidade: Login do Usuário\n  Cenário: entra")
         ->assertJsonPath('spec', 'tests/login-do-usuario.spec.ts')
         ->assertJsonPath('feature', 'features/login-do-usuario.feature');
 
@@ -113,8 +113,93 @@ it('parses structured output even when the model wraps it in code fences', funct
 
     postJson("/api/v1/projects/{$slug}/tests", recordingPayload())
         ->assertOk()
-        ->assertJsonPath('gherkin', 'Funcionalidade: Cercado')
+        ->assertJsonPath('gherkin', "@read\nFuncionalidade: Cercado")
         ->assertJsonPath('playwright', 'spec limpo');
+});
+
+it('instructs both writers to tag the artifacts with @read or @write', function () {
+    expect(app(GherkinWriter::class)->instructions())->toContain('@read')
+        ->toContain('@write');
+
+    expect(app(PlaywrightWriter::class)->instructions())->toContain('@read')
+        ->toContain('@write');
+});
+
+it('injects @write into an untagged spec when the recording mutates data', function () {
+    GherkinWriter::fake([['gherkin' => "Funcionalidade: Cadastro\n  Cenário: cria"]]);
+    PlaywrightWriter::fake([['playwright' => <<<'TS'
+    import { test, expect } from '@playwright/test'
+
+    test.describe('Cadastro', () => {
+        test('cria', async ({ page }) => {})
+    })
+    TS]]);
+    Http::fake();
+    $slug = project();
+
+    $payload = recordingPayload();
+    $payload['events'][] = ['type' => 'fill', 'timestamp' => 3, 'url' => 'http://127.0.0.1:52346/', 'selectors' => ['id' => 'nome'], 'label' => 'Nome', 'value' => 'x'];
+
+    $response = postJson("/api/v1/projects/{$slug}/tests", $payload)->assertOk();
+
+    expect($response->json('playwright'))->toContain("test.describe('Cadastro', { tag: ['@write'] }, () =>")
+        ->and($response->json('gherkin'))->toStartWith('@write');
+});
+
+it('injects @read into an untagged spec when the recording only reads', function () {
+    GherkinWriter::fake([['gherkin' => "Funcionalidade: Consulta\n  Cenário: navega"]]);
+    PlaywrightWriter::fake([['playwright' => <<<'TS'
+    import { test, expect } from '@playwright/test'
+
+    test.describe('Consulta', () => {
+        test('navega', async ({ page }) => {})
+    })
+    TS]]);
+    Http::fake();
+    $slug = project();
+
+    $response = postJson("/api/v1/projects/{$slug}/tests", recordingPayload())->assertOk();
+
+    expect($response->json('playwright'))->toContain("test.describe('Consulta', { tag: ['@read'] }, () =>")
+        ->and($response->json('gherkin'))->toStartWith('@read');
+});
+
+it('adds the read or write tag to an existing tag list without one', function () {
+    GherkinWriter::fake([['gherkin' => "@login\nFuncionalidade: Login\n  Cenário: entra"]]);
+    PlaywrightWriter::fake([['playwright' => <<<'TS'
+    import { test, expect } from '@playwright/test'
+
+    test.describe('Login', { tag: ['@login'] }, () => {
+        test('entra', async ({ page }) => {})
+    })
+    TS]]);
+    Http::fake();
+    $slug = project();
+
+    $response = postJson("/api/v1/projects/{$slug}/tests", recordingPayload())->assertOk();
+
+    expect($response->json('playwright'))->toContain("tag: ['@read', '@login']")
+        ->and($response->json('gherkin'))->toStartWith("@read @login\n");
+});
+
+it('keeps artifacts untouched when the read or write tag is already there', function () {
+    $gherkin = "@write @checkout\nFuncionalidade: Checkout\n  Cenário: paga";
+    $spec = <<<'TS'
+    import { test, expect } from '@playwright/test'
+
+    test.describe('Checkout', { tag: ['@write', '@checkout'] }, () => {
+        test('paga', async ({ page }) => {})
+    })
+    TS;
+    GherkinWriter::fake([['gherkin' => $gherkin]]);
+    PlaywrightWriter::fake([['playwright' => $spec]]);
+    Http::fake();
+    $slug = project();
+
+    $response = postJson("/api/v1/projects/{$slug}/tests", recordingPayload())->assertOk();
+
+    expect($response->json('playwright'))->toBe($spec)
+        ->and($response->json('gherkin'))->toBe($gherkin);
 });
 
 it('validates the recording payload', function () {

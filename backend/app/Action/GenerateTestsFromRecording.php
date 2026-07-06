@@ -41,11 +41,56 @@ class GenerateTestsFromRecording
             [$playwright, $testRun] = $this->runUntilItPasses($recording, $gherkin, $events, $playwright);
         }
 
+        $tag = $this->readWriteTag($recording->events);
+
         return new GeneratedTestsData(
-            gherkin: $gherkin,
-            playwright: $playwright,
+            gherkin: $this->ensureGherkinTag($gherkin, $tag),
+            playwright: $this->ensurePlaywrightTag($playwright, $tag),
             testRun: $testRun,
         );
+    }
+
+    private function readWriteTag(array $events): string
+    {
+        $mutates = collect($events)->contains(
+            fn (array $event): bool => in_array($event['type'] ?? '', ['fill', 'submit'], true),
+        );
+
+        // ponytail: heurística fill/submit = escrita; clique que muta sem formulário passa por @read — o agente decide melhor, isto é só o fallback
+        return $mutates ? '@write' : '@read';
+    }
+
+    private function ensureGherkinTag(string $gherkin, string $tag): string
+    {
+        $firstLine = strtok($gherkin, "\n") ?: '';
+
+        if (str_starts_with(trim($firstLine), '@')) {
+            if (preg_match('/@(read|write)\b/', $firstLine)) {
+                return $gherkin;
+            }
+
+            return "{$tag} ".ltrim($gherkin);
+        }
+
+        return "{$tag}\n{$gherkin}";
+    }
+
+    private function ensurePlaywrightTag(string $playwright, string $tag): string
+    {
+        if (preg_match('/tag:\s*\[([^\]]*)\]/', $playwright, $m)) {
+            if (preg_match('/@(read|write)\b/', $m[1])) {
+                return $playwright;
+            }
+
+            return preg_replace('/tag:\s*\[/', "tag: ['{$tag}', ", $playwright, 1);
+        }
+
+        return preg_replace(
+            '/test\.describe\(\s*((["\']).+?\2)\s*,\s*(?=\(|async)/',
+            "test.describe($1, { tag: ['{$tag}'] }, ",
+            $playwright,
+            1,
+        ) ?? $playwright;
     }
 
     private function runUntilItPasses(

@@ -26,6 +26,11 @@ class GherkinWriter implements Agent, HasStructuredOutput
         - Agrupe o fluxo em cenários coesos; prefira um cenário por objetivo do usuário.
         - Use os labels dos eventos para nomear campos e botões como o usuário os vê.
         - Valores de senha chegam mascarados como •••• — nunca invente a senha real.
+
+        Tags (obrigatório):
+        - Acima da linha Funcionalidade, escreva uma linha de tags.
+        - A primeira tag é SEMPRE exatamente uma entre @read (o fluxo só consulta) e @write (o fluxo cria, altera ou remove dados).
+        - Depois dela, adicione tags curtas de domínio em português (ex.: @login, @checkout, @cadastro).
         INSTRUCTIONS;
     }
 
