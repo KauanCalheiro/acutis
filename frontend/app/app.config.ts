@@ -29,7 +29,7 @@ export default defineAppConfig({
     },
     tooltip: {
       slots: {
-        text: 'text-sm'
+        text: 'text-base'
       }
     },
     alert: {
