@@ -27,6 +27,11 @@ export default defineAppConfig({
         size: 'xl'
       }
     },
+    tooltip: {
+      slots: {
+        text: 'text-sm'
+      }
+    },
     alert: {
       defaultVariants: {
         variant: 'soft'

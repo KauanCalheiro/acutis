@@ -20,6 +20,7 @@ const {
   <UTooltip
     :text="label"
     :delay-duration="0"
+    arrow
     :content="{
       side
     }"
