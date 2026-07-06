@@ -54,13 +54,9 @@ async function onSubmit(event: FormSubmitEvent<CreateProject>) {
 </script>
 
 <template>
-  <UModal
+  <BaseModal
     v-model:open="open"
     title="Renomear projeto"
-    :ui="{
-      content: 'divide-y-0',
-      footer: 'justify-end'
-    }"
   >
     <template #body>
       <UForm
@@ -102,5 +98,5 @@ async function onSubmit(event: FormSubmitEvent<CreateProject>) {
         data-testid="projeto-form-salvar"
       />
     </template>
-  </UModal>
+  </BaseModal>
 </template>
