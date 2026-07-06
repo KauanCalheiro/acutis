@@ -10,7 +10,7 @@ interface ProjectsResponse {
   }
 }
 
-const PAGE_SIZE = 6
+const PAGE_SIZE = 9
 
 const hydrated = ref(false)
 onMounted(() => {

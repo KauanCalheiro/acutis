@@ -26,7 +26,7 @@ test.describe('projects home', { tag: ['@read', '@project'] }, () => {
     })
 
     test('lists the first page of projects', async ({ page }) => {
-        await expect(page.getByTestId('projeto-card')).toHaveCount(6)
+        await expect(page.getByTestId('projeto-card')).toHaveCount(9)
         await expect(page.getByTestId('projeto-card').first()).toContainText('Alpha Store')
     })
 
@@ -73,8 +73,8 @@ test.describe('projects home', { tag: ['@read', '@project'] }, () => {
             await page.getByTestId('projeto-paginacao').getByRole('button', { name: 'Page 2' }).click()
         })
 
-        await expect(page.getByTestId('projeto-card')).toHaveCount(2)
-        await expect(page.getByTestId('projeto-card').first()).toContainText('Golf Panel')
+        await expect(page.getByTestId('projeto-card')).toHaveCount(1)
+        await expect(page.getByTestId('projeto-card').first()).toContainText('Zumbi Tracker')
     })
 
     test('search without matches shows the empty state', async ({ page }) => {
