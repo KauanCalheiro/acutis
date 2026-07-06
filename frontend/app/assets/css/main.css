@@ -26,3 +26,40 @@
 *:has(> a:focus-visible) {
   --tw-ring-color: var(--ui-border-inverted);
 }
+
+@property --scroll-fade-top {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --scroll-fade-bottom {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes scroll-fade {
+  0% {
+    --scroll-fade-top: 0px;
+    --scroll-fade-bottom: 2rem;
+  }
+  100% {
+    --scroll-fade-top: 2rem;
+    --scroll-fade-bottom: 0px;
+  }
+}
+
+@supports (animation-timeline: scroll(self)) {
+  .scroll-fade {
+    mask-image: linear-gradient(
+      to bottom,
+      transparent,
+      black var(--scroll-fade-top),
+      black calc(100% - var(--scroll-fade-bottom)),
+      transparent
+    );
+    animation: scroll-fade linear both;
+    animation-timeline: scroll(self);
+  }
+}
