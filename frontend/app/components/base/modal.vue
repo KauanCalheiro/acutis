@@ -4,13 +4,15 @@ interface BaseModal {
   description?: string
   dismissable?: boolean
   closable?: boolean
+  wide?: boolean
 }
 
 const {
   title = '',
   description = '',
   dismissable = true,
-  closable = false
+  closable = false,
+  wide = false
 } = defineProps<BaseModal>()
 
 const open = defineModel<boolean>('open', {
@@ -26,7 +28,7 @@ const open = defineModel<boolean>('open', {
     :dismissible="dismissable"
     :close="closable"
     :ui="{
-      content: 'divide-y-0',
+      content: wide ? 'divide-y-0 sm:max-w-5xl' : 'divide-y-0',
       title: 'text-xl',
       body: 'scroll-fade',
       footer: 'justify-end'
