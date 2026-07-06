@@ -95,6 +95,8 @@ const items = [
           :key="item.to"
           :text="item.label"
           :disabled="expanded"
+          :delay-duration="0"
+          arrow
           :content="{
             side: 'right',
           }"
@@ -126,8 +128,10 @@ const items = [
           side: 'right',
         }"
       >
-        <UButton
+        <BaseButtonIcon
           icon="i-ic-round-palette"
+          label="Cor primária"
+          side="right"
           variant="ghost"
           color="neutral"
           block
@@ -151,12 +155,23 @@ const items = [
           </div>
         </template>
       </UPopover>
-      <UColorModeButton
-        block
-        data-testid="navbar-tema"
-      />
-      <UButton
+      <UTooltip
+        text="Tema"
+        :delay-duration="0"
+        arrow
+        :content="{
+          side: 'right',
+        }"
+      >
+        <UColorModeButton
+          block
+          data-testid="navbar-tema"
+        />
+      </UTooltip>
+      <BaseButtonIcon
         :icon="pinned ? 'i-ic-round-chevron-left' : 'i-ic-round-chevron-right'"
+        :label="pinned ? 'Recolher menu' : 'Manter aberto'"
+        side="right"
         variant="ghost"
         color="neutral"
         block

@@ -45,6 +45,17 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
         await expect(page).toHaveURL('/')
     })
 
+    test('icon-only actions show an immediate tooltip on hover', async ({ page }) => {
+        await page.getByTestId('projeto-remover').hover()
+        await expect(page.getByRole('tooltip')).toContainText('Remover projeto')
+
+        await page.getByTestId('projeto-editar').hover()
+        await expect(page.getByRole('tooltip')).toContainText('Renomear projeto')
+
+        await page.getByTestId('projeto-voltar').hover()
+        await expect(page.getByRole('tooltip')).toContainText('Voltar')
+    })
+
     test('lists the scenarios with their tags', async ({ page }) => {
         await expect(page.getByTestId('cenario-card')).toHaveCount(2)
 
