@@ -12,6 +12,7 @@ class TestDraftResource extends JsonResource
         return [
             'title' => $this->title,
             'tags' => $this->tags,
+            'domain' => $this->domain,
             'path' => $this->path,
             'gherkin' => $this->gherkin,
             'playwright' => $this->playwright,

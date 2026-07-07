@@ -120,7 +120,8 @@ class ProjectController extends Controller
         return TestDraftResource::make(new TestDraftData(
             title: $title,
             tags: TestArtifact::tags($generated->gherkin),
-            path: TestArtifact::uniquePath($path, Str::slug($title) ?: 'teste'),
+            domain: $generated->domain,
+            path: TestArtifact::uniquePath("{$path}/tests", Str::slug($title) ?: 'teste'),
             gherkin: $generated->gherkin,
             playwright: $generated->playwright,
         ));

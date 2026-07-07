@@ -38,8 +38,8 @@ function draftPayload(array $overrides = []): array
     ], $overrides);
 }
 
-it('returns an editable draft with title, tags and path without writing files', function () {
-    GherkinWriter::fake([['gherkin' => "Funcionalidade: Login do Usuário\n  Cenário: entra"]]);
+it('returns an editable draft with title, tags, domain and path without writing files', function () {
+    GherkinWriter::fake([['gherkin' => "Funcionalidade: Login do Usuário\n  Cenário: entra", 'domain' => 'login']]);
     PlaywrightWriter::fake([['playwright' => "import { test } from '@playwright/test' // spec gerado"]]);
     Http::fake();
     $slug = draftProject();
@@ -48,6 +48,7 @@ it('returns an editable draft with title, tags and path without writing files', 
         ->assertOk()
         ->assertJsonPath('title', 'Login do Usuário')
         ->assertJsonPath('tags', ['@read'])
+        ->assertJsonPath('domain', 'login')
         ->assertJsonPath('path', 'login-do-usuario')
         ->assertJsonPath('gherkin', "@read\nFuncionalidade: Login do Usuário\n  Cenário: entra")
         ->assertJson(fn ($json) => $json->where('playwright', fn ($v) => str_contains($v, 'spec gerado'))->etc());
@@ -58,7 +59,7 @@ it('returns an editable draft with title, tags and path without writing files', 
 });
 
 it('suggests a non-colliding path when a spec of the same name exists', function () {
-    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login']]);
+    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
     PlaywrightWriter::fake([['playwright' => 'spec']]);
     Http::fake();
     $slug = draftProject();
@@ -72,7 +73,7 @@ it('suggests a non-colliding path when a spec of the same name exists', function
 });
 
 it('tags the draft @write when the recording mutates data', function () {
-    GherkinWriter::fake([['gherkin' => "Funcionalidade: Cadastro\n  Cenário: cria"]]);
+    GherkinWriter::fake([['gherkin' => "Funcionalidade: Cadastro\n  Cenário: cria", 'domain' => 'cadastro']]);
     PlaywrightWriter::fake([['playwright' => 'spec']]);
     Http::fake();
     $slug = draftProject();
@@ -87,7 +88,7 @@ it('tags the draft @write when the recording mutates data', function () {
 });
 
 it('annotates noticeable pauses so the generated spec waits for loading', function () {
-    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Fluxo']]);
+    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Fluxo', 'domain' => 'fluxo']]);
     PlaywrightWriter::fake([['playwright' => 'spec']]);
     Http::fake();
     $slug = draftProject();
@@ -103,7 +104,7 @@ it('annotates noticeable pauses so the generated spec waits for loading', functi
 });
 
 it('parses structured output even when the model wraps it in code fences', function () {
-    GherkinWriter::fake([new StructuredTextResponse([], "```json\n{\"gherkin\": \"Funcionalidade: Cercado\"}\n```", new Usage, new Meta('gemini', 'x'))]);
+    GherkinWriter::fake([new StructuredTextResponse([], "```json\n{\"gherkin\": \"Funcionalidade: Cercado\", \"domain\": \"cercado\"}\n```", new Usage, new Meta('gemini', 'x'))]);
     PlaywrightWriter::fake([new StructuredTextResponse([], "{\"playwright\": \"spec limpo\"}\n```", new Usage, new Meta('gemini', 'x'))]);
     Http::fake();
     $slug = draftProject();
@@ -111,6 +112,7 @@ it('parses structured output even when the model wraps it in code fences', funct
     postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())
         ->assertOk()
         ->assertJsonPath('gherkin', "@read\nFuncionalidade: Cercado")
+        ->assertJsonPath('domain', 'cercado')
         ->assertJsonPath('playwright', 'spec limpo');
 });
 

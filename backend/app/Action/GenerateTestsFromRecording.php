@@ -26,9 +26,11 @@ class GenerateTestsFromRecording
             JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
         );
 
-        $gherkin = StructuredOutput::field(app(GherkinWriter::class)->prompt(
+        $gherkinResponse = app(GherkinWriter::class)->prompt(
             "URL base: {$recording->baseUrl}\n\nEventos gravados:\n{$events}",
-        ), 'gherkin');
+        );
+        $gherkin = StructuredOutput::field($gherkinResponse, 'gherkin');
+        $domain = StructuredOutput::field($gherkinResponse, 'domain');
 
         $playwright = StructuredOutput::field(app(PlaywrightWriter::class)->prompt(
             "URL base: {$recording->baseUrl}\n\nCenário Gherkin:\n{$gherkin}\n\nEventos gravados:\n{$events}"
@@ -46,6 +48,7 @@ class GenerateTestsFromRecording
         return new GeneratedTestsData(
             gherkin: $this->ensureGherkinTag($gherkin, $tag),
             playwright: $this->ensurePlaywrightTag($playwright, $tag),
+            domain: $domain,
             testRun: $testRun,
         );
     }
