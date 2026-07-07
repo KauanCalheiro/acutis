@@ -9,16 +9,56 @@ const phrases = [
   'Dando os retoques finais'
 ]
 
-const index = ref(0)
-let timer: ReturnType<typeof setInterval> | undefined
+const NOISE_CHARS = '!<>-_\\/[]{}—=+*^?#01'
+const STEP_MS = 50
+const HOLD_MS = 1200
+
+const display = ref(phrases[0])
+
+function noiseFor(char: string) {
+  return char === ' ' ? ' ' : NOISE_CHARS[Math.floor(Math.random() * NOISE_CHARS.length)]
+}
+
+function sleep(ms: number) {
+  return new Promise<void>(resolve => setTimeout(resolve, ms))
+}
+
+async function encrypt(text: string) {
+  for (let locked = text.length; locked >= 0; locked--) {
+    display.value = text.slice(0, locked) + text.slice(locked).split('').map(noiseFor).join('')
+    await sleep(STEP_MS)
+  }
+}
+
+async function decrypt(text: string) {
+  for (let revealed = 0; revealed <= text.length; revealed++) {
+    display.value = text.slice(0, revealed) + text.slice(revealed).split('').map(noiseFor).join('')
+    await sleep(STEP_MS)
+  }
+}
+
+let running = true
+
+async function loop() {
+  let index = 0
+  while (running) {
+    await sleep(HOLD_MS)
+    if (!running) return
+    const next = phrases[(index + 1) % phrases.length]!
+    await encrypt(phrases[index]!)
+    if (!running) return
+    await decrypt(next)
+    index = (index + 1) % phrases.length
+  }
+}
 
 onMounted(() => {
-  timer = setInterval(() => {
-    index.value = (index.value + 1) % phrases.length
-  }, 2500)
+  loop()
 })
 
-onUnmounted(() => clearInterval(timer))
+onUnmounted(() => {
+  running = false
+})
 </script>
 
 <template>
@@ -26,32 +66,16 @@ onUnmounted(() => clearInterval(timer))
     data-testid="contexto-carregando"
     class="flex flex-col items-center gap-6 py-10 text-center"
   >
-    <span class="relative flex size-20 items-center justify-center">
-      <span class="absolute inline-flex size-full animate-ping rounded-full bg-primary/30" />
-      <span class="relative inline-flex size-20 items-center justify-center rounded-full bg-elevated">
-        <UIcon
-          name="i-ic-round-auto-awesome"
-          class="size-9 animate-pulse text-primary"
-        />
-      </span>
-    </span>
+    <UIcon
+      name="i-line-md-coffee-half-empty-twotone-loop"
+      class="size-20 text-highlighted/75"
+    />
 
-    <Transition
-      mode="out-in"
-      enter-active-class="transition-opacity duration-300"
-      leave-active-class="transition-opacity duration-300"
-      enter-from-class="opacity-0"
-      leave-to-class="opacity-0"
-    >
-      <p
-        :key="index"
-        class="text-lg font-medium text-highlighted"
-      >
-        {{ phrases[index] }}
-      </p>
-    </Transition>
+    <p class="text-lg font-mono font-medium text-highlighted">
+      {{ display }}
+    </p>
 
-    <p class="text-sm text-muted">
+    <p class="text-xs text-dimmed">
       Isso pode levar alguns segundos.
     </p>
   </div>
