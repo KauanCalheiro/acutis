@@ -2,7 +2,6 @@
 import Prism from 'prismjs'
 import 'prismjs/components/prism-typescript'
 import 'prismjs/components/prism-gherkin'
-import 'prismjs/themes/prism-tomorrow.css'
 
 interface BaseCodefield {
   language: 'typescript' | 'gherkin'
@@ -43,7 +42,7 @@ onMounted(resize)
 </script>
 
 <template>
-  <div class="codefield relative overflow-hidden rounded-md bg-[#2d2d2d] font-mono text-sm/6">
+  <div class="codefield relative overflow-hidden rounded-md bg-elevated font-mono text-sm/6">
     <pre
       aria-hidden="true"
       class="codefield-box pointer-events-none absolute inset-0 m-0 overflow-hidden"
@@ -53,7 +52,7 @@ onMounted(resize)
       v-model="model"
       :data-testid="testid"
       spellcheck="false"
-      class="codefield-box relative block w-full resize-none bg-transparent text-transparent caret-white outline-none"
+      class="codefield-box relative block w-full resize-none bg-transparent text-transparent caret-[var(--ui-text-highlighted)] outline-none"
       @input="resize"
       @keydown.tab="onTab"
     />
@@ -73,5 +72,91 @@ onMounted(resize)
 .codefield :deep(code) {
   font: inherit;
   white-space: inherit;
+}
+</style>
+
+<style>
+/* ponytail: paleta própria em vez de um tema Prism fixo — assim acompanha .dark do Nuxt UI;
+   token.* são gerados via v-html, escopo global necessário pra CSS scoped não alcançar */
+.codefield .token.comment {
+  color: #6a737d;
+}
+
+.codefield .token.keyword,
+.codefield .token.feature,
+.codefield .token.scenario,
+.codefield .token.outline,
+.codefield .token.important,
+.codefield .token.atrule {
+  color: #d73a49;
+}
+
+.codefield .token.string,
+.codefield .token.pystring {
+  color: #22863a;
+}
+
+.codefield .token.function {
+  color: #6f42c1;
+}
+
+.codefield .token.number,
+.codefield .token.boolean {
+  color: #005cc5;
+}
+
+.codefield .token.class-name,
+.codefield .token.tag {
+  color: #e36209;
+}
+
+.codefield .token.attr-name {
+  color: #6f42c1;
+}
+
+.codefield .token.punctuation,
+.codefield .token.operator {
+  color: #24292e;
+}
+
+.dark .codefield .token.comment {
+  color: #8b949e;
+}
+
+.dark .codefield .token.keyword,
+.dark .codefield .token.feature,
+.dark .codefield .token.scenario,
+.dark .codefield .token.outline,
+.dark .codefield .token.important,
+.dark .codefield .token.atrule {
+  color: #ff7b72;
+}
+
+.dark .codefield .token.string,
+.dark .codefield .token.pystring {
+  color: #a5d6ff;
+}
+
+.dark .codefield .token.function {
+  color: #d2a8ff;
+}
+
+.dark .codefield .token.number,
+.dark .codefield .token.boolean {
+  color: #79c0ff;
+}
+
+.dark .codefield .token.class-name,
+.dark .codefield .token.tag {
+  color: #7ee787;
+}
+
+.dark .codefield .token.attr-name {
+  color: #d2a8ff;
+}
+
+.dark .codefield .token.punctuation,
+.dark .codefield .token.operator {
+  color: #c9d1d9;
 }
 </style>
