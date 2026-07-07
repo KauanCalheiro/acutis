@@ -43,6 +43,7 @@ const mockEvents: RecorderEvent[] = [
 const mockDraft = ref<TestDraft>({
   title: 'Fluxo de login',
   tags: ['@read'],
+  domain: 'login',
   path: 'fluxo-de-login',
   gherkin: [
     '@read',

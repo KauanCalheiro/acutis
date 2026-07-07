@@ -19,7 +19,7 @@ const emit = defineEmits<{
 const { state, url } = useWebdriver()
 
 function emptyDraft(): TestDraft {
-  return { title: '', tags: [], path: '', gherkin: '', playwright: '' }
+  return { title: '', tags: [], domain: '', path: '', gherkin: '', playwright: '' }
 }
 
 const step = ref<'review' | 'loading' | 'edit'>('review')
