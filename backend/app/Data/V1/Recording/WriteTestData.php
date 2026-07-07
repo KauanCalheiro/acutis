@@ -10,6 +10,7 @@ class WriteTestData extends Data
     public function __construct(
         public string $title,
         public string $path,
+        public string $domain,
         public string $gherkin,
         public string $playwright,
         public array $tags = [],
@@ -20,6 +21,7 @@ class WriteTestData extends Data
         return [
             'title' => ['required', 'string'],
             'path' => ['required', 'string'],
+            'domain' => ['required', 'string'],
             'gherkin' => ['required', 'string'],
             'playwright' => ['required', 'string'],
             'tags' => ['nullable', 'array'],
@@ -32,6 +34,7 @@ class WriteTestData extends Data
         return [
             'title.required' => 'O título do cenário é obrigatório.',
             'path.required' => 'O caminho do arquivo é obrigatório.',
+            'domain.required' => 'O domínio do cenário é obrigatório.',
             'gherkin.required' => 'O cenário Gherkin é obrigatório.',
             'playwright.required' => 'O teste Playwright é obrigatório.',
         ];

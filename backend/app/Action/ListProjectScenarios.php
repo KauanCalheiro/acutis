@@ -17,7 +17,12 @@ class ListProjectScenarios
             return [];
         }
 
-        return collect(File::glob($path.'/tests/*.spec.ts'))
+        $specs = [
+            ...File::glob($path.'/tests/*.spec.ts'),
+            ...File::glob($path.'/tests/*/*.spec.ts'),
+        ];
+
+        return collect($specs)
             ->map(fn (string $spec): ScenarioData => $this->toScenario($path, $spec))
             ->values()
             ->all();
@@ -25,15 +30,20 @@ class ListProjectScenarios
 
     private function toScenario(string $path, string $spec): ScenarioData
     {
+        $relativeDir = trim(str_replace("{$path}/tests", '', dirname($spec)), '/');
+        $domain = $relativeDir === '' ? null : $relativeDir;
         $name = basename($spec, '.spec.ts');
-        $feature = "{$path}/features/{$name}.feature";
+        $specRelative = $domain === null ? "{$name}.spec.ts" : "{$domain}/{$name}.spec.ts";
+        $featureRelative = $domain === null ? "{$name}.feature" : "{$domain}/{$name}.feature";
+        $feature = "{$path}/features/{$featureRelative}";
         $source = (string) File::get($spec);
 
         return new ScenarioData(
             title: $this->title($feature, $source, $name),
-            spec: "tests/{$name}.spec.ts",
-            feature: File::exists($feature) ? "features/{$name}.feature" : null,
+            spec: "tests/{$specRelative}",
+            feature: File::exists($feature) ? "features/{$featureRelative}" : null,
             tags: $this->tags($source),
+            domain: $domain,
         );
     }
 
