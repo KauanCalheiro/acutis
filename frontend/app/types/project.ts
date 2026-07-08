@@ -12,6 +12,7 @@ export interface Scenario {
   spec: string
   feature: string | null
   tags: string[]
+  domain: string | null
 }
 
 export interface ProjectDetail extends Project {
@@ -23,6 +24,7 @@ export interface ProjectDetail extends Project {
 export interface TestDraft {
   title: string
   tags: string[]
+  domain: string
   path: string
   gherkin: string
   playwright: string

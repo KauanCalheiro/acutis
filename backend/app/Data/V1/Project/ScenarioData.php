@@ -12,5 +12,6 @@ class ScenarioData extends Data
         public string $spec,
         public ?string $feature,
         public array $tags,
+        public ?string $domain,
     ) {}
 }

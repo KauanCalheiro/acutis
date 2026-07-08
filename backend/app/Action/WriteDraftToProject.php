@@ -17,10 +17,11 @@ class WriteDraftToProject
     public function handle(string $slug, WriteTestData $data): ProjectTestData
     {
         $path = Project::path($slug);
+        $domain = Str::slug($data->domain) ?: 'outros';
 
-        $name = TestArtifact::uniquePath($path, Str::slug($data->path) ?: 'teste');
-        $spec = "tests/{$name}.spec.ts";
-        $feature = "features/{$name}.feature";
+        $name = TestArtifact::uniquePath("{$path}/tests/{$domain}", Str::slug($data->path) ?: 'teste');
+        $spec = "tests/{$domain}/{$name}.spec.ts";
+        $feature = "features/{$domain}/{$name}.feature";
 
         $gherkin = TestArtifact::stampGherkinTags(
             TestArtifact::stampTitle($data->gherkin, $data->title),
@@ -28,8 +29,8 @@ class WriteDraftToProject
         );
         $playwright = TestArtifact::stampPlaywrightTags($data->playwright, $data->tags);
 
-        File::ensureDirectoryExists("{$path}/tests");
-        File::ensureDirectoryExists("{$path}/features");
+        File::ensureDirectoryExists("{$path}/tests/{$domain}");
+        File::ensureDirectoryExists("{$path}/features/{$domain}");
         File::put("{$path}/{$spec}", $playwright."\n");
         File::put("{$path}/{$feature}", $gherkin."\n");
 

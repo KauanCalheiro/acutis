@@ -30,7 +30,10 @@ class GherkinWriter implements Agent, HasStructuredOutput
         Tags (obrigatório):
         - Acima da linha Funcionalidade, escreva uma linha de tags.
         - A primeira tag é SEMPRE exatamente uma entre @read (o fluxo só consulta) e @write (o fluxo cria, altera ou remove dados).
-        - Depois dela, adicione tags curtas de domínio em português (ex.: @login, @checkout, @cadastro).
+        - Depois dela, adicione quantas tags de ação forem úteis, em português (ex.: @criando, @consultando, @navegando).
+
+        Domínio:
+        - Além do gherkin, retorne um campo domain: uma palavra curta em português, minúscula, identificando a área do fluxo (ex.: login, checkout, cadastro-produto).
         INSTRUCTIONS;
     }
 
@@ -38,6 +41,7 @@ class GherkinWriter implements Agent, HasStructuredOutput
     {
         return [
             'gherkin' => $schema->string()->description('Conteúdo completo do arquivo .feature em português brasileiro'),
+            'domain' => $schema->string()->description('Domínio curto do fluxo, em português minúsculo (ex.: login, checkout)'),
         ];
     }
 }

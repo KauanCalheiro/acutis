@@ -251,6 +251,7 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
                 body: JSON.stringify({
                     title: 'Fluxo gravado',
                     tags: ['@read'],
+                    domain: 'navegacao',
                     path: 'fluxo-gravado',
                     gherkin: '@read\nFuncionalidade: Fluxo gravado\n  Cenário: clica',
                     playwright: "import { test } from '@playwright/test' // spec",
@@ -258,7 +259,7 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
             })
         })
 
-        let posted: { title?: string, path?: string, tags?: string[] } | null = null
+        let posted: { title?: string, path?: string, domain?: string, tags?: string[] } | null = null
         await page.route('**/api/projects/alpha-store/tests', async (route) => {
             posted = route.request().postDataJSON()
             await route.fulfill({
@@ -276,6 +277,7 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
         await test.step('the editable contexts appear seeded with the AI draft', async () => {
             await expect(page.getByTestId('contexto-titulo')).toHaveValue('Fluxo gravado', { timeout: 10_000 })
             await expect(page.getByTestId('contexto-path')).toHaveValue('fluxo-gravado')
+            await expect(page.getByTestId('contexto-dominio')).toHaveValue('navegacao')
         })
 
         await test.step('the user edits the title before sending', async () => {
@@ -288,6 +290,7 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
         expect(drafted!.events!.some((e) => e.type === 'click')).toBe(true)
         expect(posted!.title).toBe('Fluxo revisado')
         expect(posted!.path).toBe('fluxo-gravado')
+        expect(posted!.domain).toBe('navegacao')
     })
 })
 

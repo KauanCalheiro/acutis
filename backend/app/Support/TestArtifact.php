@@ -34,13 +34,13 @@ final class TestArtifact
         return $tags[0];
     }
 
-    /** Nome de arquivo único (sem extensão) dentro de tests/, evitando sobrescrever. */
-    public static function uniquePath(string $projectPath, string $desired): string
+    /** Nome de arquivo único (sem extensão) dentro de $dir, evitando sobrescrever. */
+    public static function uniquePath(string $dir, string $desired): string
     {
         $candidate = $desired;
         $suffix = 1;
 
-        while (File::exists("{$projectPath}/tests/{$candidate}.spec.ts")) {
+        while (File::exists("{$dir}/{$candidate}.spec.ts")) {
             $suffix++;
             $candidate = "{$desired}-{$suffix}";
         }
