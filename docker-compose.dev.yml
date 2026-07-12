@@ -1,7 +1,9 @@
 services:
   backend:
     build: backend/docker/development
-    command: sh -c "composer install && php artisan serve --host=0.0.0.0 --port=8000"
+    command: sh -c "composer install && php artisan serve --host=0.0.0.0 --port=8000 --no-reload"
+    environment:
+      ACUTIS_PROJECTS_HOST_PATH: ${ACUTIS_PROJECTS_HOST_PATH:-}
     ports:
       - "28000:8000"
     volumes:
