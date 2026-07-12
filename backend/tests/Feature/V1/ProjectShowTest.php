@@ -140,3 +140,19 @@ it('falls back to the file name when there is no describe title', function () {
 it('returns 404 for an unknown project', function () {
     getJson('/api/v1/projects/nao-existe')->assertNotFound();
 });
+
+it('builds the vscode url from the configured host path', function () {
+    config()->set('acutis.projects.host_path', '/Users/dev/code/.acutis');
+
+    getJson('/api/v1/projects/minha-loja')
+        ->assertOk()
+        ->assertJsonPath('vscode_url', 'vscode://file/Users/dev/code/.acutis/minha-loja');
+});
+
+it('falls back to the projects path when no host path is configured', function () {
+    config()->set('acutis.projects.host_path', null);
+
+    getJson('/api/v1/projects/minha-loja')
+        ->assertOk()
+        ->assertJsonPath('vscode_url', 'vscode://file'.$this->dir);
+});

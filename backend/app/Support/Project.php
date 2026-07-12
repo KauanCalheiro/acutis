@@ -18,4 +18,10 @@ final class Project
 
         return $path;
     }
+
+    /** Caminho do projeto no host, pra montar o link vscode://file/. */
+    public static function hostPath(string $slug): string
+    {
+        return acutis()->projectsHostPath."/{$slug}";
+    }
 }
