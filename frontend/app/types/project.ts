@@ -20,6 +20,7 @@ export interface ProjectDetail extends Project {
   updated_at: string
   scenarios: Scenario[]
   auth_status: 'unset' | 'skipped' | 'configured'
+  vscode_url: string
 }
 
 export interface TestDraft {

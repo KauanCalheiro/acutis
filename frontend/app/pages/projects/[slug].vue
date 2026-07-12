@@ -167,6 +167,15 @@ async function remove() {
 
       <div class="flex gap-2 shrink-0">
         <BaseButtonIcon
+          icon="i-ic-round-code"
+          label="Abrir no VS Code"
+          color="neutral"
+          variant="soft"
+          :to="project!.vscode_url"
+          target="_blank"
+          data-testid="projeto-vscode"
+        />
+        <BaseButtonIcon
           icon="i-ic-round-key"
           label="Autenticação"
           :color="project!.auth_status === 'configured' ? 'success' : 'neutral'"
