@@ -14,7 +14,7 @@ class ShowProject
 {
     use AsAction;
 
-    /** @return array{project: ProjectData, branch: ?string, updated_at: string, scenarios: list<\App\Data\V1\Project\ScenarioData>, auth_status: string} */
+    /** @return array{project: ProjectData, branch: ?string, updated_at: string, scenarios: list<\App\Data\V1\Project\ScenarioData>, auth_status: string, vscode_url: string} */
     public function handle(string $slug): array
     {
         $path = Project::path($slug);
@@ -36,6 +36,7 @@ class ShowProject
             'updated_at' => Carbon::createFromTimestamp(File::lastModified($path))->toIso8601String(),
             'scenarios' => ListProjectScenarios::run($path),
             'auth_status' => $this->authStatus($path, $manifest),
+            'vscode_url' => 'vscode://file'.Project::hostPath($slug),
         ];
     }
 

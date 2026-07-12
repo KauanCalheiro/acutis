@@ -49,6 +49,10 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
         await expect(page.getByTestId('projeto-auth')).toBeVisible()
     })
 
+    test('links the vscode button to the project folder on the host', async ({ page }) => {
+        await expect(page.getByTestId('projeto-vscode')).toHaveAttribute('href', `vscode://file${join(FIXTURES_DIR, 'alpha-store')}`)
+    })
+
     test('shows an alert when the project has no authentication configured', async ({ page }) => {
         await expect(page.getByTestId('projeto-auth-aviso')).toBeVisible()
     })
@@ -65,6 +69,7 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
             ['projeto-editar', 'Renomear projeto'],
             ['projeto-voltar', 'Voltar'],
             ['projeto-auth', 'Autenticação'],
+            ['projeto-vscode', 'Abrir no VS Code'],
         ] as const) {
             await page.mouse.move(640, 500)
             await expect(async () => {
