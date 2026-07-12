@@ -19,6 +19,7 @@ export interface ProjectDetail extends Project {
   branch: string | null
   updated_at: string
   scenarios: Scenario[]
+  auth_status: 'unset' | 'skipped' | 'configured'
 }
 
 export interface TestDraft {

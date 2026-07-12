@@ -14,7 +14,7 @@ class ShowProject
 {
     use AsAction;
 
-    /** @return array{project: ProjectData, branch: ?string, updated_at: string, scenarios: list<\App\Data\V1\Project\ScenarioData>} */
+    /** @return array{project: ProjectData, branch: ?string, updated_at: string, scenarios: list<\App\Data\V1\Project\ScenarioData>, auth_status: string} */
     public function handle(string $slug): array
     {
         $path = Project::path($slug);
@@ -35,6 +35,16 @@ class ShowProject
             'branch' => Git::branch($path),
             'updated_at' => Carbon::createFromTimestamp(File::lastModified($path))->toIso8601String(),
             'scenarios' => ListProjectScenarios::run($path),
+            'auth_status' => $this->authStatus($path, $manifest),
         ];
+    }
+
+    private function authStatus(string $path, array $manifest): string
+    {
+        if (File::exists("{$path}/tests/auth.setup.ts")) {
+            return 'configured';
+        }
+
+        return ($manifest['auth_skipped'] ?? false) ? 'skipped' : 'unset';
     }
 }

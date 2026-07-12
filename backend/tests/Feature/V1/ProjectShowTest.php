@@ -33,7 +33,47 @@ it('shows the project details', function () {
         ->assertJsonPath('provider', null)
         ->assertJsonPath('branch', null)
         ->assertJsonPath('scenarios', [])
+        ->assertJsonPath('auth_status', 'unset')
         ->assertJsonStructure(['created_at', 'updated_at']);
+});
+
+it('shows the auth status as configured when auth.setup.ts exists', function () {
+    File::ensureDirectoryExists($this->dir.'/tests');
+    File::put($this->dir.'/tests/auth.setup.ts', 'import { test as setup } from "@playwright/test"');
+
+    getJson('/api/v1/projects/minha-loja')
+        ->assertOk()
+        ->assertJsonPath('auth_status', 'configured');
+});
+
+it('shows the auth status as skipped when dismissed in the manifest', function () {
+    File::put($this->dir.'/acutis.json', json_encode([
+        'name' => 'Minha Loja',
+        'slug' => 'minha-loja',
+        'created_at' => '2026-01-01T00:00:00+00:00',
+        'version' => 1,
+        'auth_skipped' => true,
+    ]));
+
+    getJson('/api/v1/projects/minha-loja')
+        ->assertOk()
+        ->assertJsonPath('auth_status', 'skipped');
+});
+
+it('prefers configured over skipped when both are true', function () {
+    File::put($this->dir.'/acutis.json', json_encode([
+        'name' => 'Minha Loja',
+        'slug' => 'minha-loja',
+        'created_at' => '2026-01-01T00:00:00+00:00',
+        'version' => 1,
+        'auth_skipped' => true,
+    ]));
+    File::ensureDirectoryExists($this->dir.'/tests');
+    File::put($this->dir.'/tests/auth.setup.ts', 'import { test as setup } from "@playwright/test"');
+
+    getJson('/api/v1/projects/minha-loja')
+        ->assertOk()
+        ->assertJsonPath('auth_status', 'configured');
 });
 
 it('shows the git branch when the project is a repository', function () {

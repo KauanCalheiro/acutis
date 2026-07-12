@@ -294,6 +294,101 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
     })
 })
 
+test.describe('recording authentication from the project page', { tag: ['@write', '@recording'] }, () => {
+    let authFixtureServer: Server
+    let authBaseUrl: string
+    let stopAuthWebdriver: () => Promise<void>
+    let stopBackend: () => Promise<void>
+    let tmpProjects: string
+
+    test.beforeAll(async () => {
+        authFixtureServer = createServer((_req, res) => {
+            res.writeHead(200, { 'Content-Type': 'text/html' })
+            res.end(FIXTURE_HTML)
+        })
+        await new Promise<void>((r) => authFixtureServer.listen(0, r))
+        const { port } = authFixtureServer.address() as { port: number }
+        authBaseUrl = `http://127.0.0.1:${port}`
+
+        stopAuthWebdriver = await startWebdriver()
+
+        tmpProjects = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
+        cpSync(resolve(import.meta.dirname, '../fixtures/projects'), tmpProjects, { recursive: true })
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
+    })
+
+    test.afterAll(async () => {
+        await stopAuthWebdriver()
+        await stopBackend()
+        rmSync(tmpProjects, { recursive: true, force: true })
+        await new Promise<void>((r) => authFixtureServer.close(() => r()))
+    })
+
+    test('records a login and generates the auth setup from the events', async ({ page }) => {
+        let posted: { baseUrl?: string, events?: Array<{ type?: string, value?: string | null }> } | null = null
+        await page.route('**/api/projects/alpha-store/auth/record', async (route) => {
+            posted = route.request().postDataJSON()
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    authSetup: "import { test as setup } from '@playwright/test' // login gravado",
+                    storageCaptured: false,
+                    testRun: null,
+                }),
+            })
+        })
+
+        await test.step('open the project page and wait for the webdriver connection', async () => {
+            await page.goto('/projects/alpha-store')
+            await page.locator('[data-hydrated="true"]').waitFor()
+            await expect(page.getByTestId('cenario-novo')).toBeEnabled({ timeout: 10_000 })
+        })
+
+        await test.step('open the auth modal and start recording', async () => {
+            await page.getByTestId('projeto-auth').click()
+            await page.getByTestId('auth-gerar').click()
+            await expect(page.getByTestId('cenario-parar')).toBeVisible({ timeout: 10_000 })
+        })
+
+        await test.step('perform the login in the recorded browser via the debug endpoints', async () => {
+            const goto = await page.request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: authBaseUrl } })
+            expect(goto.ok()).toBe(true)
+            const fill = await page.request.post(`${WEBDRIVER_URL}/debug/fill`, { data: { selector: '#name', value: 'admin' } })
+            expect(fill.ok()).toBe(true)
+            const click = await page.request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#btn' } })
+            expect(click.ok()).toBe(true)
+        })
+
+        await test.step('stop recording and generate the auth setup', async () => {
+            await page.getByTestId('cenario-parar').click()
+            await expect(page.getByTestId('auth-resultado')).toBeVisible({ timeout: 10_000 })
+        })
+
+        await expect(page.getByTestId('auth-script')).toContainText('login gravado')
+        expect(posted!.baseUrl).toBe(authBaseUrl)
+        expect(posted!.events!.some((e) => e.type === 'fill' && e.value === 'admin')).toBe(true)
+
+        await test.step('runs the generated test from the preview', async () => {
+            await page.route('**/api/projects/alpha-store/run', async (route) => {
+                expect(route.request().postDataJSON()).toMatchObject({ spec: 'tests/auth.setup.ts' })
+                await route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ passed: true, output: '1 passed' }),
+                })
+            })
+
+            await page.getByTestId('auth-executar').click()
+
+            await expect(page.getByTestId('auth-execucao-resultado')).toContainText('Teste passou')
+        })
+
+        await expect(page.getByTestId('auth-reconfigurar')).toBeVisible()
+        await expect(page.getByTestId('auth-salvar')).toBeVisible()
+    })
+})
+
 test.describe('recording over cdp against a host chrome', { tag: ['@write', '@recording'] }, () => {
     const CDP_PORT = 9223
     let cdpFixtureServer: Server
