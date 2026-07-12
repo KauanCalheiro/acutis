@@ -10,10 +10,16 @@ use App\Action\ProbeGitRepository;
 use App\Action\ShowProject;
 use App\Action\UpdateProject;
 use App\Action\RunProject;
+use App\Action\ShowProjectAuth;
+use App\Action\SkipProjectAuth;
+use App\Action\UpdateProjectAuth;
+use App\Action\WriteAuthRecordingToProject;
 use App\Action\WriteAuthSetupToProject;
 use App\Action\GenerateTestsFromRecording;
 use App\Action\WriteDraftToProject;
+use App\Data\V1\Auth\AuthRecordingData;
 use App\Data\V1\Auth\AuthSetupData;
+use App\Data\V1\Auth\UpdateAuthSetupData;
 use App\Data\V1\Project\CloneProjectData;
 use App\Data\V1\Project\CreateProjectData;
 use App\Data\V1\Project\ProbeGitData;
@@ -27,6 +33,7 @@ use App\Http\Resources\V1\GeneratedAuthSetupResource;
 use App\Http\Resources\V1\GitProbeResource;
 use App\Http\Resources\V1\ProjectShowResource;
 use App\Http\Resources\V1\ProjectResource;
+use App\Http\Resources\V1\ProjectAuthResource;
 use App\Http\Resources\V1\ProjectRunResource;
 use App\Http\Resources\V1\ProjectTestResource;
 use App\Http\Resources\V1\TestDraftResource;
@@ -108,6 +115,28 @@ class ProjectController extends Controller
     public function auth(string $project, AuthSetupData $data): GeneratedAuthSetupResource
     {
         return GeneratedAuthSetupResource::make(WriteAuthSetupToProject::run($project, $data));
+    }
+
+    public function showAuth(string $project): ProjectAuthResource
+    {
+        return ProjectAuthResource::make(ShowProjectAuth::run($project));
+    }
+
+    public function updateAuth(string $project, UpdateAuthSetupData $data): ProjectAuthResource
+    {
+        return ProjectAuthResource::make(UpdateProjectAuth::run($project, $data->authSetup));
+    }
+
+    public function skipAuth(string $project): Response
+    {
+        SkipProjectAuth::run($project);
+
+        return response()->noContent();
+    }
+
+    public function recordAuth(string $project, AuthRecordingData $data): GeneratedAuthSetupResource
+    {
+        return GeneratedAuthSetupResource::make(WriteAuthRecordingToProject::run($project, $data));
     }
 
     public function testsDraft(string $project, RecordingData $data): TestDraftResource

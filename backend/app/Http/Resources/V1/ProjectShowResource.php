@@ -27,6 +27,7 @@ class ProjectShowResource extends JsonResource
                 fn (ScenarioData $scenario): array => $scenario->toArray(),
                 $this->resource['scenarios'],
             ),
+            'auth_status' => $this->resource['auth_status'],
         ];
     }
 }

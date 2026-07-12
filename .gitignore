@@ -3,3 +3,4 @@
 .env
 /.acutis/*
 !/.acutis/.gitkeep
+.superpowers/

@@ -61,7 +61,7 @@ class GenerateAuthSetup
                 ? 'O teste passou mas nenhum cookie ou localStorage de sessão foi salvo — o login provavelmente não ocorreu. '
                     .'Não use page.context().storageState como checagem de existência nem retorne cedo: esse método sempre grava, mesmo sem login. '
                     .'Execute o login completo e só então salve o estado.'
-                : "Erro da execução:\n{$result->output}";
+                : $this->executionFeedback($result->output);
 
             $authSetup = StructuredOutput::field(app(AuthSetupWriter::class)->prompt(
                 "O setup de autenticação abaixo não autenticou. Corrija-o."
@@ -71,6 +71,20 @@ class GenerateAuthSetup
                     ."\n\nSnapshot da página de login:\n{$snapshot}",
             ), 'authSetup');
         }
+    }
+
+    private function executionFeedback(string $output): string
+    {
+        $feedback = "Erro da execução:\n{$output}";
+
+        if (str_contains($output, 'strict mode violation')) {
+            $feedback .= "\n\nO seletor usado bateu em mais de um elemento (strict mode violation) — o erro acima lista cada elemento "
+                .'encontrado com seu texto. Não corrija com .first() ou :nth-child (frágil, quebra se a ordem mudar). Em vez disso, '
+                .'identifique qual dos elementos listados é o certo e escreva getByRole(\'button\', { name: \'<texto exato>\', exact: true }), '
+                .'ou use um seletor mais específico do snapshot (id, data-test) que não bata em outros elementos da página.';
+        }
+
+        return $feedback;
     }
 
     private function hasSession(mixed $state): bool

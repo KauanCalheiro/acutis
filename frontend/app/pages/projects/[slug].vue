@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ProjectDetail } from '~/types/project'
+import type { RecorderEvent } from '~/composables/webdriver'
 
 const route = useRoute()
 const slug = computed(() => route.params.slug as string)
@@ -46,16 +47,57 @@ function tagColor(tag: string) {
 const renameOpen = ref(false)
 const removeOpen = ref(false)
 const removing = ref(false)
+const authOpen = ref(false)
+const authRecording = ref(false)
+const authModal = ref<{ submitRecording: (baseUrl: string, events: RecorderEvent[]) => Promise<void> } | null>(null)
+const skippingAuth = ref(false)
+
+async function skipAuth() {
+  skippingAuth.value = true
+
+  try {
+    await $fetch(`/api/projects/${slug.value}/auth/skip`, {
+      method: 'POST'
+    })
+    await refresh()
+  } finally {
+    skippingAuth.value = false
+  }
+}
 
 const { state: webdriver, startRecording, stopRecording } = useWebdriver()
 const reviewOpen = ref(false)
 
-watch(() => webdriver.value.videoSessionId, (sessionId) => {
-  if (sessionId) reviewOpen.value = true
+function eventsBaseUrl(events: RecorderEvent[]): string | null {
+  const first = events.find(event => event.url)
+  if (!first?.url) return null
+  try {
+    return new URL(first.url).origin
+  } catch {
+    return null
+  }
+}
+
+watch(() => webdriver.value.videoSessionId, async (sessionId) => {
+  if (!sessionId) return
+
+  if (authRecording.value) {
+    authRecording.value = false
+    const baseUrl = eventsBaseUrl(webdriver.value.events)
+    if (baseUrl) await authModal.value?.submitRecording(baseUrl, webdriver.value.events)
+    return
+  }
+
+  reviewOpen.value = true
 })
 
 function stopAndReview() {
   stopRecording()
+}
+
+function startAuthRecording() {
+  authRecording.value = true
+  startRecording()
 }
 
 function onRenamed(newSlug: string) {
@@ -125,12 +167,12 @@ async function remove() {
 
       <div class="flex gap-2 shrink-0">
         <BaseButtonIcon
-          icon="i-ic-round-delete"
-          label="Remover projeto"
-          color="error"
+          icon="i-ic-round-key"
+          label="Autenticação"
+          :color="project!.auth_status === 'configured' ? 'success' : 'neutral'"
           variant="soft"
-          data-testid="projeto-remover"
-          @click="removeOpen = true"
+          data-testid="projeto-auth"
+          @click="authOpen = true"
         />
         <BaseButtonIcon
           icon="i-ic-round-edit"
@@ -140,8 +182,47 @@ async function remove() {
           data-testid="projeto-editar"
           @click="renameOpen = true"
         />
+        <BaseButtonIcon
+          icon="i-ic-round-delete"
+          label="Remover projeto"
+          color="error"
+          variant="soft"
+          data-testid="projeto-remover"
+          @click="removeOpen = true"
+        />
       </div>
     </div>
+
+    <UAlert
+      v-if="project!.auth_status === 'unset'"
+      color="warning"
+      variant="soft"
+      icon="i-ic-round-warning"
+      class="mt-6"
+      title="Sem autenticação configurada"
+      description="Cenários gravados após um login vão falhar na verificação até a autenticação ser configurada."
+      data-testid="projeto-auth-aviso"
+      :ui="{ actions: 'justify-end' }"
+    >
+      <template #actions>
+        <UButton
+          label="Não precisa de login"
+          size="md"
+          color="neutral"
+          variant="link"
+          :loading="skippingAuth"
+          data-testid="projeto-auth-dispensar"
+          @click="skipAuth"
+        />
+        <UButton
+          label="Configurar"
+          size="md"
+          color="warning"
+          data-testid="projeto-auth-configurar"
+          @click="authOpen = true"
+        />
+      </template>
+    </UAlert>
 
     <div class="flex flex-wrap items-center gap-4 mt-8 mb-8">
       <UInput
@@ -232,6 +313,15 @@ async function remove() {
       :slug="project!.slug"
       :name="project!.name"
       @renamed="onRenamed"
+    />
+
+    <ProjectAuthModal
+      ref="authModal"
+      v-model:open="authOpen"
+      :slug="slug"
+      :status="project!.auth_status"
+      @configured="refresh()"
+      @record="startAuthRecording"
     />
 
     <BaseConfirm

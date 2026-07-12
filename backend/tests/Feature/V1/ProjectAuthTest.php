@@ -118,6 +118,24 @@ it('feeds a runner failure back to the auth writer and retries', function () {
     AuthSetupWriter::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, 'timeout no seletor #login'));
 });
 
+it('adds a specific hint when the failure is a strict mode violation', function () {
+    Http::fake([
+        '*/runner/snapshot' => Http::response(['url' => 'x', 'title' => 'x', 'elements' => []]),
+        '*/runner/spec' => Http::sequence()
+            ->push(['passed' => false, 'output' => "Error: strict mode violation: locator('button') resolved to 4 elements"])
+            ->push(['passed' => true, 'output' => 'ok', 'storageState' => ['cookies' => [['name' => 'sess']]]]),
+    ]);
+    AuthSetupWriter::fake([['authSetup' => 'primeiro'], ['authSetup' => 'corrigido']]);
+    $slug = makeProject();
+
+    postJson("/api/v1/projects/{$slug}/auth", authPayload())->assertOk();
+
+    AuthSetupWriter::assertPrompted(
+        fn ($prompt) => str_contains($prompt->prompt, 'strict mode violation')
+            && str_contains($prompt->prompt, 'exact: true')
+    );
+});
+
 it('reports an empty session as not captured', function () {
     Http::fake([
         '*/runner/snapshot' => Http::response(['url' => 'x', 'title' => 'x', 'elements' => []]),
