@@ -17,60 +17,87 @@ class GenerateAuthSetup
 
     private const MAX_RUN_ATTEMPTS = 3;
 
+    private const NO_SESSION_ERROR = 'O login executou sem erro mas nenhum estado de sessão (cookie ou localStorage) foi capturado.';
+
     public function handle(AuthSetupData $input): GeneratedAuthSetupData
     {
         $snapshot = app(CaptureSnapshot::class)->capture($input->loginUrl);
 
-        $authSetup = StructuredOutput::field(app(AuthSetupWriter::class)->prompt(
+        $authSetup = $this->write($input, $snapshot);
+
+        return $this->tryOnce($input, $snapshot, $authSetup, attempt: 1);
+    }
+
+    /**
+     * Continua o loop de autocorreção a partir de uma primeira tentativa que falhou.
+     * Chamado em background (dispatch(...)->afterResponse()) para não bloquear a resposta HTTP.
+     */
+    public function retry(AuthSetupData $input, GeneratedAuthSetupData $failed): GeneratedAuthSetupData
+    {
+        while ($failed->testRun->attempts < self::MAX_RUN_ATTEMPTS) {
+            $authSetup = $this->correct($input, $failed);
+
+            $failed = $this->tryOnce($input, $failed->snapshot, $authSetup, $failed->testRun->attempts + 1);
+
+            if ($failed->testRun->passed) {
+                return $failed;
+            }
+        }
+
+        return $failed;
+    }
+
+    private function write(AuthSetupData $input, string $snapshot): string
+    {
+        return StructuredOutput::field(app(AuthSetupWriter::class)->prompt(
             "URL de login: {$input->loginUrl}\n\nSnapshot da página de login:\n{$snapshot}",
         ), 'authSetup');
+    }
 
+    private function correct(AuthSetupData $input, GeneratedAuthSetupData $failed): string
+    {
+        $feedback = $failed->testRun->error === self::NO_SESSION_ERROR
+            ? 'O teste passou mas nenhum cookie ou localStorage de sessão foi salvo — o login provavelmente não ocorreu. '
+                .'Não use page.context().storageState como checagem de existência nem retorne cedo: esse método sempre grava, mesmo sem login. '
+                .'Execute o login completo e só então salve o estado.'
+            : $this->executionFeedback($failed->testRun->error);
+
+        return StructuredOutput::field(app(AuthSetupWriter::class)->prompt(
+            "O setup de autenticação abaixo não autenticou. Corrija-o."
+                ."\n\nURL de login: {$input->loginUrl}"
+                ."\n\n{$feedback}"
+                ."\n\nSetup com falha:\n{$failed->authSetup}"
+                ."\n\nSnapshot da página de login:\n{$failed->snapshot}",
+        ), 'authSetup');
+    }
+
+    private function tryOnce(AuthSetupData $input, string $snapshot, string $authSetup, int $attempt): GeneratedAuthSetupData
+    {
         $env = ['AUTH_USER' => $input->username, 'AUTH_PASSWORD' => $input->password];
-        $attempts = 0;
 
-        while (true) {
-            $attempts++;
+        $result = app(RunPlaywrightTest::class)->run($authSetup, $input->executionUrl, $env);
+        $captured = $this->hasSession($result->storageState);
 
-            $result = app(RunPlaywrightTest::class)->run($authSetup, $input->executionUrl, $env);
-            $captured = $this->hasSession($result->storageState);
-
-            if ($result->passed && $captured) {
-                return new GeneratedAuthSetupData(
-                    authSetup: $authSetup,
-                    storageCaptured: true,
-                    testRun: new TestRunData(executed: true, passed: true, attempts: $attempts),
-                );
-            }
-
-            if ($attempts >= self::MAX_RUN_ATTEMPTS) {
-                return new GeneratedAuthSetupData(
-                    authSetup: $authSetup,
-                    storageCaptured: false,
-                    testRun: new TestRunData(
-                        executed: true,
-                        passed: false,
-                        attempts: $attempts,
-                        error: $result->passed
-                            ? 'O login executou sem erro mas nenhum estado de sessão (cookie ou localStorage) foi capturado.'
-                            : $result->output,
-                    ),
-                );
-            }
-
-            $feedback = $result->passed
-                ? 'O teste passou mas nenhum cookie ou localStorage de sessão foi salvo — o login provavelmente não ocorreu. '
-                    .'Não use page.context().storageState como checagem de existência nem retorne cedo: esse método sempre grava, mesmo sem login. '
-                    .'Execute o login completo e só então salve o estado.'
-                : $this->executionFeedback($result->output);
-
-            $authSetup = StructuredOutput::field(app(AuthSetupWriter::class)->prompt(
-                "O setup de autenticação abaixo não autenticou. Corrija-o."
-                    ."\n\nURL de login: {$input->loginUrl}"
-                    ."\n\n{$feedback}"
-                    ."\n\nSetup com falha:\n{$authSetup}"
-                    ."\n\nSnapshot da página de login:\n{$snapshot}",
-            ), 'authSetup');
+        if ($result->passed && $captured) {
+            return new GeneratedAuthSetupData(
+                authSetup: $authSetup,
+                storageCaptured: true,
+                testRun: new TestRunData(executed: true, passed: true, attempts: $attempt),
+                snapshot: $snapshot,
+            );
         }
+
+        return new GeneratedAuthSetupData(
+            authSetup: $authSetup,
+            storageCaptured: false,
+            testRun: new TestRunData(
+                executed: true,
+                passed: false,
+                attempts: $attempt,
+                error: $result->passed ? self::NO_SESSION_ERROR : $result->output,
+            ),
+            snapshot: $snapshot,
+        );
     }
 
     private function executionFeedback(string $output): string
