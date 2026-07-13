@@ -9,6 +9,15 @@ import { useAssertMode } from './pill/useAssertMode'
 let hostElement: HTMLDivElement | null = null
 let keepAliveObserver: MutationObserver | null = null
 
+/**
+ * Por padrão a senha é sempre mascarada antes de sair do navegador — só o modo 'auth'
+ * (gravação específica pra configurar autenticação) desativa isso, pra extrair credenciais
+ * reais no backend. Gravação de cenário normal nunca vê esse valor.
+ */
+function shouldMaskPasswords(): boolean {
+    return (window as unknown as { __acutisRecorderMode?: string }).__acutisRecorderMode !== 'auth'
+}
+
 function ensureAttached(): void {
     if (!hostElement) return
     const parent = document.body ?? document.documentElement
@@ -101,7 +110,8 @@ export function mountRecorder(onClick?: () => void): void {
         if (!(el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement)) return
         const raw = (el as HTMLInputElement).value
         if (!raw) return
-        const value = el instanceof HTMLInputElement && el.type === 'password' ? '••••' : raw
+        const isPassword = el instanceof HTMLInputElement && el.type === 'password'
+        const value = isPassword && shouldMaskPasswords() ? '••••' : raw
         dispatch({ ...buildBaseEvent('fill', el), value })
     }, true)
 

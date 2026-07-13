@@ -4,5 +4,11 @@
 <body>
 <button id="btn">Click me</button>
 <input id="name" placeholder="Name" />
+<input id="password" type="password" placeholder="Password" />
+<script>
+  document.getElementById('btn').addEventListener('click', () => {
+    localStorage.setItem('token', 'abc')
+  })
+</script>
 </body>
 </html>

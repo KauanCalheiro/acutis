@@ -9,6 +9,7 @@ use App\Ai\StructuredOutput;
 use App\Data\V1\Auth\AuthSetupData;
 use App\Data\V1\Auth\GeneratedAuthSetupData;
 use App\Data\V1\Recording\TestRunData;
+use App\Support\SessionState;
 use Lorisleiva\Actions\Concerns\AsAction;
 
 class GenerateAuthSetup
@@ -24,6 +25,17 @@ class GenerateAuthSetup
         $snapshot = app(CaptureSnapshot::class)->capture($input->loginUrl);
 
         $authSetup = $this->write($input, $snapshot);
+
+        return $this->tryOnce($input, $snapshot, $authSetup, attempt: 1);
+    }
+
+    /**
+     * Executa e valida um authSetup já escrito por outra fonte (ex.: gerado a partir de uma gravação),
+     * em vez de escrever um novo a partir do snapshot da URL de login.
+     */
+    public function verify(AuthSetupData $input, string $authSetup): GeneratedAuthSetupData
+    {
+        $snapshot = app(CaptureSnapshot::class)->capture($input->loginUrl);
 
         return $this->tryOnce($input, $snapshot, $authSetup, attempt: 1);
     }
@@ -76,7 +88,7 @@ class GenerateAuthSetup
         $env = ['AUTH_USER' => $input->username, 'AUTH_PASSWORD' => $input->password];
 
         $result = app(RunPlaywrightTest::class)->run($authSetup, $input->executionUrl, $env);
-        $captured = $this->hasSession($result->storageState);
+        $captured = SessionState::hasSession($result->storageState);
 
         if ($result->passed && $captured) {
             return new GeneratedAuthSetupData(
@@ -112,24 +124,5 @@ class GenerateAuthSetup
         }
 
         return $feedback;
-    }
-
-    private function hasSession(mixed $state): bool
-    {
-        if (! is_array($state)) {
-            return false;
-        }
-
-        if (! empty($state['cookies'])) {
-            return true;
-        }
-
-        foreach ($state['origins'] ?? [] as $origin) {
-            if (! empty($origin['localStorage'])) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

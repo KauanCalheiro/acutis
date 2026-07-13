@@ -32,5 +32,6 @@ export interface RecordingEvent {
     value: string | null
     tagName: string | null
     innerText: string | null
+    inputType: string | null
     assert?: AssertPayload
 }

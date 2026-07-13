@@ -12,5 +12,6 @@ class GeneratedAuthSetupData extends Data
         public bool $storageCaptured,
         public ?TestRunData $testRun = null,
         public ?string $snapshot = null,
+        public ?array $storageState = null,
     ) {}
 }

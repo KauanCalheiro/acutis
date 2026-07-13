@@ -78,7 +78,7 @@ function seekTo(e: RecorderEvent): void {
         :disabled="recording"
         icon="i-lucide-circle"
         color="error"
-        @click="start"
+        @click="start()"
       >
         Gravar
       </UButton>

@@ -10,6 +10,7 @@ class AuthRecordingData extends Data
         public string $baseUrl,
         public array $events,
         public ?string $executionUrl = null,
+        public ?array $storageState = null,
     ) {}
 
     public static function rules(): array
@@ -19,7 +20,9 @@ class AuthRecordingData extends Data
             'events' => ['required', 'array', 'min:1'],
             'events.*.type' => ['required', 'string'],
             'events.*.url' => ['required', 'string'],
+            'events.*.inputType' => ['nullable', 'string'],
             'executionUrl' => ['nullable', 'string', 'url'],
+            'storageState' => ['nullable', 'array'],
         ];
     }
 

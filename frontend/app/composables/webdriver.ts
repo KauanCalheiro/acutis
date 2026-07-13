@@ -8,6 +8,13 @@ export interface RecorderEvent {
   sessionId?: string | null
   timestamp?: number
   recordingStartedAt?: number
+  storageState?: StorageState | null
+  inputType?: string | null
+}
+
+export interface StorageState {
+  cookies: unknown[]
+  origins: unknown[]
 }
 
 interface WebdriverState {
@@ -18,6 +25,7 @@ interface WebdriverState {
   events: RecorderEvent[]
   videoSessionId: string | null
   recordingStartedAt: number | null
+  storageState: StorageState | null
 }
 
 const RECONNECT_DELAY_MS = 2000
@@ -35,12 +43,13 @@ export function useWebdriver() {
     events: [],
     videoSessionId: null,
     recordingStartedAt: null,
+    storageState: null
   }))
 
   const url = useRuntimeConfig().public.webdriver.acutis.url
 
-  function send(type: string) {
-    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type }))
+  function send(type: string, payload: Record<string, unknown> = {}) {
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type, ...payload }))
   }
 
   function onMessage(raw: string) {
@@ -70,6 +79,7 @@ export function useWebdriver() {
       case 'recorder:stop':
         state.value.recording = false
         state.value.videoSessionId = data.sessionId ?? null
+        state.value.storageState = data.storageState ?? null
         break
       default:
         if (data.event.startsWith('recorder:')) state.value.events.push(data)
@@ -97,12 +107,13 @@ export function useWebdriver() {
     connect()
   }
 
-  function startRecording() {
+  function startRecording(mode: 'scenario' | 'auth' = 'scenario') {
     state.value.error = null
     state.value.events = []
     state.value.videoSessionId = null
+    state.value.storageState = null
     state.value.recording = true
-    send('START_RECORDING')
+    send('START_RECORDING', { mode })
   }
 
   function stopRecording() {
@@ -115,6 +126,6 @@ export function useWebdriver() {
     url,
     ensureConnected,
     startRecording,
-    stopRecording,
+    stopRecording
   }
 }

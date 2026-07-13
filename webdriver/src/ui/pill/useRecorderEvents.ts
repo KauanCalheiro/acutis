@@ -107,6 +107,7 @@ export function useRecorderEvents() {
             value: null,
             tagName: el.tagName.toLowerCase(),
             innerText: (el as HTMLElement).innerText?.trim().slice(0, 200) || null,
+            inputType: el instanceof HTMLInputElement ? el.type : null,
         }
     }
 
@@ -119,7 +120,8 @@ export function useRecorderEvents() {
             label: document.title || null,
             value: null,
             tagName: null,
-            innerText: null
+            innerText: null,
+            inputType: null
         }
     }
 

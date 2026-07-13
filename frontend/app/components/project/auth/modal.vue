@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RecorderEvent } from '~/composables/webdriver'
+import type { RecorderEvent, StorageState } from '~/composables/webdriver'
 
 interface ProjectAuthModal {
   slug: string
@@ -26,6 +26,7 @@ const LOADING_PHRASES = [
 const step = ref<'loading-existing' | 'intro' | 'loading' | 'result' | 'view' | 'edit'>('intro')
 const error = ref<string | null>(null)
 const generatedScript = ref('')
+const sessionCaptured = ref(false)
 const existingScript = ref('')
 const editedScript = ref('')
 const saving = ref(false)
@@ -105,6 +106,7 @@ async function save() {
 function recordAgain() {
   step.value = 'intro'
   runResult.value = null
+  sessionCaptured.value = false
 }
 
 function startRecording() {
@@ -112,7 +114,7 @@ function startRecording() {
   emit('record')
 }
 
-async function submitRecording(baseUrl: string, events: RecorderEvent[]) {
+async function submitRecording(baseUrl: string, events: RecorderEvent[], storageState: StorageState | null) {
   submittingRecording.value = true
   error.value = null
   runResult.value = null
@@ -120,7 +122,7 @@ async function submitRecording(baseUrl: string, events: RecorderEvent[]) {
   open.value = true
 
   try {
-    const response = await $fetch<{ authSetup: string }>(`/api/projects/${slug}/auth/record`, {
+    const response = await $fetch<{ authSetup: string, storageCaptured: boolean }>(`/api/projects/${slug}/auth/record`, {
       method: 'POST',
       body: {
         baseUrl,
@@ -130,11 +132,14 @@ async function submitRecording(baseUrl: string, events: RecorderEvent[]) {
           url: event.url ?? null,
           selectors: event.selectors ?? null,
           label: event.label ?? null,
-          value: event.value ?? null
-        }))
+          value: event.value ?? null,
+          inputType: event.inputType ?? null
+        })),
+        storageState
       }
     })
     generatedScript.value = response.authSetup
+    sessionCaptured.value = response.storageCaptured
     step.value = 'result'
     emit('configured')
   } catch {
@@ -175,10 +180,19 @@ defineExpose({
         class="flex flex-col gap-4"
       >
         <UAlert
+          v-if="sessionCaptured"
           color="success"
           variant="soft"
           title="Autenticação gravada"
-          description="O login gravado foi convertido em teste. Preencha AUTH_USER e AUTH_PASSWORD no .env do projeto com as credenciais reais para rodar esse login automaticamente depois."
+          description="O login gravado foi convertido em teste e a sessão da gravação já foi salva — os testes do projeto já rodam autenticados."
+          data-testid="auth-resultado"
+        />
+        <UAlert
+          v-else
+          color="warning"
+          variant="soft"
+          title="Autenticação gravada"
+          description="O login gravado foi convertido em teste, mas não foi possível salvar a sessão automaticamente. Preencha AUTH_USER e AUTH_PASSWORD no .env do projeto com as credenciais reais para rodar esse login."
           data-testid="auth-resultado"
         />
         <div class="flex items-center justify-between gap-2">
@@ -230,7 +244,7 @@ defineExpose({
           Vamos gravar o login de verdade: clique em "Gravar" e faça o login normalmente na aba que abrir. A IA transforma essa gravação num teste de autenticação — sem adivinhar seletor, sem digitar sua senha em formulário nenhum.
         </p>
         <p class="text-xs text-dimmed">
-          Campos de senha nunca são capturados em texto — a extensão já mascara esse valor antes de qualquer coisa sair do seu navegador.
+          A senha digitada na gravação é usada só para validar que o login funciona e fica salva localmente no `.env` do projeto (nunca no script gerado nem versionada).
         </p>
       </div>
 
