@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
 import { clearNuxtData } from 'nuxt/app'
+import { nextTick } from 'vue'
 import IndexPage from '~/pages/index.vue'
 import type { Project } from '~/types/project'
 
@@ -71,5 +72,42 @@ describe('IndexPage', () => {
 
     expect(wrapper.find('[data-testid="projeto-vazio"]').exists()).toBe(true)
     expect(wrapper.findAll('[data-testid="projeto-card"]')).toHaveLength(0)
+    expect(wrapper.find('[data-testid="projeto-paginacao"]').exists()).toBe(false)
+  })
+
+  it('opens the create modal on the template tab from the empty state', async () => {
+    response = {
+      data: [],
+      meta: {
+        current_page: 1,
+        per_page: 6,
+        total: 0
+      }
+    }
+
+    const wrapper = await mountSuspended(IndexPage)
+
+    await wrapper.find('[data-testid="projeto-vazio-template"]').trigger('click')
+    await nextTick()
+
+    expect(document.querySelector('[data-testid="projeto-form-nome"]')).not.toBeNull()
+  })
+
+  it('opens the create modal on the git tab from the empty state', async () => {
+    response = {
+      data: [],
+      meta: {
+        current_page: 1,
+        per_page: 6,
+        total: 0
+      }
+    }
+
+    const wrapper = await mountSuspended(IndexPage)
+
+    await wrapper.find('[data-testid="projeto-vazio-git"]').trigger('click')
+    await nextTick()
+
+    expect(document.querySelector('[data-testid="projeto-form-url"]')).not.toBeNull()
   })
 })

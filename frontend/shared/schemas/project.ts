@@ -59,3 +59,5 @@ export const cloneProjectSchema = z
   })
 
 export type CloneProject = z.output<typeof cloneProjectSchema>
+
+export type ProjectFormTab = 'template' | 'git'

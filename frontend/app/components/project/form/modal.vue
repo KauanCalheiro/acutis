@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import type { FormSubmitEvent, TabsItem } from '@nuxt/ui'
-import { cloneProjectSchema, createProjectSchema, type CloneProject, type CreateProject } from '#shared/schemas/project'
+import { cloneProjectSchema, createProjectSchema, type CloneProject, type CreateProject, type ProjectFormTab } from '#shared/schemas/project'
 
 const open = defineModel<boolean>('open', {
   default: false,
+})
+
+const tab = defineModel<ProjectFormTab>('tab', {
+  default: 'template',
 })
 
 const emit = defineEmits<{
@@ -20,8 +24,6 @@ const tabs: TabsItem[] = [
     value: 'git',
   },
 ]
-
-const tab = ref('template')
 
 const templateState = reactive({
   name: '',
