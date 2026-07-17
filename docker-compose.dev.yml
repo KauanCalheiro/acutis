@@ -1,3 +1,5 @@
+name: acutis
+
 services:
   backend:
     build: backend/docker/development
