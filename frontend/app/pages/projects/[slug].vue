@@ -309,13 +309,11 @@ async function remove() {
       </UCard>
     </div>
 
-    <p
+    <ScenarioEmpty
       v-else
-      class="text-muted text-center py-12"
-      data-testid="cenario-vazio"
-    >
-      Nenhum cenário ainda. Grave uma interação para gerar o primeiro teste.
-    </p>
+      :disabled="!webdriver.connected"
+      @record="startRecording"
+    />
 
     <ProjectRenameModal
       v-model:open="renameOpen"

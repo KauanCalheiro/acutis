@@ -104,6 +104,15 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
 
         expect(response?.status()).toBe(404)
     })
+
+    test('shows the empty state with a single card when the project has no scenarios', async ({ page }) => {
+        await page.goto('/projects/beta-blog')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await expect(page.getByTestId('cenario-vazio')).toBeVisible()
+        await expect(page.getByTestId('cenario-vazio-gravar')).toBeVisible()
+        await expect(page.getByTestId('cenario-card')).toHaveCount(0)
+    })
 })
 
 test.describe('project authentication modal', { tag: ['@write', '@project'] }, () => {
