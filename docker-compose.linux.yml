@@ -1,0 +1,15 @@
+name: acutis
+
+services:
+  backend:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      WEBDRIVER_URL: http://host.docker.internal:24000
+
+  webdriver:
+    network_mode: host
+    ports: !reset []
+    environment:
+      PORT: "24000"
+      RECORDER_CDP_URL: http://127.0.0.1:9222

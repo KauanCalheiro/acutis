@@ -8,6 +8,14 @@ Esta é a versão final do TCC. A versão inicial (com erros e código legado) e
 docker compose -f docker-compose.dev.yml up
 ```
 
+**Linux nativo (sem Docker Desktop):** para gravar cenários, suba com o override adicional:
+
+```sh
+docker compose -f docker-compose.dev.yml -f docker-compose.linux.yml up
+```
+
+Chrome recente (desde ~v136) ignora `--remote-debugging-address` e só aceita conexões CDP em `127.0.0.1` — no Docker Engine nativo, `host.docker.internal` aponta pro IP da bridge (não pro loopback), então o container do `webdriver` não alcança o Chrome do host sem esse override (que coloca o `webdriver` em `network_mode: host`, igualando seu `127.0.0.1` ao da máquina). No macOS/Windows (Docker Desktop) isso não é necessário — a VM do Docker Desktop já expõe o loopback do host via `host.docker.internal`.
+
 Portas publicadas no host (altas de propósito, pra não colidir com nada — expor bonito depois via Nginx Proxy Manager):
 
 | Serviço | Host | Interna | Nota pro proxy |
