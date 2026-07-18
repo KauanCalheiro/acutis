@@ -1,0 +1,5 @@
+[
+    { "type": "navigate", "url": "/login", "label": "Abrir página de login" },
+    { "type": "click", "label": "Entrar com usuário/código" },
+    { "type": "fill", "label": "Usuário ou código", "value": "ana.lasta" }
+]

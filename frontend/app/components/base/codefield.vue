@@ -6,9 +6,10 @@ import 'prismjs/components/prism-gherkin'
 interface BaseCodefield {
   language: 'typescript' | 'gherkin'
   testid?: string
+  readonly?: boolean
 }
 
-const { language, testid } = defineProps<BaseCodefield>()
+const { language, testid, readonly = false } = defineProps<BaseCodefield>()
 
 const model = defineModel<string>({
   default: ''
@@ -51,6 +52,7 @@ onMounted(resize)
       ref="textarea"
       v-model="model"
       :data-testid="testid"
+      :readonly="readonly"
       spellcheck="false"
       class="codefield-box relative block w-full resize-none bg-transparent text-transparent caret-[var(--ui-text-highlighted)] outline-none"
       @input="resize"

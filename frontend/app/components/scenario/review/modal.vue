@@ -58,6 +58,16 @@ const baseUrl = computed(() => {
   }
 })
 
+const mappedEvents = computed(() => timeline.value.map(event => ({
+  type: event.type,
+  timestamp: event.timestamp,
+  url: event.url ?? null,
+  selectors: event.selectors ?? null,
+  label: event.label ?? null,
+  value: event.value ?? null,
+  sensitive: event.sensitive ?? false
+})))
+
 async function generate() {
   if (!baseUrl.value) {
     error.value = 'Nenhuma navegação registrada na gravação.'
@@ -72,14 +82,7 @@ async function generate() {
       method: 'POST',
       body: {
         baseUrl: baseUrl.value,
-        events: timeline.value.map(event => ({
-          type: event.type,
-          timestamp: event.timestamp,
-          url: event.url ?? null,
-          selectors: event.selectors ?? null,
-          label: event.label ?? null,
-          value: event.value ?? null
-        }))
+        events: mappedEvents.value
       }
     })
     step.value = 'edit'
@@ -98,7 +101,7 @@ async function commit() {
   try {
     await $fetch(`/api/projects/${slug}/tests`, {
       method: 'POST',
-      body: draft.value
+      body: { ...draft.value, events: mappedEvents.value }
     })
     open.value = false
     emit('generated')

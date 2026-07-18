@@ -36,8 +36,9 @@ pnpm dev   # :3000
 ```sh
 cd webdriver
 pnpm install
-pnpm dev   # :4000, watch mode via swc-node/register — mesmo modo que o entrypoint do Docker usa
+pnpm dev   # :4000
 ```
 
+- **`pnpm dev` do webdriver NÃO é watch mode** (diferente do que o entrypoint do Docker faz com `node --watch`) — é só `node --import @swc-node/register/esm-register src/main.ts` de uma vez, o processo não recarrega sozinho. Editou algo em `webdriver/src/**`, mata o processo (`Ctrl+C` ou `pkill -f main.ts`) e sobe de novo — senão o processo continua servindo o código antigo indefinidamente, silenciosamente.
 - Sem a env `RECORDER_CDP_URL`, o recorder abre o próprio Chromium headed em vez de conectar num Chrome externo via CDP (diferente do modo Docker, que depende do Chrome do host).
 - Setup e seed do banco dedicado do e2e (`database/e2e.sqlite`, `migrate:fresh --seed`) já é automatizado pelo `e2e/scripts/setup.sh` (roda como `pretest` do `e2e/package.json`) — não precisa fazer manual, só `pnpm test` dentro de `e2e/`.

@@ -16,6 +16,7 @@ class TestDraftResource extends JsonResource
             'path' => $this->path,
             'gherkin' => $this->gherkin,
             'playwright' => $this->playwright,
+            'envVars' => $this->envVars,
         ];
     }
 }
