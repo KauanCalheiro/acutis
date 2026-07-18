@@ -5,7 +5,7 @@ metadata:
   type: project
 ---
 
-Monorepo com quatro subprojetos independentes. Comandos rodam dentro do container, nunca no host — ver [docker](docker.md).
+Monorepo com quatro subprojetos independentes. Comandos rodam num dos dois modos de execução — ver [execution](execution.md).
 
 ```
 acutis/
