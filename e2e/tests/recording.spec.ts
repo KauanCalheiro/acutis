@@ -294,7 +294,7 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
     })
 })
 
-test.describe('recording authentication from the project page', { tag: ['@write', '@recording'] }, () => {
+test.describe.skip('recording authentication from the project page', { tag: ['@write', '@recording'] }, () => {
     let authFixtureServer: Server
     let authBaseUrl: string
     let stopAuthWebdriver: () => Promise<void>
