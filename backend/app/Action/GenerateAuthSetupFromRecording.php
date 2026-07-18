@@ -6,6 +6,7 @@ use App\Ai\Agents\AuthRecordingWriter;
 use App\Ai\StructuredOutput;
 use App\Data\V1\Auth\AuthRecordingData;
 use App\Data\V1\Auth\GeneratedAuthSetupData;
+use App\Support\RecordingEvents;
 use Lorisleiva\Actions\Concerns\AsAction;
 
 class GenerateAuthSetupFromRecording
@@ -15,7 +16,7 @@ class GenerateAuthSetupFromRecording
     public function handle(AuthRecordingData $input): GeneratedAuthSetupData
     {
         $events = json_encode(
-            $input->events,
+            RecordingEvents::redact($input->events),
             JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
         );
 

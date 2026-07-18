@@ -38,12 +38,6 @@ const scenarios = computed(() => {
   )
 })
 
-function tagColor(tag: string) {
-  if (tag === '@read') return 'success'
-  if (tag === '@write') return 'warning'
-  return 'primary'
-}
-
 const renameOpen = ref(false)
 const removeOpen = ref(false)
 const removing = ref(false)
@@ -175,6 +169,7 @@ async function remove() {
           target="_blank"
           data-testid="projeto-vscode"
         />
+        <!-- TODO(auth-flow): reativar, ver .claude/memory/auth-flow.md
         <BaseButtonIcon
           icon="i-ic-round-key"
           label="Autenticação"
@@ -183,6 +178,7 @@ async function remove() {
           data-testid="projeto-auth"
           @click="authOpen = true"
         />
+        -->
         <BaseButtonIcon
           icon="i-ic-round-edit"
           label="Renomear projeto"
@@ -202,6 +198,7 @@ async function remove() {
       </div>
     </div>
 
+    <!-- TODO(auth-flow): reativar, ver .claude/memory/auth-flow.md
     <UAlert
       v-if="project!.auth_status === 'unset'"
       color="warning"
@@ -232,6 +229,7 @@ async function remove() {
         />
       </template>
     </UAlert>
+    -->
 
     <div class="flex flex-wrap items-center gap-4 mt-8 mb-8">
       <UInput
@@ -288,6 +286,8 @@ async function remove() {
         v-for="scenario in scenarios"
         :key="scenario.spec"
         data-testid="cenario-card"
+        class="cursor-pointer"
+        @click="navigateTo(`/projects/${slug}/scenarios/${scenario.spec.replace(/^tests\//, '').replace(/\.spec\.ts$/, '')}`)"
       >
         <div class="flex flex-col gap-2">
           <p class="font-semibold truncate">

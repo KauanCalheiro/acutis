@@ -28,10 +28,10 @@ function recordPayload(array $overrides = []): array
     return array_merge([
         'baseUrl' => 'https://sistema.test/login',
         'events' => [
-            ['type' => 'navigate', 'timestamp' => 1, 'url' => 'https://sistema.test/login', 'selectors' => null, 'label' => null, 'value' => null],
-            ['type' => 'fill', 'timestamp' => 2, 'url' => 'https://sistema.test/login', 'selectors' => ['dataTestId' => 'user'], 'label' => 'Usuário', 'value' => 'user1'],
-            ['type' => 'fill', 'timestamp' => 3, 'url' => 'https://sistema.test/login', 'selectors' => ['dataTestId' => 'pass'], 'label' => 'Senha', 'value' => '••••'],
-            ['type' => 'submit', 'timestamp' => 4, 'url' => 'https://sistema.test/login', 'selectors' => ['dataTestId' => 'entrar'], 'label' => 'Entrar', 'value' => null],
+            ['type' => 'navigate', 'timestamp' => 1, 'url' => 'https://sistema.test/login', 'selectors' => null, 'label' => null, 'value' => null, 'sensitive' => false],
+            ['type' => 'fill', 'timestamp' => 2, 'url' => 'https://sistema.test/login', 'selectors' => ['dataTestId' => 'user'], 'label' => 'Usuário', 'value' => 'user1', 'sensitive' => false],
+            ['type' => 'fill', 'timestamp' => 3, 'url' => 'https://sistema.test/login', 'selectors' => ['dataTestId' => 'pass'], 'label' => 'Senha', 'value' => 'topsecret123', 'sensitive' => true],
+            ['type' => 'submit', 'timestamp' => 4, 'url' => 'https://sistema.test/login', 'selectors' => ['dataTestId' => 'entrar'], 'label' => 'Entrar', 'value' => null, 'sensitive' => false],
         ],
     ], $overrides);
 }
@@ -64,6 +64,37 @@ it('shows the recorded events to the writer', function () {
             && str_contains($prompt->prompt, '••••')
             && str_contains($prompt->prompt, 'dataTestId')
     );
+});
+
+it('redacts the sensitive value before showing events to the writer', function () {
+    AuthRecordingWriter::fake();
+    Http::fake();
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    AuthRecordingWriter::assertPrompted(
+        fn ($prompt) => ! str_contains($prompt->prompt, 'topsecret123')
+    );
+});
+
+it('writes the recorded credentials into .env and a placeholder .env.example', function () {
+    AuthRecordingWriter::fake();
+    Http::fake();
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    $dir = $this->projectsPath."/{$slug}";
+
+    expect(File::get($dir.'/.env'))
+        ->toContain('AUTH_USER=user1')
+        ->toContain('AUTH_PASSWORD=topsecret123')
+        ->and(File::get($dir.'/.env.example'))
+        ->toContain('AUTH_USER=')
+        ->toContain('AUTH_PASSWORD=')
+        ->not->toContain('topsecret123')
+        ->and(File::get($dir.'/.gitignore'))->toContain('.env');
 });
 
 it('returns 404 for a project that does not exist', function () {

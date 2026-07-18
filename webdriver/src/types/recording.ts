@@ -30,6 +30,7 @@ export interface RecordingEvent {
     selectors: RecordingSelectors | null
     label: string | null
     value: string | null
+    sensitive: boolean
     tagName: string | null
     innerText: string | null
     assert?: AssertPayload

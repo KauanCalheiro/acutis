@@ -1,3 +1,5 @@
+import type { RecorderEvent } from '~/composables/webdriver'
+
 export interface Project {
   name: string
   slug: string
@@ -23,6 +25,13 @@ export interface ProjectDetail extends Project {
   vscode_url: string
 }
 
+export interface ScenarioDetail extends Scenario {
+  playwright: string
+  gherkin: string | null
+  events: RecorderEvent[]
+  updated_at: string
+}
+
 export interface TestDraft {
   title: string
   tags: string[]
@@ -30,4 +39,6 @@ export interface TestDraft {
   path: string
   gherkin: string
   playwright: string
+  events?: RecorderEvent[]
+  envVars?: string[]
 }

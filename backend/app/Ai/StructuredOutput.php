@@ -23,6 +23,22 @@ class StructuredOutput
         throw new RuntimeException("O agente de IA não retornou o campo '{$key}' esperado.");
     }
 
+    /** @return list<string> */
+    public static function fieldArray(TextResponse $response, string $key): array
+    {
+        if ($response instanceof ArrayAccess && isset($response[$key]) && is_array($response[$key])) {
+            return $response[$key];
+        }
+
+        $decoded = self::decodeLoosely($response->text);
+
+        if (is_array($decoded) && is_array($decoded[$key] ?? null)) {
+            return $decoded[$key];
+        }
+
+        return [];
+    }
+
     private static function decodeLoosely(string $text): ?array
     {
         $decoded = json_decode(trim($text), true);

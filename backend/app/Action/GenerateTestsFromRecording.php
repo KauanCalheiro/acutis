@@ -9,6 +9,7 @@ use App\Ai\Tools\RunPlaywrightTest;
 use App\Data\V1\Recording\GeneratedTestsData;
 use App\Data\V1\Recording\RecordingData;
 use App\Data\V1\Recording\TestRunData;
+use App\Support\RecordingEvents;
 use Lorisleiva\Actions\Concerns\AsAction;
 
 class GenerateTestsFromRecording
@@ -22,7 +23,7 @@ class GenerateTestsFromRecording
     public function handle(RecordingData $recording): GeneratedTestsData
     {
         $events = json_encode(
-            $recording->events,
+            RecordingEvents::redact($recording->events),
             JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
         );
 
@@ -32,15 +33,17 @@ class GenerateTestsFromRecording
         $gherkin = StructuredOutput::field($gherkinResponse, 'gherkin');
         $domain = StructuredOutput::field($gherkinResponse, 'domain');
 
-        $playwright = StructuredOutput::field(app(PlaywrightWriter::class)->prompt(
+        $playwrightResponse = app(PlaywrightWriter::class)->prompt(
             "URL base: {$recording->baseUrl}\n\nCenário Gherkin:\n{$gherkin}\n\nEventos gravados:\n{$events}"
                 .$this->noticeablePauses($recording->events),
-        ), 'playwright');
+        );
+        $playwright = StructuredOutput::field($playwrightResponse, 'playwright');
+        $envVars = StructuredOutput::fieldArray($playwrightResponse, 'envVars');
 
         $testRun = null;
 
         if ($recording->executionUrl !== null) {
-            [$playwright, $testRun] = $this->runUntilItPasses($recording, $gherkin, $events, $playwright);
+            [$playwright, $testRun, $envVars] = $this->runUntilItPasses($recording, $gherkin, $events, $playwright, $envVars);
         }
 
         $tag = $this->readWriteTag($recording->events);
@@ -49,6 +52,7 @@ class GenerateTestsFromRecording
             gherkin: $this->ensureGherkinTag($gherkin, $tag),
             playwright: $this->ensurePlaywrightTag($playwright, $tag),
             domain: $domain,
+            envVars: $envVars,
             testRun: $testRun,
         );
     }
@@ -101,6 +105,7 @@ class GenerateTestsFromRecording
         string $gherkin,
         string $events,
         string $playwright,
+        array $envVars,
     ): array {
         $attempts = 0;
 
@@ -113,7 +118,7 @@ class GenerateTestsFromRecording
             );
 
             if ($result->passed) {
-                return [$playwright, new TestRunData(executed: true, passed: true, attempts: $attempts)];
+                return [$playwright, new TestRunData(executed: true, passed: true, attempts: $attempts), $envVars];
             }
 
             if ($attempts >= self::MAX_RUN_ATTEMPTS) {
@@ -122,16 +127,18 @@ class GenerateTestsFromRecording
                     passed: false,
                     attempts: $attempts,
                     error: $result->output,
-                )];
+                ), $envVars];
             }
 
-            $playwright = StructuredOutput::field(app(PlaywrightWriter::class)->prompt(
+            $retryResponse = app(PlaywrightWriter::class)->prompt(
                 "O teste Playwright abaixo falhou ao executar. Corrija o spec mantendo a URL base {$recording->baseUrl}."
                     ."\n\nErro da execução:\n{$result->output}"
                     ."\n\nSpec com falha:\n{$playwright}"
                     ."\n\nCenário Gherkin:\n{$gherkin}"
                     ."\n\nEventos gravados:\n{$events}",
-            ), 'playwright');
+            );
+            $playwright = StructuredOutput::field($retryResponse, 'playwright');
+            $envVars = StructuredOutput::fieldArray($retryResponse, 'envVars');
         }
     }
 

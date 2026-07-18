@@ -25,7 +25,7 @@ class PlaywrightWriter implements Agent, HasStructuredOutput
         - O test.describe SEMPRE declara as mesmas tags do Gherkin via option tag: test.describe('Título', { tag: ['@read'] }, () => { ... }) — a primeira é exatamente uma entre @read e @write.
         - Navegue sempre com URL absoluta construída a partir da URL base fornecida — nunca page.goto('/') relativo.
         - Inclua expect de URL após cada navegação registrada nos eventos.
-        - Valores de senha chegam mascarados como •••• — use process.env ou um placeholder nomeado, nunca o valor mascarado.
+        - Valores de senha chegam mascarados como •••• — use process.env.<NOME_EM_MAIUSCULAS> (nunca o valor mascarado) e reporte esse nome exato em envVars, na mesma ordem em que os eventos mascarados aparecem na gravação.
         - Importe apenas de @playwright/test.
 
         Esperas:
@@ -40,6 +40,8 @@ class PlaywrightWriter implements Agent, HasStructuredOutput
     {
         return [
             'playwright' => $schema->string()->description('Conteúdo completo do arquivo .spec.ts'),
+            'envVars' => $schema->array()->items($schema->string())
+                ->description('Nomes exatos das variáveis process.env.<NOME> usadas para valores mascarados como ••••, na ordem em que aparecem. Vazio se não houver nenhum.'),
         ];
     }
 }

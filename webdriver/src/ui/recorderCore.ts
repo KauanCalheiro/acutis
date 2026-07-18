@@ -9,6 +9,13 @@ import { useAssertMode } from './pill/useAssertMode'
 let hostElement: HTMLDivElement | null = null
 let keepAliveObserver: MutationObserver | null = null
 
+export function resolveFillValue(el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement): { value: string, sensitive: boolean } {
+    return {
+        value: el.value,
+        sensitive: el instanceof HTMLInputElement && el.type === 'password',
+    }
+}
+
 function ensureAttached(): void {
     if (!hostElement) return
     const parent = document.body ?? document.documentElement
@@ -99,10 +106,9 @@ export function mountRecorder(onClick?: () => void): void {
         if (isHostEvent(e) || isPaused.value) return
         const el = e.target
         if (!(el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement)) return
-        const raw = (el as HTMLInputElement).value
-        if (!raw) return
-        const value = el instanceof HTMLInputElement && el.type === 'password' ? '••••' : raw
-        dispatch({ ...buildBaseEvent('fill', el), value })
+        const { value, sensitive } = resolveFillValue(el)
+        if (!value) return
+        dispatch({ ...buildBaseEvent('fill', el), value, sensitive })
     }, true)
 
     document.addEventListener('submit', (e) => {

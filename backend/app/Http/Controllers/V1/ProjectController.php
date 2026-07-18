@@ -11,6 +11,8 @@ use App\Action\ShowProject;
 use App\Action\UpdateProject;
 use App\Action\RunProject;
 use App\Action\ShowProjectAuth;
+use App\Action\ShowProjectScenario;
+use App\Action\DeleteProjectScenario;
 use App\Action\SkipProjectAuth;
 use App\Action\UpdateProjectAuth;
 use App\Action\WriteAuthRecordingToProject;
@@ -36,6 +38,7 @@ use App\Http\Resources\V1\ProjectResource;
 use App\Http\Resources\V1\ProjectAuthResource;
 use App\Http\Resources\V1\ProjectRunResource;
 use App\Http\Resources\V1\ProjectTestResource;
+use App\Http\Resources\V1\ScenarioShowResource;
 use App\Http\Resources\V1\TestDraftResource;
 use App\Support\TestArtifact;
 use Illuminate\Support\Str;
@@ -122,6 +125,18 @@ class ProjectController extends Controller
         return ProjectAuthResource::make(ShowProjectAuth::run($project));
     }
 
+    public function showScenario(string $project, string $scenario): ScenarioShowResource
+    {
+        return ScenarioShowResource::make(ShowProjectScenario::run($project, $scenario));
+    }
+
+    public function destroyScenario(string $project, string $scenario): Response
+    {
+        DeleteProjectScenario::run($project, $scenario);
+
+        return response()->noContent();
+    }
+
     public function updateAuth(string $project, UpdateAuthSetupData $data): ProjectAuthResource
     {
         return ProjectAuthResource::make(UpdateProjectAuth::run($project, $data->authSetup));
@@ -153,6 +168,7 @@ class ProjectController extends Controller
             path: TestArtifact::uniquePath("{$path}/tests", Str::slug($title) ?: 'teste'),
             gherkin: $generated->gherkin,
             playwright: $generated->playwright,
+            envVars: $generated->envVars,
         ));
     }
 

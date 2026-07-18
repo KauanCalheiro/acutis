@@ -91,7 +91,7 @@ function seekTo(event: RecorderEvent) {
             >
               {{ describe(event) }}
               <template v-if="event.value">
-                = {{ event.value }}
+                = {{ event.sensitive ? '••••' : event.value }}
               </template>
             </p>
             <p class="text-xs text-dimmed">

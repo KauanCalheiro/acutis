@@ -14,6 +14,8 @@ class WriteTestData extends Data
         public string $gherkin,
         public string $playwright,
         public array $tags = [],
+        public ?array $events = null,
+        public array $envVars = [],
     ) {}
 
     public static function rules(): array
@@ -26,6 +28,11 @@ class WriteTestData extends Data
             'playwright' => ['required', 'string'],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string'],
+            'events' => ['nullable', 'array'],
+            'events.*.type' => ['required', 'string'],
+            'events.*.sensitive' => ['sometimes', 'boolean'],
+            'envVars' => ['nullable', 'array'],
+            'envVars.*' => ['string'],
         ];
     }
 
