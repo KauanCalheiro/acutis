@@ -1,6 +1,6 @@
 # Memory Catalog
 
-Instruções persistentes ficam em `./.claude/memory/`. Antes de qualquer ação em um domínio, ler o arquivo correspondente — as regras vivem lá, não aqui. `backend.md`, `frontend.md`, `webdriver.md`, `e2e.md`, `execution.md` e `structure.md` são **índices**: levam às sub-memórias específicas (ler o índice primeiro).
+Instruções persistentes ficam em `./.claude/memory/`. Antes de qualquer ação em um domínio, ler o arquivo correspondente — as regras vivem lá, não aqui. `backend.md`, `frontend.md`, `webdriver.md`, `e2e.md`, `execution.md`, `structure.md` e `todo.md` são **índices**: levam às sub-memórias específicas (ler o índice primeiro).
 
 | Arquivo | Tipo | Ler quando |
 |---------|------|------------|
@@ -15,3 +15,4 @@ Instruções persistentes ficam em `./.claude/memory/`. Antes de qualquer ação
 | [branches.md](branches.md) | feedback | depois de mergear PR, ou ao pedir limpeza — apagar branch órfã local/remota |
 | [tdd.md](tdd.md) | feedback | qualquer feature/bugfix — red/green/refactor, teste antes do código |
 | [structure.md](structure.md) | índice | procurar onde fica arquivo/pasta no monorepo (→ backend, frontend, webdriver, e2e) |
+| [todo.md](todo.md) | índice | verificar pendências registradas do projeto (→ auth-flow) |
