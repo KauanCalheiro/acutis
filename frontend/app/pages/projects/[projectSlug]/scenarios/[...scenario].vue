@@ -12,7 +12,7 @@ onMounted(() => {
 })
 
 const { data: project } = await useFetch<ProjectDetail>(`/api/projects/${slug.value}`)
-const { data: scenario } = await useFetch<ScenarioDetail>(`/api/projects/${slug.value}/scenarios/${scenarioId.value}`)
+const { data: scenario, refresh: refreshScenario } = await useFetch<ScenarioDetail>(`/api/projects/${slug.value}/scenarios/${scenarioId.value}`)
 
 if (!project.value || !scenario.value) {
   throw createError({
@@ -43,6 +43,21 @@ const updatedAt = computed(() => new Date(scenario.value!.updated_at).toLocaleSt
   dateStyle: 'short',
   timeStyle: 'short'
 }))
+
+const editOpen = ref(false)
+
+function scenarioIdFor(spec: string) {
+  return spec.replace(/^tests\//, '').replace(/\.spec\.ts$/, '')
+}
+
+async function onUpdated(updated: ScenarioDetail) {
+  if (scenarioIdFor(updated.spec) !== scenarioId.value) {
+    await navigateTo(`/projects/${slug.value}/scenarios/${scenarioIdFor(updated.spec)}`)
+    return
+  }
+
+  await refreshScenario()
+}
 
 // ponytail: histórico de execuções ainda não é persistido no back-end (só a
 // execução ao vivo existe) — mock até existir uma tabela de runs.
@@ -113,8 +128,8 @@ const tabs: TabsItem[] = [
           label="Editar"
           color="neutral"
           variant="soft"
-          disabled
           data-testid="cenario-editar"
+          @click="editOpen = true"
         />
         <UButton
           label="Ver sugestões"
@@ -222,5 +237,12 @@ const tabs: TabsItem[] = [
         Isso <b>apaga</b> os arquivos de teste, feature e eventos de "{{ scenario!.title }}".
       </template>
     </BaseConfirm>
+
+    <ScenarioEditModal
+      v-model:open="editOpen"
+      :slug="slug"
+      :scenario="scenario!"
+      @updated="onUpdated"
+    />
   </UContainer>
 </template>

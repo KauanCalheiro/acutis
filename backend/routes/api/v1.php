@@ -23,3 +23,5 @@ Route::get('projects/{project}/scenarios/{scenario}', [ProjectController::class,
     ->where('scenario', '.*');
 Route::delete('projects/{project}/scenarios/{scenario}', [ProjectController::class, 'destroyScenario'])
     ->where('scenario', '.*');
+Route::patch('projects/{project}/scenarios/{scenario}', [ProjectController::class, 'updateScenario'])
+    ->where('scenario', '.*');

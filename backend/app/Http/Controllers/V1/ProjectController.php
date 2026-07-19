@@ -12,6 +12,7 @@ use App\Action\UpdateProject;
 use App\Action\RunProject;
 use App\Action\ShowProjectAuth;
 use App\Action\ShowProjectScenario;
+use App\Action\UpdateProjectScenario;
 use App\Action\DeleteProjectScenario;
 use App\Action\SkipProjectAuth;
 use App\Action\UpdateProjectAuth;
@@ -26,6 +27,7 @@ use App\Data\V1\Project\CloneProjectData;
 use App\Data\V1\Project\CreateProjectData;
 use App\Data\V1\Project\ProbeGitData;
 use App\Data\V1\Project\UpdateProjectData;
+use App\Data\V1\Project\UpdateScenarioData;
 use App\Data\V1\Project\RunProjectData;
 use App\Data\V1\Recording\RecordingData;
 use App\Data\V1\Recording\TestDraftData;
@@ -135,6 +137,11 @@ class ProjectController extends Controller
         DeleteProjectScenario::run($project, $scenario);
 
         return response()->noContent();
+    }
+
+    public function updateScenario(string $project, string $scenario, UpdateScenarioData $data): ScenarioShowResource
+    {
+        return ScenarioShowResource::make(UpdateProjectScenario::run($project, $scenario, $data));
     }
 
     public function updateAuth(string $project, UpdateAuthSetupData $data): ProjectAuthResource
