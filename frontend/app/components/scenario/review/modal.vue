@@ -34,11 +34,7 @@ watch(open, (isOpen) => {
   }
 })
 
-const modalTitle = computed(() => {
-  if (step.value === 'loading') return 'Gerando cenário'
-  if (step.value === 'edit') return 'Revise os contextos'
-  return 'Revise seus eventos'
-})
+const modalTitle = computed(() => step.value === 'edit' ? 'Revise os contextos' : 'Revise seus eventos')
 
 const timeline = computed(() =>
   state.value.events
@@ -123,6 +119,7 @@ function rerecord() {
     v-model:open="open"
     :title="modalTitle"
     :dismissable="false"
+    :loading="step === 'loading'"
     wide
   >
     <template #body>
@@ -149,10 +146,7 @@ function rerecord() {
       />
     </template>
 
-    <template
-      v-if="step !== 'loading'"
-      #footer
-    >
+    <template #footer>
       <template v-if="step === 'edit'">
         <UButton
           label="Cancelar"

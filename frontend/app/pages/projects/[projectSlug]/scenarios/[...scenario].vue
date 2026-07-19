@@ -45,6 +45,7 @@ const updatedAt = computed(() => new Date(scenario.value!.updated_at).toLocaleSt
 }))
 
 const editOpen = ref(false)
+const suggestionsOpen = ref(false)
 
 function scenarioIdFor(spec: string) {
   return spec.replace(/^tests\//, '').replace(/\.spec\.ts$/, '')
@@ -136,8 +137,8 @@ const tabs: TabsItem[] = [
           trailing-icon="i-ic-round-auto-awesome"
           color="neutral"
           variant="soft"
-          disabled
           data-testid="cenario-sugestoes"
+          @click="suggestionsOpen = true"
         />
         <UButton
           label="Testar"
@@ -214,12 +215,19 @@ const tabs: TabsItem[] = [
               {{ run.date }}
             </p>
           </div>
-          <UBadge
-            :color="run.status === 'success' ? 'success' : 'error'"
-            variant="subtle"
-            :icon="run.status === 'success' ? 'i-ic-round-check-circle' : 'i-ic-round-error'"
-            :label="run.status === 'success' ? 'Sucesso' : 'Falha'"
-          />
+          <div class="flex items-center gap-2 w-25">
+            <UIcon
+              :name="run.status === 'success' ? 'i-ic-round-check-circle' : 'i-ic-round-error'"
+              :class="{
+                'bg-success': run.status === 'success',
+                'bg-error': run.status === 'failure'
+              }"
+              class="size-6"
+            />
+            <span>
+              {{ run.status === 'success' ? 'Sucesso' : 'Falha' }}
+            </span>
+          </div>
         </div>
       </UCard>
     </div>
@@ -243,6 +251,12 @@ const tabs: TabsItem[] = [
       :slug="slug"
       :scenario="scenario!"
       @updated="onUpdated"
+    />
+
+    <ScenarioSuggestionsModal
+      v-model:open="suggestionsOpen"
+      :slug="slug"
+      :scenario-id="scenarioId"
     />
   </UContainer>
 </template>

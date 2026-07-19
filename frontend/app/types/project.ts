@@ -32,6 +32,13 @@ export interface ScenarioDetail extends Scenario {
   updated_at: string
 }
 
+export interface SelectorSuggestion {
+  event: string
+  currentSelector: string
+  suggestedTestId: string
+  reason: string
+}
+
 export interface TestDraft {
   title: string
   tags: string[]

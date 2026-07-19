@@ -25,3 +25,5 @@ Route::delete('projects/{project}/scenarios/{scenario}', [ProjectController::cla
     ->where('scenario', '.*');
 Route::patch('projects/{project}/scenarios/{scenario}', [ProjectController::class, 'updateScenario'])
     ->where('scenario', '.*');
+Route::post('projects/{project}/scenarios/{scenario}/suggestions', [ProjectController::class, 'suggestScenarioSelectors'])
+    ->where('scenario', '.*');
