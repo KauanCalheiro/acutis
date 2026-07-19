@@ -143,4 +143,16 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         await expect(page.getByRole('dialog')).toContainText('Já existe um cenário')
         await expect(page).toHaveURL('/projects/alpha-store/scenarios/login-do-cliente')
     })
+
+    test('suggests test ids for the events without one', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('cenario-sugestoes').click()
+        await expect(page.getByTestId('sugestoes-carregando')).toBeHidden({ timeout: 20_000 })
+
+        const cards = page.getByTestId('sugestao-card')
+        await expect(cards.first()).toBeVisible()
+        await expect(cards.first().getByTestId('sugestao-testid')).toContainText('data-testid="')
+    })
 })

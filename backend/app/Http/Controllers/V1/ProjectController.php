@@ -13,6 +13,7 @@ use App\Action\RunProject;
 use App\Action\ShowProjectAuth;
 use App\Action\ShowProjectScenario;
 use App\Action\UpdateProjectScenario;
+use App\Action\SuggestScenarioSelectors;
 use App\Action\DeleteProjectScenario;
 use App\Action\SkipProjectAuth;
 use App\Action\UpdateProjectAuth;
@@ -41,6 +42,7 @@ use App\Http\Resources\V1\ProjectAuthResource;
 use App\Http\Resources\V1\ProjectRunResource;
 use App\Http\Resources\V1\ProjectTestResource;
 use App\Http\Resources\V1\ScenarioShowResource;
+use App\Http\Resources\V1\SelectorSuggestionResource;
 use App\Http\Resources\V1\TestDraftResource;
 use App\Support\TestArtifact;
 use Illuminate\Support\Str;
@@ -142,6 +144,11 @@ class ProjectController extends Controller
     public function updateScenario(string $project, string $scenario, UpdateScenarioData $data): ScenarioShowResource
     {
         return ScenarioShowResource::make(UpdateProjectScenario::run($project, $scenario, $data));
+    }
+
+    public function suggestScenarioSelectors(string $project, string $scenario): AnonymousResourceCollection
+    {
+        return SelectorSuggestionResource::collection(SuggestScenarioSelectors::run($project, $scenario));
     }
 
     public function updateAuth(string $project, UpdateAuthSetupData $data): ProjectAuthResource
