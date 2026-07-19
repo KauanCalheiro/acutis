@@ -141,7 +141,6 @@ const tabs: TabsItem[] = [
         v-for="tag in scenario!.tags"
         :key="tag"
         :color="tagColor(tag)"
-        size="md"
         :label="tag"
       />
     </div>
