@@ -74,6 +74,13 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
 
+    // cada teste mexe/apaga cenários do alpha-store — reseta a pasta antes de
+    // cada um pra não depender da ordem de execução nem do que o teste anterior mudou
+    test.beforeEach(() => {
+        rmSync(join(tmpProjects, 'alpha-store'), { recursive: true, force: true })
+        cpSync(join(FIXTURES_DIR, 'alpha-store'), join(tmpProjects, 'alpha-store'), { recursive: true })
+    })
+
     test.afterAll(async () => {
         await stopBackend()
         rmSync(tmpProjects, { recursive: true, force: true })
@@ -93,5 +100,47 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         await expect(page).toHaveURL('/projects/alpha-store')
         expect(existsSync(join(tmpProjects, 'alpha-store', 'tests', 'login-do-cliente.spec.ts'))).toBe(false)
         expect(existsSync(join(tmpProjects, 'alpha-store', 'features', 'login-do-cliente.feature'))).toBe(false)
+    })
+
+    test('edits the scenario content without renaming it', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await test.step('change the title and save', async () => {
+            await page.getByTestId('cenario-editar').click()
+            await page.getByTestId('contexto-titulo').fill('Login do cliente atualizado')
+            await page.getByTestId('cenario-editar-salvar').click()
+        })
+
+        await expect(page).toHaveURL('/projects/alpha-store/scenarios/login-do-cliente')
+        await expect(page.getByTestId('cenario-titulo')).toHaveText('Login do cliente atualizado')
+    })
+
+    test('renames the scenario and navigates to the new url', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await test.step('change the file/domain and save', async () => {
+            await page.getByTestId('cenario-editar').click()
+            await page.getByTestId('contexto-path').fill('entrar')
+            await page.getByTestId('contexto-dominio').fill('auth')
+            await page.getByTestId('cenario-editar-salvar').click()
+        })
+
+        await expect(page).toHaveURL('/projects/alpha-store/scenarios/auth/entrar')
+        expect(existsSync(join(tmpProjects, 'alpha-store', 'tests', 'login-do-cliente.spec.ts'))).toBe(false)
+        expect(existsSync(join(tmpProjects, 'alpha-store', 'tests', 'auth', 'entrar.spec.ts'))).toBe(true)
+    })
+
+    test('shows an error when renaming onto a scenario that already exists', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('cenario-editar').click()
+        await page.getByTestId('contexto-path').fill('cadastro-de-produto')
+        await page.getByTestId('cenario-editar-salvar').click()
+
+        await expect(page.getByRole('dialog')).toContainText('Já existe um cenário')
+        await expect(page).toHaveURL('/projects/alpha-store/scenarios/login-do-cliente')
     })
 })
