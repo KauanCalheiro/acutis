@@ -62,8 +62,8 @@ watch(suggestionsOpen, async (isOpen) => {
       method: 'POST',
       body: { scenarioId: scenarioId.value }
     })
-  } catch {
-    suggestionsError.value = 'Não foi possível gerar sugestões agora. Tente novamente.'
+  } catch (error) {
+    suggestionsError.value = extractServerError(error, 'Não foi possível gerar sugestões agora. Tente novamente.')
   } finally {
     suggestionsLoading.value = false
   }
