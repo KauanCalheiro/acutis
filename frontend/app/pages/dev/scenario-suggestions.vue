@@ -7,6 +7,7 @@ import type { SelectorSuggestion } from '~/types/project'
 const loadingOpen = ref(false)
 const errorOpen = ref(false)
 const successOpen = ref(false)
+const emptyOpen = ref(false)
 
 const mockSuggestions: SelectorSuggestion[] = [
   {
@@ -58,6 +59,14 @@ const mockSuggestions: SelectorSuggestion[] = [
         data-testid="preview-sugestoes-sucesso"
         @click="successOpen = true"
       />
+      <UButton
+        label="Ver sugestões (vazio)"
+        trailing-icon="i-ic-round-auto-awesome"
+        color="neutral"
+        variant="soft"
+        data-testid="preview-sugestoes-vazio"
+        @click="emptyOpen = true"
+      />
     </div>
 
     <ScenarioSuggestionsModal
@@ -66,11 +75,15 @@ const mockSuggestions: SelectorSuggestion[] = [
     />
     <ScenarioSuggestionsModal
       v-model:open="errorOpen"
-      error="Não foi possível gerar sugestões agora. Tente novamente."
+      error="O provedor de IA não respondeu a tempo (timeout de 30s)."
     />
     <ScenarioSuggestionsModal
       v-model:open="successOpen"
       :suggestions="mockSuggestions"
+    />
+    <ScenarioSuggestionsModal
+      v-model:open="emptyOpen"
+      :suggestions="[]"
     />
   </UContainer>
 </template>
