@@ -155,4 +155,19 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         await expect(cards.first()).toBeVisible()
         await expect(cards.first().getByTestId('sugestao-testid')).toContainText('data-testid="')
     })
+
+    test('shows the real backend message when suggestions fail', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.route('**/api/projects/alpha-store/scenario-suggestions', (route) => route.fulfill({
+            status: 500,
+            contentType: 'application/json',
+            body: JSON.stringify({ data: { message: 'O provedor de IA não respondeu a tempo.' } }),
+        }))
+
+        await page.getByTestId('cenario-sugestoes').click()
+
+        await expect(page.getByRole('dialog')).toContainText('O provedor de IA não respondeu a tempo.')
+    })
 })
