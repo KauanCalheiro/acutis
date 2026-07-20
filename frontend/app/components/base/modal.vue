@@ -31,7 +31,7 @@ const open = defineModel<boolean>('open', {
     :close="!loading && closable"
     :ui="{
       content: wide ? 'divide-y-0 sm:max-w-5xl' : 'divide-y-0',
-      title: 'text-xl',
+      title: 'text-xl p-2',
       body: 'scroll-fade',
       footer: 'justify-end'
     }"
