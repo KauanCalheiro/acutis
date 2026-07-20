@@ -2,37 +2,15 @@
 import type { SelectorSuggestion } from '~/types/project'
 
 interface ScenarioSuggestionsModal {
-  slug: string
-  scenarioId: string
+  loading?: boolean
+  suggestions?: SelectorSuggestion[]
+  error?: string | null
 }
 
-const { slug, scenarioId } = defineProps<ScenarioSuggestionsModal>()
+const { loading = false, suggestions = [], error = null } = defineProps<ScenarioSuggestionsModal>()
 
 const open = defineModel<boolean>('open', {
   default: false
-})
-
-const loading = ref(false)
-const suggestions = ref<SelectorSuggestion[]>([])
-const error = ref<string | null>(null)
-
-watch(open, async (isOpen) => {
-  if (!isOpen) return
-
-  loading.value = true
-  error.value = null
-  suggestions.value = []
-
-  try {
-    suggestions.value = await $fetch<SelectorSuggestion[]>(`/api/projects/${slug}/scenario-suggestions`, {
-      method: 'POST',
-      body: { scenarioId }
-    })
-  } catch {
-    error.value = 'Não foi possível gerar sugestões agora. Tente novamente.'
-  } finally {
-    loading.value = false
-  }
 })
 
 const copied = ref<number | null>(null)

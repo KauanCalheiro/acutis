@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TabsItem } from '@nuxt/ui'
-import type { ProjectDetail, ScenarioDetail } from '~/types/project'
+import type { ProjectDetail, ScenarioDetail, SelectorSuggestion } from '~/types/project'
 
 const route = useRoute()
 const slug = computed(() => route.params.projectSlug as string)
@@ -46,6 +46,28 @@ const updatedAt = computed(() => new Date(scenario.value!.updated_at).toLocaleSt
 
 const editOpen = ref(false)
 const suggestionsOpen = ref(false)
+const suggestionsLoading = ref(false)
+const suggestions = ref<SelectorSuggestion[]>([])
+const suggestionsError = ref<string | null>(null)
+
+watch(suggestionsOpen, async (isOpen) => {
+  if (!isOpen) return
+
+  suggestionsLoading.value = true
+  suggestionsError.value = null
+  suggestions.value = []
+
+  try {
+    suggestions.value = await $fetch<SelectorSuggestion[]>(`/api/projects/${slug.value}/scenario-suggestions`, {
+      method: 'POST',
+      body: { scenarioId: scenarioId.value }
+    })
+  } catch {
+    suggestionsError.value = 'Não foi possível gerar sugestões agora. Tente novamente.'
+  } finally {
+    suggestionsLoading.value = false
+  }
+})
 
 function scenarioIdFor(spec: string) {
   return spec.replace(/^tests\//, '').replace(/\.spec\.ts$/, '')
@@ -255,8 +277,9 @@ const tabs: TabsItem[] = [
 
     <ScenarioSuggestionsModal
       v-model:open="suggestionsOpen"
-      :slug="slug"
-      :scenario-id="scenarioId"
+      :loading="suggestionsLoading"
+      :suggestions="suggestions"
+      :error="suggestionsError"
     />
   </UContainer>
 </template>
