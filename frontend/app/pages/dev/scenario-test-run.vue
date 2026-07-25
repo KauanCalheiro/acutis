@@ -9,14 +9,16 @@ const failedOpen = ref(false)
 
 const runningSteps = [
   { title: 'Abrir página de login', status: 'success' as const },
-  { title: 'Entrar com usuário/código', status: 'success' as const },
-  { title: 'Usuário ou código', status: 'pending' as const }
+  { title: 'Entrar com usuário/código', status: 'running' as const },
+  { title: 'Usuário ou código', status: 'waiting' as const },
+  { title: 'Ver o painel', status: 'waiting' as const }
 ]
 
 const failedSteps = [
   { title: 'Abrir página de login', status: 'success' as const },
   { title: 'Entrar com usuário/código', status: 'success' as const },
-  { title: 'Usuário ou código', status: 'failed' as const, error: 'Timed out 5000ms waiting for locator(\'#user-input\')' }
+  { title: 'Usuário ou código', status: 'failed' as const, error: 'Timed out 5000ms waiting for locator(\'#user-input\')' },
+  { title: 'Ver o painel', status: 'waiting' as const }
 ]
 
 const passedSteps = failedSteps.map(step => ({ ...step, status: 'success' as const, error: null }))

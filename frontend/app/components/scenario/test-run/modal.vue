@@ -1,7 +1,7 @@
 <script setup lang="ts">
 interface TestStep {
   title: string
-  status: 'pending' | 'success' | 'failed'
+  status: 'waiting' | 'running' | 'success' | 'failed'
   error?: string | null
 }
 
@@ -31,14 +31,22 @@ const open = defineModel<boolean>('open', {
 
 const passed = computed(() => !steps.some(step => step.status === 'failed'))
 
+const visibleSteps = computed(() => {
+  const failed = steps.findIndex(step => step.status === 'failed')
+
+  return failed === -1 ? steps : steps.slice(0, failed + 1)
+})
+
 const stepIcons: Record<TestStep['status'], string> = {
-  pending: 'i-ic-round-radio-button-unchecked',
+  waiting: 'i-ic-round-radio-button-unchecked',
+  running: 'i-ic-round-radio-button-unchecked',
   success: 'i-ic-round-check-circle',
   failed: 'i-ic-round-error'
 }
 
 const stepColors: Record<TestStep['status'], string> = {
-  pending: 'text-warning animate-pulse',
+  waiting: 'text-dimmed',
+  running: 'text-warning animate-pulse',
   success: 'text-success',
   failed: 'text-error'
 }
@@ -115,9 +123,10 @@ const stepColors: Record<TestStep['status'], string> = {
         </p>
         <ol class="flex flex-col">
           <li
-            v-for="(step, i) in steps"
+            v-for="(step, i) in visibleSteps"
             :key="i"
             data-testid="execucao-step"
+            :data-status="step.status"
             class="flex items-stretch gap-3"
           >
             <div class="flex flex-col items-center">
@@ -127,7 +136,7 @@ const stepColors: Record<TestStep['status'], string> = {
                 :class="stepColors[step.status]"
               />
               <span
-                v-if="i < steps.length - 1"
+                v-if="i < visibleSteps.length - 1"
                 class="w-px grow bg-accented"
               />
             </div>

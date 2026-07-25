@@ -1,7 +1,30 @@
+const { readFileSync } = require('node:fs')
+
 const MARKER = '@@ACUTIS_RUN@@'
+const STEP_TITLE = /test\.step\(\s*(['"`])((?:\\.|(?!\1).)*)\1/g
 
 function emit(payload) {
     process.stdout.write(MARKER + JSON.stringify(payload) + '\n')
+}
+
+function declaredStepTitles(files) {
+    const titles = []
+
+    for (const file of files) {
+        let source
+
+        try {
+            source = readFileSync(file, 'utf8')
+        } catch {
+            continue
+        }
+
+        for (const match of source.matchAll(STEP_TITLE)) {
+            titles.push(match[2].replace(/\\(['"`\\])/g, '$1'))
+        }
+    }
+
+    return titles
 }
 
 function firstError(errors) {
@@ -12,7 +35,10 @@ function firstError(errors) {
 
 class StreamReporter {
     onBegin(_config, suite) {
-        emit({ event: 'run:started', total: suite.allTests().length })
+        const tests = suite.allTests()
+        const files = [...new Set(tests.map((test) => test.location.file))]
+
+        emit({ event: 'run:started', total: tests.length, steps: declaredStepTitles(files) })
     }
 
     onTestBegin(test) {

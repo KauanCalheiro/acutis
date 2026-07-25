@@ -307,6 +307,9 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         const failedStep = steps.find((e) => e.title === 'passo que falha' && e.status === 'failed')
         expect(failedStep).toBeTruthy()
         expect(String(failedStep?.error)).toContain('expect')
+
+        const started = events.find((e) => e.event === 'run:started')
+        expect(started?.steps).toEqual(['passo que passa', 'passo que falha'])
     })
 
     test('records and serves a video of the run when video is enabled', async ({ request }) => {

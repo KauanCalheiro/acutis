@@ -84,12 +84,12 @@ async function onUpdated(updated: ScenarioDetail) {
 
 interface TestStep {
   title: string
-  status: 'pending' | 'success' | 'failed'
+  status: 'waiting' | 'running' | 'success' | 'failed'
   error?: string | null
 }
 
 type RunStreamEvent
-  = | { event: 'run:started' }
+  = | { event: 'run:started', steps?: string[] }
     | { event: 'step', title: string, status: 'pending' }
     | { event: 'step', title: string, status: 'success' | 'failed', durationMs: number, error: string | null }
     | { event: 'test', status: 'pending' }
@@ -117,13 +117,19 @@ function runTest() {
   source.onmessage = (message) => {
     const data = JSON.parse(message.data) as RunStreamEvent
 
+    if (data.event === 'run:started') {
+      steps.value = (data.steps ?? []).map(title => ({ title, status: 'waiting' }))
+    }
+
     if (data.event === 'step') {
       if (data.status === 'pending') {
-        steps.value = [...steps.value, { title: data.title, status: 'pending' }]
+        const waiting = steps.value.findIndex(step => step.title === data.title && step.status === 'waiting')
+        if (waiting === -1) steps.value = [...steps.value, { title: data.title, status: 'running' }]
+        else steps.value[waiting] = { title: data.title, status: 'running' }
         return
       }
 
-      const index = steps.value.findLastIndex(step => step.title === data.title && step.status === 'pending')
+      const index = steps.value.findLastIndex(step => step.title === data.title && step.status === 'running')
       if (index !== -1) steps.value[index] = { title: data.title, status: data.status, error: data.error }
     }
 
