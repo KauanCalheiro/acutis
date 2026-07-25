@@ -55,6 +55,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Psr\Http\Message\StreamInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -211,6 +212,8 @@ class ProjectController extends Controller
         $grep = $request->query('grep');
 
         return response()->stream(function () use ($path, $spec, $grep): void {
+            set_time_limit(0);
+
             $body = Http::withOptions(['stream' => true])
                 ->timeout(600)
                 ->post(acutis()->webdriverUrl.'/runner/project/stream', [
@@ -221,31 +224,38 @@ class ProjectController extends Controller
                 ->toPsrResponse()
                 ->getBody();
 
-            $buffer = '';
+            $stream = $this->unbufferedStream($body);
 
-            while (! $body->eof()) {
-                $buffer .= $body->read(1024);
+            while (($line = fgets($stream)) !== false) {
+                $line = trim($line);
 
-                while (($newline = strpos($buffer, "\n")) !== false) {
-                    $line = substr($buffer, 0, $newline);
-                    $buffer = substr($buffer, $newline + 1);
-
-                    if (trim($line) === '') {
-                        continue;
-                    }
-
-                    echo "data: {$line}\n\n";
-
-                    if (ob_get_level() > 0) {
-                        ob_flush();
-                    }
-                    flush();
+                if ($line === '') {
+                    continue;
                 }
+
+                echo "data: {$line}\n\n";
+
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+                flush();
             }
+
+            fclose($stream);
         }, Response::HTTP_OK, [
             'Content-Type' => 'text/event-stream',
             'Cache-Control' => 'no-cache',
             'X-Accel-Buffering' => 'no',
         ]);
+    }
+
+    /** @return resource */
+    private function unbufferedStream(StreamInterface $body)
+    {
+        $stream = $body->detach();
+
+        stream_set_chunk_size($stream, 1);
+
+        return $stream;
     }
 }

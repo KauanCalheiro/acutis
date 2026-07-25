@@ -94,6 +94,19 @@ it('forwards spec and grep to the stream and hides the container path', function
     Http::assertSent(fn ($request) => $request['spec'] === 'tests/x.spec.ts' && $request['grep'] === '@smoke');
 });
 
+it('forwards the last event even when the stream ends without a trailing newline', function () {
+    Http::fake([
+        '*/runner/project/stream' => Http::response(
+            "{\"event\":\"run:started\",\"total\":1}\n{\"event\":\"run:finished\",\"passed\":true}"
+        ),
+    ]);
+    $slug = bareProject();
+
+    $content = $this->get("/api/v1/projects/{$slug}/run/stream")->assertOk()->streamedContent();
+
+    expect($content)->toContain('data: {"event":"run:finished","passed":true}');
+});
+
 it('returns 404 when streaming a project that does not exist', function () {
     Http::fake();
 
