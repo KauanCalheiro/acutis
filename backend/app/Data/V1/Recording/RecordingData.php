@@ -22,6 +22,7 @@ class RecordingData extends Data
             'events' => ['required', 'array', 'min:1'],
             'events.*.type' => ['required', 'string'],
             'events.*.url' => ['required', 'string'],
+            'events.*.sensitive' => ['sometimes', 'boolean'],
             'executionUrl' => ['nullable', 'string', 'url'],
         ];
     }

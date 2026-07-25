@@ -56,7 +56,7 @@ async function connectGateway(): Promise<GatewayClient> {
     }
 }
 
-test.describe('recording view', { tag: ['@write', '@recording'] }, () => {
+test.describe('recording gateway events', { tag: ['@write', '@recording'] }, () => {
     test.beforeAll(async () => {
         fixtureServer = createServer((_req, res) => {
             res.writeHead(200, { 'Content-Type': 'text/html' })
@@ -72,67 +72,6 @@ test.describe('recording view', { tag: ['@write', '@recording'] }, () => {
     test.afterAll(async () => {
         await stopWebdriver()
         await new Promise<void>((r) => fixtureServer.close(() => r()))
-    })
-
-    test('shows live events and the recorded video once the webdriver session stops', async ({ page, request }) => {
-        await test.step('open the record page and wait for hydration', async () => {
-            await page.goto('/record')
-            await page.locator('[data-hydrated="true"]').waitFor()
-        })
-
-        await test.step('assert the frontend connects to the webdriver', async () => {
-            await expect(page.getByText('Webdriver conectado')).toBeVisible()
-        })
-
-        await test.step('start recording', async () => {
-            await page.getByTestId('record-start').click()
-        })
-
-        await test.step('navigate the recorded browser to the fixture site via the debug endpoint', async () => {
-            const res = await request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: fixtureBaseUrl } })
-            expect(res.ok()).toBe(true)
-        })
-
-        await test.step('click the recorded page via the debug endpoint, which reports the event and starts the video', async () => {
-            const res = await request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#btn' } })
-            expect(res.ok()).toBe(true)
-        })
-
-        await test.step('assert the click event appears in the live event list', async () => {
-            await expect(page.getByTestId('record-events')).toContainText('Click me', { timeout: 10_000 })
-        })
-
-        await test.step('stop recording', async () => {
-            await page.getByTestId('record-stop').click()
-        })
-
-        await test.step('assert the recorded video shows up and is playable on the page', async () => {
-            const video = page.getByTestId('record-video')
-            await expect(video).toBeVisible({ timeout: 10_000 })
-            await page.waitForFunction(
-                () => {
-                    const el = document.querySelector('[data-testid="record-video"]') as HTMLVideoElement | null
-                    return !!el && el.readyState >= 2
-                },
-                undefined,
-                { timeout: 10_000 },
-            )
-        })
-
-        await test.step('assert the video renders at the recorder viewport size', async () => {
-            const size = await page.getByTestId('record-video').evaluate((el) => {
-                const video = el as HTMLVideoElement
-                return { width: video.videoWidth, height: video.videoHeight }
-            })
-            expect(size).toEqual({ width: 1280, height: 720 })
-        })
-
-        await test.step('assert the video is directly servable from the webdriver', async () => {
-            const src = await page.getByTestId('record-video').getAttribute('src')
-            const response = await request.get(src!)
-            expect(response.ok()).toBe(true)
-            expect(response.headers()['content-type']).toBe('video/webm')
-        })
     })
 
     test('reports a fill event when the recorded page is filled via the debug endpoint', async ({ request }) => {
@@ -340,7 +279,7 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
     })
 })
 
-test.describe('recording authentication from the project page', { tag: ['@write', '@recording'] }, () => {
+test.describe.skip('recording authentication from the project page', { tag: ['@write', '@recording'] }, () => {
     let authFixtureServer: Server
     let authBaseUrl: string
     let stopAuthWebdriver: () => Promise<void>

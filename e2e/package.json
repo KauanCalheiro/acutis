@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "pnpm --dir ../webdriver build:ui && pnpm --dir ../webdriver build && playwright test",
+    "pretest": "./scripts/setup.sh && pnpm --dir ../webdriver build:ui && pnpm --dir ../webdriver build",
+    "test": "playwright test",
     "capture:fixture": "pnpm --dir ../webdriver build:ui && pnpm --dir ../webdriver build && node scripts/capture-sample-recording.ts"
   },
   "devDependencies": {

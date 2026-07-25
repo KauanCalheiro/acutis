@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import type { FormSubmitEvent, TabsItem } from '@nuxt/ui'
-import { cloneProjectSchema, createProjectSchema, type CloneProject, type CreateProject } from '#shared/schemas/project'
+import { cloneProjectSchema, createProjectSchema, type CloneProject, type CreateProject, type ProjectFormTab } from '#shared/schemas/project'
 
 const open = defineModel<boolean>('open', {
   default: false,
+})
+
+const tab = defineModel<ProjectFormTab>('tab', {
+  default: 'template',
 })
 
 const emit = defineEmits<{
@@ -20,8 +24,6 @@ const tabs: TabsItem[] = [
     value: 'git',
   },
 ]
-
-const tab = ref('template')
 
 const templateState = reactive({
   name: '',
@@ -93,15 +95,6 @@ watch([() => templateState.name, () => cloneState.url, () => cloneState.name, ta
   serverError.value = undefined
 })
 
-function extractServerError(error: unknown): string {
-  const err = error as { data?: { data?: { message?: string, errors?: Record<string, string[]> } } }
-  const errors = err.data?.data?.errors
-
-  return errors?.[Object.keys(errors)[0] ?? '']?.[0]
-    ?? err.data?.data?.message
-    ?? 'Não foi possível criar o projeto.'
-}
-
 async function save(request: Promise<unknown>) {
   saving.value = true
 
@@ -117,7 +110,7 @@ async function save(request: Promise<unknown>) {
     cloneState.ssh_key = ''
     emit('saved')
   } catch (error) {
-    serverError.value = extractServerError(error)
+    serverError.value = extractServerError(error, 'Não foi possível criar o projeto.')
   } finally {
     saving.value = false
   }

@@ -5,6 +5,7 @@ interface BaseModal {
   dismissable?: boolean
   closable?: boolean
   wide?: boolean
+  loading?: boolean
 }
 
 const {
@@ -12,7 +13,8 @@ const {
   description = '',
   dismissable = true,
   closable = false,
-  wide = false
+  wide = false,
+  loading = false
 } = defineProps<BaseModal>()
 
 const open = defineModel<boolean>('open', {
@@ -23,19 +25,19 @@ const open = defineModel<boolean>('open', {
 <template>
   <UModal
     v-model:open="open"
-    :title="title"
-    :description="description"
+    :title="loading ? '' : title"
+    :description="loading ? '' : description"
     :dismissible="dismissable"
-    :close="closable"
+    :close="!loading && closable"
     :ui="{
       content: wide ? 'divide-y-0 sm:max-w-5xl' : 'divide-y-0',
-      title: 'text-xl',
+      title: 'text-xl p-2',
       body: 'scroll-fade',
       footer: 'justify-end'
     }"
   >
     <template
-      v-if="$slots.header"
+      v-if="!loading && $slots.header"
       #header
     >
       <slot name="header" />
@@ -46,7 +48,7 @@ const open = defineModel<boolean>('open', {
     </template>
 
     <template
-      v-if="$slots.footer"
+      v-if="!loading && $slots.footer"
       #footer
     >
       <slot name="footer" />

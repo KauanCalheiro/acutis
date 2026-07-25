@@ -19,3 +19,13 @@ Route::post('projects/{project}/tests/draft', [ProjectController::class, 'testsD
 Route::post('projects/{project}/tests', [ProjectController::class, 'tests']);
 Route::post('projects/{project}/run', [ProjectController::class, 'run']);
 Route::get('projects/{project}/run/stream', [ProjectController::class, 'runStream']);
+Route::get('projects/{project}/scenarios/{scenario}', [ProjectController::class, 'showScenario'])
+    ->where('scenario', '.*');
+Route::delete('projects/{project}/scenarios/{scenario}', [ProjectController::class, 'destroyScenario'])
+    ->where('scenario', '.*');
+Route::patch('projects/{project}/scenarios/{scenario}', [ProjectController::class, 'updateScenario'])
+    ->where('scenario', '.*');
+Route::post('projects/{project}/scenarios/{scenario}/suggestions', [ProjectController::class, 'suggestScenarioSelectors'])
+    ->where('scenario', '.*');
+Route::post('projects/{project}/scenarios/{scenario}/fix', [ProjectController::class, 'fixScenario'])
+    ->where('scenario', '.*');

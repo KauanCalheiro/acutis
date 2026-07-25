@@ -105,6 +105,7 @@ export function useRecorderEvents() {
             selectors: extractSelectors(el),
             label: resolveLabel(el),
             value: null,
+            sensitive: false,
             tagName: el.tagName.toLowerCase(),
             innerText: (el as HTMLElement).innerText?.trim().slice(0, 200) || null,
             inputType: el instanceof HTMLInputElement ? el.type : null,
@@ -119,6 +120,7 @@ export function useRecorderEvents() {
             selectors: null,
             label: document.title || null,
             value: null,
+            sensitive: false,
             tagName: null,
             innerText: null,
             inputType: null

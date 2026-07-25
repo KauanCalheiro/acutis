@@ -34,11 +34,7 @@ watch(open, (isOpen) => {
   }
 })
 
-const modalTitle = computed(() => {
-  if (step.value === 'loading') return 'Gerando cenário'
-  if (step.value === 'edit') return 'Revise os contextos'
-  return 'Revise seus eventos'
-})
+const modalTitle = computed(() => step.value === 'edit' ? 'Revise os contextos' : 'Revise seus eventos')
 
 const timeline = computed(() =>
   state.value.events
@@ -58,6 +54,16 @@ const baseUrl = computed(() => {
   }
 })
 
+const mappedEvents = computed(() => timeline.value.map(event => ({
+  type: event.type,
+  timestamp: event.timestamp,
+  url: event.url ?? null,
+  selectors: event.selectors ?? null,
+  label: event.label ?? null,
+  value: event.value ?? null,
+  sensitive: event.sensitive ?? false
+})))
+
 async function generate() {
   if (!baseUrl.value) {
     error.value = 'Nenhuma navegação registrada na gravação.'
@@ -72,14 +78,7 @@ async function generate() {
       method: 'POST',
       body: {
         baseUrl: baseUrl.value,
-        events: timeline.value.map(event => ({
-          type: event.type,
-          timestamp: event.timestamp,
-          url: event.url ?? null,
-          selectors: event.selectors ?? null,
-          label: event.label ?? null,
-          value: event.value ?? null
-        }))
+        events: mappedEvents.value
       }
     })
     step.value = 'edit'
@@ -98,7 +97,7 @@ async function commit() {
   try {
     await $fetch(`/api/projects/${slug}/tests`, {
       method: 'POST',
-      body: draft.value
+      body: { ...draft.value, events: mappedEvents.value }
     })
     open.value = false
     emit('generated')
@@ -120,6 +119,7 @@ function rerecord() {
     v-model:open="open"
     :title="modalTitle"
     :dismissable="false"
+    :loading="step === 'loading'"
     wide
   >
     <template #body>
@@ -146,10 +146,7 @@ function rerecord() {
       />
     </template>
 
-    <template
-      v-if="step !== 'loading'"
-      #footer
-    >
+    <template #footer>
       <template v-if="step === 'edit'">
         <UButton
           label="Cancelar"

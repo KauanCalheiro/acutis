@@ -74,11 +74,7 @@ watch(open, async (isOpen) => {
   }
 })
 
-const modalTitle = computed(() => {
-  if (step.value === 'loading' || step.value === 'loading-existing') return 'Configurando autenticação'
-  if (step.value === 'result' || step.value === 'view' || step.value === 'edit') return 'Autenticação'
-  return 'Autenticação'
-})
+const modalTitle = 'Autenticação'
 
 function edit() {
   editedScript.value = existingScript.value
@@ -160,6 +156,7 @@ defineExpose({
     v-model:open="open"
     :title="modalTitle"
     :dismissable="false"
+    :loading="step === 'loading' || step === 'loading-existing'"
     wide
   >
     <template #body>
@@ -258,10 +255,7 @@ defineExpose({
       />
     </template>
 
-    <template
-      v-if="step !== 'loading' && step !== 'loading-existing'"
-      #footer
-    >
+    <template #footer>
       <template v-if="step === 'result'">
         <UButton
           label="Gravar novamente"

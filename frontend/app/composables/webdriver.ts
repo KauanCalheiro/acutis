@@ -4,6 +4,7 @@ export interface RecorderEvent {
   url?: string
   label?: string | null
   value?: string | null
+  sensitive?: boolean
   selectors?: { dataTestId?: string | null, text?: string | null, cssStable?: string | null } | null
   sessionId?: string | null
   timestamp?: number

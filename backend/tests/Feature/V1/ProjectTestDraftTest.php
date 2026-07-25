@@ -116,6 +116,35 @@ it('parses structured output even when the model wraps it in code fences', funct
         ->assertJsonPath('playwright', 'spec limpo');
 });
 
+it('returns the env vars the writer declares for masked values', function () {
+    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
+    PlaywrightWriter::fake([['playwright' => 'process.env.SENHA_UNIVATES', 'envVars' => ['SENHA_UNIVATES']]]);
+    Http::fake();
+    $slug = draftProject();
+
+    $payload = draftPayload();
+    $payload['events'][] = ['type' => 'fill', 'timestamp' => 3, 'url' => 'http://127.0.0.1:52346/', 'selectors' => ['id' => 'senha'], 'label' => 'Senha', 'value' => 'topsecret123', 'sensitive' => true];
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", $payload)
+        ->assertOk()
+        ->assertJsonPath('envVars', ['SENHA_UNIVATES']);
+});
+
+it('redacts a sensitive event value before showing it to the writers', function () {
+    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
+    PlaywrightWriter::fake([['playwright' => 'spec']]);
+    Http::fake();
+    $slug = draftProject();
+
+    $payload = draftPayload();
+    $payload['events'][] = ['type' => 'fill', 'timestamp' => 3, 'url' => 'http://127.0.0.1:52346/', 'selectors' => ['id' => 'senha'], 'label' => 'Senha', 'value' => 'topsecret123', 'sensitive' => true];
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", $payload)->assertOk();
+
+    GherkinWriter::assertPrompted(fn ($prompt) => ! str_contains($prompt->prompt, 'topsecret123'));
+    PlaywrightWriter::assertPrompted(fn ($prompt) => ! str_contains($prompt->prompt, 'topsecret123'));
+});
+
 it('returns 404 when drafting for a project that does not exist', function () {
     GherkinWriter::fake();
     PlaywrightWriter::fake();

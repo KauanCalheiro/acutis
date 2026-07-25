@@ -4,3 +4,4 @@
 /.acutis/*
 !/.acutis/.gitkeep
 .superpowers/
+.claude/.obsidian/*

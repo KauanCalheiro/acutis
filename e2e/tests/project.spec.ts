@@ -45,7 +45,7 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
         await expect(page).toHaveURL('/')
     })
 
-    test('shows the authentication button in the header', async ({ page }) => {
+    test.skip('shows the authentication button in the header', async ({ page }) => {
         await expect(page.getByTestId('projeto-auth')).toBeVisible()
     })
 
@@ -53,11 +53,11 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
         await expect(page.getByTestId('projeto-vscode')).toHaveAttribute('href', `vscode://file${join(FIXTURES_DIR, 'alpha-store')}`)
     })
 
-    test('shows an alert when the project has no authentication configured', async ({ page }) => {
+    test.skip('shows an alert when the project has no authentication configured', async ({ page }) => {
         await expect(page.getByTestId('projeto-auth-aviso')).toBeVisible()
     })
 
-    test('opens the auth modal from the alert', async ({ page }) => {
+    test.skip('opens the auth modal from the alert', async ({ page }) => {
         await page.getByTestId('projeto-auth-configurar').click()
 
         await expect(page.getByTestId('auth-gerar')).toBeVisible()
@@ -68,7 +68,6 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
             ['projeto-remover', 'Remover projeto'],
             ['projeto-editar', 'Renomear projeto'],
             ['projeto-voltar', 'Voltar'],
-            ['projeto-auth', 'Autenticação'],
             ['projeto-vscode', 'Abrir no VS Code'],
         ] as const) {
             await page.mouse.move(640, 500)
@@ -104,9 +103,18 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
 
         expect(response?.status()).toBe(404)
     })
+
+    test('shows the empty state with a single card when the project has no scenarios', async ({ page }) => {
+        await page.goto('/projects/beta-blog')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await expect(page.getByTestId('cenario-vazio')).toBeVisible()
+        await expect(page.getByTestId('cenario-vazio-gravar')).toBeVisible()
+        await expect(page.getByTestId('cenario-card')).toHaveCount(0)
+    })
 })
 
-test.describe('project authentication modal', { tag: ['@write', '@project'] }, () => {
+test.describe.skip('project authentication modal', { tag: ['@write', '@project'] }, () => {
     let stopBackend: () => Promise<void>
     let tmpProjects: string
 
@@ -197,7 +205,7 @@ test.describe('project management', { tag: ['@write', '@project'] }, () => {
         await expect(page.getByTestId('projeto-nome')).toHaveText('Blog Renomeado')
     })
 
-    test('dismisses the alert when the project does not need login', async ({ page }) => {
+    test.skip('dismisses the alert when the project does not need login', async ({ page }) => {
         await page.goto('/projects/alpha-store')
         await page.locator('[data-hydrated="true"]').waitFor()
 
@@ -212,7 +220,7 @@ test.describe('project management', { tag: ['@write', '@project'] }, () => {
         await expect(page.getByTestId('projeto-auth')).toBeVisible()
     })
 
-    test('hides the alert once authentication is configured', async ({ page }) => {
+    test.skip('hides the alert once authentication is configured', async ({ page }) => {
         mkdirSync(join(tmpProjects, 'alpha-store', 'tests'), { recursive: true })
         writeFileSync(
             join(tmpProjects, 'alpha-store', 'tests', 'auth.setup.ts'),

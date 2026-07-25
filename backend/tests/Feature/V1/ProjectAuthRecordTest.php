@@ -76,6 +76,37 @@ it('shows the recorded events to the writer, redacting the real password first',
     );
 });
 
+it('redacts the sensitive value before showing events to the writer', function () {
+    AuthRecordingWriter::fake();
+    Http::fake();
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    AuthRecordingWriter::assertPrompted(
+        fn ($prompt) => ! str_contains($prompt->prompt, 'topsecret123')
+    );
+});
+
+it('writes the recorded credentials into .env and a placeholder .env.example', function () {
+    AuthRecordingWriter::fake();
+    Http::fake();
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    $dir = $this->projectsPath."/{$slug}";
+
+    expect(File::get($dir.'/.env'))
+        ->toContain('AUTH_USER=user1')
+        ->toContain('AUTH_PASSWORD=topsecret123')
+        ->and(File::get($dir.'/.env.example'))
+        ->toContain('AUTH_USER=')
+        ->toContain('AUTH_PASSWORD=')
+        ->not->toContain('topsecret123')
+        ->and(File::get($dir.'/.gitignore'))->toContain('.env');
+});
+
 it('returns 404 for a project that does not exist', function () {
     AuthRecordingWriter::fake();
     Http::fake();

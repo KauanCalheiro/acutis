@@ -1,5 +1,8 @@
-import { Body, Controller, ForbiddenException, Post, Res } from '@nestjs/common'
+import { Body, Controller, ForbiddenException, Get, NotFoundException, Post, Query, Res } from '@nestjs/common'
+import type { Response } from 'express'
+import { existsSync } from 'node:fs'
 import type { ServerResponse } from 'node:http'
+import { watchableVideo } from './run-video.js'
 import { RunnerService, type RunResult } from './runner.service.js'
 import { SnapshotService, type Snapshot } from './snapshot.service.js'
 
@@ -68,5 +71,16 @@ export class RunnerController {
         )
 
         res.end()
+    }
+
+    @Get('video')
+    async video(@Query('path') path: string, @Res() res: Response): Promise<void> {
+        this.ensureTestMode()
+
+        if (!path.endsWith('.webm') || !existsSync(path)) {
+            throw new NotFoundException()
+        }
+
+        res.sendFile(await watchableVideo(path))
     }
 }

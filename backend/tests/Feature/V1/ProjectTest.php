@@ -27,7 +27,7 @@ it('creates a project from the template', function () {
 
     expect(File::isDirectory($dir))->toBeTrue()
         ->and(File::exists($dir.'/playwright.config.ts'))->toBeTrue()
-        ->and(File::exists($dir.'/tests/example.spec.ts'))->toBeTrue();
+        ->and(File::exists($dir.'/tests/example.spec.ts'))->toBeFalse();
 
     expect(File::get($dir.'/package.json'))
         ->toContain('"name": "my-new-project"')

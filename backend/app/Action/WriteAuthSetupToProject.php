@@ -38,7 +38,8 @@ class WriteAuthSetupToProject
     {
         AuthProjectFiles::writeConfig($path, $data->executionUrl ?? $data->loginUrl);
         File::put("{$path}/tests/auth.setup.ts", $generated->authSetup."\n");
-        File::put("{$path}/.env", "AUTH_USER={$data->username}\nAUTH_PASSWORD={$data->password}\n");
+        AuthProjectFiles::writeEnv($path, $data->username, $data->password);
+        AuthProjectFiles::writeEnvExample($path);
         AuthProjectFiles::ensureGitignore($path);
     }
 }

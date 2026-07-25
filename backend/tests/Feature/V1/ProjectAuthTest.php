@@ -60,6 +60,7 @@ it('writes the generated auth setup into the project folder', function () {
     expect(File::get($dir.'/tests/auth.setup.ts'))->toContain('login gerado')
         ->and(File::get($dir.'/playwright.config.ts'))->toContain("baseURL: 'https://sistema.test'")
         ->and(File::get($dir.'/.env'))->toContain('AUTH_USER=user1')->toContain('AUTH_PASSWORD=secret-xyz')
+        ->and(File::get($dir.'/.env.example'))->toContain('AUTH_USER=')->toContain('AUTH_PASSWORD=')->not->toContain('secret-xyz')
         ->and(File::get($dir.'/.gitignore'))->toContain('storage-state.json')->toContain('.env');
 });
 

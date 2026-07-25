@@ -33,8 +33,8 @@ const emit = defineEmits<{
   >
     <template #body>
       <div class="flex min-h-24 items-center justify-center text-center">
-        <p class="text-lg text-muted">
-          {{ description }}
+        <p class="w-full text-lg text-muted break-words">
+          <slot name="description">{{ description }}</slot>
         </p>
       </div>
     </template>

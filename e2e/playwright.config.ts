@@ -12,10 +12,10 @@ export default defineConfig({
         video: 'on',
     },
     webServer: {
-        command: 'pnpm dev',
+        command: 'pnpm preview',
         cwd: '../frontend',
         url: 'http://localhost:3000',
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: false,
         timeout: 60_000,
         env: {
             ...process.env,

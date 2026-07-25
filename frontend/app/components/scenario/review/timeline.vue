@@ -34,11 +34,6 @@ const currentIndex = computed(() => {
   return index
 })
 
-function describe(event: RecorderEvent): string {
-  const selector = event.selectors
-  return event.label || selector?.text || selector?.dataTestId || selector?.cssStable || event.url || event.type || ''
-}
-
 function seekTo(event: RecorderEvent) {
   if (!videoEl.value) return
   const offset = offsetSeconds(event)
@@ -89,9 +84,9 @@ function seekTo(event: RecorderEvent) {
               class="truncate text-sm transition-colors group-hover:text-highlighted"
               :class="i === currentIndex ? 'font-semibold text-primary' : 'text-default'"
             >
-              {{ describe(event) }}
+              {{ describeRecorderEvent(event) }}
               <template v-if="event.value">
-                = {{ event.value }}
+                = {{ event.sensitive ? '••••' : event.value }}
               </template>
             </p>
             <p class="text-xs text-dimmed">

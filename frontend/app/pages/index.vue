@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Project } from '~/types/project'
+import type { ProjectFormTab } from '#shared/schemas/project'
 
 interface ProjectsResponse {
   data: Project[]
@@ -44,6 +45,12 @@ const projects = computed(() => data.value?.data ?? [])
 const total = computed(() => data.value?.meta.total ?? 0)
 
 const createOpen = ref(false)
+const createTab = ref<ProjectFormTab>('template')
+
+function openCreate(tab: ProjectFormTab) {
+  createTab.value = tab
+  createOpen.value = true
+}
 
 const taglines = [
   'Testar na mão é coisa do passado',
@@ -134,6 +141,7 @@ onBeforeUnmount(() => {
 
     <ProjectFormModal
       v-model:open="createOpen"
+      v-model:tab="createTab"
       @saved="refresh()"
     />
 
@@ -148,13 +156,10 @@ onBeforeUnmount(() => {
       />
     </div>
 
-    <p
+    <ProjectEmpty
       v-else-if="projects.length === 0"
-      data-testid="projeto-vazio"
-      class="text-muted py-10 text-center"
-    >
-      Nenhum projeto encontrado
-    </p>
+      @select="openCreate"
+    />
 
     <div
       v-else
@@ -167,7 +172,10 @@ onBeforeUnmount(() => {
       />
     </div>
 
-    <div class="flex justify-center mt-8">
+    <div
+      v-if="projects.length > 0"
+      class="flex justify-center mt-8"
+    >
       <UPagination
         v-model:page="page"
         data-testid="projeto-paginacao"

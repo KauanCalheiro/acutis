@@ -12,6 +12,6 @@ return [
     ],
 
     'webdriver' => [
-        'url' => env('WEBDRIVER_URL', 'http://webdriver:4000'),
+        'url' => env('WEBDRIVER_URL', 'http://localhost:4000'),
     ],
 ];
