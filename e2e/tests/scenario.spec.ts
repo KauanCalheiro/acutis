@@ -211,6 +211,69 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         expect(requestedUrl).toContain('spec=tests%2Flogin-do-cliente.spec.ts')
     })
 
+    test('proposes an ai fix for the failing step and applies it', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.route('**/api/projects/alpha-store/run-stream*', async (route) => {
+            const events = [
+                { event: 'run:started', total: 1, steps: ['Entrar com usuário/código'] },
+                { event: 'test', id: 't1', title: 'login', status: 'pending' },
+                { event: 'step', testId: 't1', title: 'Entrar com usuário/código', status: 'pending' },
+                { event: 'step', testId: 't1', title: 'Entrar com usuário/código', status: 'failed', durationMs: 50, error: "locator('#v-0') resolved to hidden" },
+                { event: 'test', id: 't1', title: 'login', status: 'failed', durationMs: 60, error: 'falhou', videoPath: null },
+                { event: 'run:finished', status: 'failed', passed: false },
+            ]
+            await route.fulfill({
+                status: 200,
+                contentType: 'text/event-stream',
+                body: events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join(''),
+            })
+        })
+
+        let fixRequest: { step?: string, error?: string } | null = null
+        await page.route('**/api/projects/alpha-store/scenario-fix', async (route) => {
+            fixRequest = route.request().postDataJSON()
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    playwright: "await page.getByTestId('login-usuario').fill('733787')",
+                    summary: 'Troquei o id gerado #v-0 pelo data-testid login-usuario.',
+                }),
+            })
+        })
+
+        let patched: { playwright?: string } | null = null
+        await page.route('**/api/projects/alpha-store/scenarios/login-do-cliente', async (route) => {
+            if (route.request().method() !== 'PATCH') return route.fallback()
+
+            patched = route.request().postDataJSON()
+            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) })
+        })
+
+        await page.getByTestId('cenario-testar').click()
+        await expect(page.getByTestId('execucao-status')).toContainText('Falha')
+
+        await test.step('ask for the fix and see the proposal', async () => {
+            await page.getByTestId('execucao-corrigir').click()
+
+            await expect(page.getByTestId('correcao-resumo')).toContainText('login-usuario')
+            await expect(page.getByTestId('correcao-spec')).toHaveValue(/getByTestId\('login-usuario'\)/)
+        })
+
+        expect(fixRequest!.step).toBe('Entrar com usuário/código')
+        expect(fixRequest!.error).toContain("locator('#v-0')")
+
+        await test.step('apply the proposal', async () => {
+            await page.getByTestId('correcao-aplicar').click()
+
+            await expect(page.getByTestId('correcao-proposta')).toBeHidden()
+        })
+
+        expect(patched!.playwright).toBe("await page.getByTestId('login-usuario').fill('733787')")
+    })
+
     test('seeds the whole timeline as waiting before the steps run', async ({ page }) => {
         await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
         await page.locator('[data-hydrated="true"]').waitFor()

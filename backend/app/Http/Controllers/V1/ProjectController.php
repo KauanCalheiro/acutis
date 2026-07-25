@@ -6,6 +6,7 @@ use App\Action\CloneProjectFromGit;
 use App\Action\CreateProjectFromTemplate;
 use App\Action\DeleteProject;
 use App\Action\DeleteProjectScenario;
+use App\Action\FixScenarioSpec;
 use App\Action\GenerateTestsFromRecording;
 use App\Action\ListProjects;
 use App\Action\ProbeGitRepository;
@@ -28,12 +29,14 @@ use App\Data\V1\Project\CloneProjectData;
 use App\Data\V1\Project\CreateProjectData;
 use App\Data\V1\Project\ProbeGitData;
 use App\Data\V1\Project\RunProjectData;
+use App\Data\V1\Project\ScenarioFixData;
 use App\Data\V1\Project\UpdateProjectData;
 use App\Data\V1\Project\UpdateScenarioData;
 use App\Data\V1\Recording\RecordingData;
 use App\Data\V1\Recording\TestDraftData;
 use App\Data\V1\Recording\WriteTestData;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\V1\FixedSpecResource;
 use App\Http\Resources\V1\GeneratedAuthSetupResource;
 use App\Http\Resources\V1\GitProbeResource;
 use App\Http\Resources\V1\ProjectAuthResource;
@@ -150,6 +153,11 @@ class ProjectController extends Controller
     public function suggestScenarioSelectors(string $project, string $scenario): AnonymousResourceCollection
     {
         return SelectorSuggestionResource::collection(SuggestScenarioSelectors::run($project, $scenario));
+    }
+
+    public function fixScenario(string $project, string $scenario, ScenarioFixData $data): FixedSpecResource
+    {
+        return FixedSpecResource::make(FixScenarioSpec::run($project, $scenario, $data));
     }
 
     public function updateAuth(string $project, UpdateAuthSetupData $data): ProjectAuthResource
