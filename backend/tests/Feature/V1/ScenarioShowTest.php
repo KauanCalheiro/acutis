@@ -40,6 +40,20 @@ it('shows the scenario content', function () {
         ->assertJsonPath('events', []);
 });
 
+it('shows the playwright import instead of the runner wrapper', function () {
+    File::ensureDirectoryExists($this->dir.'/tests/checkout');
+    File::put($this->dir.'/tests/login.spec.ts', "import { test, expect } from '../acutis-run'\ntest.describe('Login', () => {})");
+    File::put($this->dir.'/tests/checkout/pagamento.spec.ts', "import { test } from '../../acutis-run'\ntest.describe('Pagamento', () => {})");
+
+    getJson('/api/v1/projects/minha-loja/scenarios/login')
+        ->assertOk()
+        ->assertJsonPath('playwright', "import { test, expect } from '@playwright/test'\ntest.describe('Login', () => {})");
+
+    getJson('/api/v1/projects/minha-loja/scenarios/checkout/pagamento')
+        ->assertOk()
+        ->assertJsonPath('playwright', "import { test } from '@playwright/test'\ntest.describe('Pagamento', () => {})");
+});
+
 it('shows the persisted recording events', function () {
     File::ensureDirectoryExists($this->dir.'/tests');
     File::put($this->dir.'/tests/login.spec.ts', "test.describe('Login', () => {})");

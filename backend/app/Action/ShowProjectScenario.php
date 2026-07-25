@@ -29,7 +29,7 @@ class ShowProjectScenario
             feature: $scenario->feature,
             tags: $scenario->tags,
             domain: $scenario->domain,
-            playwright: File::get($spec),
+            playwright: Scenario::source($spec),
             gherkin: $feature ? File::get($feature) : null,
             events: File::exists($eventsFile) ? json_decode(File::get($eventsFile), true) : [],
             updatedAt: Carbon::createFromTimestamp(File::lastModified($spec))->toIso8601String(),

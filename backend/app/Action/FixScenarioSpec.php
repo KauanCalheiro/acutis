@@ -22,7 +22,7 @@ class FixScenarioSpec
         $path = Project::path($slug);
         $scenario = Scenario::find($path, $scenarioId);
 
-        $playwright = File::get("{$path}/{$scenario->spec}");
+        $playwright = Scenario::source("{$path}/{$scenario->spec}");
         $events = $this->events($path, $scenario->spec);
 
         $response = app(SpecFixer::class)->prompt($this->promptFor($playwright, $events, $input));
