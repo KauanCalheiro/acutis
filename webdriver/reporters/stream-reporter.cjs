@@ -19,12 +19,31 @@ class StreamReporter {
         emit({ event: 'test', id: test.id, title: test.title, status: 'pending' })
     }
 
+    onStepBegin(test, _result, step) {
+        if (step.category !== 'test.step') return
+        emit({ event: 'step', testId: test.id, title: step.title, status: 'pending' })
+    }
+
+    onStepEnd(test, _result, step) {
+        if (step.category !== 'test.step') return
+        emit({
+            event: 'step',
+            testId: test.id,
+            title: step.title,
+            status: step.error ? 'failed' : 'success',
+            durationMs: step.duration,
+            error: step.error ? firstError([step.error]) : null,
+        })
+    }
+
     onTestEnd(test, result) {
         const status = result.status === 'passed'
             ? 'success'
             : result.status === 'skipped'
                 ? 'skipped'
                 : 'failed'
+
+        const video = result.attachments.find((a) => a.name === 'video')
 
         emit({
             event: 'test',
@@ -33,6 +52,7 @@ class StreamReporter {
             status,
             durationMs: result.duration,
             error: status === 'failed' ? firstError(result.errors) : null,
+            videoPath: video ? video.path : null,
         })
     }
 

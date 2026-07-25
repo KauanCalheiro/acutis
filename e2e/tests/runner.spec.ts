@@ -275,4 +275,86 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         const finished = events.find((e) => e.event === 'run:finished')
         expect(finished?.passed).toBe(false)
     })
+
+    test('streams test.step progress alongside the test events', async ({ request }) => {
+        test.setTimeout(120_000)
+
+        const { mkdtemp, mkdir, writeFile } = await import('node:fs/promises')
+        const { tmpdir } = await import('node:os')
+        const { join } = await import('node:path')
+
+        const dir = await mkdtemp(join(tmpdir(), 'acutis-stream-steps-'))
+        await mkdir(join(dir, 'tests'), { recursive: true })
+        await writeFile(join(dir, 'playwright.config.ts'),
+            "import { defineConfig } from '@playwright/test'\nexport default defineConfig({ testDir: './tests' })\n")
+        await writeFile(join(dir, 'tests', 'steps.spec.ts'), [
+            "import { test, expect } from '@playwright/test'",
+            "test('fluxo com passos', async () => {",
+            "    await test.step('passo que passa', () => { expect(1).toBe(1) })",
+            "    await test.step('passo que falha', () => { expect(1).toBe(2) }).catch(() => {})",
+            '})',
+        ].join('\n'))
+
+        const res = await request.post(`${RUNNER_URL}/runner/project/stream`, { data: { path: dir }, timeout: 90_000 })
+        expect(res.ok()).toBe(true)
+
+        const events = (await res.text()).split('\n').filter(Boolean).map((line) => JSON.parse(line))
+        const steps = events.filter((e) => e.event === 'step')
+
+        expect(steps.some((e) => e.title === 'passo que passa' && e.status === 'pending')).toBe(true)
+        expect(steps.some((e) => e.title === 'passo que passa' && e.status === 'success')).toBe(true)
+
+        const failedStep = steps.find((e) => e.title === 'passo que falha' && e.status === 'failed')
+        expect(failedStep).toBeTruthy()
+        expect(String(failedStep?.error)).toContain('expect')
+    })
+
+    test('records and serves a video of the run when video is enabled', async ({ request }) => {
+        test.setTimeout(120_000)
+
+        const { mkdtemp, mkdir, writeFile } = await import('node:fs/promises')
+        const { tmpdir } = await import('node:os')
+        const { join } = await import('node:path')
+        const { createServer } = await import('node:http')
+
+        const server = createServer((_req, res) => {
+            res.writeHead(200, { 'Content-Type': 'text/html' })
+            res.end('<!doctype html><html><body>ok</body></html>')
+        })
+        await new Promise<void>((r) => server.listen(0, r))
+        const { port } = server.address() as { port: number }
+
+        const dir = await mkdtemp(join(tmpdir(), 'acutis-stream-video-'))
+        await mkdir(join(dir, 'tests'), { recursive: true })
+        await writeFile(join(dir, 'playwright.config.ts'), [
+            "import { defineConfig } from '@playwright/test'",
+            'export default defineConfig({',
+            "    testDir: './tests',",
+            `    use: { baseURL: 'http://127.0.0.1:${port}', video: 'on' },`,
+            '})',
+        ].join('\n'))
+        await writeFile(join(dir, 'tests', 'visita.spec.ts'), [
+            "import { test } from '@playwright/test'",
+            "test('visita a página', async ({ page }) => {",
+            "    await test.step('abre a página', async () => { await page.goto('/') })",
+            '})',
+        ].join('\n'))
+
+        try {
+            const res = await request.post(`${RUNNER_URL}/runner/project/stream`, { data: { path: dir }, timeout: 90_000 })
+            expect(res.ok()).toBe(true)
+
+            const events = (await res.text()).split('\n').filter(Boolean).map((line) => JSON.parse(line))
+            const finishedTest = events.find((e) => e.event === 'test' && e.status === 'success')
+
+            expect(finishedTest?.videoPath).toBeTruthy()
+
+            const videoRes = await request.get(`${RUNNER_URL}/runner/video`, { params: { path: finishedTest.videoPath } })
+            expect(videoRes.ok()).toBe(true)
+            expect(videoRes.headers()['content-type']).toBe('video/webm')
+            expect((await videoRes.body()).length).toBeGreaterThan(0)
+        } finally {
+            await new Promise<void>((r) => server.close(() => r()))
+        }
+    })
 })
