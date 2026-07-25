@@ -23,11 +23,6 @@ class WriteAuthRecordingToProject
 
         AuthProjectFiles::writeConfig($path, $data->executionUrl ?? $data->baseUrl);
         File::put("{$path}/tests/auth.setup.ts", $generated->authSetup."\n");
-
-        [$username, $password] = $this->extractCredentials($data->events);
-        AuthProjectFiles::writeEnv($path, $username ?? '', $password ?? '');
-        AuthProjectFiles::writeEnvExample($path);
-
         AuthProjectFiles::ensureGitignore($path);
 
         if ($generated->storageCaptured) {
@@ -53,6 +48,7 @@ class WriteAuthRecordingToProject
         }
 
         File::put("{$path}/.env", "AUTH_USER={$credentials->username}\nAUTH_PASSWORD={$credentials->password}\n");
+        AuthProjectFiles::writeEnvExample($path);
 
         $input = new AuthSetupData(
             loginUrl: $credentials->loginUrl ?? $data->baseUrl,
@@ -78,33 +74,5 @@ class WriteAuthRecordingToProject
             storageCaptured: $verified->storageCaptured,
             testRun: $verified->testRun,
         );
-    }
-
-    /** @param array<int, array<string, mixed>> $events */
-    private function extractCredentials(array $events): array
-    {
-        $passwordIndex = null;
-        $password = null;
-
-        foreach ($events as $index => $event) {
-            if (($event['type'] ?? null) === 'fill' && ($event['sensitive'] ?? false) === true) {
-                $passwordIndex = $index;
-                $password = $event['value'] ?? null;
-                break;
-            }
-        }
-
-        $username = null;
-
-        if ($passwordIndex !== null) {
-            for ($index = $passwordIndex - 1; $index >= 0; $index--) {
-                if (($events[$index]['type'] ?? null) === 'fill') {
-                    $username = $events[$index]['value'] ?? null;
-                    break;
-                }
-            }
-        }
-
-        return [$username, $password];
     }
 }

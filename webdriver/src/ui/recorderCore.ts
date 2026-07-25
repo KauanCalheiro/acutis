@@ -14,7 +14,7 @@ let keepAliveObserver: MutationObserver | null = null
  * (gravação específica pra configurar autenticação) desativa isso, pra extrair credenciais
  * reais no backend. Gravação de cenário normal nunca vê esse valor.
  */
-function shouldMaskPasswords(): boolean {
+export function shouldMaskPasswords(): boolean {
     return (window as unknown as { __acutisRecorderMode?: string }).__acutisRecorderMode !== 'auth'
 }
 

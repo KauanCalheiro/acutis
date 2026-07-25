@@ -78,7 +78,7 @@ it('shows the recorded events to the writer, redacting the real password first',
 
 it('redacts the sensitive value before showing events to the writer', function () {
     AuthRecordingWriter::fake();
-    Http::fake();
+    fakeSuccessfulFallback();
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
@@ -90,7 +90,7 @@ it('redacts the sensitive value before showing events to the writer', function (
 
 it('writes the recorded credentials into .env and a placeholder .env.example', function () {
     AuthRecordingWriter::fake();
-    Http::fake();
+    fakeSuccessfulFallback();
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
