@@ -56,11 +56,6 @@ test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
         await page.getByTestId('cenario-tab-eventos').click()
         await expect(page.getByTestId('cenario-eventos')).toBeVisible()
     })
-
-    test('shows the tests grid', async ({ page }) => {
-        await expect(page.getByTestId('cenario-teste-card')).toHaveCount(6)
-        await expect(page.getByTestId('cenario-teste-card').first()).toContainText('Testado em')
-    })
 })
 
 test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
@@ -169,5 +164,77 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         await page.getByTestId('cenario-sugestoes').click()
 
         await expect(page.getByRole('dialog')).toContainText('O provedor de IA não respondeu a tempo.')
+    })
+
+    test('runs the scenario test and shows the result', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        let requestedUrl: string | null = null
+        await page.route('**/api/projects/alpha-store/run-stream*', async (route) => {
+            requestedUrl = route.request().url()
+            const events = [
+                { event: 'run:started', total: 1, steps: ['Abrir página de login', 'Entrar com usuário/código', 'Ver o painel'] },
+                { event: 'test', id: 't1', title: 'login', status: 'pending' },
+                { event: 'step', testId: 't1', title: 'Abrir página de login', status: 'pending' },
+                { event: 'step', testId: 't1', title: 'Abrir página de login', status: 'success', durationMs: 100 },
+                { event: 'step', testId: 't1', title: 'Entrar com usuário/código', status: 'pending' },
+                { event: 'step', testId: 't1', title: 'Entrar com usuário/código', status: 'failed', durationMs: 50, error: 'Timed out waiting for element' },
+                { event: 'test', id: 't1', title: 'login', status: 'failed', durationMs: 150, error: 'Timed out waiting for element', videoPath: '/tmp/acutis-run/test-results/login/video.webm' },
+                { event: 'run:finished', status: 'failed', passed: false },
+            ]
+            await route.fulfill({
+                status: 200,
+                contentType: 'text/event-stream',
+                body: events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join(''),
+            })
+        })
+
+        await page.getByTestId('cenario-testar').click()
+
+        const steps = page.getByTestId('execucao-step')
+        await expect(steps).toHaveCount(2)
+        await expect(page.getByRole('dialog')).not.toContainText('Ver o painel')
+        await expect(steps.nth(0).getByTestId('execucao-step-titulo')).toHaveText('Abrir página de login')
+        await expect(steps.nth(0).locator('[class*="text-success"]')).toBeVisible()
+        await expect(steps.nth(1).getByTestId('execucao-step-titulo')).toHaveText('Entrar com usuário/código')
+        await expect(steps.nth(1).locator('[class*="text-error"]').first()).toBeVisible()
+        await expect(steps.nth(1).getByTestId('execucao-step-erro')).toContainText('Timed out waiting for element')
+
+        await expect(page.getByTestId('execucao-status')).toContainText('Falha')
+        await expect(page.getByRole('dialog')).toContainText('Login do cliente')
+        await expect(page.getByRole('dialog')).toContainText('Alpha Store')
+
+        await expect(page.getByTestId('execucao-fechar')).toBeVisible()
+        await expect(page.getByTestId('execucao-video')).toHaveAttribute('src', /runner\/video\?path=/)
+
+        expect(requestedUrl).toContain('spec=tests%2Flogin-do-cliente.spec.ts')
+    })
+
+    test('seeds the whole timeline as waiting before the steps run', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.route('**/api/projects/alpha-store/run-stream*', async (route) => {
+            const events = [
+                { event: 'run:started', total: 1, steps: ['Abrir página de login', 'Entrar com usuário/código', 'Ver o painel'] },
+            ]
+            await route.fulfill({
+                status: 200,
+                contentType: 'text/event-stream',
+                body: events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join(''),
+            })
+        })
+
+        await page.getByTestId('cenario-testar').click()
+
+        const steps = page.getByTestId('execucao-step')
+        await expect(steps).toHaveCount(3)
+        await expect(steps.nth(0).getByTestId('execucao-step-titulo')).toHaveText('Abrir página de login')
+        await expect(steps.nth(2).getByTestId('execucao-step-titulo')).toHaveText('Ver o painel')
+
+        for (const i of [0, 1, 2]) {
+            await expect(steps.nth(i)).toHaveAttribute('data-status', 'waiting')
+        }
     })
 })

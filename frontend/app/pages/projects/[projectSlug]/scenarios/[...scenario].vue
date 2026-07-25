@@ -82,16 +82,76 @@ async function onUpdated(updated: ScenarioDetail) {
   await refreshScenario()
 }
 
-// ponytail: histórico de execuções ainda não é persistido no back-end (só a
-// execução ao vivo existe) — mock até existir uma tabela de runs.
-const mockRuns = [
-  { date: '12/06/2026', status: 'success' },
-  { date: '12/06/2026', status: 'success' },
-  { date: '11/06/2026', status: 'failure' },
-  { date: '11/06/2026', status: 'success' },
-  { date: '10/06/2026', status: 'success' },
-  { date: '10/06/2026', status: 'failure' }
-] as const
+interface TestStep {
+  title: string
+  status: 'waiting' | 'running' | 'success' | 'failed'
+  error?: string | null
+}
+
+type RunStreamEvent
+  = | { event: 'run:started', steps?: string[] }
+    | { event: 'step', title: string, status: 'pending' }
+    | { event: 'step', title: string, status: 'success' | 'failed', durationMs: number, error: string | null }
+    | { event: 'test', status: 'pending' }
+    | { event: 'test', status: 'success' | 'failed' | 'skipped', durationMs: number, error: string | null, videoPath: string | null }
+    | { event: 'run:finished', passed: boolean }
+
+const webdriverUrl = useRuntimeConfig().public.webdriver.acutis.url
+
+const runOpen = ref(false)
+const running = ref(false)
+const steps = ref<TestStep[]>([])
+const videoUrl = ref<string | null>(null)
+const testedAt = ref<string | null>(null)
+
+function runTest() {
+  runOpen.value = true
+  running.value = true
+  steps.value = []
+  videoUrl.value = null
+  testedAt.value = null
+
+  const query = new URLSearchParams({ spec: scenario.value!.spec })
+  const source = new EventSource(`/api/projects/${slug.value}/run-stream?${query}`)
+
+  source.onmessage = (message) => {
+    const data = JSON.parse(message.data) as RunStreamEvent
+
+    if (data.event === 'run:started') {
+      steps.value = (data.steps ?? []).map(title => ({ title, status: 'waiting' }))
+    }
+
+    if (data.event === 'step') {
+      if (data.status === 'pending') {
+        const waiting = steps.value.findIndex(step => step.title === data.title && step.status === 'waiting')
+        if (waiting === -1) steps.value = [...steps.value, { title: data.title, status: 'running' }]
+        else steps.value[waiting] = { title: data.title, status: 'running' }
+        return
+      }
+
+      const index = steps.value.findLastIndex(step => step.title === data.title && step.status === 'running')
+      if (index !== -1) steps.value[index] = { title: data.title, status: data.status, error: data.error }
+    }
+
+    if (data.event === 'test' && data.status !== 'pending' && data.videoPath) {
+      const videoQuery = new URLSearchParams({ path: data.videoPath })
+      videoUrl.value = `${webdriverUrl}/runner/video?${videoQuery}`
+    }
+
+    if (data.event === 'run:finished') {
+      source.close()
+      running.value = false
+      testedAt.value = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+    }
+  }
+
+  source.onerror = () => {
+    source.close()
+    running.value = false
+    testedAt.value = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+    if (steps.value.length === 0) steps.value = [{ title: 'Não foi possível executar o teste.', status: 'failed' }]
+  }
+}
 
 const tab = ref('eventos')
 const tabs: TabsItem[] = [
@@ -165,8 +225,9 @@ const tabs: TabsItem[] = [
         <UButton
           label="Testar"
           trailing-icon="i-ic-round-play-arrow"
-          disabled
+          :loading="running"
           data-testid="cenario-testar"
+          @click="runTest"
         />
       </div>
     </div>
@@ -219,41 +280,6 @@ const tabs: TabsItem[] = [
       />
     </div>
 
-    <p class="font-semibold mt-10 mb-4">
-      Testes
-    </p>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <UCard
-        v-for="(run, i) in mockRuns"
-        :key="i"
-        data-testid="cenario-teste-card"
-      >
-        <div class="flex items-center justify-between gap-4">
-          <div>
-            <p class="text-xs text-muted">
-              Testado em
-            </p>
-            <p class="text-sm font-semibold">
-              {{ run.date }}
-            </p>
-          </div>
-          <div class="flex items-center gap-2 w-25">
-            <UIcon
-              :name="run.status === 'success' ? 'i-ic-round-check-circle' : 'i-ic-round-error'"
-              :class="{
-                'bg-success': run.status === 'success',
-                'bg-error': run.status === 'failure'
-              }"
-              class="size-6"
-            />
-            <span>
-              {{ run.status === 'success' ? 'Sucesso' : 'Falha' }}
-            </span>
-          </div>
-        </div>
-      </UCard>
-    </div>
-
     <BaseConfirm
       v-model:open="removeOpen"
       title="Excluir cenário"
@@ -280,6 +306,17 @@ const tabs: TabsItem[] = [
       :loading="suggestionsLoading"
       :suggestions="suggestions"
       :error="suggestionsError"
+    />
+
+    <ScenarioTestRunModal
+      v-model:open="runOpen"
+      :running="running"
+      :steps="steps"
+      :video-url="videoUrl"
+      :project-name="project!.name"
+      :scenario-name="scenario!.title"
+      :branch="project!.branch"
+      :tested-at="testedAt"
     />
   </UContainer>
 </template>
