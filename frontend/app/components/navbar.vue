@@ -54,12 +54,6 @@ const items = [
     to: '/',
     testid: 'navbar-projetos',
   },
-  {
-    label: 'Gravação',
-    icon: 'i-ic-round-fiber-manual-record',
-    to: '/record',
-    testid: 'navbar-gravacao',
-  },
 ]
 </script>
 
