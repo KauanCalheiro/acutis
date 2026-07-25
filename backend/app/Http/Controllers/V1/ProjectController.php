@@ -5,21 +5,21 @@ namespace App\Http\Controllers\V1;
 use App\Action\CloneProjectFromGit;
 use App\Action\CreateProjectFromTemplate;
 use App\Action\DeleteProject;
+use App\Action\DeleteProjectScenario;
+use App\Action\GenerateTestsFromRecording;
 use App\Action\ListProjects;
 use App\Action\ProbeGitRepository;
-use App\Action\ShowProject;
-use App\Action\UpdateProject;
 use App\Action\RunProject;
+use App\Action\ShowProject;
 use App\Action\ShowProjectAuth;
 use App\Action\ShowProjectScenario;
-use App\Action\UpdateProjectScenario;
-use App\Action\SuggestScenarioSelectors;
-use App\Action\DeleteProjectScenario;
 use App\Action\SkipProjectAuth;
+use App\Action\SuggestScenarioSelectors;
+use App\Action\UpdateProject;
 use App\Action\UpdateProjectAuth;
+use App\Action\UpdateProjectScenario;
 use App\Action\WriteAuthRecordingToProject;
 use App\Action\WriteAuthSetupToProject;
-use App\Action\GenerateTestsFromRecording;
 use App\Action\WriteDraftToProject;
 use App\Data\V1\Auth\AuthRecordingData;
 use App\Data\V1\Auth\AuthSetupData;
@@ -27,31 +27,32 @@ use App\Data\V1\Auth\UpdateAuthSetupData;
 use App\Data\V1\Project\CloneProjectData;
 use App\Data\V1\Project\CreateProjectData;
 use App\Data\V1\Project\ProbeGitData;
+use App\Data\V1\Project\RunProjectData;
 use App\Data\V1\Project\UpdateProjectData;
 use App\Data\V1\Project\UpdateScenarioData;
-use App\Data\V1\Project\RunProjectData;
 use App\Data\V1\Recording\RecordingData;
 use App\Data\V1\Recording\TestDraftData;
 use App\Data\V1\Recording\WriteTestData;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\GeneratedAuthSetupResource;
 use App\Http\Resources\V1\GitProbeResource;
-use App\Http\Resources\V1\ProjectShowResource;
-use App\Http\Resources\V1\ProjectResource;
 use App\Http\Resources\V1\ProjectAuthResource;
+use App\Http\Resources\V1\ProjectResource;
 use App\Http\Resources\V1\ProjectRunResource;
+use App\Http\Resources\V1\ProjectShowResource;
 use App\Http\Resources\V1\ProjectTestResource;
 use App\Http\Resources\V1\ScenarioShowResource;
 use App\Http\Resources\V1\SelectorSuggestionResource;
 use App\Http\Resources\V1\TestDraftResource;
-use App\Support\TestArtifact;
-use Illuminate\Support\Str;
 use App\Support\Project;
+use App\Support\TestArtifact;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use Psr\Http\Message\StreamInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -203,6 +204,8 @@ class ProjectController extends Controller
         $grep = $request->query('grep');
 
         return response()->stream(function () use ($path, $spec, $grep): void {
+            set_time_limit(0);
+
             $body = Http::withOptions(['stream' => true])
                 ->timeout(600)
                 ->post(acutis()->webdriverUrl.'/runner/project/stream', [
@@ -213,31 +216,38 @@ class ProjectController extends Controller
                 ->toPsrResponse()
                 ->getBody();
 
-            $buffer = '';
+            $stream = $this->unbufferedStream($body);
 
-            while (! $body->eof()) {
-                $buffer .= $body->read(1024);
+            while (($line = fgets($stream)) !== false) {
+                $line = trim($line);
 
-                while (($newline = strpos($buffer, "\n")) !== false) {
-                    $line = substr($buffer, 0, $newline);
-                    $buffer = substr($buffer, $newline + 1);
-
-                    if (trim($line) === '') {
-                        continue;
-                    }
-
-                    echo "data: {$line}\n\n";
-
-                    if (ob_get_level() > 0) {
-                        ob_flush();
-                    }
-                    flush();
+                if ($line === '') {
+                    continue;
                 }
+
+                echo "data: {$line}\n\n";
+
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+                flush();
             }
+
+            fclose($stream);
         }, Response::HTTP_OK, [
             'Content-Type' => 'text/event-stream',
             'Cache-Control' => 'no-cache',
             'X-Accel-Buffering' => 'no',
         ]);
+    }
+
+    /** @return resource */
+    private function unbufferedStream(StreamInterface $body)
+    {
+        $stream = $body->detach();
+
+        stream_set_chunk_size($stream, 1);
+
+        return $stream;
     }
 }
