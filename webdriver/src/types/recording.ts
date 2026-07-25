@@ -33,5 +33,6 @@ export interface RecordingEvent {
     sensitive: boolean
     tagName: string | null
     innerText: string | null
+    inputType: string | null
     assert?: AssertPayload
 }

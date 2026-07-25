@@ -8,8 +8,14 @@ import { RECORDER_BUNDLE_PATH } from '../config/paths.js'
 import { VideoService } from '../video/video.service.js'
 import type { RecordingEvent } from '../types/recording.js'
 
+export interface StorageState {
+    cookies: unknown[]
+    origins: unknown[]
+}
+
 export interface StopResult {
     sessionId: string | null
+    storageState: StorageState | null
 }
 
 const RECORDING_VIEWPORT = { width: 1280, height: 720 }
@@ -34,6 +40,7 @@ export class RecorderService {
         onEvent: (event: RecordingEvent) => void,
         onStarted: (recordingStartedAt: number) => void,
         onRequestStop: () => void,
+        mode: 'scenario' | 'auth' = 'scenario',
     ): Promise<void> {
         this.sessionId = randomUUID()
         this.screencastStarted = false
@@ -62,6 +69,9 @@ export class RecorderService {
         await this.page.exposeFunction('__acutisReportEvent', onEvent)
         await this.page.exposeFunction('__acutisRequestStop', onRequestStop)
 
+        await this.context.addInitScript((recorderMode) => {
+            (window as unknown as { __acutisRecorderMode?: string }).__acutisRecorderMode = recorderMode
+        }, mode)
         await this.context.addInitScript({ path: RECORDER_BUNDLE_PATH })
 
         this.ready = true
@@ -80,11 +90,12 @@ export class RecorderService {
 
     async stop(): Promise<StopResult> {
         if (!this.context) {
-            return { sessionId: null }
+            return { sessionId: null, storageState: null }
         }
 
         const sessionId = this.sessionId
         const wasScreencasting = this.screencastStarted
+        const storageState = await this.captureStorageState()
 
         if (wasScreencasting && this.page) {
             try { await this.page.screencast.stop() } catch { /* já parado */ }
@@ -103,7 +114,32 @@ export class RecorderService {
         this.sessionId = null
         this.ready = false
 
-        return { sessionId: wasScreencasting ? sessionId : null }
+        return { sessionId: wasScreencasting ? sessionId : null, storageState }
+    }
+
+    /**
+     * No modo CDP o contexto é o navegador real do usuário — pode ter cookies/localStorage
+     * de outras abas/sites acumulados. Filtra pela origem da página gravada para nunca
+     * vazar sessão de um site não relacionado ao login gravado.
+     */
+    private async captureStorageState(): Promise<StorageState | null> {
+        if (!this.context || !this.page) return null
+
+        try {
+            const full = await this.context.storageState()
+            const url = new URL(this.page.url())
+            const hostname = url.hostname
+
+            return {
+                cookies: full.cookies.filter((cookie) => {
+                    const domain = cookie.domain.replace(/^\./, '')
+                    return hostname === domain || hostname.endsWith(`.${domain}`)
+                }),
+                origins: full.origins.filter((origin) => origin.origin === url.origin),
+            }
+        } catch {
+            return null
+        }
     }
 
     /** O DevTools do Chrome rejeita Host header que não seja IP/localhost — hostnames como host.docker.internal viram IP. */

@@ -108,6 +108,7 @@ export function useRecorderEvents() {
             sensitive: false,
             tagName: el.tagName.toLowerCase(),
             innerText: (el as HTMLElement).innerText?.trim().slice(0, 200) || null,
+            inputType: el instanceof HTMLInputElement ? el.type : null,
         }
     }
 
@@ -121,7 +122,8 @@ export function useRecorderEvents() {
             value: null,
             sensitive: false,
             tagName: null,
-            innerText: null
+            innerText: null,
+            inputType: null
         }
     }
 

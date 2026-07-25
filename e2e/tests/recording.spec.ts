@@ -18,7 +18,7 @@ let stopWebdriver: () => Promise<void>
 type GatewayMessage = { event: string } & Record<string, unknown>
 
 interface GatewayClient {
-    send: (type: string) => void
+    send: (type: string, payload?: Record<string, unknown>) => void
     waitForMessage: (predicate: (message: GatewayMessage) => boolean) => Promise<GatewayMessage>
     close: () => void
 }
@@ -40,7 +40,7 @@ async function connectGateway(): Promise<GatewayClient> {
     })
 
     return {
-        send: (type) => ws.send(JSON.stringify({ type })),
+        send: (type, payload) => ws.send(JSON.stringify({ type, ...payload })),
         waitForMessage: (predicate) => new Promise((resolve, reject) => {
             const timer = setTimeout(() => reject(new Error('timed out waiting for gateway message')), 10_000)
             const check = () => {
@@ -102,6 +102,52 @@ test.describe('recording gateway events', { tag: ['@write', '@recording'] }, () 
                 gateway.send('STOP_RECORDING')
                 await gateway.waitForMessage((m) => m.event === 'recorder:stop')
             })
+        } finally {
+            gateway.close()
+        }
+    })
+
+    test('masks password fields by default (scenario recording)', async ({ request }) => {
+        const gateway = await connectGateway()
+
+        try {
+            gateway.send('START_RECORDING')
+
+            const goto = await request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: fixtureBaseUrl } })
+            expect(goto.ok()).toBe(true)
+
+            const fill = await request.post(`${WEBDRIVER_URL}/debug/fill`, { data: { selector: '#password', value: 's3cr3t' } })
+            expect(fill.ok()).toBe(true)
+
+            const message = await gateway.waitForMessage((m) => m.event === 'recorder:fill')
+            expect(message.value).toBe('••••')
+            expect(message.inputType).toBe('password')
+
+            gateway.send('STOP_RECORDING')
+            await gateway.waitForMessage((m) => m.event === 'recorder:stop')
+        } finally {
+            gateway.close()
+        }
+    })
+
+    test('reports the real password value when recording in auth mode', async ({ request }) => {
+        const gateway = await connectGateway()
+
+        try {
+            gateway.send('START_RECORDING', { mode: 'auth' })
+
+            const goto = await request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: fixtureBaseUrl } })
+            expect(goto.ok()).toBe(true)
+
+            const fill = await request.post(`${WEBDRIVER_URL}/debug/fill`, { data: { selector: '#password', value: 's3cr3t' } })
+            expect(fill.ok()).toBe(true)
+
+            const message = await gateway.waitForMessage((m) => m.event === 'recorder:fill')
+            expect(message.value).toBe('s3cr3t')
+            expect(message.inputType).toBe('password')
+
+            gateway.send('STOP_RECORDING')
+            await gateway.waitForMessage((m) => m.event === 'recorder:stop')
         } finally {
             gateway.close()
         }
@@ -264,7 +310,11 @@ test.describe.skip('recording authentication from the project page', { tag: ['@w
     })
 
     test('records a login and generates the auth setup from the events', async ({ page }) => {
-        let posted: { baseUrl?: string, events?: Array<{ type?: string, value?: string | null }> } | null = null
+        let posted: {
+            baseUrl?: string
+            events?: Array<{ type?: string, value?: string | null }>
+            storageState?: { cookies: unknown[], origins: Array<{ origin: string, localStorage: unknown[] }> } | null
+        } | null = null
         await page.route('**/api/projects/alpha-store/auth/record', async (route) => {
             posted = route.request().postDataJSON()
             await route.fulfill({
@@ -295,6 +345,8 @@ test.describe.skip('recording authentication from the project page', { tag: ['@w
             expect(goto.ok()).toBe(true)
             const fill = await page.request.post(`${WEBDRIVER_URL}/debug/fill`, { data: { selector: '#name', value: 'admin' } })
             expect(fill.ok()).toBe(true)
+            const fillPassword = await page.request.post(`${WEBDRIVER_URL}/debug/fill`, { data: { selector: '#password', value: 's3cr3t' } })
+            expect(fillPassword.ok()).toBe(true)
             const click = await page.request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#btn' } })
             expect(click.ok()).toBe(true)
         })
@@ -307,6 +359,20 @@ test.describe.skip('recording authentication from the project page', { tag: ['@w
         await expect(page.getByTestId('auth-script')).toContainText('login gravado')
         expect(posted!.baseUrl).toBe(authBaseUrl)
         expect(posted!.events!.some((e) => e.type === 'fill' && e.value === 'admin')).toBe(true)
+
+        await test.step('the real password is forwarded unmasked for this auth-mode recording', () => {
+            expect(posted!.events!.some((e) => e.type === 'fill' && e.value === 's3cr3t')).toBe(true)
+        })
+
+        await test.step('the session captured live from the recorded login is forwarded to the backend', () => {
+            expect(posted!.storageState?.origins.some(
+                (origin) => origin.origin === authBaseUrl && origin.localStorage.length > 0,
+            )).toBe(true)
+        })
+
+        await test.step('the fallback copy tells the user to fill AUTH_USER/AUTH_PASSWORD since this mock reports no session', async () => {
+            await expect(page.getByTestId('auth-resultado')).toContainText('AUTH_USER')
+        })
 
         await test.step('runs the generated test from the preview', async () => {
             await page.route('**/api/projects/alpha-store/run', async (route) => {
@@ -325,6 +391,42 @@ test.describe.skip('recording authentication from the project page', { tag: ['@w
 
         await expect(page.getByTestId('auth-reconfigurar')).toBeVisible()
         await expect(page.getByTestId('auth-salvar')).toBeVisible()
+    })
+
+    test('shows the automatic-session copy when the backend reports the recorded login was captured', async ({ page }) => {
+        await page.route('**/api/projects/alpha-store/auth/record', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    authSetup: "import { test as setup } from '@playwright/test' // login gravado",
+                    storageCaptured: true,
+                    testRun: null,
+                }),
+            })
+        })
+
+        await test.step('open the project page and wait for the webdriver connection', async () => {
+            await page.goto('/projects/alpha-store')
+            await page.locator('[data-hydrated="true"]').waitFor()
+            await expect(page.getByTestId('cenario-novo')).toBeEnabled({ timeout: 10_000 })
+        })
+
+        await test.step('open the auth modal, record and stop', async () => {
+            await page.getByTestId('projeto-auth').click()
+            await page.getByTestId('auth-gerar').click()
+            await expect(page.getByTestId('cenario-parar')).toBeVisible({ timeout: 10_000 })
+
+            const goto = await page.request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: authBaseUrl } })
+            expect(goto.ok()).toBe(true)
+            const click = await page.request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#btn' } })
+            expect(click.ok()).toBe(true)
+
+            await page.getByTestId('cenario-parar').click()
+            await expect(page.getByTestId('auth-resultado')).toBeVisible({ timeout: 10_000 })
+        })
+
+        await expect(page.getByTestId('auth-resultado')).not.toContainText('AUTH_USER')
     })
 })
 

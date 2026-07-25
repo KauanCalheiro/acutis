@@ -1,28 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { resolveFillValue } from './recorderCore'
+import { shouldMaskPasswords } from './recorderCore'
 
-describe('resolveFillValue', () => {
-    it('marks a password field as sensitive and keeps the real value', () => {
-        document.body.innerHTML = '<input type="password" />'
-        const el = document.querySelector('input')!
-        el.value = 'hunter2'
+type RecorderWindow = { __acutisRecorderMode?: string }
 
-        expect(resolveFillValue(el)).toEqual({ value: 'hunter2', sensitive: true })
+describe('shouldMaskPasswords', () => {
+    it('masks the password in a regular scenario recording', () => {
+        delete (window as unknown as RecorderWindow).__acutisRecorderMode
+
+        expect(shouldMaskPasswords()).toBe(true)
     })
 
-    it('does not mark a regular text field as sensitive', () => {
-        document.body.innerHTML = '<input type="text" />'
-        const el = document.querySelector('input')!
-        el.value = 'someone@example.com'
+    it('masks the password in any mode other than auth', () => {
+        ;(window as unknown as RecorderWindow).__acutisRecorderMode = 'scenario'
 
-        expect(resolveFillValue(el)).toEqual({ value: 'someone@example.com', sensitive: false })
+        expect(shouldMaskPasswords()).toBe(true)
     })
 
-    it('does not mark a textarea as sensitive', () => {
-        document.body.innerHTML = '<textarea></textarea>'
-        const el = document.querySelector('textarea')!
-        el.value = 'some notes'
+    it('keeps the real password while recording an auth setup', () => {
+        ;(window as unknown as RecorderWindow).__acutisRecorderMode = 'auth'
 
-        expect(resolveFillValue(el)).toEqual({ value: 'some notes', sensitive: false })
+        expect(shouldMaskPasswords()).toBe(false)
     })
 })

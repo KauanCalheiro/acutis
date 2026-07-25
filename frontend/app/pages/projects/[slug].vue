@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ProjectDetail } from '~/types/project'
-import type { RecorderEvent } from '~/composables/webdriver'
+import type { RecorderEvent, StorageState } from '~/composables/webdriver'
 
 const route = useRoute()
 const slug = computed(() => route.params.slug as string)
@@ -43,7 +43,7 @@ const removeOpen = ref(false)
 const removing = ref(false)
 const authOpen = ref(false)
 const authRecording = ref(false)
-const authModal = ref<{ submitRecording: (baseUrl: string, events: RecorderEvent[]) => Promise<void> } | null>(null)
+const authModal = ref<{ submitRecording: (baseUrl: string, events: RecorderEvent[], storageState: StorageState | null) => Promise<void> } | null>(null)
 const skippingAuth = ref(false)
 
 async function skipAuth() {
@@ -78,7 +78,7 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
   if (authRecording.value) {
     authRecording.value = false
     const baseUrl = eventsBaseUrl(webdriver.value.events)
-    if (baseUrl) await authModal.value?.submitRecording(baseUrl, webdriver.value.events)
+    if (baseUrl) await authModal.value?.submitRecording(baseUrl, webdriver.value.events, webdriver.value.storageState)
     return
   }
 
@@ -91,7 +91,7 @@ function stopAndReview() {
 
 function startAuthRecording() {
   authRecording.value = true
-  startRecording()
+  startRecording('auth')
 }
 
 function onRenamed(newSlug: string) {
@@ -245,7 +245,7 @@ async function remove() {
         label="Novo cenário"
         trailing-icon="i-ic-round-add"
         :disabled="!webdriver.connected"
-        @click="startRecording"
+        @click="startRecording()"
       />
       <UButton
         v-else
@@ -275,7 +275,7 @@ async function remove() {
       v-model:open="reviewOpen"
       :slug="slug"
       @generated="refresh()"
-      @rerecord="startRecording"
+      @rerecord="startRecording()"
     />
 
     <div

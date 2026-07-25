@@ -100,7 +100,7 @@ it('injects credentials as env and never writes them into the setup file', funct
     });
 });
 
-it('feeds a runner failure back to the auth writer and retries', function () {
+it('returns the first attempt right away and retries in the background', function () {
     Http::fake([
         '*/runner/snapshot' => Http::response(['url' => 'x', 'title' => 'x', 'elements' => []]),
         '*/runner/spec' => Http::sequence()
@@ -112,11 +112,46 @@ it('feeds a runner failure back to the auth writer and retries', function () {
 
     postJson("/api/v1/projects/{$slug}/auth", authPayload())
         ->assertOk()
-        ->assertJsonPath('testRun.attempts', 2);
+        ->assertJsonPath('testRun.attempts', 1)
+        ->assertJsonPath('testRun.passed', false);
 
+    // dispatch(...)->afterResponse() runs once the kernel terminates the request, which
+    // Laravel's test HTTP client already does inside postJson() — so by now the background
+    // retry has finished and the corrected setup should already be on disk.
     expect(File::get($this->projectsPath."/{$slug}/tests/auth.setup.ts"))->toContain('corrigido');
 
     AuthSetupWriter::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, 'timeout no seletor #login'));
+});
+
+it('does not retry in the background once the first attempt already passed', function () {
+    fakeAuthPipeline();
+    $slug = makeProject();
+
+    postJson("/api/v1/projects/{$slug}/auth", authPayload())
+        ->assertOk()
+        ->assertJsonPath('testRun.attempts', 1)
+        ->assertJsonPath('testRun.passed', true);
+
+    AuthSetupWriter::assertNotPrompted(fn ($prompt) => str_contains($prompt->prompt, 'não autenticou'));
+});
+
+it('gives up after exhausting the background retries and keeps the first attempted setup on disk', function () {
+    Http::fake([
+        '*/runner/snapshot' => Http::response(['url' => 'x', 'title' => 'x', 'elements' => []]),
+        '*/runner/spec' => Http::response(['passed' => false, 'output' => 'Error: sempre falha']),
+    ]);
+    AuthSetupWriter::fake([['authSetup' => 'a'], ['authSetup' => 'b'], ['authSetup' => 'c']]);
+    $slug = makeProject();
+
+    postJson("/api/v1/projects/{$slug}/auth", authPayload())
+        ->assertOk()
+        ->assertJsonPath('testRun.attempts', 1)
+        ->assertJsonPath('testRun.passed', false);
+
+    // background gave up after 3 total attempts (1 sync + 2 background) without ever passing,
+    // so the project keeps the first attempt's setup on disk instead of a half-corrected one.
+    expect(File::get($this->projectsPath."/{$slug}/tests/auth.setup.ts"))->toContain('a');
+    AuthSetupWriter::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, 'sempre falha'));
 });
 
 it('adds a specific hint when the failure is a strict mode violation', function () {

@@ -1,5 +1,6 @@
 import {
     ConnectedSocket,
+    MessageBody,
     SubscribeMessage,
     WebSocketGateway,
     type OnGatewayConnection,
@@ -24,12 +25,16 @@ export class RecorderGateway implements OnGatewayConnection {
     }
 
     @SubscribeMessage('START_RECORDING')
-    async handleStart(@ConnectedSocket() ws: WebSocket): Promise<void> {
+    async handleStart(
+        @MessageBody() body: { mode?: 'scenario' | 'auth' },
+        @ConnectedSocket() ws: WebSocket,
+    ): Promise<void> {
         try {
             await this.recorderService.start(
                 (event) => safeSend(ws, { event: `recorder:${event.type}`, ...event }),
                 (recordingStartedAt) => safeSend(ws, { event: 'recorder:started', recordingStartedAt }),
                 () => { void this.handleStop(ws) },
+                body?.mode ?? 'scenario',
             )
         } catch (error) {
             safeSend(ws, {
@@ -41,7 +46,7 @@ export class RecorderGateway implements OnGatewayConnection {
 
     @SubscribeMessage('STOP_RECORDING')
     async handleStop(@ConnectedSocket() ws: WebSocket): Promise<void> {
-        const { sessionId } = await this.recorderService.stop()
-        safeSend(ws, { event: 'recorder:stop', sessionId })
+        const { sessionId, storageState } = await this.recorderService.stop()
+        safeSend(ws, { event: 'recorder:stop', sessionId, storageState })
     }
 }

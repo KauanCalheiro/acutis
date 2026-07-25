@@ -9,11 +9,13 @@ import { useAssertMode } from './pill/useAssertMode'
 let hostElement: HTMLDivElement | null = null
 let keepAliveObserver: MutationObserver | null = null
 
-export function resolveFillValue(el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement): { value: string, sensitive: boolean } {
-    return {
-        value: el.value,
-        sensitive: el instanceof HTMLInputElement && el.type === 'password',
-    }
+/**
+ * Por padrão a senha é sempre mascarada antes de sair do navegador — só o modo 'auth'
+ * (gravação específica pra configurar autenticação) desativa isso, pra extrair credenciais
+ * reais no backend. Gravação de cenário normal nunca vê esse valor.
+ */
+export function shouldMaskPasswords(): boolean {
+    return (window as unknown as { __acutisRecorderMode?: string }).__acutisRecorderMode !== 'auth'
 }
 
 function ensureAttached(): void {
@@ -106,9 +108,11 @@ export function mountRecorder(onClick?: () => void): void {
         if (isHostEvent(e) || isPaused.value) return
         const el = e.target
         if (!(el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement)) return
-        const { value, sensitive } = resolveFillValue(el)
-        if (!value) return
-        dispatch({ ...buildBaseEvent('fill', el), value, sensitive })
+        const raw = (el as HTMLInputElement).value
+        if (!raw) return
+        const isPassword = el instanceof HTMLInputElement && el.type === 'password'
+        const value = isPassword && shouldMaskPasswords() ? '••••' : raw
+        dispatch({ ...buildBaseEvent('fill', el), value })
     }, true)
 
     document.addEventListener('submit', (e) => {
