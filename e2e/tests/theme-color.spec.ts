@@ -8,8 +8,8 @@ function primaryColor(page: Page) {
 
 test.describe('theme primary color', { tag: ['@write', '@theme'] }, () => {
     test.beforeEach(async ({ page }) => {
-        await test.step('open record page and wait for hydration', async () => {
-            await page.goto('/record')
+        await test.step('open the projects page and wait for hydration', async () => {
+            await page.goto('/')
             await page.locator('[data-hydrated="true"]').waitFor()
         })
     })

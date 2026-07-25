@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test'
 
 test.describe('app navbar', { tag: ['@read', '@navbar'] }, () => {
     test.beforeEach(async ({ page }) => {
-        await test.step('open record page and wait for hydration', async () => {
-            await page.goto('/record')
+        await test.step('open the projects page and wait for hydration', async () => {
+            await page.goto('/')
             await page.locator('[data-hydrated="true"]').waitFor()
         })
     })
@@ -11,7 +11,6 @@ test.describe('app navbar', { tag: ['@read', '@navbar'] }, () => {
     test('shows the app logo on top and nav items', async ({ page }) => {
         await expect(page.getByTestId('navbar-logo')).toBeVisible()
         await expect(page.getByTestId('navbar-projetos')).toBeVisible()
-        await expect(page.getByTestId('navbar-gravacao')).toBeVisible()
     })
 
     test('starts collapsed, without labels', async ({ page }) => {
@@ -21,7 +20,6 @@ test.describe('app navbar', { tag: ['@read', '@navbar'] }, () => {
     test('expands with labels and collapses back on toggle', async ({ page }) => {
         await page.getByTestId('navbar-alternar').click()
         await expect(page.getByTestId('navbar-projetos')).toContainText('Projetos')
-        await expect(page.getByTestId('navbar-gravacao')).toContainText('Gravação')
 
         await page.getByTestId('navbar-alternar').click()
         await page.mouse.move(640, 400)
@@ -71,6 +69,5 @@ test.describe('app navbar', { tag: ['@read', '@navbar'] }, () => {
 
     test('links point to the app routes', async ({ page }) => {
         await expect(page.getByTestId('navbar-projetos')).toHaveAttribute('href', '/')
-        await expect(page.getByTestId('navbar-gravacao')).toHaveAttribute('href', '/record')
     })
 })
