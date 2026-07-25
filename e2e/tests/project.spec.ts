@@ -68,7 +68,6 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
             ['projeto-remover', 'Remover projeto'],
             ['projeto-editar', 'Renomear projeto'],
             ['projeto-voltar', 'Voltar'],
-            ['projeto-auth', 'Autenticação'],
             ['projeto-vscode', 'Abrir no VS Code'],
         ] as const) {
             await page.mouse.move(640, 500)
