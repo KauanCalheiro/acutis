@@ -27,3 +27,5 @@ Route::patch('projects/{project}/scenarios/{scenario}', [ProjectController::clas
     ->where('scenario', '.*');
 Route::post('projects/{project}/scenarios/{scenario}/suggestions', [ProjectController::class, 'suggestScenarioSelectors'])
     ->where('scenario', '.*');
+Route::post('projects/{project}/scenarios/{scenario}/fix', [ProjectController::class, 'fixScenario'])
+    ->where('scenario', '.*');

@@ -104,12 +104,66 @@ const steps = ref<TestStep[]>([])
 const videoUrl = ref<string | null>(null)
 const testedAt = ref<string | null>(null)
 
+const fixing = ref(false)
+const fix = ref<{ playwright: string, summary: string } | null>(null)
+const fixError = ref<string | null>(null)
+const applyingFix = ref(false)
+
+const failedStep = computed(() => steps.value.find(step => step.status === 'failed'))
+
+async function requestFix() {
+  const failed = failedStep.value
+  if (!failed) return
+
+  fixing.value = true
+  fixError.value = null
+
+  try {
+    fix.value = await $fetch<{ playwright: string, summary: string }>(`/api/projects/${slug.value}/scenario-fix`, {
+      method: 'POST',
+      body: { scenarioId: scenarioId.value, step: failed.title, error: failed.error ?? '' }
+    })
+  } catch (error) {
+    fixError.value = extractServerError(error, 'Não foi possível gerar uma correção agora. Tente novamente.')
+  } finally {
+    fixing.value = false
+  }
+}
+
+async function applyFix() {
+  if (!fix.value) return
+
+  applyingFix.value = true
+
+  try {
+    await $fetch(`/api/projects/${slug.value}/scenarios/${scenarioId.value}`, {
+      method: 'PATCH',
+      body: { ...draftFromScenario(scenario.value!), playwright: fix.value.playwright }
+    })
+
+    fix.value = null
+    runOpen.value = false
+    await refreshScenario()
+  } catch (error) {
+    fixError.value = extractServerError(error, 'Não foi possível salvar a correção.')
+  } finally {
+    applyingFix.value = false
+  }
+}
+
+function discardFix() {
+  fix.value = null
+  fixError.value = null
+}
+
 function runTest() {
   runOpen.value = true
   running.value = true
   steps.value = []
   videoUrl.value = null
   testedAt.value = null
+  fix.value = null
+  fixError.value = null
 
   const query = new URLSearchParams({ spec: scenario.value!.spec })
   const source = new EventSource(`/api/projects/${slug.value}/run-stream?${query}`)
@@ -317,6 +371,13 @@ const tabs: TabsItem[] = [
       :scenario-name="scenario!.title"
       :branch="project!.branch"
       :tested-at="testedAt"
+      :fixing="fixing"
+      :fix="fix"
+      :fix-error="fixError"
+      :applying-fix="applyingFix"
+      @fix="requestFix"
+      @apply-fix="applyFix"
+      @discard-fix="discardFix"
     />
   </UContainer>
 </template>
