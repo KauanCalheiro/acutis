@@ -85,7 +85,7 @@ const stepColors: Record<TestStep['status'], string> = {
   >
     <template #header>
       <div class="flex w-full items-start justify-between gap-4">
-        <div class="flex flex-col pt-3 gap-2">
+        <div class="flex flex-col pt-6 gap-2">
           <p
             v-if="running"
             class="text-xl font-bold"
@@ -104,16 +104,6 @@ const stepColors: Record<TestStep['status'], string> = {
             <p class="mt-2 text-xl font-bold">
               Resultado do teste
             </p>
-            <div class="mt-2 space-y-0.5 text-sm">
-              <p><span class="font-semibold">Projeto:</span> {{ projectName }}</p>
-              <p><span class="font-semibold">Cenário:</span> {{ scenarioName }}</p>
-              <p v-if="branch">
-                <span class="font-semibold">Branch:</span> {{ branch }}
-              </p>
-              <p v-if="testedAt">
-                <span class="font-semibold">Testado em:</span> {{ testedAt }}
-              </p>
-            </div>
           </template>
         </div>
 
@@ -121,7 +111,7 @@ const stepColors: Record<TestStep['status'], string> = {
           v-if="!running && !passed && !fix"
           label="Corrigir"
           trailing-icon="i-ic-round-auto-awesome"
-          class="mt-3 shrink-0"
+          class="mt-6 shrink-0"
           :loading="fixing"
           :disabled="fixing"
           data-testid="execucao-corrigir"
@@ -138,6 +128,21 @@ const stepColors: Record<TestStep['status'], string> = {
       />
 
       <template v-else>
+        <div
+          v-if="!running"
+          class="mb-6 space-y-0.5 text-sm"
+          data-testid="execucao-detalhes"
+        >
+          <p><span class="font-semibold">Projeto:</span> {{ projectName }}</p>
+          <p><span class="font-semibold">Cenário:</span> {{ scenarioName }}</p>
+          <p v-if="branch">
+            <span class="font-semibold">Branch:</span> {{ branch }}
+          </p>
+          <p v-if="testedAt">
+            <span class="font-semibold">Testado em:</span> {{ testedAt }}
+          </p>
+        </div>
+
         <BaseLoadingPhrases
           v-if="fixing"
           :phrases="['Analisando a falha', 'Procurando um seletor melhor', 'Reescrevendo o teste']"

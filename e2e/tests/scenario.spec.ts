@@ -206,6 +206,11 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         await expect(page.getByRole('dialog')).toContainText('Alpha Store')
 
         await expect(page.getByTestId('execucao-fechar')).toBeVisible()
+
+        const dialogBox = (await page.getByRole('dialog').boundingBox())!
+        const statusBox = (await page.getByTestId('execucao-status').boundingBox())!
+        expect(statusBox.y, 'o cabeçalho não pode vazar para fora do modal').toBeGreaterThan(dialogBox.y + 8)
+        await expect(page.getByTestId('execucao-detalhes')).toContainText('Login do cliente')
         const video = page.getByTestId('execucao-video')
         await expect(video).toHaveAttribute('src', /runner\/video\?path=/)
         await expect(video).toHaveAttribute('preload', 'metadata')
