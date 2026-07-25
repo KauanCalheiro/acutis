@@ -56,6 +56,12 @@ const visibleSteps = computed(() => {
   return failed === -1 ? steps : steps.slice(0, failed + 1)
 })
 
+function seekToPreviewFrame(event: Event) {
+  const video = event.target as HTMLVideoElement
+
+  video.currentTime = video.duration * 0.25
+}
+
 const stepIcons: Record<TestStep['status'], string> = {
   waiting: 'i-ic-round-radio-button-unchecked',
   running: 'i-ic-round-radio-button-unchecked',
@@ -194,8 +200,10 @@ const stepColors: Record<TestStep['status'], string> = {
         <video
           v-if="videoUrl"
           :src="videoUrl"
+          preload="metadata"
           controls
-          class="mb-6 w-full rounded-lg"
+          @loadedmetadata="seekToPreviewFrame"
+          class="mx-auto mb-6 w-3/4 rounded-lg bg-elevated"
           data-testid="execucao-video"
         />
 
