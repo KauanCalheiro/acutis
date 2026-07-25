@@ -27,7 +27,7 @@ Faltando algum → parar e avisar o usuário; não tentar instalar runtime.
 | frontend (Nuxt) | 3000 | http://localhost:3000 |
 | webdriver (NestJS) | 4000 | http://localhost:4000 |
 
-Os configs (`frontend/nuxt.config.ts`, `webdriver/src/config/env.ts`) já apontam pra esses defaults entre si — não setar env extra.
+Os configs (`frontend/nuxt.config.ts`, `webdriver/src/config/env.ts`, `backend/config/acutis.php`) já apontam pra esses defaults entre si — o Docker é que sobrescreve pros nomes de serviço, não o contrário.
 
 ## Setup de primeira vez — backend (idempotente)
 
@@ -45,10 +45,12 @@ Frontend e webdriver: só `pnpm install` na primeira vez (ou após mudar depend�
 ## Subir os três (cada um em background)
 
 ```sh
-cd backend  && php artisan serve                 # :8000
-cd frontend && pnpm install && pnpm dev          # :3000
-cd webdriver && pnpm install && pnpm dev         # :4000
+cd backend  && php artisan serve                          # :8000
+cd frontend && pnpm install && pnpm dev                   # :3000
+cd webdriver && pnpm install && WEBDRIVER_TEST_MODE=1 pnpm dev   # :4000
 ```
+
+**`WEBDRIVER_TEST_MODE=1` não é opcional pra rodar teste pela UI.** Os endpoints `/runner/*` (que o botão "Testar" usa, via backend) respondem **403** sem ela. O compose já seta; local precisa passar na linha de comando.
 
 Lançar cada um com `run_in_background`, depois confirmar que respondem (curl na URL) antes de reportar pronto.
 
