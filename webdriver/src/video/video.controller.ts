@@ -2,14 +2,13 @@ import {
     Controller,
     Delete,
     Get,
-    Header,
     HttpCode,
     HttpStatus,
     NotFoundException,
     Param,
     Res,
 } from '@nestjs/common'
-import type { Writable } from 'node:stream'
+import type { Response } from 'express'
 import { VideoService } from './video.service.js'
 
 @Controller('recording')
@@ -19,13 +18,12 @@ export class VideoController {
     ) { }
 
     @Get(':sessionId')
-    @Header('Content-Type', 'video/webm')
-    stream(@Param('sessionId') sessionId: string, @Res() res: Writable): void {
+    stream(@Param('sessionId') sessionId: string, @Res() res: Response): void {
         if (!this.videoService.exists(sessionId)) {
             throw new NotFoundException()
         }
 
-        this.videoService.openStream(sessionId).pipe(res)
+        res.sendFile(this.videoService.path(sessionId))
     }
 
     @Delete(':sessionId')

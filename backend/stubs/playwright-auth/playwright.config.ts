@@ -10,7 +10,8 @@ export default defineConfig({
     ],
     use: {
         baseURL: '{{baseUrl}}',
-        video: 'on',
+        video: { mode: 'on', show: { actions: { duration: 500, fontSize: 1 }, test: { level: 'step' } } },
+        launchOptions: { slowMo: 500 },
         screenshot: 'only-on-failure',
         trace: 'on',
     },

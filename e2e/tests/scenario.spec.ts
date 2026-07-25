@@ -206,7 +206,12 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         await expect(page.getByRole('dialog')).toContainText('Alpha Store')
 
         await expect(page.getByTestId('execucao-fechar')).toBeVisible()
-        await expect(page.getByTestId('execucao-video')).toHaveAttribute('src', /runner\/video\?path=/)
+        const video = page.getByTestId('execucao-video')
+        await expect(video).toHaveAttribute('src', /runner\/video\?path=/)
+        await expect(video).toHaveAttribute('preload', 'metadata')
+        const videoWidth = (await video.boundingBox())!.width
+        const containerWidth = (await video.locator('xpath=..').boundingBox())!.width
+        expect(videoWidth).toBeLessThan(containerWidth * 0.8)
 
         expect(requestedUrl).toContain('spec=tests%2Flogin-do-cliente.spec.ts')
     })
