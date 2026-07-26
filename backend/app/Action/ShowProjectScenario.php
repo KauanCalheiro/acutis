@@ -33,6 +33,7 @@ class ShowProjectScenario
             gherkin: $feature ? File::get($feature) : null,
             events: File::exists($eventsFile) ? json_decode(File::get($eventsFile), true) : [],
             updatedAt: Carbon::createFromTimestamp(File::lastModified($spec))->toIso8601String(),
+            runs: ListScenarioRuns::run($path, $scenarioId),
         );
     }
 }
