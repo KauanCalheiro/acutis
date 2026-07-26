@@ -12,6 +12,7 @@ interface FixedSpec {
 
 interface ScenarioTestRunModal {
   running?: boolean
+  live?: boolean
   passed?: boolean
   steps?: TestStep[]
   videoUrl?: string | null
@@ -28,6 +29,7 @@ interface ScenarioTestRunModal {
 
 const {
   running = false,
+  live = false,
   passed = false,
   steps = [],
   videoUrl = null,
@@ -106,7 +108,7 @@ const stepColors: Record<TestStep['status'], string> = {
         </div>
 
         <UButton
-          v-if="!running && !passed && !fix && failedStep !== -1"
+          v-if="live && !running && !passed && !fix && failedStep !== -1"
           label="Corrigir"
           trailing-icon="i-ic-round-auto-awesome"
           class="mt-6 shrink-0"

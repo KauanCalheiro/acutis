@@ -105,6 +105,7 @@ const videoUrl = ref<string | null>(null)
 const testedAt = ref<string | null>(null)
 const executedPlaywright = ref<string | null>(null)
 const runPassed = ref(false)
+const liveRun = ref(false)
 
 function videoUrlFor(path: string) {
   return `${webdriverUrl}/runner/video?${new URLSearchParams({ path })}`
@@ -127,6 +128,7 @@ function openRun(run: ScenarioRun) {
   testedAt.value = formatTestedAt(new Date(run.started_at))
   executedPlaywright.value = run.playwright
   runPassed.value = run.passed
+  liveRun.value = false
   fix.value = null
   fixError.value = null
   running.value = false
@@ -193,6 +195,7 @@ function runTest() {
   testedAt.value = null
   executedPlaywright.value = null
   runPassed.value = false
+  liveRun.value = true
   fix.value = null
   fixError.value = null
 
@@ -402,6 +405,7 @@ const tabs: TabsItem[] = [
     <ScenarioTestRunModal
       v-model:open="runOpen"
       :running="running"
+      :live="liveRun"
       :passed="runPassed"
       :steps="steps"
       :video-url="videoUrl"
