@@ -21,7 +21,7 @@ class ListScenarioRuns
         rsort($files);
 
         $runs = collect($files)
-            ->take(ScenarioRuns::KEPT)
+            ->take(ScenarioRuns::SHOWN)
             ->map(fn (string $file): array => json_decode((string) File::get($file), true));
 
         $recorded = File::exists($video)
