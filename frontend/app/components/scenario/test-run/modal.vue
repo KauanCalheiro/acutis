@@ -12,6 +12,7 @@ interface FixedSpec {
 
 interface ScenarioTestRunModal {
   running?: boolean
+  passed?: boolean
   steps?: TestStep[]
   videoUrl?: string | null
   projectName: string
@@ -27,6 +28,7 @@ interface ScenarioTestRunModal {
 
 const {
   running = false,
+  passed = false,
   steps = [],
   videoUrl = null,
   projectName,
@@ -50,12 +52,10 @@ const open = defineModel<boolean>('open', {
   default: false
 })
 
-const passed = computed(() => !steps.some(step => step.status === 'failed'))
+const failedStep = computed(() => steps.findIndex(step => step.status === 'failed'))
 
 const visibleSteps = computed(() => {
-  const failed = steps.findIndex(step => step.status === 'failed')
-
-  return failed === -1 ? steps : steps.slice(0, failed + 1)
+  return failedStep.value === -1 ? steps : steps.slice(0, failedStep.value + 1)
 })
 
 function seekToPreviewFrame(event: Event) {
@@ -110,7 +110,7 @@ const stepColors: Record<TestStep['status'], string> = {
         </div>
 
         <UButton
-          v-if="!running && !passed && !fix"
+          v-if="!running && !passed && !fix && failedStep !== -1"
           label="Corrigir"
           trailing-icon="i-ic-round-auto-awesome"
           class="mt-6 shrink-0"
