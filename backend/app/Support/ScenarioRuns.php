@@ -8,7 +8,7 @@ final class ScenarioRuns
 {
     public const VIDEO = 'last.webm';
 
-    public const KEPT = 20;
+    public const SHOWN = 6;
 
     public static function scenarioId(string $spec): string
     {
