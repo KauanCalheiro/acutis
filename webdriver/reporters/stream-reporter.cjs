@@ -34,6 +34,10 @@ function firstError(errors) {
 }
 
 class StreamReporter {
+    constructor() {
+        this.openSteps = new Map()
+    }
+
     onBegin(_config, suite) {
         const tests = suite.allTests()
         const files = [...new Set(tests.map((test) => test.location.file))]
@@ -47,11 +51,19 @@ class StreamReporter {
 
     onStepBegin(test, _result, step) {
         if (step.category !== 'test.step') return
+
+        const open = this.openSteps.get(test.id) ?? []
+        open.push(step.title)
+        this.openSteps.set(test.id, open)
+
         emit({ event: 'step', testId: test.id, title: step.title, status: 'pending' })
     }
 
     onStepEnd(test, _result, step) {
         if (step.category !== 'test.step') return
+
+        this.closeStep(test.id, step.title)
+
         emit({
             event: 'step',
             testId: test.id,
@@ -62,12 +74,31 @@ class StreamReporter {
         })
     }
 
+    closeStep(testId, title) {
+        const open = this.openSteps.get(testId) ?? []
+        const index = open.lastIndexOf(title)
+
+        if (index >= 0) open.splice(index, 1)
+    }
+
+    failOpenSteps(test, error) {
+        for (const title of this.openSteps.get(test.id) ?? []) {
+            emit({ event: 'step', testId: test.id, title, status: 'failed', durationMs: 0, error })
+        }
+
+        this.openSteps.delete(test.id)
+    }
+
     onTestEnd(test, result) {
         const status = result.status === 'passed'
             ? 'success'
             : result.status === 'skipped'
                 ? 'skipped'
                 : 'failed'
+
+        if (status === 'failed') {
+            this.failOpenSteps(test, firstError(result.errors))
+        }
 
         const video = result.attachments.find((a) => a.name === 'video')
 

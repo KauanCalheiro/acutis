@@ -49,7 +49,7 @@ class ListProjects
     {
         $manifest = json_decode((string) File::get($dir.'/acutis.json'), true) ?: [];
         $slug = $manifest['slug'] ?? basename($dir);
-        $repository = Git::remoteUrl($dir);
+        $repository = Git::in($dir)->remoteUrl();
 
         return new ProjectData(
             name: $manifest['name'] ?? $slug,

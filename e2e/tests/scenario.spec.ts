@@ -56,6 +56,31 @@ test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
         await page.getByTestId('cenario-tab-eventos').click()
         await expect(page.getByTestId('cenario-eventos')).toBeVisible()
     })
+
+    test('lists the persisted runs, newest first', async ({ page }) => {
+        const runs = page.getByTestId('cenario-execucao')
+
+        await expect(runs).toHaveCount(2)
+        await expect(runs.nth(0)).toHaveAttribute('data-status', 'success')
+        await expect(runs.nth(0)).toContainText('13/06/2026')
+        await expect(runs.nth(1)).toHaveAttribute('data-status', 'failed')
+        await expect(runs.nth(1)).toContainText('12/06/2026')
+    })
+
+    test('opens a persisted run with its timeline and the code that ran', async ({ page }) => {
+        await page.getByTestId('cenario-execucao').nth(1).click()
+
+        await expect(page.getByTestId('execucao-status')).toContainText('Falha')
+
+        const steps = page.getByTestId('execucao-step')
+        await expect(steps).toHaveCount(3)
+        await expect(steps.nth(1).getByTestId('execucao-step-erro')).toContainText("locator('#v-0') resolved to hidden")
+        await expect(steps.nth(2)).toHaveAttribute('data-status', 'waiting')
+
+        await expect(page.getByTestId('execucao-playwright')).toHaveValue(/test\.describe\('Login do cliente'/)
+        await expect(page.getByTestId('execucao-video')).toBeHidden()
+        await expect(page.getByTestId('execucao-corrigir'), 'corrigir é só da execução ao vivo').toBeHidden()
+    })
 })
 
 test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
@@ -193,8 +218,9 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         await page.getByTestId('cenario-testar').click()
 
         const steps = page.getByTestId('execucao-step')
-        await expect(steps).toHaveCount(2)
-        await expect(page.getByRole('dialog')).not.toContainText('Ver o painel')
+        await expect(steps).toHaveCount(3)
+        await expect(steps.nth(2).getByTestId('execucao-step-titulo')).toHaveText('Ver o painel')
+        await expect(steps.nth(2)).toHaveAttribute('data-status', 'waiting')
         await expect(steps.nth(0).getByTestId('execucao-step-titulo')).toHaveText('Abrir página de login')
         await expect(steps.nth(0).locator('[class*="text-success"]')).toBeVisible()
         await expect(steps.nth(1).getByTestId('execucao-step-titulo')).toHaveText('Entrar com usuário/código')
@@ -282,6 +308,60 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         })
 
         expect(patched!.playwright).toBe("await page.getByTestId('login-usuario').fill('733787')")
+    })
+
+    test('reports failure when the test dies with a step still running', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.route('**/api/projects/alpha-store/run-stream*', async (route) => {
+            const events = [
+                { event: 'run:started', total: 1, steps: ['Abrir página de login', 'Entrar com usuário/código'] },
+                { event: 'test', id: 't1', title: 'login', status: 'pending' },
+                { event: 'step', testId: 't1', title: 'Abrir página de login', status: 'pending' },
+                { event: 'step', testId: 't1', title: 'Abrir página de login', status: 'success', durationMs: 100 },
+                { event: 'step', testId: 't1', title: 'Entrar com usuário/código', status: 'pending' },
+                { event: 'step', testId: 't1', title: 'Entrar com usuário/código', status: 'failed', durationMs: 0, error: 'Test timeout of 30000ms exceeded.' },
+                { event: 'test', id: 't1', title: 'login', status: 'failed', durationMs: 31982, error: 'Test timeout of 30000ms exceeded.', videoPath: null },
+                { event: 'run:finished', status: 'failed', passed: false },
+            ]
+            await route.fulfill({
+                status: 200,
+                contentType: 'text/event-stream',
+                body: events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join(''),
+            })
+        })
+
+        await page.getByTestId('cenario-testar').click()
+
+        await expect(page.getByTestId('execucao-status')).toContainText('Falha')
+        await expect(page.getByTestId('execucao-step').nth(1).getByTestId('execucao-step-erro')).toContainText('Test timeout of 30000ms exceeded.')
+        await expect(page.getByTestId('execucao-corrigir')).toBeVisible()
+    })
+
+    test('reports failure even when no step was marked as failed', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.route('**/api/projects/alpha-store/run-stream*', async (route) => {
+            const events = [
+                { event: 'run:started', total: 1, steps: ['Abrir página de login'] },
+                { event: 'test', id: 't1', title: 'login', status: 'pending' },
+                { event: 'step', testId: 't1', title: 'Abrir página de login', status: 'pending' },
+                { event: 'step', testId: 't1', title: 'Abrir página de login', status: 'success', durationMs: 100 },
+                { event: 'test', id: 't1', title: 'login', status: 'failed', durationMs: 200, error: 'beforeEach hook falhou', videoPath: null },
+                { event: 'run:finished', status: 'failed', passed: false },
+            ]
+            await route.fulfill({
+                status: 200,
+                contentType: 'text/event-stream',
+                body: events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join(''),
+            })
+        })
+
+        await page.getByTestId('cenario-testar').click()
+
+        await expect(page.getByTestId('execucao-status')).toContainText('Falha')
     })
 
     test('seeds the whole timeline as waiting before the steps run', async ({ page }) => {

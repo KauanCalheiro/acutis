@@ -3,6 +3,7 @@
 namespace App\Action;
 
 use App\Data\V1\Project\ProjectData;
+use App\Data\V1\Project\ScenarioData;
 use App\Enums\GitProvider;
 use App\Support\Git;
 use App\Support\Project;
@@ -14,12 +15,12 @@ class ShowProject
 {
     use AsAction;
 
-    /** @return array{project: ProjectData, branch: ?string, updated_at: string, scenarios: list<\App\Data\V1\Project\ScenarioData>, auth_status: string, vscode_url: string} */
+    /** @return array{project: ProjectData, branch: ?string, updated_at: string, scenarios: list<ScenarioData>, auth_status: string, vscode_url: string} */
     public function handle(string $slug): array
     {
         $path = Project::path($slug);
         $manifest = json_decode((string) File::get($path.'/acutis.json'), true) ?: [];
-        $repository = Git::remoteUrl($path);
+        $repository = Git::in($path)->remoteUrl();
 
         $project = new ProjectData(
             name: $manifest['name'] ?? $slug,
@@ -32,7 +33,7 @@ class ShowProject
 
         return [
             'project' => $project,
-            'branch' => Git::branch($path),
+            'branch' => Git::in($path)->branch(),
             'updated_at' => Carbon::createFromTimestamp(File::lastModified($path))->toIso8601String(),
             'scenarios' => ListProjectScenarios::run($path),
             'auth_status' => $this->authStatus($path, $manifest),

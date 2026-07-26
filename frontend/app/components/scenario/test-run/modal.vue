@@ -12,6 +12,8 @@ interface FixedSpec {
 
 interface ScenarioTestRunModal {
   running?: boolean
+  live?: boolean
+  passed?: boolean
   steps?: TestStep[]
   videoUrl?: string | null
   projectName: string
@@ -22,10 +24,13 @@ interface ScenarioTestRunModal {
   fix?: FixedSpec | null
   fixError?: string | null
   applyingFix?: boolean
+  playwright?: string | null
 }
 
 const {
   running = false,
+  live = false,
+  passed = false,
   steps = [],
   videoUrl = null,
   projectName,
@@ -35,7 +40,8 @@ const {
   fixing = false,
   fix = null,
   fixError = null,
-  applyingFix = false
+  applyingFix = false,
+  playwright = null
 } = defineProps<ScenarioTestRunModal>()
 
 const emit = defineEmits<{
@@ -48,13 +54,7 @@ const open = defineModel<boolean>('open', {
   default: false
 })
 
-const passed = computed(() => !steps.some(step => step.status === 'failed'))
-
-const visibleSteps = computed(() => {
-  const failed = steps.findIndex(step => step.status === 'failed')
-
-  return failed === -1 ? steps : steps.slice(0, failed + 1)
-})
+const failedStep = computed(() => steps.findIndex(step => step.status === 'failed'))
 
 function seekToPreviewFrame(event: Event) {
   const video = event.target as HTMLVideoElement
@@ -108,7 +108,7 @@ const stepColors: Record<TestStep['status'], string> = {
         </div>
 
         <UButton
-          v-if="!running && !passed && !fix"
+          v-if="live && !running && !passed && !fix && failedStep !== -1"
           label="Corrigir"
           trailing-icon="i-ic-round-auto-awesome"
           class="mt-6 shrink-0"
@@ -217,7 +217,7 @@ const stepColors: Record<TestStep['status'], string> = {
         </p>
         <ol class="flex flex-col">
           <li
-            v-for="(step, i) in visibleSteps"
+            v-for="(step, i) in steps"
             :key="i"
             data-testid="execucao-step"
             :data-status="step.status"
@@ -230,7 +230,7 @@ const stepColors: Record<TestStep['status'], string> = {
                 :class="stepColors[step.status]"
               />
               <span
-                v-if="i < visibleSteps.length - 1"
+                v-if="i < steps.length - 1"
                 class="w-px grow bg-accented"
               />
             </div>
@@ -251,6 +251,18 @@ const stepColors: Record<TestStep['status'], string> = {
             </div>
           </li>
         </ol>
+
+        <template v-if="playwright">
+          <p class="mt-6 mb-3 text-lg font-semibold">
+            Código executado
+          </p>
+          <BaseCodefield
+            :model-value="playwright"
+            language="typescript"
+            readonly
+            testid="execucao-playwright"
+          />
+        </template>
       </template>
     </template>
 

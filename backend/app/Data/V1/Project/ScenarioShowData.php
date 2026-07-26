@@ -9,6 +9,7 @@ class ScenarioShowData extends Data
     /**
      * @param  list<string>  $tags
      * @param  list<array<string, mixed>>  $events
+     * @param  list<ScenarioRunData>  $runs
      */
     public function __construct(
         public string $title,
@@ -20,5 +21,6 @@ class ScenarioShowData extends Data
         public ?string $gherkin,
         public array $events,
         public string $updatedAt,
+        public array $runs,
     ) {}
 }

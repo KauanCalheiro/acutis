@@ -1,0 +1,29 @@
+{
+    "started_at": "2026-06-12T14:08:31+00:00",
+    "duration_ms": 4200,
+    "passed": false,
+    "branch": "main",
+    "author": "Testadora",
+    "video": false,
+    "steps": [
+        {
+            "title": "Abrir página de login",
+            "status": "success",
+            "duration_ms": 900,
+            "error": null
+        },
+        {
+            "title": "Entrar com usuário/código",
+            "status": "failed",
+            "duration_ms": 3300,
+            "error": "locator('#v-0') resolved to hidden"
+        },
+        {
+            "title": "Ver o painel",
+            "status": "waiting",
+            "duration_ms": 0,
+            "error": null
+        }
+    ],
+    "playwright": "import { test } from '@playwright/test'\n\ntest.describe('Login do cliente', () => {})"
+}

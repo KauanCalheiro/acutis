@@ -9,6 +9,7 @@ use App\Action\DeleteProjectScenario;
 use App\Action\FixScenarioSpec;
 use App\Action\GenerateTestsFromRecording;
 use App\Action\ListProjects;
+use App\Action\PersistScenarioRun;
 use App\Action\ProbeGitRepository;
 use App\Action\RunProject;
 use App\Action\ShowProject;
@@ -214,6 +215,9 @@ class ProjectController extends Controller
         return response()->stream(function () use ($path, $spec, $grep): void {
             set_time_limit(0);
 
+            $startedAt = now();
+            $events = [];
+
             $body = Http::withOptions(['stream' => true])
                 ->timeout(600)
                 ->post(acutis()->webdriverUrl.'/runner/project/stream', [
@@ -239,9 +243,19 @@ class ProjectController extends Controller
                     ob_flush();
                 }
                 flush();
+
+                $event = json_decode($line, true);
+
+                if (filled($event)) {
+                    $events[] = $event;
+                }
             }
 
             fclose($stream);
+
+            if (filled($spec)) {
+                PersistScenarioRun::run($path, $spec, $events, $startedAt);
+            }
         }, Response::HTTP_OK, [
             'Content-Type' => 'text/event-stream',
             'Cache-Control' => 'no-cache',

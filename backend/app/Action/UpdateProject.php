@@ -47,7 +47,7 @@ class UpdateProject
             JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
         )."\n");
 
-        $repository = Git::remoteUrl($path);
+        $repository = Git::in($path)->remoteUrl();
 
         return new ProjectData(
             name: $name,

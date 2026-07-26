@@ -49,7 +49,7 @@ class CloneProjectFromGit
         }
 
         $createdAt = WriteAcutisManifest::run($path, $name, $slug);
-        $repository = Git::remoteUrl($path);
+        $repository = Git::in($path)->remoteUrl();
 
         return new ProjectData(
             name: $name,

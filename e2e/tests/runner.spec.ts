@@ -294,6 +294,33 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         expect(finished?.passed).toBe(false)
     })
 
+    test('kills a test that runs past the ten second timeout', async ({ request }) => {
+        test.setTimeout(120_000)
+
+        const { mkdtemp, mkdir, writeFile } = await import('node:fs/promises')
+        const { tmpdir } = await import('node:os')
+        const { join } = await import('node:path')
+
+        const dir = await mkdtemp(join(tmpdir(), 'acutis-timeout-'))
+        await mkdir(join(dir, 'tests'), { recursive: true })
+        await writeFile(join(dir, 'playwright.config.ts'),
+            "import { defineConfig } from '@playwright/test'\nexport default defineConfig({ testDir: './tests' })\n")
+        await writeFile(join(dir, 'tests', 'lento.spec.ts'),
+            "import { test } from '@playwright/test'\ntest('demora demais', async () => { await new Promise((resolve) => setTimeout(resolve, 30_000)) })\n")
+
+        const startedAt = Date.now()
+        const res = await request.post(`${RUNNER_URL}/runner/project/stream`, { data: { path: dir }, timeout: 90_000 })
+        const elapsed = Date.now() - startedAt
+
+        expect(res.ok()).toBe(true)
+
+        const events = (await res.text()).split('\n').filter(Boolean).map((line) => JSON.parse(line))
+        const failure = events.find((e) => e.event === 'test' && e.status === 'failed')
+
+        expect(String(failure?.error)).toContain('Test timeout of 10000ms exceeded')
+        expect(elapsed, 'o teste lento não pode chegar ao fim dos 30s').toBeLessThan(25_000)
+    })
+
     test('streams test.step progress alongside the test events', async ({ request }) => {
         test.setTimeout(120_000)
 
