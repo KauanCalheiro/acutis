@@ -327,6 +327,7 @@ const tabs: TabsItem[] = [
     </div>
 
     <div
+      v-if="scenario!.tags.length"
       class="flex flex-wrap gap-1 mt-4"
       data-testid="cenario-tags"
     >
@@ -353,25 +354,54 @@ const tabs: TabsItem[] = [
     </UTabs>
 
     <div class="mt-4">
-      <ScenarioReviewTimeline
-        v-if="tab === 'eventos'"
-        :events="scenario!.events"
-        data-testid="cenario-eventos"
-      />
-      <BaseCodefield
-        v-else-if="tab === 'gherkin'"
-        :model-value="scenario!.gherkin ?? ''"
-        language="gherkin"
-        readonly
-        testid="cenario-gherkin"
-      />
-      <BaseCodefield
-        v-else
-        :model-value="scenario!.playwright"
-        language="typescript"
-        readonly
-        testid="cenario-playwright"
-      />
+      <template v-if="tab === 'eventos'">
+        <BaseEmpty
+          v-if="scenario!.events.length === 0"
+          icon="i-ic-round-timeline"
+          title="Nenhum evento gravado"
+          description="Este cenário foi escrito direto em código, sem passar por uma gravação de navegador."
+          testid="cenario-eventos-vazio"
+        />
+        <ScenarioReviewTimeline
+          v-else
+          :events="scenario!.events"
+          data-testid="cenario-eventos"
+        />
+      </template>
+
+      <template v-else-if="tab === 'gherkin'">
+        <BaseEmpty
+          v-if="!scenario!.gherkin"
+          icon="i-ic-round-description"
+          title="Sem descrição em Gherkin"
+          description="Este cenário não tem arquivo .feature — só o código Playwright da aba ao lado."
+          testid="cenario-gherkin-vazio"
+        />
+        <BaseCodefield
+          v-else
+          :model-value="scenario!.gherkin"
+          language="gherkin"
+          readonly
+          testid="cenario-gherkin"
+        />
+      </template>
+
+      <template v-else>
+        <BaseEmpty
+          v-if="!scenario!.playwright.trim()"
+          icon="i-ic-round-code-off"
+          title="Sem código Playwright"
+          description="O arquivo .spec.ts deste cenário está vazio — edite o cenário pra escrever o teste."
+          testid="cenario-playwright-vazio"
+        />
+        <BaseCodefield
+          v-else
+          :model-value="scenario!.playwright"
+          language="typescript"
+          readonly
+          testid="cenario-playwright"
+        />
+      </template>
     </div>
 
     <ScenarioTestRunHistory

@@ -57,6 +57,20 @@ test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
         await expect(page.getByTestId('cenario-eventos')).toBeVisible()
     })
 
+    test('shows an empty state for a scenario without events, gherkin or runs', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/cadastro-de-produto')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await expect(page.getByTestId('cenario-eventos-vazio')).toContainText('Nenhum evento gravado')
+        await expect(page.getByTestId('cenario-execucoes-vazio')).toContainText('Nenhum teste executado ainda')
+
+        await page.getByTestId('cenario-tab-gherkin').click()
+        await expect(page.getByTestId('cenario-gherkin-vazio')).toContainText('Sem descrição em Gherkin')
+
+        await page.getByTestId('cenario-tab-playwright').click()
+        await expect(page.getByTestId('cenario-playwright')).toHaveValue(/./)
+    })
+
     test('lists the persisted runs, newest first', async ({ page }) => {
         const runs = page.getByTestId('cenario-execucao')
 
