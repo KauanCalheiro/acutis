@@ -20,6 +20,7 @@ export interface RunOptions {
 
 const RUN_TIMEOUT_MS = 60_000
 const PROJECT_RUN_TIMEOUT_MS = 300_000
+const TEST_TIMEOUT = ['--timeout', '10000']
 const STORAGE_STATE_FILE = 'storage-state.json'
 const STREAM_MARKER = '@@ACUTIS_RUN@@'
 const UNREADABLE_ACTION_LABEL = 1
@@ -82,7 +83,7 @@ export class RunnerService {
         await this.ensureWatchableRun(dir)
         await this.ensureRunTail(dir)
 
-        const args: string[] = []
+        const args = [...TEST_TIMEOUT]
         if (options.spec) args.push(options.spec)
         if (options.grep) args.push('--grep', options.grep)
 
@@ -99,7 +100,7 @@ export class RunnerService {
         await this.ensureRunTail(dir)
         const env = await this.readDotenv(dir)
 
-        const args = [`--reporter=${STREAM_REPORTER_PATH}`]
+        const args = [`--reporter=${STREAM_REPORTER_PATH}`, ...TEST_TIMEOUT]
         if (options.spec) args.push(options.spec)
         if (options.grep) args.push('--grep', options.grep)
 
