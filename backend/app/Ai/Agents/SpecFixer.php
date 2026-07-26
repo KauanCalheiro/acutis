@@ -34,6 +34,15 @@ class SpecFixer implements Agent, HasStructuredOutput
         - Use os eventos gravados pra confirmar a intenção original do passo
           quando o spec tiver divergido dela.
 
+        Formato do arquivo — o valor de playwright é o conteúdo literal de um
+        arquivo em disco, não um trecho em linha única:
+        - Uma instrução por linha, terminada por quebra de linha real.
+        - Indentação de 4 espaços por nível de aninhamento.
+        - Preserve a formatação do spec recebido; mexa só nas linhas que
+          precisam da correção.
+        - Nunca junte o arquivo inteiro numa linha só nem troque quebra de
+          linha por ponto e vírgula.
+
         No summary, explique em português, numa frase, o que mudou e por quê.
         INSTRUCTIONS;
     }
@@ -41,7 +50,7 @@ class SpecFixer implements Agent, HasStructuredOutput
     public function schema(JsonSchema $schema): array
     {
         return [
-            'playwright' => $schema->string()->description('Conteúdo completo do arquivo .spec.ts corrigido'),
+            'playwright' => $schema->string()->description('Conteúdo completo do arquivo .spec.ts corrigido, com quebras de linha reais e indentação de 4 espaços'),
             'summary' => $schema->string()->description('Uma frase em português sobre o que mudou e por quê'),
         ];
     }
