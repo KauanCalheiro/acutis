@@ -5,11 +5,6 @@ interface TestStep {
   error?: string | null
 }
 
-interface FixedSpec {
-  playwright: string
-  summary: string
-}
-
 interface ScenarioTestRunModal {
   running?: boolean
   live?: boolean
@@ -20,10 +15,6 @@ interface ScenarioTestRunModal {
   scenarioName: string
   branch?: string | null
   testedAt?: string | null
-  fixing?: boolean
-  fix?: FixedSpec | null
-  fixError?: string | null
-  applyingFix?: boolean
   playwright?: string | null
 }
 
@@ -37,17 +28,11 @@ const {
   scenarioName,
   branch = null,
   testedAt = null,
-  fixing = false,
-  fix = null,
-  fixError = null,
-  applyingFix = false,
   playwright = null
 } = defineProps<ScenarioTestRunModal>()
 
 const emit = defineEmits<{
   fix: []
-  applyFix: []
-  discardFix: []
 }>()
 
 const open = defineModel<boolean>('open', {
@@ -108,12 +93,10 @@ const stepColors: Record<TestStep['status'], string> = {
         </div>
 
         <UButton
-          v-if="live && !running && !passed && !fix && failedStep !== -1"
+          v-if="live && !running && !passed && failedStep !== -1"
           label="Corrigir"
           trailing-icon="i-ic-round-auto-awesome"
           class="mt-6 shrink-0"
-          :loading="fixing"
-          :disabled="fixing"
           data-testid="execucao-corrigir"
           @click="emit('fix')"
         />
@@ -141,65 +124,6 @@ const stepColors: Record<TestStep['status'], string> = {
           <p v-if="testedAt">
             <span class="font-semibold">Testado em:</span> {{ testedAt }}
           </p>
-        </div>
-
-        <BaseLoadingPhrases
-          v-if="fixing"
-          :phrases="['Analisando a falha', 'Procurando um seletor melhor', 'Reescrevendo o teste']"
-          class="mb-6"
-          data-testid="correcao-carregando"
-        />
-
-        <UAlert
-          v-else-if="fixError"
-          color="error"
-          variant="subtle"
-          icon="i-ic-round-error"
-          :description="fixError"
-          class="mb-6"
-          data-testid="correcao-erro"
-        />
-
-        <div
-          v-else-if="fix"
-          class="mb-6"
-          data-testid="correcao-proposta"
-        >
-          <p class="mb-1 text-lg font-semibold">
-            Correção proposta
-          </p>
-          <p
-            class="mb-3 text-sm text-muted"
-            data-testid="correcao-resumo"
-          >
-            {{ fix.summary }}
-          </p>
-
-          <BaseCodefield
-            :model-value="fix.playwright"
-            language="typescript"
-            readonly
-            testid="correcao-spec"
-          />
-
-          <div class="mt-3 flex gap-2">
-            <UButton
-              label="Aplicar"
-              icon="i-ic-round-check"
-              :loading="applyingFix"
-              :disabled="applyingFix"
-              data-testid="correcao-aplicar"
-              @click="emit('applyFix')"
-            />
-            <UButton
-              label="Descartar"
-              color="neutral"
-              variant="ghost"
-              :disabled="applyingFix"
-              data-testid="correcao-descartar"
-              @click="emit('discardFix')"
-            />
-          </div>
         </div>
 
         <video

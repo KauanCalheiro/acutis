@@ -270,6 +270,7 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         let fixRequest: { step?: string, error?: string } | null = null
         await page.route('**/api/projects/alpha-store/scenario-fix', async (route) => {
             fixRequest = route.request().postDataJSON()
+            await new Promise((resolve) => setTimeout(resolve, 700))
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -293,6 +294,9 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
 
         await test.step('ask for the fix and see the proposal', async () => {
             await page.getByTestId('execucao-corrigir').click()
+
+            await expect(page.getByTestId('correcao-carregando')).toBeVisible()
+            await expect(page.getByTestId('execucao-status'), 'o resultado sai da tela enquanto a correção carrega').toBeHidden()
 
             await expect(page.getByTestId('correcao-resumo')).toContainText('login-usuario')
             await expect(page.getByTestId('correcao-spec')).toHaveValue(/getByTestId\('login-usuario'\)/)
