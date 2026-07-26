@@ -216,8 +216,9 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         await page.getByTestId('cenario-testar').click()
 
         const steps = page.getByTestId('execucao-step')
-        await expect(steps).toHaveCount(2)
-        await expect(page.getByRole('dialog')).not.toContainText('Ver o painel')
+        await expect(steps).toHaveCount(3)
+        await expect(steps.nth(2).getByTestId('execucao-step-titulo')).toHaveText('Ver o painel')
+        await expect(steps.nth(2)).toHaveAttribute('data-status', 'waiting')
         await expect(steps.nth(0).getByTestId('execucao-step-titulo')).toHaveText('Abrir página de login')
         await expect(steps.nth(0).locator('[class*="text-success"]')).toBeVisible()
         await expect(steps.nth(1).getByTestId('execucao-step-titulo')).toHaveText('Entrar com usuário/código')

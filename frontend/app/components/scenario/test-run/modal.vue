@@ -54,10 +54,6 @@ const open = defineModel<boolean>('open', {
 
 const failedStep = computed(() => steps.findIndex(step => step.status === 'failed'))
 
-const visibleSteps = computed(() => {
-  return failedStep.value === -1 ? steps : steps.slice(0, failedStep.value + 1)
-})
-
 function seekToPreviewFrame(event: Event) {
   const video = event.target as HTMLVideoElement
 
@@ -219,7 +215,7 @@ const stepColors: Record<TestStep['status'], string> = {
         </p>
         <ol class="flex flex-col">
           <li
-            v-for="(step, i) in visibleSteps"
+            v-for="(step, i) in steps"
             :key="i"
             data-testid="execucao-step"
             :data-status="step.status"
@@ -232,7 +228,7 @@ const stepColors: Record<TestStep['status'], string> = {
                 :class="stepColors[step.status]"
               />
               <span
-                v-if="i < visibleSteps.length - 1"
+                v-if="i < steps.length - 1"
                 class="w-px grow bg-accented"
               />
             </div>
