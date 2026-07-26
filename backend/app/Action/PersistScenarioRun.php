@@ -50,16 +50,38 @@ class PersistScenarioRun
     /** @param  list<array<string, mixed>>  $events */
     private function steps(array $events): array
     {
-        return collect($events)
-            ->filter(fn (array $event): bool => $event['event'] === 'step' && $event['status'] !== 'pending')
-            ->map(fn (array $event): array => [
+        $timeline = collect($events)
+            ->firstWhere('event', 'run:started')['steps'] ?? [];
+
+        $timeline = collect($timeline)->map(fn (string $title): array => [
+            'title' => $title,
+            'status' => 'waiting',
+            'duration_ms' => 0,
+            'error' => null,
+        ]);
+
+        foreach ($events as $event) {
+            if ($event['event'] !== 'step' || $event['status'] === 'pending') {
+                continue;
+            }
+
+            $ran = [
                 'title' => $event['title'],
                 'status' => $event['status'],
                 'duration_ms' => $event['durationMs'] ?? 0,
                 'error' => $event['error'] ?? null,
-            ])
-            ->values()
-            ->all();
+            ];
+
+            $waiting = $timeline->search(
+                fn (array $step): bool => $step['title'] === $event['title'] && $step['status'] === 'waiting'
+            );
+
+            $waiting === false
+                ? $timeline->push($ran)
+                : $timeline->put($waiting, $ran);
+        }
+
+        return $timeline->values()->all();
     }
 
     /** @param  list<array<string, mixed>>  $events */

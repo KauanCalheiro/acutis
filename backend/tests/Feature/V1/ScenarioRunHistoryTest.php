@@ -54,6 +54,19 @@ function failingRun(): string
     ]);
 }
 
+function abortedRun(): string
+{
+    return runEvents([
+        ['event' => 'run:started', 'total' => 1, 'steps' => ['Acessar a home', 'Clicar em Entrar', 'Ver o painel']],
+        ['event' => 'step', 'testId' => 'a1', 'title' => 'Acessar a home', 'status' => 'pending'],
+        ['event' => 'step', 'testId' => 'a1', 'title' => 'Acessar a home', 'status' => 'success', 'durationMs' => 120, 'error' => null],
+        ['event' => 'step', 'testId' => 'a1', 'title' => 'Clicar em Entrar', 'status' => 'pending'],
+        ['event' => 'step', 'testId' => 'a1', 'title' => 'Clicar em Entrar', 'status' => 'failed', 'durationMs' => 0, 'error' => 'Test timeout of 30000ms exceeded.'],
+        ['event' => 'test', 'id' => 'a1', 'title' => 'Entrar', 'status' => 'failed', 'durationMs' => 31982, 'error' => 'Test timeout of 30000ms exceeded.', 'videoPath' => null],
+        ['event' => 'run:finished', 'status' => 'failed', 'passed' => false],
+    ]);
+}
+
 function streamScenario(string ...$bodies): void
 {
     $sequence = Http::sequence();
@@ -93,6 +106,31 @@ it('saves the run to the scenario history', function () {
         'error' => 'locator resolveu como hidden',
     ]]);
     expect($runs[0]['started_at'])->not->toBeEmpty();
+});
+
+it('keeps the steps that never ran after the failure', function () {
+    streamScenario(abortedRun());
+
+    expect(savedRuns($this->history)[0]['steps'])->toBe([
+        [
+            'title' => 'Acessar a home',
+            'status' => 'success',
+            'duration_ms' => 120,
+            'error' => null,
+        ],
+        [
+            'title' => 'Clicar em Entrar',
+            'status' => 'failed',
+            'duration_ms' => 0,
+            'error' => 'Test timeout of 30000ms exceeded.',
+        ],
+        [
+            'title' => 'Ver o painel',
+            'status' => 'waiting',
+            'duration_ms' => 0,
+            'error' => null,
+        ],
+    ]);
 });
 
 it('saves the playwright code that ran without the runner wrapper', function () {

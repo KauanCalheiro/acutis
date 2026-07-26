@@ -27,7 +27,7 @@ export interface ProjectDetail extends Project {
 
 export interface ScenarioRunStep {
   title: string
-  status: 'success' | 'failed'
+  status: 'waiting' | 'success' | 'failed'
   duration_ms: number
   error: string | null
 }

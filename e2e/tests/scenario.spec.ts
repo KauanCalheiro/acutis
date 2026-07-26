@@ -73,8 +73,9 @@ test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
         await expect(page.getByTestId('execucao-status')).toContainText('Falha')
 
         const steps = page.getByTestId('execucao-step')
-        await expect(steps).toHaveCount(2)
+        await expect(steps).toHaveCount(3)
         await expect(steps.nth(1).getByTestId('execucao-step-erro')).toContainText("locator('#v-0') resolved to hidden")
+        await expect(steps.nth(2)).toHaveAttribute('data-status', 'waiting')
 
         await expect(page.getByTestId('execucao-playwright')).toHaveValue(/test\.describe\('Login do cliente'/)
         await expect(page.getByTestId('execucao-video')).toBeHidden()

@@ -17,6 +17,12 @@
             "status": "failed",
             "duration_ms": 3300,
             "error": "locator('#v-0') resolved to hidden"
+        },
+        {
+            "title": "Ver o painel",
+            "status": "waiting",
+            "duration_ms": 0,
+            "error": null
         }
     ],
     "playwright": "import { test } from '@playwright/test'\n\ntest.describe('Login do cliente', () => {})"
