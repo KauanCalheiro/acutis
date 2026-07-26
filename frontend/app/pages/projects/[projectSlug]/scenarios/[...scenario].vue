@@ -135,6 +135,7 @@ function openRun(run: ScenarioRun) {
   runOpen.value = true
 }
 
+const fixOpen = ref(false)
 const fixing = ref(false)
 const fix = ref<{ playwright: string, summary: string } | null>(null)
 const fixError = ref<string | null>(null)
@@ -146,7 +147,10 @@ async function requestFix() {
   const failed = failedStep.value
   if (!failed) return
 
+  runOpen.value = false
+  fixOpen.value = true
   fixing.value = true
+  fix.value = null
   fixError.value = null
 
   try {
@@ -173,7 +177,7 @@ async function applyFix() {
     })
 
     fix.value = null
-    runOpen.value = false
+    fixOpen.value = false
     await refreshScenario()
   } catch (error) {
     fixError.value = extractServerError(error, 'Não foi possível salvar a correção.')
@@ -183,6 +187,7 @@ async function applyFix() {
 }
 
 function discardFix() {
+  fixOpen.value = false
   fix.value = null
   fixError.value = null
 }
@@ -413,14 +418,18 @@ const tabs: TabsItem[] = [
       :scenario-name="scenario!.title"
       :branch="project!.branch"
       :tested-at="testedAt"
-      :fixing="fixing"
-      :fix="fix"
-      :fix-error="fixError"
-      :applying-fix="applyingFix"
       :playwright="executedPlaywright"
       @fix="requestFix"
-      @apply-fix="applyFix"
-      @discard-fix="discardFix"
+    />
+
+    <ScenarioFixModal
+      v-model:open="fixOpen"
+      :loading="fixing"
+      :fix="fix"
+      :error="fixError"
+      :applying="applyingFix"
+      @apply="applyFix"
+      @discard="discardFix"
     />
   </UContainer>
 </template>
