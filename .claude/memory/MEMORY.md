@@ -16,4 +16,3 @@ Instruções persistentes ficam em `./.claude/memory/`. Antes de qualquer ação
 | [tdd.md](tdd.md) | feedback | qualquer feature/bugfix — red/green/refactor, teste antes do código |
 | [structure.md](structure.md) | índice | procurar onde fica arquivo/pasta no monorepo (→ backend, frontend, webdriver, e2e) |
 | [todo.md](todo.md) | índice | verificar pendências registradas do projeto (→ auth-flow) |
-| [spec-fixer.md](spec-fixer.md) | project | implementar o botão "Corrigir" — design aprovado do agente que conserta o cenário a partir da falha |
