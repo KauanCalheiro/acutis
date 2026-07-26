@@ -25,13 +25,13 @@ function testedAt(run: ScenarioRun) {
       Testes
     </p>
 
-    <p
+    <BaseEmpty
       v-if="runs.length === 0"
-      class="text-sm text-muted"
-      data-testid="cenario-execucoes-vazio"
-    >
-      Nenhum teste executado ainda.
-    </p>
+      icon="i-ic-round-play-circle-outline"
+      title="Nenhum teste executado ainda"
+      description="Rode o cenário em Testar — cada execução fica registrada aqui com o resultado e o código que rodou."
+      testid="cenario-execucoes-vazio"
+    />
 
     <div
       v-else
