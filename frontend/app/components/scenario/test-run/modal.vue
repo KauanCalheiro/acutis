@@ -22,6 +22,7 @@ interface ScenarioTestRunModal {
   fix?: FixedSpec | null
   fixError?: string | null
   applyingFix?: boolean
+  playwright?: string | null
 }
 
 const {
@@ -35,7 +36,8 @@ const {
   fixing = false,
   fix = null,
   fixError = null,
-  applyingFix = false
+  applyingFix = false,
+  playwright = null
 } = defineProps<ScenarioTestRunModal>()
 
 const emit = defineEmits<{
@@ -251,6 +253,18 @@ const stepColors: Record<TestStep['status'], string> = {
             </div>
           </li>
         </ol>
+
+        <template v-if="playwright">
+          <p class="mt-6 mb-3 text-lg font-semibold">
+            Código executado
+          </p>
+          <BaseCodefield
+            :model-value="playwright"
+            language="typescript"
+            readonly
+            testid="execucao-playwright"
+          />
+        </template>
       </template>
     </template>
 

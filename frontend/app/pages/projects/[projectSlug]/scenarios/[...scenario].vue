@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TabsItem } from '@nuxt/ui'
-import type { ProjectDetail, ScenarioDetail, SelectorSuggestion } from '~/types/project'
+import type { ProjectDetail, ScenarioDetail, ScenarioRun, SelectorSuggestion } from '~/types/project'
 
 const route = useRoute()
 const slug = computed(() => route.params.projectSlug as string)
@@ -103,6 +103,33 @@ const running = ref(false)
 const steps = ref<TestStep[]>([])
 const videoUrl = ref<string | null>(null)
 const testedAt = ref<string | null>(null)
+const executedPlaywright = ref<string | null>(null)
+
+function videoUrlFor(path: string) {
+  return `${webdriverUrl}/runner/video?${new URLSearchParams({ path })}`
+}
+
+function formatTestedAt(date: Date) {
+  return date.toLocaleString('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  })
+}
+
+function openRun(run: ScenarioRun) {
+  steps.value = run.steps.map(step => ({
+    title: step.title,
+    status: step.status,
+    error: step.error
+  }))
+  videoUrl.value = run.video_path ? videoUrlFor(run.video_path) : null
+  testedAt.value = formatTestedAt(new Date(run.started_at))
+  executedPlaywright.value = run.playwright
+  fix.value = null
+  fixError.value = null
+  running.value = false
+  runOpen.value = true
+}
 
 const fixing = ref(false)
 const fix = ref<{ playwright: string, summary: string } | null>(null)
@@ -162,6 +189,7 @@ function runTest() {
   steps.value = []
   videoUrl.value = null
   testedAt.value = null
+  executedPlaywright.value = null
   fix.value = null
   fixError.value = null
 
@@ -188,21 +216,21 @@ function runTest() {
     }
 
     if (data.event === 'test' && data.status !== 'pending' && data.videoPath) {
-      const videoQuery = new URLSearchParams({ path: data.videoPath })
-      videoUrl.value = `${webdriverUrl}/runner/video?${videoQuery}`
+      videoUrl.value = videoUrlFor(data.videoPath)
     }
 
     if (data.event === 'run:finished') {
       source.close()
       running.value = false
-      testedAt.value = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+      testedAt.value = formatTestedAt(new Date())
+      refreshScenario()
     }
   }
 
   source.onerror = () => {
     source.close()
     running.value = false
-    testedAt.value = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+    testedAt.value = formatTestedAt(new Date())
     if (steps.value.length === 0) steps.value = [{ title: 'Não foi possível executar o teste.', status: 'failed' }]
   }
 }
@@ -334,6 +362,11 @@ const tabs: TabsItem[] = [
       />
     </div>
 
+    <ScenarioTestRunHistory
+      :runs="scenario!.runs"
+      @open="openRun"
+    />
+
     <BaseConfirm
       v-model:open="removeOpen"
       title="Excluir cenário"
@@ -375,6 +408,7 @@ const tabs: TabsItem[] = [
       :fix="fix"
       :fix-error="fixError"
       :applying-fix="applyingFix"
+      :playwright="executedPlaywright"
       @fix="requestFix"
       @apply-fix="applyFix"
       @discard-fix="discardFix"

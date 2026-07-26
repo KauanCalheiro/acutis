@@ -25,11 +25,30 @@ export interface ProjectDetail extends Project {
   vscode_url: string
 }
 
+export interface ScenarioRunStep {
+  title: string
+  status: 'success' | 'failed'
+  duration_ms: number
+  error: string | null
+}
+
+export interface ScenarioRun {
+  started_at: string
+  duration_ms: number
+  passed: boolean
+  branch: string | null
+  author: string | null
+  steps: ScenarioRunStep[]
+  playwright: string
+  video_path: string | null
+}
+
 export interface ScenarioDetail extends Scenario {
   playwright: string
   gherkin: string | null
   events: RecorderEvent[]
   updated_at: string
+  runs: ScenarioRun[]
 }
 
 export interface SelectorSuggestion {

@@ -56,6 +56,29 @@ test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
         await page.getByTestId('cenario-tab-eventos').click()
         await expect(page.getByTestId('cenario-eventos')).toBeVisible()
     })
+
+    test('lists the persisted runs, newest first', async ({ page }) => {
+        const runs = page.getByTestId('cenario-execucao')
+
+        await expect(runs).toHaveCount(2)
+        await expect(runs.nth(0)).toHaveAttribute('data-status', 'success')
+        await expect(runs.nth(0)).toContainText('13/06/2026')
+        await expect(runs.nth(1)).toHaveAttribute('data-status', 'failed')
+        await expect(runs.nth(1)).toContainText('12/06/2026')
+    })
+
+    test('opens a persisted run with its timeline and the code that ran', async ({ page }) => {
+        await page.getByTestId('cenario-execucao').nth(1).click()
+
+        await expect(page.getByTestId('execucao-status')).toContainText('Falha')
+
+        const steps = page.getByTestId('execucao-step')
+        await expect(steps).toHaveCount(2)
+        await expect(steps.nth(1).getByTestId('execucao-step-erro')).toContainText("locator('#v-0') resolved to hidden")
+
+        await expect(page.getByTestId('execucao-playwright')).toHaveValue(/test\.describe\('Login do cliente'/)
+        await expect(page.getByTestId('execucao-video')).toBeHidden()
+    })
 })
 
 test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
