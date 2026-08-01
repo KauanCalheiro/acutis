@@ -28,6 +28,7 @@ class ProjectShowResource extends JsonResource
                 $this->resource['scenarios'],
             ),
             'auth_status' => $this->resource['auth_status'],
+            'base_url' => $this->resource['base_url'],
             'vscode_url' => $this->resource['vscode_url'],
         ];
     }

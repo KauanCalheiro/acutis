@@ -18,7 +18,8 @@ class SpecFixer implements Agent, HasStructuredOutput
         return <<<'INSTRUCTIONS'
         Você recebe um teste Playwright que falhou, o título do passo que quebrou,
         o erro da execução, um snapshot dos elementos da página real e os eventos
-        originais da gravação. Devolva o arquivo .spec.ts inteiro, corrigido.
+        originais da gravação. Devolva o arquivo inteiro, corrigido — pode ser um
+        .spec.ts de cenário ou o auth.setup.ts que faz login e salva a sessão.
 
         A causa mais comum é seletor frágil: id gerado pelo framework (#v-0,
         :r3:), classe de estilização ou texto que muda com i18n. Prefira, nesta

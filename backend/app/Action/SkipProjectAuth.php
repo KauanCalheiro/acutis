@@ -12,7 +12,7 @@ class SkipProjectAuth
 
     public function handle(string $slug): void
     {
-        $path = Project::path($slug);
+        $path = Project::make($slug)->path();
         $manifest = json_decode((string) File::get("{$path}/acutis.json"), true) ?: [];
 
         $manifest['auth_skipped'] = true;

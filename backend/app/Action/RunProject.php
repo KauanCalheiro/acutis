@@ -13,7 +13,7 @@ class RunProject
 
     public function handle(string $slug, ?string $spec = null, ?string $grep = null): ProjectRunData
     {
-        $path = Project::path($slug);
+        $path = Project::make($slug)->path();
 
         $result = Http::timeout(300)
             ->post(acutis()->webdriverUrl.'/runner/project', [

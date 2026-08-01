@@ -1,7 +1,6 @@
 <?php
 
 use App\Ai\Agents\AuthRecordingWriter;
-use App\Ai\Agents\AuthSetupWriter;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -37,33 +36,47 @@ function recordPayload(array $overrides = []): array
     ], $overrides);
 }
 
-function fakeSuccessfulFallback(): void
-{
-    Http::fake([
-        '*/runner/snapshot' => Http::response(['url' => 'x', 'title' => 'x', 'elements' => []]),
-        '*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok', 'storageState' => ['cookies' => [['name' => 'sess']]]]),
-    ]);
-}
-
 it('writes the generated auth setup from the recording into the project folder', function () {
     AuthRecordingWriter::fake([['authSetup' => "import { test as setup } from '@playwright/test' // login gravado"]]);
-    fakeSuccessfulFallback();
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())
         ->assertOk()
-        ->assertJsonPath('authSetup', fn ($v) => str_contains($v, 'login gravado'));
+        ->assertJsonPath('authSetup', fn ($v) => str_contains($v, 'login gravado'))
+        ->assertJsonPath('credentialsNeeded', false);
 
     $dir = $this->projectsPath."/{$slug}";
 
     expect(File::get($dir.'/tests/auth.setup.ts'))->toContain('login gravado')
-        ->and(File::get($dir.'/playwright.config.ts'))->toContain("baseURL: 'https://sistema.test/login'")
         ->and(File::exists($dir.'/.gitignore'))->toBeTrue();
+});
+
+it('never sets the base url — that comes from the project settings only', function () {
+    AuthRecordingWriter::fake();
+    $slug = recordProject();
+    $dir = $this->projectsPath."/{$slug}";
+    $config = File::get($dir.'/playwright.config.ts');
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
+        'executionUrl' => 'https://homolog.sistema.test',
+    ]))->assertOk();
+
+    expect(File::get($dir.'/.env'))->not->toContain('BASE_URL')
+        ->and(File::get($dir.'/playwright.config.ts'))->toBe($config);
+});
+
+it('never executes anything — running the setup is the caller\'s job', function () {
+    AuthRecordingWriter::fake();
+    Http::fake();
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    Http::assertNothingSent();
 });
 
 it('shows the recorded events to the writer, redacting the real password first', function () {
     AuthRecordingWriter::fake();
-    fakeSuccessfulFallback();
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
@@ -76,21 +89,17 @@ it('shows the recorded events to the writer, redacting the real password first',
     );
 });
 
-it('redacts the sensitive value before showing events to the writer', function () {
+it('keeps the real password out of the response body', function () {
     AuthRecordingWriter::fake();
-    fakeSuccessfulFallback();
     $slug = recordProject();
 
-    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+    $response = postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
 
-    AuthRecordingWriter::assertPrompted(
-        fn ($prompt) => ! str_contains($prompt->prompt, 'topsecret123')
-    );
+    expect($response->getContent())->not->toContain('topsecret123');
 });
 
 it('writes the recorded credentials into .env and a placeholder .env.example', function () {
     AuthRecordingWriter::fake();
-    fakeSuccessfulFallback();
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
@@ -107,16 +116,110 @@ it('writes the recorded credentials into .env and a placeholder .env.example', f
         ->and(File::get($dir.'/.gitignore'))->toContain('.env');
 });
 
+it('preserves env keys the project already had', function () {
+    AuthRecordingWriter::fake();
+    $slug = recordProject();
+    $dir = $this->projectsPath."/{$slug}";
+    File::put($dir.'/.env', "CHECKOUT_CARD=4111111111111111\nAUTH_USER=antigo\n");
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    expect(File::get($dir.'/.env'))
+        ->toContain('CHECKOUT_CARD=4111111111111111')
+        ->toContain('AUTH_USER=user1')
+        ->not->toContain('AUTH_USER=antigo');
+});
+
+it('leaves a config it cannot parse untouched', function () {
+    AuthRecordingWriter::fake();
+    $slug = recordProject();
+    $dir = $this->projectsPath."/{$slug}";
+    File::put($dir.'/playwright.config.ts', '// configuração escrita pelo usuário');
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    expect(File::get($dir.'/playwright.config.ts'))->toBe('// configuração escrita pelo usuário');
+});
+
+it('teaches an old config about the auth setup, keeping what the user wrote', function () {
+    AuthRecordingWriter::fake();
+    $slug = recordProject();
+    $dir = $this->projectsPath."/{$slug}";
+    File::put($dir.'/playwright.config.ts', <<<'TS'
+    import { defineConfig } from '@playwright/test'
+
+    export default defineConfig({
+        testDir: './tests',
+        use: {
+            launchOptions: { slowMo: 300 },
+            baseURL: 'http://localhost:3000',
+        },
+    })
+    TS);
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    expect(File::get($dir.'/playwright.config.ts'))
+        ->toContain("name: 'setup'")
+        ->toContain('auth\\.setup\\.ts')
+        ->toContain("name: 'publicos'")
+        ->toContain("name: 'autenticados'")
+        ->toContain('slowMo: 300')
+        ->toContain("baseURL: 'http://localhost:3000'");
+});
+
+it('does not touch a config that already declares its own projects', function () {
+    AuthRecordingWriter::fake();
+    $slug = recordProject();
+    $dir = $this->projectsPath."/{$slug}";
+    $meu = "import { defineConfig } from '@playwright/test'\nexport default defineConfig({ projects: [{ name: 'meu' }] })\n";
+    File::put($dir.'/playwright.config.ts', $meu);
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    expect(File::get($dir.'/playwright.config.ts'))->toBe($meu);
+});
+
+it('asks for credentials when it cannot extract them from the recording', function () {
+    AuthRecordingWriter::fake();
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
+        'events' => [
+            ['type' => 'navigate', 'timestamp' => 1, 'url' => 'https://sso.test/entrar', 'selectors' => null, 'label' => null, 'value' => null, 'inputType' => null],
+            ['type' => 'click', 'timestamp' => 2, 'url' => 'https://sso.test/entrar', 'selectors' => ['dataTestId' => 'sso'], 'label' => 'Entrar com SSO', 'value' => null, 'inputType' => null],
+        ],
+    ]))
+        ->assertOk()
+        ->assertJsonPath('credentialsNeeded', true);
+
+    $dir = $this->projectsPath."/{$slug}";
+
+    expect(File::exists($dir.'/tests/auth.setup.ts'))->toBeTrue()
+        ->and(File::exists($dir.'/.env'))->toBeFalse();
+});
+
+it('persists the recorded events so the fixer can read them later, with the password redacted', function () {
+    AuthRecordingWriter::fake();
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    $events = json_decode(File::get($this->projectsPath."/{$slug}/tests/auth.events.json"), true);
+
+    expect($events)->toHaveCount(4)
+        ->and($events[2]['value'])->toBe('••••')
+        ->and($events[1]['value'])->toBe('user1');
+});
+
 it('returns 404 for a project that does not exist', function () {
     AuthRecordingWriter::fake();
-    Http::fake();
 
     postJson('/api/v1/projects/inexistente/auth/record', recordPayload())->assertNotFound();
 });
 
 it('validates the recording payload', function () {
     AuthRecordingWriter::fake();
-    Http::fake();
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", ['events' => []])
@@ -124,114 +227,15 @@ it('validates the recording payload', function () {
         ->assertJsonValidationErrors(['baseUrl', 'events']);
 });
 
-it('captures the session straight from the storageState of the live recording, without executing anything', function () {
-    AuthRecordingWriter::fake([['authSetup' => "import { test as setup } from '@playwright/test' // login gravado"]]);
-    Http::fake();
-    $slug = recordProject();
-
-    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
-        'storageState' => ['cookies' => [['name' => 'sess', 'value' => 'abc']], 'origins' => []],
-    ]))
-        ->assertOk()
-        ->assertJsonPath('storageCaptured', true)
-        ->assertJsonPath('testRun', null);
-
-    Http::assertNothingSent();
-
-    $dir = $this->projectsPath."/{$slug}";
-    expect(json_decode(File::get($dir.'/storage-state.json'), true))
-        ->toBe(['cookies' => [['name' => 'sess', 'value' => 'abc']], 'origins' => []])
-        ->and(File::exists($dir.'/.env'))->toBeFalse();
-});
-
-it('counts a localStorage-only recorded session as captured too', function () {
+it('leaves a base url the user configured untouched', function () {
     AuthRecordingWriter::fake();
-    Http::fake();
     $slug = recordProject();
-
-    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
-        'storageState' => ['cookies' => [], 'origins' => [['origin' => 'https://sistema.test', 'localStorage' => [['name' => 'token', 'value' => 'abc']]]]],
-    ]))->assertOk()->assertJsonPath('storageCaptured', true);
-
-    expect(File::exists($this->projectsPath."/{$slug}/storage-state.json"))->toBeTrue();
-});
-
-it('does not write storage-state.json nor attempt a fallback when no session or credentials were recorded', function () {
-    AuthRecordingWriter::fake();
-    Http::fake();
-    $slug = recordProject();
-
-    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
-        'events' => [
-            ['type' => 'navigate', 'timestamp' => 1, 'url' => 'https://sistema.test/login', 'selectors' => null, 'label' => null, 'value' => null, 'inputType' => null],
-        ],
-    ]))
-        ->assertOk()
-        ->assertJsonPath('storageCaptured', false);
-
     $dir = $this->projectsPath."/{$slug}";
-    expect(File::exists($dir.'/storage-state.json'))->toBeFalse()
-        ->and(File::exists($dir.'/.env'))->toBeFalse();
+    File::put($dir.'/.env', "BASE_URL=https://escolhida-pelo-usuario.test\n");
 
-    Http::assertNothingSent();
-});
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
 
-it('extracts the real username and password from the recording and verifies the script when no live session was captured', function () {
-    AuthRecordingWriter::fake([['authSetup' => "import { test as setup } from '@playwright/test' // login gravado"]]);
-    fakeSuccessfulFallback();
-    $slug = recordProject();
-
-    $response = postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())
-        ->assertOk()
-        ->assertJsonPath('storageCaptured', true)
-        ->assertJsonPath('testRun.passed', true)
-        ->assertJsonPath('testRun.attempts', 1);
-
-    expect($response->getContent())->not->toContain('topsecret123');
-
-    $dir = $this->projectsPath."/{$slug}";
-    expect(File::get($dir.'/.env'))->toContain('AUTH_USER=user1')->toContain('AUTH_PASSWORD=topsecret123');
-
-    Http::assertSent(function ($request) {
-        if (! str_contains($request->url(), '/runner/spec')) {
-            return true;
-        }
-
-        return $request['env']['AUTH_USER'] === 'user1' && $request['env']['AUTH_PASSWORD'] === 'topsecret123';
-    });
-});
-
-it('retries the recorded auth setup in the background when the first execution attempt fails', function () {
-    AuthRecordingWriter::fake([['authSetup' => "import { test as setup } from '@playwright/test' // login gravado"]]);
-    Http::fake([
-        '*/runner/snapshot' => Http::response(['url' => 'x', 'title' => 'x', 'elements' => []]),
-        '*/runner/spec' => Http::sequence()
-            ->push(['passed' => false, 'output' => 'Error: timeout no seletor #login'])
-            ->push(['passed' => true, 'output' => 'ok', 'storageState' => ['cookies' => [['name' => 'sess']]]]),
-    ]);
-    AuthSetupWriter::fake([['authSetup' => 'corrigido']]);
-    $slug = recordProject();
-
-    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())
-        ->assertOk()
-        ->assertJsonPath('testRun.attempts', 1)
-        ->assertJsonPath('testRun.passed', false);
-
-    expect(File::get($this->projectsPath."/{$slug}/tests/auth.setup.ts"))->toContain('corrigido');
-});
-
-it('gives up after exhausting the background retries and keeps the recorded script on disk', function () {
-    AuthRecordingWriter::fake([['authSetup' => "import { test as setup } from '@playwright/test' // login gravado"]]);
-    Http::fake([
-        '*/runner/snapshot' => Http::response(['url' => 'x', 'title' => 'x', 'elements' => []]),
-        '*/runner/spec' => Http::response(['passed' => false, 'output' => 'Error: sempre falha']),
-    ]);
-    AuthSetupWriter::fake([['authSetup' => 'b'], ['authSetup' => 'c']]);
-    $slug = recordProject();
-
-    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())
-        ->assertOk()
-        ->assertJsonPath('testRun.passed', false);
-
-    expect(File::get($this->projectsPath."/{$slug}/tests/auth.setup.ts"))->toContain('login gravado');
+    expect(File::get($dir.'/.env'))
+        ->toContain('BASE_URL=https://escolhida-pelo-usuario.test')
+        ->not->toContain('sistema.test/login');
 });

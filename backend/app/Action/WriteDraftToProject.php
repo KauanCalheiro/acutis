@@ -4,9 +4,8 @@ namespace App\Action;
 
 use App\Data\V1\Recording\ProjectTestData;
 use App\Data\V1\Recording\WriteTestData;
-use App\Support\AuthProjectFiles;
 use App\Support\Project;
-use App\Support\RecordingEvents;
+use App\Support\Recording;
 use App\Support\TestArtifact;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -19,7 +18,7 @@ class WriteDraftToProject
 
     public function handle(string $slug, WriteTestData $data): ProjectTestData
     {
-        $path = Project::path($slug);
+        $path = Project::make($slug)->path();
         $domain = Str::slug($data->domain) ?: 'outros';
 
         $name = TestArtifact::uniquePath("{$path}/tests/{$domain}", Str::slug($data->path) ?: 'teste');
@@ -38,20 +37,19 @@ class WriteDraftToProject
         File::put("{$path}/{$feature}", $gherkin."\n");
 
         if ($data->events !== null) {
-            if ($warning = RecordingEvents::unmatchedEnvWarning($data->envVars, $data->events)) {
+            if ($warning = Recording::make($data->events)->unmatchedEnvWarning($data->envVars)) {
                 Log::warning($warning);
             }
 
-            $envValues = RecordingEvents::matchEnvValues($data->envVars, $data->events);
+            $envValues = Recording::make($data->events)->envValues($data->envVars);
 
             if ($envValues !== []) {
-                AuthProjectFiles::mergeEnv($path, $envValues);
-                AuthProjectFiles::ensureGitignore($path);
+                Project::make($slug)->env()->merge($envValues);
             }
 
             File::put(
                 "{$path}/tests/{$domain}/{$name}.events.json",
-                json_encode(RecordingEvents::redact($data->events), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                json_encode(Recording::make($data->events)->redacted(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             );
         }
 

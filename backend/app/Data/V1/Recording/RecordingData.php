@@ -13,6 +13,7 @@ class RecordingData extends Data
         public ?string $recordedAt = null,
         public ?string $video = null,
         public ?string $executionUrl = null,
+        public bool $publico = false,
     ) {}
 
     public static function rules(): array
@@ -24,6 +25,7 @@ class RecordingData extends Data
             'events.*.url' => ['required', 'string'],
             'events.*.sensitive' => ['sometimes', 'boolean'],
             'executionUrl' => ['nullable', 'string', 'url'],
+            'publico' => ['sometimes', 'boolean'],
         ];
     }
 

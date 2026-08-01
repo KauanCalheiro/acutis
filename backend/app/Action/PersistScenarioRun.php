@@ -3,8 +3,9 @@
 namespace App\Action;
 
 use App\Support\Git;
+use App\Support\Project;
 use App\Support\Scenario;
-use App\Support\ScenarioRuns;
+use App\Support\Scenario\Runs;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -17,8 +18,9 @@ class PersistScenarioRun
     /** @param  list<array<string, mixed>>  $events */
     public function handle(string $path, string $spec, array $events, Carbon $startedAt): void
     {
-        $scenarioId = ScenarioRuns::scenarioId($spec);
-        $directory = ScenarioRuns::directory($path, $scenarioId);
+        $scenario = Scenario::fromSpec(Project::at($path), $spec);
+        $scenarioId = $scenario->id();
+        $directory = $scenario->runs()->directory();
         $specFile = "{$path}/{$spec}";
 
         File::ensureDirectoryExists($directory);
@@ -35,13 +37,13 @@ class PersistScenarioRun
             'author' => $git->author(),
             'video' => $video,
             'steps' => $this->steps($events),
-            'playwright' => File::exists($specFile) ? Scenario::source($specFile) : '',
+            'playwright' => File::exists($specFile) ? Scenario::sourceOf($specFile) : '',
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
 
         $committed = ["runs/{$scenarioId}/{$file}"];
 
         if ($video) {
-            $committed[] = 'runs/'.$scenarioId.'/'.ScenarioRuns::VIDEO;
+            $committed[] = 'runs/'.$scenarioId.'/'.Runs::VIDEO;
         }
 
         $git->commit("chore: registrar execução de {$scenarioId}", $committed)->push();
@@ -110,7 +112,7 @@ class PersistScenarioRun
             return false;
         }
 
-        File::copy($source, $directory.'/'.ScenarioRuns::VIDEO);
+        File::copy($source, $directory.'/'.Runs::VIDEO);
 
         return true;
     }

@@ -16,8 +16,9 @@ class ShowProjectScenario
 
     public function handle(string $slug, string $scenarioId): ScenarioShowData
     {
-        $path = Project::path($slug);
-        $scenario = Scenario::find($path, $scenarioId);
+        $project = Project::make($slug);
+        $path = $project->path();
+        $scenario = $project->scenario($scenarioId)->data();
 
         $spec = "{$path}/{$scenario->spec}";
         $feature = $scenario->feature ? "{$path}/{$scenario->feature}" : null;
@@ -29,7 +30,7 @@ class ShowProjectScenario
             feature: $scenario->feature,
             tags: $scenario->tags,
             domain: $scenario->domain,
-            playwright: Scenario::source($spec),
+            playwright: Scenario::sourceOf($spec),
             gherkin: $feature ? File::get($feature) : null,
             events: File::exists($eventsFile) ? json_decode(File::get($eventsFile), true) : [],
             updatedAt: Carbon::createFromTimestamp(File::lastModified($spec))->toIso8601String(),
