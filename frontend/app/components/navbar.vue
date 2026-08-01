@@ -69,11 +69,11 @@ const items = [
     >
       <NuxtLink
         to="/"
-        class="flex items-center gap-3 overflow-hidden"
+        class="flex items-center justify-center gap-3 overflow-hidden"
         data-testid="navbar-logo"
       >
-        <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-lg font-bold text-inverted">
-          A
+        <span class="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary text-inverted">
+          <BaseLogo class="size-7" />
         </span>
         <span
           v-if="expanded"

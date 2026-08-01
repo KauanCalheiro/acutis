@@ -64,6 +64,18 @@ test.describe('theme primary color', { tag: ['@write', '@theme'] }, () => {
         await expect(page.getByTestId('cor-green')).toBeVisible()
     })
 
+    test('the favicon follows the primary color', async ({ page }) => {
+        const favicon = () => page.locator('link[rel="icon"]').getAttribute('href')
+
+        await expect.poll(favicon).toContain('data:image/svg+xml')
+        const before = await favicon()
+
+        await page.getByTestId('navbar-cor').click()
+        await page.getByTestId('cor-green').click()
+
+        await expect.poll(favicon).not.toBe(before)
+    })
+
     test('keeps the chosen color after reload', async ({ page }) => {
         const before = await primaryColor(page)
 
