@@ -3,9 +3,10 @@ import type { TestDraft } from '~/types/project'
 
 interface ScenarioReviewModal {
   slug: string
+  publico?: boolean
 }
 
-const { slug } = defineProps<ScenarioReviewModal>()
+const { slug, publico = false } = defineProps<ScenarioReviewModal>()
 
 const open = defineModel<boolean>('open', {
   default: false
@@ -78,7 +79,8 @@ async function generate() {
       method: 'POST',
       body: {
         baseUrl: baseUrl.value,
-        events: mappedEvents.value
+        events: mappedEvents.value,
+        publico
       }
     })
     step.value = 'edit'

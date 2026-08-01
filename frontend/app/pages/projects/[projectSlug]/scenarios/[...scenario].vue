@@ -82,41 +82,20 @@ async function onUpdated(updated: ScenarioDetail) {
   await refreshScenario()
 }
 
-interface TestStep {
-  title: string
-  status: 'waiting' | 'running' | 'success' | 'failed'
-  error?: string | null
-}
-
-type RunStreamEvent
-  = | { event: 'run:started', steps?: string[] }
-    | { event: 'step', title: string, status: 'pending' }
-    | { event: 'step', title: string, status: 'success' | 'failed', durationMs: number, error: string | null }
-    | { event: 'test', status: 'pending' }
-    | { event: 'test', status: 'success' | 'failed' | 'skipped', durationMs: number, error: string | null, videoPath: string | null }
-    | { event: 'run:finished', passed: boolean }
-
-const webdriverUrl = useRuntimeConfig().public.webdriver.acutis.url
+const {
+  steps,
+  running,
+  passed: runPassed,
+  live: liveRun,
+  videoUrl,
+  testedAt,
+  output: runOutput,
+  failedStep,
+  start: startRun
+} = useRunStream(() => slug.value)
 
 const runOpen = ref(false)
-const running = ref(false)
-const steps = ref<TestStep[]>([])
-const videoUrl = ref<string | null>(null)
-const testedAt = ref<string | null>(null)
 const executedPlaywright = ref<string | null>(null)
-const runPassed = ref(false)
-const liveRun = ref(false)
-
-function videoUrlFor(path: string) {
-  return `${webdriverUrl}/runner/video?${new URLSearchParams({ path })}`
-}
-
-function formatTestedAt(date: Date) {
-  return date.toLocaleString('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-  })
-}
 
 function openRun(run: ScenarioRun) {
   steps.value = run.steps.map(step => ({
@@ -140,8 +119,6 @@ const fixing = ref(false)
 const fix = ref<{ playwright: string, summary: string } | null>(null)
 const fixError = ref<string | null>(null)
 const applyingFix = ref(false)
-
-const failedStep = computed(() => steps.value.find(step => step.status === 'failed'))
 
 async function requestFix() {
   const failed = failedStep.value
@@ -194,57 +171,11 @@ function discardFix() {
 
 function runTest() {
   runOpen.value = true
-  running.value = true
-  steps.value = []
-  videoUrl.value = null
-  testedAt.value = null
   executedPlaywright.value = null
-  runPassed.value = false
-  liveRun.value = true
   fix.value = null
   fixError.value = null
 
-  const query = new URLSearchParams({ spec: scenario.value!.spec })
-  const source = new EventSource(`/api/projects/${slug.value}/run-stream?${query}`)
-
-  source.onmessage = (message) => {
-    const data = JSON.parse(message.data) as RunStreamEvent
-
-    if (data.event === 'run:started') {
-      steps.value = (data.steps ?? []).map(title => ({ title, status: 'waiting' }))
-    }
-
-    if (data.event === 'step') {
-      if (data.status === 'pending') {
-        const waiting = steps.value.findIndex(step => step.title === data.title && step.status === 'waiting')
-        if (waiting === -1) steps.value = [...steps.value, { title: data.title, status: 'running' }]
-        else steps.value[waiting] = { title: data.title, status: 'running' }
-        return
-      }
-
-      const index = steps.value.findLastIndex(step => step.title === data.title && step.status === 'running')
-      if (index !== -1) steps.value[index] = { title: data.title, status: data.status, error: data.error }
-    }
-
-    if (data.event === 'test' && data.status !== 'pending' && data.videoPath) {
-      videoUrl.value = videoUrlFor(data.videoPath)
-    }
-
-    if (data.event === 'run:finished') {
-      source.close()
-      running.value = false
-      runPassed.value = data.passed
-      testedAt.value = formatTestedAt(new Date())
-      refreshScenario()
-    }
-  }
-
-  source.onerror = () => {
-    source.close()
-    running.value = false
-    testedAt.value = formatTestedAt(new Date())
-    if (steps.value.length === 0) steps.value = [{ title: 'Não foi possível executar o teste.', status: 'failed' }]
-  }
+  startRun(scenario.value!.spec, refreshScenario)
 }
 
 const tab = ref('eventos')
@@ -449,6 +380,7 @@ const tabs: TabsItem[] = [
       :branch="project!.branch"
       :tested-at="testedAt"
       :playwright="executedPlaywright"
+      :output="runOutput"
       @fix="requestFix"
     />
 

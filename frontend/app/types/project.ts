@@ -21,7 +21,8 @@ export interface ProjectDetail extends Project {
   branch: string | null
   updated_at: string
   scenarios: Scenario[]
-  auth_status: 'unset' | 'skipped' | 'configured'
+  auth_status: 'unset' | 'skipped' | 'configured' | 'failing'
+  base_url: string | null
   vscode_url: string
 }
 
