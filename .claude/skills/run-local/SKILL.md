@@ -42,7 +42,21 @@ php artisan migrate
 
 Frontend e webdriver: só `pnpm install` na primeira vez (ou após mudar dependência).
 
-## Subir os três (cada um em background)
+## Subir os três de uma vez (preferido)
+
+```sh
+./dev.sh              # sobe os três, fica preso, logs prefixados; Ctrl+C derruba tudo
+./dev.sh --build      # instala dependências e prepara o banco antes de subir
+./dev.sh --headless   # recorder sem janela — usar quando um agente dirige a ferramenta
+```
+
+**`--headless` quando você não é a pessoa no micro.** O recorder abre Chromium visível por padrão, porque gravar é alguém usando o sistema. Dirigindo por API (`/debug/goto`, `/debug/click`), a janela só rouba o foco de quem está trabalhando na máquina.
+
+É o equivalente local do `docker compose up`. Já checa os pré-requisitos, recusa subir se alguma porta estiver ocupada, passa o `WEBDRIVER_TEST_MODE=1` e imprime as URLs quando os três respondem.
+
+Rodando por um agente: lançar com `run_in_background` e derrubar depois com `kill -INT <pid>` — o `set -m` do script coloca cada serviço no próprio process group, então o SIGINT limpa a árvore inteira (verificado: 3 processos → 0, portas liberadas).
+
+## Subir cada um separado (quando precisar isolar um serviço)
 
 ```sh
 cd backend  && php artisan serve                          # :8000
