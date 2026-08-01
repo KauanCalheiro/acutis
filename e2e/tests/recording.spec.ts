@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { createServer, type Server } from 'node:http'
-import { readFileSync, cpSync, mkdtempSync, rmSync } from 'node:fs'
+import { readFileSync, writeFileSync, cpSync, mkdtempSync, rmSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { startBackend } from '../support/backend'
@@ -20,6 +20,7 @@ type GatewayMessage = { event: string } & Record<string, unknown>
 interface GatewayClient {
     send: (type: string, payload?: Record<string, unknown>) => void
     waitForMessage: (predicate: (message: GatewayMessage) => boolean) => Promise<GatewayMessage>
+    received: () => GatewayMessage[]
     close: () => void
 }
 
@@ -41,6 +42,7 @@ async function connectGateway(): Promise<GatewayClient> {
 
     return {
         send: (type, payload) => ws.send(JSON.stringify({ type, ...payload })),
+        received: () => [...messages],
         waitForMessage: (predicate) => new Promise((resolve, reject) => {
             const timer = setTimeout(() => reject(new Error('timed out waiting for gateway message')), 10_000)
             const check = () => {
@@ -279,7 +281,7 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
     })
 })
 
-test.describe.skip('recording authentication from the project page', { tag: ['@write', '@recording'] }, () => {
+test.describe('recording authentication from the project page', { tag: ['@write', '@recording'] }, () => {
     let authFixtureServer: Server
     let authBaseUrl: string
     let stopAuthWebdriver: () => Promise<void>
@@ -309,12 +311,12 @@ test.describe.skip('recording authentication from the project page', { tag: ['@w
         await new Promise<void>((r) => authFixtureServer.close(() => r()))
     })
 
-    test('records a login and generates the auth setup from the events', async ({ page }) => {
+    test('records a login, writes the setup and runs it right away', async ({ page }) => {
         let posted: {
             baseUrl?: string
             events?: Array<{ type?: string, value?: string | null }>
-            storageState?: { cookies: unknown[], origins: Array<{ origin: string, localStorage: unknown[] }> } | null
         } | null = null
+
         await page.route('**/api/projects/alpha-store/auth/record', async (route) => {
             posted = route.request().postDataJSON()
             await route.fulfill({
@@ -322,9 +324,27 @@ test.describe.skip('recording authentication from the project page', { tag: ['@w
                 contentType: 'application/json',
                 body: JSON.stringify({
                     authSetup: "import { test as setup } from '@playwright/test' // login gravado",
-                    storageCaptured: false,
-                    testRun: null,
+                    credentialsNeeded: false,
                 }),
+            })
+        })
+
+        await page.route('**/api/projects/alpha-store/run-stream**', async (route) => {
+            expect(route.request().url()).toContain('spec=tests%2Fauth.setup.ts')
+            await route.fulfill({
+                status: 200,
+                contentType: 'text/event-stream',
+                body: [
+                    `data: ${JSON.stringify({ event: 'run:started', steps: ['Faz login'] })}`,
+                    '',
+                    `data: ${JSON.stringify({ event: 'step', title: 'Faz login', status: 'pending' })}`,
+                    '',
+                    `data: ${JSON.stringify({ event: 'step', title: 'Faz login', status: 'success', durationMs: 10, error: null })}`,
+                    '',
+                    `data: ${JSON.stringify({ event: 'run:finished', passed: true })}`,
+                    '',
+                    '',
+                ].join('\n'),
             })
         })
 
@@ -351,58 +371,44 @@ test.describe.skip('recording authentication from the project page', { tag: ['@w
             expect(click.ok()).toBe(true)
         })
 
-        await test.step('stop recording and generate the auth setup', async () => {
+        await test.step('stopping the recording writes the setup and executes it', async () => {
             await page.getByTestId('cenario-parar').click()
-            await expect(page.getByTestId('auth-resultado')).toBeVisible({ timeout: 10_000 })
+            await expect(page.getByTestId('execucao-status')).toBeVisible({ timeout: 15_000 })
         })
 
-        await expect(page.getByTestId('auth-script')).toContainText('login gravado')
+        await expect(page.getByTestId('execucao-detalhes')).toContainText('Autenticação')
         expect(posted!.baseUrl).toBe(authBaseUrl)
         expect(posted!.events!.some((e) => e.type === 'fill' && e.value === 'admin')).toBe(true)
 
         await test.step('the real password is forwarded unmasked for this auth-mode recording', () => {
             expect(posted!.events!.some((e) => e.type === 'fill' && e.value === 's3cr3t')).toBe(true)
         })
-
-        await test.step('the session captured live from the recorded login is forwarded to the backend', () => {
-            expect(posted!.storageState?.origins.some(
-                (origin) => origin.origin === authBaseUrl && origin.localStorage.length > 0,
-            )).toBe(true)
-        })
-
-        await test.step('the fallback copy tells the user to fill AUTH_USER/AUTH_PASSWORD since this mock reports no session', async () => {
-            await expect(page.getByTestId('auth-resultado')).toContainText('AUTH_USER')
-        })
-
-        await test.step('runs the generated test from the preview', async () => {
-            await page.route('**/api/projects/alpha-store/run', async (route) => {
-                expect(route.request().postDataJSON()).toMatchObject({ spec: 'tests/auth.setup.ts' })
-                await route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify({ passed: true, output: '1 passed' }),
-                })
-            })
-
-            await page.getByTestId('auth-executar').click()
-
-            await expect(page.getByTestId('auth-execucao-resultado')).toContainText('Teste passou')
-        })
-
-        await expect(page.getByTestId('auth-reconfigurar')).toBeVisible()
-        await expect(page.getByTestId('auth-salvar')).toBeVisible()
     })
 
-    test('shows the automatic-session copy when the backend reports the recorded login was captured', async ({ page }) => {
+    test('asks for the credentials when the backend could not extract them', async ({ page }) => {
+        let saved: { username?: string, password?: string } | null = null
+
         await page.route('**/api/projects/alpha-store/auth/record', async (route) => {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
                 body: JSON.stringify({
                     authSetup: "import { test as setup } from '@playwright/test' // login gravado",
-                    storageCaptured: true,
-                    testRun: null,
+                    credentialsNeeded: true,
                 }),
+            })
+        })
+
+        await page.route('**/api/projects/alpha-store/auth/credentials', async (route) => {
+            saved = route.request().postDataJSON()
+            await route.fulfill({ status: 204, body: '' })
+        })
+
+        await page.route('**/api/projects/alpha-store/run-stream**', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'text/event-stream',
+                body: `data: ${JSON.stringify({ event: 'run:finished', passed: true })}\n\n`,
             })
         })
 
@@ -412,7 +418,7 @@ test.describe.skip('recording authentication from the project page', { tag: ['@w
             await expect(page.getByTestId('cenario-novo')).toBeEnabled({ timeout: 10_000 })
         })
 
-        await test.step('open the auth modal, record and stop', async () => {
+        await test.step('record a login and stop', async () => {
             await page.getByTestId('projeto-auth').click()
             await page.getByTestId('auth-gerar').click()
             await expect(page.getByTestId('cenario-parar')).toBeVisible({ timeout: 10_000 })
@@ -423,10 +429,18 @@ test.describe.skip('recording authentication from the project page', { tag: ['@w
             expect(click.ok()).toBe(true)
 
             await page.getByTestId('cenario-parar').click()
-            await expect(page.getByTestId('auth-resultado')).toBeVisible({ timeout: 10_000 })
         })
 
-        await expect(page.getByTestId('auth-resultado')).not.toContainText('AUTH_USER')
+        await test.step('the modal asks for the credentials instead of running', async () => {
+            await expect(page.getByTestId('auth-credenciais')).toBeVisible({ timeout: 15_000 })
+
+            await page.getByTestId('auth-credenciais-usuario').fill('733787')
+            await page.getByTestId('auth-credenciais-senha').fill('senha-real')
+            await page.getByTestId('auth-credenciais-salvar').click()
+        })
+
+        await expect(page.getByTestId('execucao-status')).toBeVisible({ timeout: 15_000 })
+        expect(saved).toMatchObject({ username: '733787', password: 'senha-real' })
     })
 })
 
@@ -567,5 +581,129 @@ test.describe('recording error when the host chrome is unreachable', { tag: ['@w
             const copied = await page.evaluate(() => navigator.clipboard.readText())
             expect(copied).toContain('remote-debugging-port=9222')
         })
+    })
+})
+
+test.describe('recording a scenario with the project session already loaded', { tag: ['@write', '@recording'] }, () => {
+    let sessionFixtureServer: Server
+    let sessionBaseUrl: string
+    let stopSessionWebdriver: () => Promise<void>
+    let tmpProject: string
+    let stateFile: string
+
+    test.beforeAll(async () => {
+        sessionFixtureServer = createServer((_req, res) => {
+            res.writeHead(200, { 'Content-Type': 'text/html' })
+            res.end(FIXTURE_HTML)
+        })
+        await new Promise<void>((r) => sessionFixtureServer.listen(0, r))
+        const { port } = sessionFixtureServer.address() as { port: number }
+        sessionBaseUrl = `http://127.0.0.1:${port}`
+
+        tmpProject = mkdtempSync(join(tmpdir(), 'acutis-sessao-'))
+        stateFile = join(tmpProject, 'storage-state.json')
+        writeFileSync(stateFile, JSON.stringify({
+            cookies: [],
+            origins: [{ origin: sessionBaseUrl, localStorage: [{ name: 'token', value: 'sessao-injetada' }] }],
+        }))
+
+        stopSessionWebdriver = await startWebdriver()
+    })
+
+    test.afterAll(async () => {
+        await stopSessionWebdriver()
+        rmSync(tmpProject, { recursive: true, force: true })
+        await new Promise<void>((r) => sessionFixtureServer.close(() => r()))
+    })
+
+    async function recordAgainst(gateway: { send: (t: string, p?: Record<string, unknown>) => void, waitForMessage: (f: (m: GatewayMessage) => boolean) => Promise<GatewayMessage> }, request: { post: (url: string, opts: { data: unknown }) => Promise<{ ok: () => boolean }> }, payload?: Record<string, unknown>) {
+        gateway.send('START_RECORDING', payload)
+
+        await expect(async () => {
+            const goto = await request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: sessionBaseUrl } })
+            expect(goto.ok()).toBe(true)
+        }).toPass({ timeout: 20_000 })
+
+        gateway.send('STOP_RECORDING')
+
+        return gateway.waitForMessage((message) => message.event === 'recorder:stop')
+    }
+
+    test('opens the recorded browser already authenticated when given the project session', async ({ request }) => {
+        const gateway = await connectGateway()
+
+        try {
+            const stopped = await recordAgainst(gateway, request, { storageState: stateFile })
+            const state = stopped.storageState as { origins: Array<{ localStorage: Array<{ name: string, value: string }> }> } | null
+
+            await test.step('the injected session is live in the recorded page, without anyone logging in', () => {
+                expect(state?.origins.some(
+                    (origin) => origin.localStorage.some((item) => item.name === 'token' && item.value === 'sessao-injetada'),
+                )).toBe(true)
+            })
+        } finally {
+            gateway.close()
+        }
+    })
+
+    test('opens the recorded browser straight at the project url, without anyone typing it', async ({ request }) => {
+        const gateway = await connectGateway()
+
+        try {
+            gateway.send('START_RECORDING', { url: sessionBaseUrl })
+
+            const navigated = await gateway.waitForMessage(
+                (message) => message.event === 'recorder:navigate' && String(message.url ?? '').startsWith(sessionBaseUrl),
+            )
+
+            expect(navigated.url).toContain(sessionBaseUrl)
+        } finally {
+            gateway.send('STOP_RECORDING')
+            await gateway.waitForMessage((message) => message.event === 'recorder:stop').catch(() => {})
+            gateway.close()
+        }
+    })
+
+    test('records the page it ended on, and never the blank page', async ({ request }) => {
+        const gateway = await connectGateway()
+
+        try {
+            gateway.send('START_RECORDING')
+
+            await expect(async () => {
+                const goto = await request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: sessionBaseUrl } })
+                expect(goto.ok()).toBe(true)
+            }).toPass({ timeout: 20_000 })
+
+            await test.step('navigate somewhere else, so the last page differs from the first', async () => {
+                const goto = await request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: `${sessionBaseUrl}/ultima` } })
+                expect(goto.ok()).toBe(true)
+            })
+
+            gateway.send('STOP_RECORDING')
+            await gateway.waitForMessage((message) => message.event === 'recorder:stop')
+
+            const urls = gateway.received()
+                .filter((message) => message.type === 'navigate')
+                .map((message) => message.url)
+
+            expect(urls).not.toContain('about:blank')
+            expect(urls[urls.length - 1]).toBe(`${sessionBaseUrl}/ultima`)
+        } finally {
+            gateway.close()
+        }
+    })
+
+    test('starts clean when no session is given', async ({ request }) => {
+        const gateway = await connectGateway()
+
+        try {
+            const stopped = await recordAgainst(gateway, request)
+            const state = stopped.storageState as { origins: Array<{ localStorage: Array<{ name: string }> }> } | null
+
+            expect(state?.origins.some((origin) => origin.localStorage.some((item) => item.name === 'token'))).toBeFalsy()
+        } finally {
+            gateway.close()
+        }
     })
 })

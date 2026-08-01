@@ -294,6 +294,43 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         expect(finished?.passed).toBe(false)
     })
 
+    test('carries the runner output when the run dies before any test reports', async ({ request }) => {
+        test.setTimeout(120_000)
+
+        const { mkdtemp, mkdir, writeFile } = await import('node:fs/promises')
+        const { tmpdir } = await import('node:os')
+        const { join } = await import('node:path')
+
+        const dir = await mkdtemp(join(tmpdir(), 'acutis-sem-teste-'))
+        await mkdir(join(dir, 'tests'), { recursive: true })
+        await writeFile(join(dir, 'playwright.config.ts'),
+            "import { defineConfig } from '@playwright/test'\nexport default defineConfig({ testDir: './tests' })\n")
+        await writeFile(join(dir, 'tests', 'ok.spec.ts'),
+            "import { test } from '@playwright/test'\ntest('passa', () => {})\n")
+
+        // Filtro que não casa arquivo de teste nenhum — é o que acontece quando o config do projeto
+        // não conhece o spec pedido (o auth.setup.ts sem o project "setup", por exemplo).
+        const res = await request.post(`${RUNNER_URL}/runner/project/stream`, {
+            data: { path: dir, spec: 'tests/nao-existe.spec.ts' },
+            timeout: 90_000,
+        })
+        expect(res.ok()).toBe(true)
+
+        const events = (await res.text()).split('\n').filter(Boolean).map((line) => JSON.parse(line))
+        const finished = events.find((e) => e.event === 'run:finished')
+
+        expect(finished?.passed).toBe(false)
+
+        await test.step('the reason reaches whoever is listening, not just the process stderr', () => {
+            expect(events.filter((e) => e.event === 'step')).toHaveLength(0)
+            expect(String(finished?.output)).toContain('No tests found')
+        })
+
+        await test.step('and comes clean, without the reporter markers the user should never see', () => {
+            expect(String(finished?.output)).not.toContain('@@ACUTIS_RUN@@')
+        })
+    })
+
     test('kills a test that runs past the ten second timeout', async ({ request }) => {
         test.setTimeout(120_000)
 
