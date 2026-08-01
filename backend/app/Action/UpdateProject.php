@@ -17,7 +17,7 @@ class UpdateProject
 
     public function handle(string $slug, string $name): ProjectData
     {
-        $path = Project::path($slug);
+        $path = Project::make($slug)->path();
         $newSlug = Str::slug($name);
 
         if ($newSlug === '') {

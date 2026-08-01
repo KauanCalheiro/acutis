@@ -1,7 +1,15 @@
 const { readFileSync } = require('node:fs')
 
 const MARKER = '@@ACUTIS_RUN@@'
-const STEP_TITLE = /test\.step\(\s*(['"`])((?:\\.|(?!\1).)*)\1/g
+// Casa test.step( e setup.step( — o arquivo de autenticação importa `test as setup`.
+const STEP_TITLE = /\w+\.step\(\s*(['"`])((?:\\.|(?!\1).)*)\1/g
+
+const AUTH_SETUP_FILE = /auth\.setup\.ts$/
+const AUTH_STEP = 'Autenticação'
+
+function isAuthSetup(test) {
+    return AUTH_SETUP_FILE.test((test.location && test.location.file) || '')
+}
 
 function emit(payload) {
     process.stdout.write(MARKER + JSON.stringify(payload) + '\n')
@@ -36,21 +44,41 @@ function firstError(errors) {
 class StreamReporter {
     constructor() {
         this.openSteps = new Map()
+        this.authAsDependency = false
     }
 
     onBegin(_config, suite) {
         const tests = suite.allTests()
-        const files = [...new Set(tests.map((test) => test.location.file))]
+        const outros = tests.filter((test) => !isAuthSetup(test))
 
-        emit({ event: 'run:started', total: tests.length, steps: declaredStepTitles(files) })
+        // O login só é infraestrutura quando há outro teste no run. Rodando o setup sozinho ele é o
+        // assunto, e aí a timeline e o vídeo dele são exatamente o que se quer ver.
+        this.authAsDependency = outros.length > 0 && outros.length < tests.length
+
+        const files = [...new Set((this.authAsDependency ? outros : tests).map((test) => test.location.file))]
+        const steps = declaredStepTitles(files)
+
+        emit({
+            event: 'run:started',
+            total: tests.length,
+            steps: this.authAsDependency ? [AUTH_STEP, ...steps] : steps,
+        })
+    }
+
+    collapsesAuth(test) {
+        return this.authAsDependency && isAuthSetup(test)
     }
 
     onTestBegin(test) {
         emit({ event: 'test', id: test.id, title: test.title, status: 'pending' })
+
+        if (this.collapsesAuth(test)) {
+            emit({ event: 'step', testId: test.id, title: AUTH_STEP, status: 'pending' })
+        }
     }
 
     onStepBegin(test, _result, step) {
-        if (step.category !== 'test.step') return
+        if (step.category !== 'test.step' || this.collapsesAuth(test)) return
 
         const open = this.openSteps.get(test.id) ?? []
         open.push(step.title)
@@ -60,7 +88,7 @@ class StreamReporter {
     }
 
     onStepEnd(test, _result, step) {
-        if (step.category !== 'test.step') return
+        if (step.category !== 'test.step' || this.collapsesAuth(test)) return
 
         this.closeStep(test.id, step.title)
 
@@ -100,6 +128,19 @@ class StreamReporter {
             this.failOpenSteps(test, firstError(result.errors))
         }
 
+        const error = status === 'failed' ? firstError(result.errors) : null
+
+        if (this.collapsesAuth(test)) {
+            emit({
+                event: 'step',
+                testId: test.id,
+                title: AUTH_STEP,
+                status: status === 'success' ? 'success' : 'failed',
+                durationMs: result.duration,
+                error,
+            })
+        }
+
         const video = result.attachments.find((a) => a.name === 'video')
 
         emit({
@@ -108,9 +149,25 @@ class StreamReporter {
             title: test.title,
             status,
             durationMs: result.duration,
-            error: status === 'failed' ? firstError(result.errors) : null,
-            videoPath: video ? video.path : null,
+            error,
+            // O vídeo do login como dependência não é o do cenário — mostrá-lo faria a interface
+            // trocar de vídeo no meio da execução e exibir uma gravação que não é a do teste.
+            videoPath: video && !this.collapsesAuth(test) ? video.path : null,
         })
+    }
+
+    /**
+     * Erro global do Playwright (config inválido, "No tests found", import quebrado). Como este é
+     * o único reporter do run, o que ele não escrever some — e a execução chega ao usuário como
+     * uma falha sem motivo nenhum. Vai para stderr, que o runner recolhe e entrega junto do
+     * run:finished.
+     */
+    onError(error) {
+        const message = ((error && (error.message || error.value)) || '').replace(/\u001b\[[0-9;]*m/g, '').trim()
+
+        if (message) {
+            process.stderr.write(message + '\n')
+        }
     }
 
     onEnd(result) {

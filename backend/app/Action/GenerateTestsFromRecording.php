@@ -9,7 +9,8 @@ use App\Ai\Tools\RunPlaywrightTest;
 use App\Data\V1\Recording\GeneratedTestsData;
 use App\Data\V1\Recording\RecordingData;
 use App\Data\V1\Recording\TestRunData;
-use App\Support\RecordingEvents;
+use App\Support\Recording;
+use App\Support\TestArtifact;
 use Lorisleiva\Actions\Concerns\AsAction;
 
 class GenerateTestsFromRecording
@@ -23,7 +24,7 @@ class GenerateTestsFromRecording
     public function handle(RecordingData $recording): GeneratedTestsData
     {
         $events = json_encode(
-            RecordingEvents::redact($recording->events),
+            Recording::make($recording->events)->redacted(),
             JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
         );
 
@@ -47,14 +48,36 @@ class GenerateTestsFromRecording
         }
 
         $tag = $this->readWriteTag($recording->events);
+        $gherkin = $this->ensureGherkinTag($gherkin, $tag);
+        $playwright = $this->ensurePlaywrightTag($playwright, $tag);
+
+        if ($recording->publico) {
+            [$gherkin, $playwright] = $this->markAsPublic($gherkin, $playwright);
+        }
 
         return new GeneratedTestsData(
-            gherkin: $this->ensureGherkinTag($gherkin, $tag),
-            playwright: $this->ensurePlaywrightTag($playwright, $tag),
+            gherkin: $gherkin,
+            playwright: $playwright,
             domain: $domain,
             envVars: $envVars,
             testRun: $testRun,
         );
+    }
+
+    /**
+     * A tag @publico é o que separa, na hora de rodar, quem usa a sessão do projeto de quem roda
+     * limpo — é ela que permite testar a própria tela de login num projeto autenticado.
+     *
+     * @return array{string, string}
+     */
+    private function markAsPublic(string $gherkin, string $playwright): array
+    {
+        $tags = [...TestArtifact::tags($gherkin), '@publico'];
+
+        return [
+            TestArtifact::stampGherkinTags($gherkin, $tags),
+            TestArtifact::stampPlaywrightTags($playwright, $tags),
+        ];
     }
 
     private function readWriteTag(array $events): string

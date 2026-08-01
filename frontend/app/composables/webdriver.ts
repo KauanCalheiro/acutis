@@ -108,13 +108,20 @@ export function useWebdriver() {
     connect()
   }
 
-  function startRecording(mode: 'scenario' | 'auth' = 'scenario') {
+  interface RecordingOptions {
+    /** Caminho do storage-state.json do projeto — abre a gravação já dentro do sistema. */
+    storageState?: string
+    /** URL do sistema (BASE_URL do projeto) — abre direto nela, sem o usuário digitar. */
+    url?: string
+  }
+
+  function startRecording(mode: 'scenario' | 'auth' = 'scenario', options: RecordingOptions = {}) {
     state.value.error = null
     state.value.events = []
     state.value.videoSessionId = null
     state.value.storageState = null
     state.value.recording = true
-    send('START_RECORDING', { mode })
+    send('START_RECORDING', { mode, ...options })
   }
 
   function stopRecording() {

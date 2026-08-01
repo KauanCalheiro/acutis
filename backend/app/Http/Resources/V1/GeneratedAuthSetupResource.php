@@ -11,8 +11,7 @@ class GeneratedAuthSetupResource extends JsonResource
     {
         return [
             'authSetup' => $this->authSetup,
-            'storageCaptured' => $this->storageCaptured,
-            'testRun' => $this->testRun ? TestRunResource::make($this->testRun) : null,
+            'credentialsNeeded' => $this->credentialsNeeded,
         ];
     }
 }

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { RecorderEvent, StorageState } from '~/composables/webdriver'
+import type { RecorderEvent } from '~/composables/webdriver'
 
 interface ProjectAuthModal {
   slug: string
-  status: 'unset' | 'skipped' | 'configured'
+  status: 'unset' | 'skipped' | 'configured' | 'failing'
 }
 
 const { slug, status } = defineProps<ProjectAuthModal>()
@@ -13,8 +13,9 @@ const open = defineModel<boolean>('open', {
 })
 
 const emit = defineEmits<{
-  configured: []
   record: []
+  written: []
+  test: []
 }>()
 
 const LOADING_PHRASES = [
@@ -23,41 +24,23 @@ const LOADING_PHRASES = [
   'Escrevendo o fluxo de autenticação'
 ]
 
-const step = ref<'loading-existing' | 'intro' | 'loading' | 'result' | 'view' | 'edit'>('intro')
+const step = ref<'loading-existing' | 'intro' | 'loading' | 'credentials' | 'view' | 'edit'>('intro')
 const error = ref<string | null>(null)
-const generatedScript = ref('')
-const sessionCaptured = ref(false)
 const existingScript = ref('')
 const editedScript = ref('')
 const saving = ref(false)
-
 const submittingRecording = ref(false)
 
-const running = ref(false)
-const runResult = ref<{ passed: boolean, output: string } | null>(null)
-
-async function runTest() {
-  running.value = true
-  runResult.value = null
-
-  try {
-    runResult.value = await $fetch<{ passed: boolean, output: string }>(`/api/projects/${slug}/run`, {
-      method: 'POST',
-      body: { spec: 'tests/auth.setup.ts' }
-    })
-  } catch {
-    runResult.value = { passed: false, output: 'Não foi possível executar o teste.' }
-  } finally {
-    running.value = false
-  }
-}
+const username = ref('')
+const password = ref('')
+const savingCredentials = ref(false)
 
 watch(open, async (isOpen) => {
   if (!isOpen || submittingRecording.value) return
 
   error.value = null
 
-  if (status !== 'configured') {
+  if (status === 'unset' || status === 'skipped') {
     step.value = 'intro'
     return
   }
@@ -73,8 +56,6 @@ watch(open, async (isOpen) => {
     step.value = 'intro'
   }
 })
-
-const modalTitle = 'Autenticação'
 
 function edit() {
   editedScript.value = existingScript.value
@@ -101,8 +82,12 @@ async function save() {
 
 function recordAgain() {
   step.value = 'intro'
-  runResult.value = null
-  sessionCaptured.value = false
+}
+
+/** O resultado aparece no modal de execução, o mesmo dos cenários — daí fechar este antes. */
+function runAuth() {
+  open.value = false
+  emit('test')
 }
 
 function startRecording() {
@@ -110,15 +95,34 @@ function startRecording() {
   emit('record')
 }
 
-async function submitRecording(baseUrl: string, events: RecorderEvent[], storageState: StorageState | null) {
+async function saveCredentials() {
+  savingCredentials.value = true
+  error.value = null
+
+  try {
+    await $fetch(`/api/projects/${slug}/auth/credentials`, {
+      method: 'POST',
+      body: { username: username.value, password: password.value }
+    })
+    username.value = ''
+    password.value = ''
+    open.value = false
+    emit('written')
+  } catch {
+    error.value = 'Não foi possível salvar as credenciais. Tente novamente.'
+  } finally {
+    savingCredentials.value = false
+  }
+}
+
+async function submitRecording(baseUrl: string, events: RecorderEvent[]) {
   submittingRecording.value = true
   error.value = null
-  runResult.value = null
   step.value = 'loading'
   open.value = true
 
   try {
-    const response = await $fetch<{ authSetup: string, storageCaptured: boolean }>(`/api/projects/${slug}/auth/record`, {
+    const response = await $fetch<{ authSetup: string, credentialsNeeded: boolean }>(`/api/projects/${slug}/auth/record`, {
       method: 'POST',
       body: {
         baseUrl,
@@ -130,14 +134,17 @@ async function submitRecording(baseUrl: string, events: RecorderEvent[], storage
           label: event.label ?? null,
           value: event.value ?? null,
           inputType: event.inputType ?? null
-        })),
-        storageState
+        }))
       }
     })
-    generatedScript.value = response.authSetup
-    sessionCaptured.value = response.storageCaptured
-    step.value = 'result'
-    emit('configured')
+
+    if (response.credentialsNeeded) {
+      step.value = 'credentials'
+      return
+    }
+
+    open.value = false
+    emit('written')
   } catch {
     error.value = 'Não foi possível gerar a autenticação a partir da gravação. Tente novamente.'
     step.value = 'intro'
@@ -154,11 +161,37 @@ defineExpose({
 <template>
   <BaseModal
     v-model:open="open"
-    :title="modalTitle"
     :dismissable="false"
     :loading="step === 'loading' || step === 'loading-existing'"
     wide
   >
+    <template #header>
+      <div class="flex w-full items-start justify-between gap-4">
+        <p class="pt-6 p-2 text-xl font-bold">
+          Autenticação
+        </p>
+
+        <div
+          v-if="step === 'view'"
+          class="mt-6 flex shrink-0 gap-2"
+        >
+          <UButton
+            label="Gravar novamente"
+            color="neutral"
+            variant="soft"
+            data-testid="auth-gravar-novamente"
+            @click="recordAgain"
+          />
+          <UButton
+            label="Testar"
+            trailing-icon="i-ic-round-play-arrow"
+            data-testid="auth-testar"
+            @click="runAuth"
+          />
+        </div>
+      </div>
+    </template>
+
     <template #body>
       <BaseLoadingPhrases
         v-if="step === 'loading'"
@@ -173,58 +206,43 @@ defineExpose({
       />
 
       <div
-        v-else-if="step === 'result'"
+        v-else-if="step === 'credentials'"
         class="flex flex-col gap-4"
+        data-testid="auth-credenciais"
       >
         <UAlert
-          v-if="sessionCaptured"
-          color="success"
-          variant="soft"
-          title="Autenticação gravada"
-          description="O login gravado foi convertido em teste e a sessão da gravação já foi salva — os testes do projeto já rodam autenticados."
-          data-testid="auth-resultado"
-        />
-        <UAlert
-          v-else
           color="warning"
           variant="soft"
-          title="Autenticação gravada"
-          description="O login gravado foi convertido em teste, mas não foi possível salvar a sessão automaticamente. Preencha AUTH_USER e AUTH_PASSWORD no .env do projeto com as credenciais reais para rodar esse login."
-          data-testid="auth-resultado"
+          icon="i-ic-round-key"
+          title="Não identifiquei usuário e senha nesta gravação"
+          description="O login é executado de novo a cada rodada de testes, então ele precisa das credenciais reais. Elas ficam só no .env local do projeto, que não é versionado."
         />
-        <div class="flex items-center justify-between gap-2">
-          <p class="text-xs text-dimmed">
-            Prévia do teste gerado
-          </p>
-          <UButton
-            label="Executar"
-            size="xs"
-            color="neutral"
-            variant="soft"
-            :loading="running"
-            data-testid="auth-executar"
-            @click="runTest"
+        <UFormField label="Usuário">
+          <UInput
+            v-model="username"
+            class="w-full"
+            autocomplete="off"
+            data-testid="auth-credenciais-usuario"
           />
-        </div>
-        <pre class="rounded-md bg-elevated p-3 font-mono text-xs overflow-x-auto" data-testid="auth-script">{{ generatedScript }}</pre>
-        <UAlert
-          v-if="runResult"
-          :color="runResult.passed ? 'success' : 'error'"
-          variant="soft"
-          :title="runResult.passed ? 'Teste passou' : 'Teste falhou'"
-          data-testid="auth-execucao-resultado"
-        >
-          <template #description>
-            <code class="block whitespace-pre-wrap text-xs">{{ runResult.output }}</code>
-          </template>
-        </UAlert>
+        </UFormField>
+        <UFormField label="Senha">
+          <UInput
+            v-model="password"
+            class="w-full"
+            type="password"
+            autocomplete="off"
+            data-testid="auth-credenciais-senha"
+          />
+        </UFormField>
       </div>
 
-      <pre
+      <BaseCodefield
         v-else-if="step === 'view'"
-        class="rounded-md bg-elevated p-3 font-mono text-xs overflow-x-auto"
-        data-testid="auth-script"
-      >{{ existingScript }}</pre>
+        :model-value="existingScript"
+        language="typescript"
+        readonly
+        testid="auth-script"
+      />
 
       <BaseCodefield
         v-else-if="step === 'edit'"
@@ -241,7 +259,7 @@ defineExpose({
           Vamos gravar o login de verdade: clique em "Gravar" e faça o login normalmente na aba que abrir. A IA transforma essa gravação num teste de autenticação — sem adivinhar seletor, sem digitar sua senha em formulário nenhum.
         </p>
         <p class="text-xs text-dimmed">
-          A senha digitada na gravação é usada só para validar que o login funciona e fica salva localmente no `.env` do projeto (nunca no script gerado nem versionada).
+          A senha digitada na gravação fica salva localmente no `.env` do projeto, nunca no script gerado nem versionada. Assim que o teste estiver escrito, ele é executado para confirmar que o login funciona.
         </p>
       </div>
 
@@ -256,31 +274,28 @@ defineExpose({
     </template>
 
     <template #footer>
-      <template v-if="step === 'result'">
+      <template v-if="step === 'credentials'">
         <UButton
-          label="Gravar novamente"
+          label="Cancelar"
           color="neutral"
-          variant="soft"
-          data-testid="auth-reconfigurar"
-          @click="recordAgain"
+          variant="ghost"
+          data-testid="auth-credenciais-cancelar"
+          @click="open = false"
         />
         <UButton
-          label="Salvar"
-          data-testid="auth-salvar"
-          @click="open = false"
+          label="Salvar e executar"
+          :loading="savingCredentials"
+          :disabled="!username || !password"
+          data-testid="auth-credenciais-salvar"
+          @click="saveCredentials"
         />
       </template>
 
       <template v-else-if="step === 'view'">
         <UButton
-          label="Gravar novamente"
+          label="Editar"
           color="neutral"
           variant="soft"
-          data-testid="auth-gravar-novamente"
-          @click="recordAgain"
-        />
-        <UButton
-          label="Editar"
           data-testid="auth-editar"
           @click="edit"
         />

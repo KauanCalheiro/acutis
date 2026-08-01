@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ProjectDetail } from '~/types/project'
-import type { RecorderEvent, StorageState } from '~/composables/webdriver'
+import type { RecorderEvent } from '~/composables/webdriver'
 
 const route = useRoute()
 const slug = computed(() => route.params.slug as string)
@@ -39,12 +39,88 @@ const scenarios = computed(() => {
 })
 
 const renameOpen = ref(false)
+const settingsOpen = ref(false)
 const removeOpen = ref(false)
 const removing = ref(false)
 const authOpen = ref(false)
 const authRecording = ref(false)
-const authModal = ref<{ submitRecording: (baseUrl: string, events: RecorderEvent[], storageState: StorageState | null) => Promise<void> } | null>(null)
+const authModal = ref<{ submitRecording: (baseUrl: string, events: RecorderEvent[]) => Promise<void> } | null>(null)
 const skippingAuth = ref(false)
+
+const AUTH_SPEC = 'tests/auth.setup.ts'
+
+const authRun = useRunStream(() => slug.value)
+const authRunOpen = ref(false)
+
+const authButtonColor = computed(() => ({
+  configured: 'success',
+  failing: 'error',
+  unset: 'neutral',
+  skipped: 'neutral'
+}[project.value!.auth_status] as 'success' | 'error' | 'neutral'))
+
+/** O setup de auth é executado pelo mesmo streaming dos cenários — é a execução que define o status. */
+function runAuthSetup() {
+  authRunOpen.value = true
+  authFix.value = null
+  authFixError.value = null
+  authRun.start(AUTH_SPEC, refresh)
+}
+
+const authFixOpen = ref(false)
+const authFixing = ref(false)
+const authFix = ref<{ playwright: string, summary: string } | null>(null)
+const authFixError = ref<string | null>(null)
+const applyingAuthFix = ref(false)
+
+async function requestAuthFix() {
+  const failed = authRun.failedStep.value
+  if (!failed) return
+
+  authRunOpen.value = false
+  authFixOpen.value = true
+  authFixing.value = true
+  authFix.value = null
+  authFixError.value = null
+
+  try {
+    authFix.value = await $fetch<{ playwright: string, summary: string }>(`/api/projects/${slug.value}/scenario-fix`, {
+      method: 'POST',
+      body: { scenarioId: 'auth', step: failed.title, error: failed.error ?? '' }
+    })
+  } catch (error) {
+    authFixError.value = extractServerError(error, 'Não foi possível gerar uma correção agora. Tente novamente.')
+  } finally {
+    authFixing.value = false
+  }
+}
+
+async function applyAuthFix() {
+  if (!authFix.value) return
+
+  applyingAuthFix.value = true
+
+  try {
+    await $fetch(`/api/projects/${slug.value}/auth`, {
+      method: 'PUT',
+      body: { authSetup: authFix.value.playwright }
+    })
+
+    authFix.value = null
+    authFixOpen.value = false
+    runAuthSetup()
+  } catch (error) {
+    authFixError.value = extractServerError(error, 'Não foi possível salvar a correção.')
+  } finally {
+    applyingAuthFix.value = false
+  }
+}
+
+function discardAuthFix() {
+  authFixOpen.value = false
+  authFix.value = null
+  authFixError.value = null
+}
 
 async function skipAuth() {
   skippingAuth.value = true
@@ -62,6 +138,81 @@ async function skipAuth() {
 const { state: webdriver, startRecording, stopRecording } = useWebdriver()
 const reviewOpen = ref(false)
 
+/**
+ * `publico` marca o cenário com @publico e o faz rodar fora da sessão — a tela de login é o caso
+ * óbvio. `simples` é o projeto sem autenticação: não carimba nada, porque se auth for configurada
+ * depois esses cenários vão precisar da sessão.
+ */
+type RecordingMode = 'plain' | 'public' | 'authenticated'
+
+const recordingMode = ref<RecordingMode>('plain')
+const recordingPublic = computed(() => recordingMode.value === 'public')
+
+const hasAuth = computed(() => project.value!.auth_status === 'configured' || project.value!.auth_status === 'failing')
+
+const recordingOptions = computed(() => [[
+  {
+    label: 'Cenário autenticado',
+    description: 'Entra no sistema antes de gravar',
+    icon: 'i-ic-round-lock',
+    testid: 'cenario-novo-autenticado',
+    onSelect: () => recordAuthenticated()
+  },
+  {
+    label: 'Cenário público',
+    description: 'Grava sem sessão (login, cadastro, landing)',
+    icon: 'i-ic-round-public',
+    testid: 'cenario-novo-publico',
+    onSelect: () => recordPublic()
+  }
+]])
+
+/** URL base configurada no projeto — é onde o navegador abre ao gravar. */
+const projectUrl = computed(() => project.value!.base_url ?? undefined)
+
+function recordPlain() {
+  recordingMode.value = 'plain'
+  startRecording('scenario', { url: projectUrl.value })
+}
+
+function recordPublic() {
+  recordingMode.value = 'public'
+  startRecording('scenario', { url: projectUrl.value })
+}
+
+/**
+ * Roda o auth.setup.ts antes de abrir o navegador: a sessão injetada sempre nasce válida, sem
+ * heurística de expiração. Falhou o login, nem abre — o resultado aparece no mesmo modal de sempre.
+ */
+function recordAuthenticated() {
+  recordingMode.value = 'authenticated'
+  authRunOpen.value = true
+  authRun.start(AUTH_SPEC, () => {
+    refresh()
+
+    if (!authRun.passed.value) return
+
+    authRunOpen.value = false
+    startRecording('scenario', {
+      storageState: `${project.value!.path}/storage-state.json`,
+      url: projectUrl.value
+    })
+  })
+}
+
+/** Atalho de um clique (card de estado vazio): num projeto com login, autenticado é o caso comum. */
+function recordDefault() {
+  return hasAuth.value ? recordAuthenticated() : recordPlain()
+}
+
+/** Regravar mantém o tipo escolhido — trocar de autenticado pra público no meio seria surpresa. */
+function recordAgain() {
+  if (recordingMode.value === 'authenticated') return recordAuthenticated()
+  if (recordingMode.value === 'public') return recordPublic()
+
+  recordPlain()
+}
+
 function eventsBaseUrl(events: RecorderEvent[]): string | null {
   const first = events.find(event => event.url)
   if (!first?.url) return null
@@ -78,7 +229,7 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
   if (authRecording.value) {
     authRecording.value = false
     const baseUrl = eventsBaseUrl(webdriver.value.events)
-    if (baseUrl) await authModal.value?.submitRecording(baseUrl, webdriver.value.events, webdriver.value.storageState)
+    if (baseUrl) await authModal.value?.submitRecording(baseUrl, webdriver.value.events)
     return
   }
 
@@ -89,9 +240,10 @@ function stopAndReview() {
   stopRecording()
 }
 
+/** Regravar o login abre no sistema, mas sem sessão — é justamente o login que vamos capturar. */
 function startAuthRecording() {
   authRecording.value = true
-  startRecording('auth')
+  startRecording('auth', { url: projectUrl.value })
 }
 
 function onRenamed(newSlug: string) {
@@ -169,16 +321,22 @@ async function remove() {
           target="_blank"
           data-testid="projeto-vscode"
         />
-        <!-- TODO(auth-flow): reativar, ver .claude/memory/auth-flow.md
         <BaseButtonIcon
           icon="i-ic-round-key"
           label="Autenticação"
-          :color="project!.auth_status === 'configured' ? 'success' : 'neutral'"
+          :color="authButtonColor"
           variant="soft"
           data-testid="projeto-auth"
           @click="authOpen = true"
         />
-        -->
+        <BaseButtonIcon
+          icon="i-ic-round-settings"
+          label="Configurações"
+          color="neutral"
+          variant="soft"
+          data-testid="projeto-configuracoes"
+          @click="settingsOpen = true"
+        />
         <BaseButtonIcon
           icon="i-ic-round-edit"
           label="Renomear projeto"
@@ -198,7 +356,6 @@ async function remove() {
       </div>
     </div>
 
-    <!-- TODO(auth-flow): reativar, ver .claude/memory/auth-flow.md
     <UAlert
       v-if="project!.auth_status === 'unset'"
       color="warning"
@@ -229,7 +386,36 @@ async function remove() {
         />
       </template>
     </UAlert>
-    -->
+
+    <UAlert
+      v-else-if="project!.auth_status === 'failing'"
+      color="error"
+      variant="soft"
+      icon="i-ic-round-error"
+      class="mt-6"
+      title="A autenticação não está funcionando"
+      description="A última execução do login falhou. Todo cenário deste projeto roda o login antes, então eles vão falhar junto até isso ser resolvido."
+      data-testid="projeto-auth-falhando"
+      :ui="{ actions: 'justify-end' }"
+    >
+      <template #actions>
+        <UButton
+          label="Executar de novo"
+          size="md"
+          color="neutral"
+          variant="link"
+          data-testid="projeto-auth-reexecutar"
+          @click="runAuthSetup"
+        />
+        <UButton
+          label="Ver autenticação"
+          size="md"
+          color="error"
+          data-testid="projeto-auth-revisar"
+          @click="authOpen = true"
+        />
+      </template>
+    </UAlert>
 
     <div class="flex flex-wrap items-center gap-4 mt-8 mb-8">
       <UInput
@@ -239,13 +425,27 @@ async function remove() {
         placeholder="Buscar cenário..."
         class="flex-1 min-w-48"
       />
+      <UDropdownMenu
+        v-if="!webdriver.recording && hasAuth"
+        :items="recordingOptions"
+      >
+        <UButton
+          data-testid="cenario-novo"
+          label="Novo cenário"
+          trailing-icon="i-ic-round-expand-more"
+          :disabled="!webdriver.connected"
+        />
+        <template #item-label="{ item }">
+          <span :data-testid="item.testid">{{ item.label }}</span>
+        </template>
+      </UDropdownMenu>
       <UButton
-        v-if="!webdriver.recording"
+        v-else-if="!webdriver.recording"
         data-testid="cenario-novo"
         label="Novo cenário"
         trailing-icon="i-ic-round-add"
         :disabled="!webdriver.connected"
-        @click="startRecording()"
+        @click="recordPlain"
       />
       <UButton
         v-else
@@ -274,8 +474,9 @@ async function remove() {
     <ScenarioReviewModal
       v-model:open="reviewOpen"
       :slug="slug"
+      :publico="recordingPublic"
       @generated="refresh()"
-      @rerecord="startRecording()"
+      @rerecord="recordAgain"
     />
 
     <div
@@ -312,7 +513,7 @@ async function remove() {
     <ScenarioEmpty
       v-else
       :disabled="!webdriver.connected"
-      @record="startRecording"
+      @record="recordDefault"
     />
 
     <ProjectRenameModal
@@ -322,13 +523,47 @@ async function remove() {
       @renamed="onRenamed"
     />
 
+    <ProjectSettingsModal
+      v-model:open="settingsOpen"
+      :slug="slug"
+      :base-url="project!.base_url"
+      @saved="refresh()"
+    />
+
     <ProjectAuthModal
       ref="authModal"
       v-model:open="authOpen"
       :slug="slug"
       :status="project!.auth_status"
-      @configured="refresh()"
+      @written="runAuthSetup"
+      @test="runAuthSetup"
       @record="startAuthRecording"
+    />
+
+    <ScenarioTestRunModal
+      v-model:open="authRunOpen"
+      :running="authRun.running.value"
+      :live="authRun.live.value"
+      :passed="authRun.passed.value"
+      :steps="authRun.steps.value"
+      :video-url="authRun.videoUrl.value"
+      :project-name="project!.name"
+      kind="autenticacao"
+      :scenario-name="AUTH_SPEC"
+      :branch="project!.branch"
+      :tested-at="authRun.testedAt.value"
+      :output="authRun.output.value"
+      @fix="requestAuthFix"
+    />
+
+    <ScenarioFixModal
+      v-model:open="authFixOpen"
+      :loading="authFixing"
+      :fix="authFix"
+      :error="authFixError"
+      :applying="applyingAuthFix"
+      @apply="applyAuthFix"
+      @discard="discardAuthFix"
     />
 
     <BaseConfirm

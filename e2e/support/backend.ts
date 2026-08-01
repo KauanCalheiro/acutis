@@ -1,8 +1,10 @@
 import { spawn } from 'node:child_process'
 import { resolve } from 'node:path'
+import { BACKEND_URL, PORTS, WEBDRIVER_URL } from './ports'
 
 const BACKEND_DIR = resolve(import.meta.dirname, '../../backend')
-export const BACKEND_URL = 'http://localhost:4200'
+
+export { BACKEND_URL }
 
 async function portInUse(): Promise<boolean> {
     try {
@@ -18,7 +20,7 @@ async function waitPortFree(): Promise<void> {
         if (!await portInUse()) return
         await new Promise((r) => setTimeout(r, 200))
     }
-    throw new Error(`port 4200 still in use; stale backend running on ${BACKEND_URL}?`)
+    throw new Error(`port ${PORTS.backend} still in use; stale backend running on ${BACKEND_URL}?`)
 }
 
 async function waitHealthy(): Promise<void> {
@@ -29,14 +31,14 @@ async function waitHealthy(): Promise<void> {
     throw new Error('backend did not become healthy in time')
 }
 
-/** Sobe o php artisan serve na 4200 e devolve o stop que espera a porta liberar. */
+/** Sobe o php artisan serve na porta do E2E e devolve o stop que espera a porta liberar. */
 export async function startBackend(env: Record<string, string>): Promise<() => Promise<void>> {
     await waitPortFree()
 
-    const proc = spawn('php', ['artisan', 'serve', '--port=4200'], {
+    const proc = spawn('php', ['artisan', 'serve', `--port=${PORTS.backend}`], {
         cwd: BACKEND_DIR,
         stdio: 'ignore',
-        env: { ...process.env, ...env },
+        env: { ...process.env, WEBDRIVER_URL, ...env },
     })
 
     await waitHealthy()

@@ -16,6 +16,10 @@ interface ScenarioTestRunModal {
   branch?: string | null
   testedAt?: string | null
   playwright?: string | null
+  /** Saída do runner quando a execução morreu antes de qualquer passo. */
+  output?: string | null
+  /** Autenticação não é cenário — muda o título e o rótulo, o resto do modal é igual. */
+  kind?: 'cenario' | 'autenticacao'
 }
 
 const {
@@ -28,7 +32,9 @@ const {
   scenarioName,
   branch = null,
   testedAt = null,
-  playwright = null
+  playwright = null,
+  output = null,
+  kind = 'cenario'
 } = defineProps<ScenarioTestRunModal>()
 
 const emit = defineEmits<{
@@ -38,6 +44,11 @@ const emit = defineEmits<{
 const open = defineModel<boolean>('open', {
   default: false
 })
+
+const isAuth = computed(() => kind === 'autenticacao')
+const label = computed(() => isAuth.value ? 'Autenticação' : 'Cenário')
+const runningTitle = computed(() => isAuth.value ? 'Testando autenticação...' : 'Testando cenário...')
+const resultTitle = computed(() => isAuth.value ? 'Resultado da autenticação' : 'Resultado do teste')
 
 const failedStep = computed(() => steps.findIndex(step => step.status === 'failed'))
 
@@ -75,7 +86,7 @@ const stepColors: Record<TestStep['status'], string> = {
             v-if="running"
             class="text-xl font-bold"
           >
-            Testando cenário...
+            {{ runningTitle }}
           </p>
 
           <template v-else>
@@ -87,7 +98,7 @@ const stepColors: Record<TestStep['status'], string> = {
               data-testid="execucao-status"
             />
             <p class="mt-2 text-xl font-bold">
-              Resultado do teste
+              {{ resultTitle }}
             </p>
           </template>
         </div>
@@ -117,7 +128,7 @@ const stepColors: Record<TestStep['status'], string> = {
           data-testid="execucao-detalhes"
         >
           <p><span class="font-semibold">Projeto:</span> {{ projectName }}</p>
-          <p><span class="font-semibold">Cenário:</span> {{ scenarioName }}</p>
+          <p><span class="font-semibold">{{ label }}:</span> {{ scenarioName }}</p>
           <p v-if="branch">
             <span class="font-semibold">Branch:</span> {{ branch }}
           </p>
@@ -136,9 +147,28 @@ const stepColors: Record<TestStep['status'], string> = {
           data-testid="execucao-video"
         />
 
-        <p class="mb-3 text-lg font-semibold">
-          Timeline de eventos
-        </p>
+        <UAlert
+          v-if="output"
+          color="error"
+          variant="soft"
+          icon="i-ic-round-error"
+          title="A execução não chegou a começar"
+          class="mb-6"
+          data-testid="execucao-saida"
+        >
+          <template #description>
+            <p class="mb-2">
+              O Playwright encerrou antes de rodar qualquer passo. Saída do runner:
+            </p>
+            <code class="block whitespace-pre-wrap font-mono text-xs">{{ output }}</code>
+          </template>
+        </UAlert>
+
+        <template v-if="steps.length">
+          <p class="mb-3 text-lg font-semibold">
+            Timeline de eventos
+          </p>
+        </template>
         <ol class="flex flex-col">
           <li
             v-for="(step, i) in steps"

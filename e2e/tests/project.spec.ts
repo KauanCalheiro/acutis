@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { startBackend } from '../support/backend'
@@ -45,7 +45,7 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
         await expect(page).toHaveURL('/')
     })
 
-    test.skip('shows the authentication button in the header', async ({ page }) => {
+    test('shows the authentication button in the header', async ({ page }) => {
         await expect(page.getByTestId('projeto-auth')).toBeVisible()
     })
 
@@ -53,11 +53,11 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
         await expect(page.getByTestId('projeto-vscode')).toHaveAttribute('href', `vscode://file${join(FIXTURES_DIR, 'alpha-store')}`)
     })
 
-    test.skip('shows an alert when the project has no authentication configured', async ({ page }) => {
+    test('shows an alert when the project has no authentication configured', async ({ page }) => {
         await expect(page.getByTestId('projeto-auth-aviso')).toBeVisible()
     })
 
-    test.skip('opens the auth modal from the alert', async ({ page }) => {
+    test('opens the auth modal from the alert', async ({ page }) => {
         await page.getByTestId('projeto-auth-configurar').click()
 
         await expect(page.getByTestId('auth-gerar')).toBeVisible()
@@ -67,6 +67,7 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
         for (const [testid, label] of [
             ['projeto-remover', 'Remover projeto'],
             ['projeto-editar', 'Renomear projeto'],
+            ['projeto-configuracoes', 'Configurações'],
             ['projeto-voltar', 'Voltar'],
             ['projeto-vscode', 'Abrir no VS Code'],
         ] as const) {
@@ -114,7 +115,7 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
     })
 })
 
-test.describe.skip('project authentication modal', { tag: ['@write', '@project'] }, () => {
+test.describe('project authentication modal', { tag: ['@write', '@project'] }, () => {
     let stopBackend: () => Promise<void>
     let tmpProjects: string
 
@@ -141,7 +142,7 @@ test.describe.skip('project authentication modal', { tag: ['@write', '@project']
 
         await page.getByTestId('projeto-auth').click()
 
-        await expect(page.getByTestId('auth-script')).toContainText('login gravado')
+        await expect(page.getByTestId('auth-script')).toHaveValue(/login gravado/)
     })
 
     test('edits and saves the existing script', async ({ page }) => {
@@ -153,7 +154,7 @@ test.describe.skip('project authentication modal', { tag: ['@write', '@project']
         await page.getByTestId('auth-script-editor').fill('conteudo editado pelo usuario')
         await page.getByTestId('auth-salvar').click()
 
-        await expect(page.getByTestId('auth-script')).toContainText('conteudo editado pelo usuario')
+        await expect(page.getByTestId('auth-script')).toHaveValue('conteudo editado pelo usuario')
     })
 
     test('returns to the intro when "record again" is chosen', async ({ page }) => {
@@ -166,12 +167,92 @@ test.describe.skip('project authentication modal', { tag: ['@write', '@project']
         await expect(page.getByTestId('auth-gerar')).toBeVisible()
     })
 
+    test('offers running the configured login without recording it again', async ({ page }) => {
+        await page.goto('/projects/beta-blog')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('projeto-auth').click()
+        await expect(page.getByTestId('auth-testar')).toBeVisible()
+
+        await page.getByTestId('auth-testar').click()
+
+        await test.step('the auth modal gives way to the run modal', async () => {
+            await expect(page.getByTestId('auth-testar')).toBeHidden()
+            await expect(page.getByTestId('execucao-detalhes').or(page.getByTestId('execucao-iniciando'))).toBeVisible({ timeout: 15_000 })
+        })
+    })
+
     test('cancel closes the modal without starting a recording', async ({ page }) => {
         await page.getByTestId('projeto-auth').click()
         await page.getByTestId('auth-cancelar').click()
 
         await expect(page.getByTestId('auth-gerar')).toBeHidden()
         await expect(page.getByTestId('cenario-parar')).toBeHidden()
+    })
+
+    test('warns that authentication is failing when the last run did not pass', async ({ page }) => {
+        mkdirSync(join(tmpProjects, 'beta-blog', 'runs', 'auth'), { recursive: true })
+        writeFileSync(
+            join(tmpProjects, 'beta-blog', 'runs', 'auth', '2026-01-01T10-00-00.000000Z-aaaa.json'),
+            JSON.stringify({ started_at: '2026-01-01T10:00:00+00:00', duration_ms: 10, passed: false, steps: [], playwright: '' }),
+        )
+
+        await page.goto('/projects/beta-blog')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await expect(page.getByTestId('projeto-auth-falhando')).toBeVisible()
+        await expect(page.getByTestId('projeto-auth-aviso')).toBeHidden()
+    })
+})
+
+test.describe('project settings', { tag: ['@write', '@project'] }, () => {
+    let stopBackend: () => Promise<void>
+    let tmpProjects: string
+
+    test.beforeAll(async () => {
+        tmpProjects = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
+        cpSync(FIXTURES_DIR, tmpProjects, { recursive: true })
+
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
+    })
+
+    test.afterAll(async () => {
+        await stopBackend()
+        rmSync(tmpProjects, { recursive: true, force: true })
+    })
+
+    test('saves the base url of the system under test', async ({ page }) => {
+        await page.goto('/projects/alpha-store')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await test.step('open the settings from the header and save a url', async () => {
+            await page.getByTestId('projeto-configuracoes').click()
+            await page.getByTestId('projeto-configuracoes-base-url').fill('https://sistema.exemplo.com/app')
+            await page.getByTestId('projeto-configuracoes-salvar').click()
+        })
+
+        await expect(page.getByTestId('projeto-configuracoes-salvar')).toBeHidden()
+        expect(readFileSync(join(tmpProjects, 'alpha-store', '.env'), 'utf8')).toContain('BASE_URL=https://sistema.exemplo.com/app')
+    })
+
+    test('reopens showing the url already saved', async ({ page }) => {
+        await page.goto('/projects/alpha-store')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('projeto-configuracoes').click()
+
+        await expect(page.getByTestId('projeto-configuracoes-base-url')).toHaveValue('https://sistema.exemplo.com/app')
+    })
+
+    test('refuses something that is not a url', async ({ page }) => {
+        await page.goto('/projects/alpha-store')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('projeto-configuracoes').click()
+        await page.getByTestId('projeto-configuracoes-base-url').fill('nao-e-url')
+        await page.getByTestId('projeto-configuracoes-salvar').click()
+
+        await expect(page.getByTestId('projeto-configuracoes-erro')).toBeVisible()
     })
 })
 
@@ -205,7 +286,7 @@ test.describe('project management', { tag: ['@write', '@project'] }, () => {
         await expect(page.getByTestId('projeto-nome')).toHaveText('Blog Renomeado')
     })
 
-    test.skip('dismisses the alert when the project does not need login', async ({ page }) => {
+    test('dismisses the alert when the project does not need login', async ({ page }) => {
         await page.goto('/projects/alpha-store')
         await page.locator('[data-hydrated="true"]').waitFor()
 
@@ -220,7 +301,7 @@ test.describe('project management', { tag: ['@write', '@project'] }, () => {
         await expect(page.getByTestId('projeto-auth')).toBeVisible()
     })
 
-    test.skip('hides the alert once authentication is configured', async ({ page }) => {
+    test('hides the alert once authentication is configured', async ({ page }) => {
         mkdirSync(join(tmpProjects, 'alpha-store', 'tests'), { recursive: true })
         writeFileSync(
             join(tmpProjects, 'alpha-store', 'tests', 'auth.setup.ts'),

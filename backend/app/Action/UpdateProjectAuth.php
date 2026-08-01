@@ -12,7 +12,7 @@ class UpdateProjectAuth
 
     public function handle(string $slug, string $authSetup): string
     {
-        $path = Project::path($slug);
+        $path = Project::make($slug)->path();
 
         File::ensureDirectoryExists("{$path}/tests");
         File::put("{$path}/tests/auth.setup.ts", $authSetup);

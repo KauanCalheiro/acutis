@@ -4,9 +4,11 @@ namespace App\Action;
 
 use App\Data\V1\Project\ProjectData;
 use App\Data\V1\Project\ScenarioData;
+use App\Enums\EnvKey;
 use App\Enums\GitProvider;
 use App\Support\Git;
 use App\Support\Project;
+use App\Support\Scenario;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
 use Lorisleiva\Actions\Concerns\AsAction;
@@ -15,10 +17,11 @@ class ShowProject
 {
     use AsAction;
 
-    /** @return array{project: ProjectData, branch: ?string, updated_at: string, scenarios: list<ScenarioData>, auth_status: string, vscode_url: string} */
+    /** @return array{project: ProjectData, branch: ?string, updated_at: string, scenarios: list<ScenarioData>, auth_status: string, base_url: ?string, vscode_url: string} */
     public function handle(string $slug): array
     {
-        $path = Project::path($slug);
+        $folder = Project::make($slug);
+        $path = $folder->path();
         $manifest = json_decode((string) File::get($path.'/acutis.json'), true) ?: [];
         $repository = Git::in($path)->remoteUrl();
 
@@ -36,17 +39,23 @@ class ShowProject
             'branch' => Git::in($path)->branch(),
             'updated_at' => Carbon::createFromTimestamp(File::lastModified($path))->toIso8601String(),
             'scenarios' => ListProjectScenarios::run($path),
-            'auth_status' => $this->authStatus($path, $manifest),
+            'auth_status' => $this->authStatus($folder, $manifest),
+            'base_url' => $folder->env()->get(EnvKey::BASE_URL),
             'vscode_url' => 'vscode://file'.Project::hostPath($slug),
         ];
     }
 
-    private function authStatus(string $path, array $manifest): string
+    /**
+     * Status vem da última execução registrada, não da existência do arquivo — um setup que
+     * falhou não conta como configurado. Sem execução nenhuma (projeto clonado, script escrito
+     * à mão) não dá pra afirmar que falha, então vale o benefício da dúvida.
+     */
+    private function authStatus(Project $folder, array $manifest): string
     {
-        if (File::exists("{$path}/tests/auth.setup.ts")) {
-            return 'configured';
+        if (! $folder->auth()->exists()) {
+            return ($manifest['auth_skipped'] ?? false) ? 'skipped' : 'unset';
         }
 
-        return ($manifest['auth_skipped'] ?? false) ? 'skipped' : 'unset';
+        return $folder->scenario(Scenario::AUTH_ID)->runs()->lastPassed() === false ? 'failing' : 'configured';
     }
 }

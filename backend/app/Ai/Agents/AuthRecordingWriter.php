@@ -23,6 +23,7 @@ class AuthRecordingWriter implements Agent, HasStructuredOutput
         - Prioridade de seletor por evento: dataTestId (page.getByTestId) > id/cssStable (page.locator(...)) > text (finder por texto).
         - Como os seletores já vêm resolvidos do clique/preenchimento real, não há ambiguidade a resolver — use o seletor do evento como está, não invente alternativa.
         - Reproduza a sequência de eventos na ordem: navigate, click, fill, submit — cada um vira a chamada Playwright correspondente.
+        - Envolva cada etapa do login em await setup.step('<título em português>', async () => { ... }), agrupando as ações relacionadas: abrir a tela de login, revelar o formulário (quando houver), preencher as credenciais, submeter, e confirmar que autenticou. Sem isso a execução não tem timeline e não dá pra apontar qual etapa quebrou.
 
         Identificar os campos de credencial:
         - O evento de fill cujo "value" é literalmente "••••" é o campo de SENHA — preencha com process.env.AUTH_PASSWORD, nunca com o valor mascarado.

@@ -5,7 +5,6 @@ namespace App\Action;
 use App\Data\V1\Project\ScenarioShowData;
 use App\Data\V1\Project\UpdateScenarioData;
 use App\Support\Project;
-use App\Support\Scenario;
 use App\Support\TestArtifact;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -18,8 +17,9 @@ class UpdateProjectScenario
 
     public function handle(string $slug, string $scenarioId, UpdateScenarioData $data): ScenarioShowData
     {
-        $path = Project::path($slug);
-        $scenario = Scenario::find($path, $scenarioId);
+        $project = Project::make($slug);
+        $path = $project->path();
+        $scenario = $project->scenario($scenarioId)->data();
 
         $domain = Str::slug($data->domain ?? '') ?: null;
         $name = Str::slug($data->path) ?: 'teste';

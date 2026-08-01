@@ -3,7 +3,8 @@
 namespace App\Action;
 
 use App\Data\V1\Project\ScenarioRunData;
-use App\Support\ScenarioRuns;
+use App\Support\Project;
+use App\Support\Scenario\Runs;
 use Illuminate\Support\Facades\File;
 use Lorisleiva\Actions\Concerns\AsAction;
 
@@ -14,14 +15,12 @@ class ListScenarioRuns
     /** @return list<ScenarioRunData> */
     public function handle(string $path, string $scenarioId): array
     {
-        $directory = ScenarioRuns::directory($path, $scenarioId);
-        $video = $directory.'/'.ScenarioRuns::VIDEO;
-        $files = File::glob($directory.'/*.json') ?: [];
-
-        rsort($files);
+        $runs = Project::at($path)->scenario($scenarioId)->runs();
+        $video = $runs->video();
+        $files = $runs->files();
 
         $runs = collect($files)
-            ->take(ScenarioRuns::SHOWN)
+            ->take(Runs::SHOWN)
             ->map(fn (string $file): array => json_decode((string) File::get($file), true));
 
         $recorded = File::exists($video)

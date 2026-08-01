@@ -6,7 +6,6 @@ use App\Ai\Agents\SelectorSuggestionWriter;
 use App\Ai\StructuredOutput;
 use App\Data\V1\Project\SelectorSuggestionData;
 use App\Support\Project;
-use App\Support\Scenario;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Lorisleiva\Actions\Concerns\AsAction;
@@ -18,8 +17,9 @@ class SuggestScenarioSelectors
     /** @return list<SelectorSuggestionData> */
     public function handle(string $slug, string $scenarioId): array
     {
-        $path = Project::path($slug);
-        $scenario = Scenario::find($path, $scenarioId);
+        $project = Project::make($slug);
+        $path = $project->path();
+        $scenario = $project->scenario($scenarioId)->data();
 
         $eventsFile = Str::replaceLast('.spec.ts', '.events.json', "{$path}/{$scenario->spec}");
         $events = File::exists($eventsFile) ? (json_decode(File::get($eventsFile), true) ?? []) : [];

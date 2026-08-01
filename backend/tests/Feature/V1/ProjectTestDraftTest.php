@@ -163,3 +163,32 @@ it('validates the recording payload before drafting', function () {
         ->assertStatus(422)
         ->assertJsonValidationErrors(['baseUrl', 'events']);
 });
+
+it('marks the scenario as public when it was recorded without a session', function () {
+    GherkinWriter::fake([['gherkin' => "Funcionalidade: Ver a landing\n  Cenário: abre", 'domain' => 'institucional']]);
+    PlaywrightWriter::fake([['playwright' => "import { test } from '@playwright/test'\ntest.describe('landing', () => {})"]]);
+    Http::fake();
+    $slug = draftProject();
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload(['publico' => true]))
+        ->assertOk()
+        ->assertJsonPath('tags', ['@read', '@publico'])
+        ->assertJson(fn ($json) => $json
+            ->where('gherkin', fn ($v) => str_contains($v, '@publico'))
+            ->where('playwright', fn ($v) => str_contains($v, '@publico'))
+            ->etc());
+});
+
+it('leaves the scenario authenticated by default, without the public tag', function () {
+    GherkinWriter::fake([['gherkin' => "Funcionalidade: Ver o painel\n  Cenário: abre", 'domain' => 'painel']]);
+    PlaywrightWriter::fake([['playwright' => "import { test } from '@playwright/test'\ntest.describe('painel', () => {})"]]);
+    Http::fake();
+    $slug = draftProject();
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())
+        ->assertOk()
+        ->assertJsonPath('tags', ['@read'])
+        ->assertJson(fn ($json) => $json
+            ->where('gherkin', fn ($v) => ! str_contains($v, '@publico'))
+            ->etc());
+});

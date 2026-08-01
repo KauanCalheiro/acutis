@@ -13,7 +13,7 @@ class ShowProjectAuth
 
     public function handle(string $slug): string
     {
-        $path = Project::path($slug);
+        $path = Project::make($slug)->path();
         $file = "{$path}/tests/auth.setup.ts";
 
         if (! File::exists($file)) {

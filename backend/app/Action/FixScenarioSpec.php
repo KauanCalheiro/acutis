@@ -8,9 +8,6 @@ use App\Ai\Tools\CaptureSnapshot;
 use App\Data\V1\Project\FixedSpecData;
 use App\Data\V1\Project\ScenarioFixData;
 use App\Support\Project;
-use App\Support\Scenario;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
 use Lorisleiva\Actions\Concerns\AsAction;
 
 class FixScenarioSpec
@@ -19,11 +16,10 @@ class FixScenarioSpec
 
     public function handle(string $slug, string $scenarioId, ScenarioFixData $input): FixedSpecData
     {
-        $path = Project::path($slug);
-        $scenario = Scenario::find($path, $scenarioId);
+        $scenario = Project::make($slug)->scenario($scenarioId);
 
-        $playwright = Scenario::source("{$path}/{$scenario->spec}");
-        $events = $this->events($path, $scenario->spec);
+        $playwright = $scenario->source();
+        $events = $scenario->events();
 
         $response = app(SpecFixer::class)->prompt($this->promptFor($playwright, $events, $input));
 
@@ -31,14 +27,6 @@ class FixScenarioSpec
             playwright: StructuredOutput::field($response, 'playwright'),
             summary: StructuredOutput::field($response, 'summary'),
         );
-    }
-
-    /** @return list<array<string, mixed>> */
-    private function events(string $path, string $spec): array
-    {
-        $file = Str::replaceLast('.spec.ts', '.events.json', "{$path}/{$spec}");
-
-        return File::exists($file) ? (json_decode(File::get($file), true) ?? []) : [];
     }
 
     /** @param  list<array<string, mixed>>  $events */

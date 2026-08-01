@@ -88,3 +88,26 @@ it('returns 404 for a scenario that does not exist', function () {
         'error' => 'erro',
     ])->assertNotFound();
 });
+
+it('fixes the auth setup with the same agent, reading its recorded events', function () {
+    fakeFix();
+    File::put($this->dir.'/tests/auth.setup.ts', "await page.locator('#v-9').fill(process.env.AUTH_USER)");
+    File::put($this->dir.'/tests/auth.events.json', json_encode([
+        ['type' => 'fill', 'label' => 'Matrícula', 'url' => 'https://app.test/login', 'selectors' => ['id' => 'v-9']],
+    ]));
+
+    postJson('/api/v1/projects/minha-loja/scenarios/auth/fix', [
+        'step' => 'login',
+        'error' => "locator('#v-9') resolved to hidden",
+    ])->assertOk();
+
+    SpecFixer::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, "page.locator('#v-9')")
+        && str_contains($prompt->prompt, 'Matrícula'));
+});
+
+it('returns 404 for the auth setup when the project has none', function () {
+    postJson('/api/v1/projects/minha-loja/scenarios/auth/fix', [
+        'step' => 'passo',
+        'error' => 'erro',
+    ])->assertNotFound();
+});

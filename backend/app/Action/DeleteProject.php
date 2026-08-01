@@ -12,6 +12,6 @@ class DeleteProject
 
     public function handle(string $slug): void
     {
-        File::deleteDirectory(Project::path($slug));
+        File::deleteDirectory(Project::make($slug)->path());
     }
 }

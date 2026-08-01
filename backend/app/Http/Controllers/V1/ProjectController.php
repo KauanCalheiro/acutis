@@ -12,6 +12,7 @@ use App\Action\ListProjects;
 use App\Action\PersistScenarioRun;
 use App\Action\ProbeGitRepository;
 use App\Action\RunProject;
+use App\Action\SaveAuthCredentials;
 use App\Action\ShowProject;
 use App\Action\ShowProjectAuth;
 use App\Action\ShowProjectScenario;
@@ -20,15 +21,16 @@ use App\Action\SuggestScenarioSelectors;
 use App\Action\UpdateProject;
 use App\Action\UpdateProjectAuth;
 use App\Action\UpdateProjectScenario;
+use App\Action\UpdateProjectSettings;
 use App\Action\WriteAuthRecordingToProject;
-use App\Action\WriteAuthSetupToProject;
 use App\Action\WriteDraftToProject;
+use App\Data\V1\Auth\AuthCredentialsData;
 use App\Data\V1\Auth\AuthRecordingData;
-use App\Data\V1\Auth\AuthSetupData;
 use App\Data\V1\Auth\UpdateAuthSetupData;
 use App\Data\V1\Project\CloneProjectData;
 use App\Data\V1\Project\CreateProjectData;
 use App\Data\V1\Project\ProbeGitData;
+use App\Data\V1\Project\ProjectSettingsData;
 use App\Data\V1\Project\RunProjectData;
 use App\Data\V1\Project\ScenarioFixData;
 use App\Data\V1\Project\UpdateProjectData;
@@ -43,6 +45,7 @@ use App\Http\Resources\V1\GitProbeResource;
 use App\Http\Resources\V1\ProjectAuthResource;
 use App\Http\Resources\V1\ProjectResource;
 use App\Http\Resources\V1\ProjectRunResource;
+use App\Http\Resources\V1\ProjectSettingsResource;
 use App\Http\Resources\V1\ProjectShowResource;
 use App\Http\Resources\V1\ProjectTestResource;
 use App\Http\Resources\V1\ScenarioShowResource;
@@ -124,9 +127,16 @@ class ProjectController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function auth(string $project, AuthSetupData $data): GeneratedAuthSetupResource
+    public function updateSettings(string $project, ProjectSettingsData $data): ProjectSettingsResource
     {
-        return GeneratedAuthSetupResource::make(WriteAuthSetupToProject::run($project, $data));
+        return ProjectSettingsResource::make(UpdateProjectSettings::run($project, $data));
+    }
+
+    public function authCredentials(string $project, AuthCredentialsData $data): Response
+    {
+        SaveAuthCredentials::run($project, $data);
+
+        return response()->noContent();
     }
 
     public function showAuth(string $project): ProjectAuthResource
@@ -180,7 +190,7 @@ class ProjectController extends Controller
 
     public function testsDraft(string $project, RecordingData $data): TestDraftResource
     {
-        $path = Project::path($project);
+        $path = Project::make($project)->path();
 
         $generated = GenerateTestsFromRecording::run($data);
         $title = TestArtifact::title($generated->gherkin);
@@ -208,7 +218,7 @@ class ProjectController extends Controller
 
     public function runStream(string $project, Request $request): StreamedResponse
     {
-        $path = Project::path($project);
+        $path = Project::make($project)->path();
         $spec = $request->query('spec');
         $grep = $request->query('grep');
 

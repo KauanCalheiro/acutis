@@ -3,7 +3,6 @@
 namespace App\Action;
 
 use App\Support\Project;
-use App\Support\Scenario;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Lorisleiva\Actions\Concerns\AsAction;
@@ -14,8 +13,9 @@ class DeleteProjectScenario
 
     public function handle(string $slug, string $scenarioId): void
     {
-        $path = Project::path($slug);
-        $scenario = Scenario::find($path, $scenarioId);
+        $project = Project::make($slug);
+        $path = $project->path();
+        $scenario = $project->scenario($scenarioId)->data();
 
         $spec = "{$path}/{$scenario->spec}";
 
