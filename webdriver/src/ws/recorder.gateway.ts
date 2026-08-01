@@ -26,7 +26,7 @@ export class RecorderGateway implements OnGatewayConnection {
 
     @SubscribeMessage('START_RECORDING')
     async handleStart(
-        @MessageBody() body: { mode?: 'scenario' | 'auth' },
+        @MessageBody() body: { mode?: 'scenario' | 'auth', storageState?: string, url?: string },
         @ConnectedSocket() ws: WebSocket,
     ): Promise<void> {
         try {
@@ -35,6 +35,8 @@ export class RecorderGateway implements OnGatewayConnection {
                 (recordingStartedAt) => safeSend(ws, { event: 'recorder:started', recordingStartedAt }),
                 () => { void this.handleStop(ws) },
                 body?.mode ?? 'scenario',
+                body?.storageState,
+                body?.url,
             )
         } catch (error) {
             safeSend(ws, {

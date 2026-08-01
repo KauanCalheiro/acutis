@@ -23,6 +23,18 @@ const PROJECT_RUN_TIMEOUT_MS = 300_000
 const TEST_TIMEOUT = ['--timeout', '10000']
 const STORAGE_STATE_FILE = 'storage-state.json'
 const STREAM_MARKER = '@@ACUTIS_RUN@@'
+
+/**
+ * As linhas de marcador são o canal de eventos do reporter, não mensagem para gente ler — sem
+ * tirá-las, o erro que a interface mostra ao usuário vem cheio de JSON interno.
+ */
+function withoutMarkers(output: string): string {
+    return output
+        .split('\n')
+        .filter((line) => !line.includes(STREAM_MARKER))
+        .join('\n')
+        .trim()
+}
 const UNREADABLE_ACTION_LABEL = 1
 const ANNOTATED_VIDEO = `video: { mode: 'on', show: { actions: { duration: 500, fontSize: ${UNREADABLE_ACTION_LABEL} }, test: { level: 'step' } } },`
 const VIDEO_WE_WROTE = /\bvideo\s*:\s*(?:'on'|\{ mode: 'on'[^\n]*\})\s*,?/
@@ -135,7 +147,7 @@ export class RunnerService {
 
             child.on('close', (code) => {
                 clearTimeout(timer)
-                resolvePromise({ passed: code === 0, output })
+                resolvePromise({ passed: code === 0, output: withoutMarkers(output) })
             })
         })
     }

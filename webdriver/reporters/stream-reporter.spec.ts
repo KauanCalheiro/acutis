@@ -113,3 +113,108 @@ describe('stream reporter', () => {
         expect(emitted.filter(event => event.status === 'failed')).toHaveLength(0)
     })
 })
+
+describe('autenticação como dependência de um cenário', () => {
+    const authTest = { id: 'auth', title: 'Autenticação', location: { file: '/proj/tests/auth.setup.ts' } }
+    const scenarioTest = { id: 's1', title: 'Ver disciplina', location: { file: '/proj/tests/disciplinas/ver.spec.ts' } }
+
+    function suiteOf(tests: unknown[]) {
+        return { allTests: () => tests }
+    }
+
+    function passed() {
+        return { status: 'passed', duration: 100, errors: [], attachments: [{ name: 'video', path: '/tmp/auth.webm' }] }
+    }
+
+    it('anuncia a autenticação como um passo só, antes dos passos do cenário', () => {
+        const emitted = record((reporter) => {
+            reporter.onBegin(null, suiteOf([authTest, scenarioTest]))
+        })
+
+        const started = emitted.find(e => e.event === 'run:started') as unknown as { steps: string[] }
+
+        expect(started.steps[0]).toBe('Autenticação')
+        expect(started.steps).toHaveLength(1)
+    })
+
+    it('colapsa os passos internos do login num passo só', () => {
+        const emitted = record((reporter) => {
+            reporter.onBegin(null, suiteOf([authTest, scenarioTest]))
+            reporter.onTestBegin(authTest)
+            reporter.onStepBegin(authTest, null, step('Preencher credenciais'))
+            reporter.onStepEnd(authTest, null, step('Preencher credenciais'))
+            reporter.onTestEnd(authTest, passed())
+        })
+
+        const steps = emitted.filter(e => e.event === 'step')
+
+        expect(steps.map(s => s.title)).toEqual(['Autenticação', 'Autenticação'])
+        expect(steps.map(s => s.status)).toEqual(['pending', 'success'])
+    })
+
+    it('não entrega o vídeo do login quando ele é só a dependência', () => {
+        const emitted = record((reporter) => {
+            reporter.onBegin(null, suiteOf([authTest, scenarioTest]))
+            reporter.onTestBegin(authTest)
+            reporter.onTestEnd(authTest, passed())
+        })
+
+        const finished = emitted.find(e => e.event === 'test' && e.status === 'success') as unknown as { videoPath: string | null }
+
+        expect(finished.videoPath).toBeNull()
+    })
+
+    it('mostra o login inteiro, com vídeo, quando ele é o teste que se está rodando', () => {
+        const emitted = record((reporter) => {
+            reporter.onBegin(null, suiteOf([authTest]))
+            reporter.onTestBegin(authTest)
+            reporter.onStepBegin(authTest, null, step('Preencher credenciais'))
+            reporter.onStepEnd(authTest, null, step('Preencher credenciais'))
+            reporter.onTestEnd(authTest, passed())
+        })
+
+        const steps = emitted.filter(e => e.event === 'step')
+        const finished = emitted.find(e => e.event === 'test' && e.status === 'success') as unknown as { videoPath: string | null }
+
+        expect(steps.map(s => s.title)).toEqual(['Preencher credenciais', 'Preencher credenciais'])
+        expect(finished.videoPath).toBe('/tmp/auth.webm')
+    })
+})
+
+describe('erro global do playwright', () => {
+    function recordStderr(run: (reporter: InstanceType<typeof StreamReporter>) => void): string {
+        let written = ''
+        const spy = vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+            written += String(chunk)
+
+            return true
+        })
+
+        try {
+            run(new StreamReporter())
+        } finally {
+            spy.mockRestore()
+        }
+
+        return written
+    }
+
+    it('deixa o erro chegar na saida do processo, senao ninguem fica sabendo', () => {
+        // Este reporter e o unico do run; o que ele engolir some para sempre.
+        const written = recordStderr((reporter) => {
+            reporter.onError({ message: 'Error: No tests found.' })
+        })
+
+        expect(written).toContain('No tests found')
+    })
+
+    it('limpa os codigos de cor antes de escrever', () => {
+        const colorido = `\u001b[31mError: quebrou\u001b[39m`
+        const written = recordStderr((reporter) => {
+            reporter.onError({ message: colorido })
+        })
+
+        expect(written).toContain('Error: quebrou')
+        expect(written).not.toContain('[31m')
+    })
+})

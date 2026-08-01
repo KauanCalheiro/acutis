@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs'
 import type { ServerResponse } from 'node:http'
 import { watchableVideo } from './run-video.js'
 import { RunnerService, type RunResult } from './runner.service.js'
+import type { RunEvent } from '../types/run.js'
 import { SnapshotService, type Snapshot } from './snapshot.service.js'
 
 @Controller('runner')
@@ -64,12 +65,29 @@ export class RunnerController {
 
         res.setHeader('Content-Type', 'application/x-ndjson')
 
-        await this.runnerService.streamProject(
+        // O motivo de uma falha antes do primeiro teste (config que não casa o spec, import
+        // quebrado, dependência faltando) só existe na saída do processo, que o reporter nunca vê.
+        // Por isso o run:finished é segurado e reemitido com o output — sem ele quem escuta recebe
+        // "falhou" e mais nada, e a interface não tem o que mostrar.
+        let finished: RunEvent | null = null
+
+        const result = await this.runnerService.streamProject(
             path ?? '',
             { spec, grep },
-            (event) => res.write(`${JSON.stringify(event)}\n`),
+            (event) => {
+                if (event.event === 'run:finished') {
+                    finished = event
+
+                    return
+                }
+
+                res.write(`${JSON.stringify(event)}\n`)
+            },
         )
 
+        const end: RunEvent = finished ?? { event: 'run:finished', status: 'failed', passed: false }
+
+        res.write(`${JSON.stringify(result.passed ? end : { ...end, output: result.output })}\n`)
         res.end()
     }
 
