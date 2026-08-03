@@ -49,7 +49,7 @@ watch(
 <template>
   <UApp>
     <div class="flex min-h-screen">
-      <Navbar />
+      <BaseNavbar />
       <main class="min-w-0 flex-1">
         <NuxtPage />
       </main>
