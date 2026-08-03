@@ -2,50 +2,19 @@
 
 Esta é a versão final do TCC. A versão inicial (com erros e código legado) está preservada em `../legacy-tcc/`.
 
-## Desenvolvimento (Docker)
+## Começar
 
 ```sh
-docker compose -f docker-compose.dev.yml up
+docker compose -f docker-compose.dev.yml up   # frontend :23000 · webdriver :24000 · backend :28000
 ```
 
-**Linux nativo (sem Docker Desktop):** para gravar cenários, suba com o override adicional:
+Para gravar cenários é preciso um Chrome do host com a porta de debug aberta — e, no Linux nativo, um override no compose. Os detalhes estão em [DOCKER.md](docs/DOCKER.md).
 
-```sh
-docker compose -f docker-compose.dev.yml -f docker-compose.linux.yml up
-```
+## Documentação
 
-Chrome recente (desde ~v136) ignora `--remote-debugging-address` e só aceita conexões CDP em `127.0.0.1` — no Docker Engine nativo, `host.docker.internal` aponta pro IP da bridge (não pro loopback), então o container do `webdriver` não alcança o Chrome do host sem esse override (que coloca o `webdriver` em `network_mode: host`, igualando seu `127.0.0.1` ao da máquina). No macOS/Windows (Docker Desktop) isso não é necessário — a VM do Docker Desktop já expõe o loopback do host via `host.docker.internal`.
-
-Portas publicadas no host (altas de propósito, pra não colidir com nada — expor bonito depois via Nginx Proxy Manager):
-
-| Serviço | Host | Interna | Nota pro proxy |
-|---------|------|---------|----------------|
-| frontend (Nuxt) | `23000` | 3000 | app principal; WebSocket habilitado (HMR do Vite) |
-| webdriver (NestJS) | `24000` | 4000 | precisa de WebSocket upgrade em `/ws`; ao trocar o domínio, ajustar `NUXT_PUBLIC_WEBDRIVER_ACUTIS_URL` (frontend) e `CORS_ORIGIN` (webdriver) no compose |
-| backend (Laravel) | `28000` | 8000 | API REST |
-
-## Gravação no Chrome do host
-
-Com a stack no Docker, o recorder se conecta a um Chrome rodando **na sua máquina** via CDP (`RECORDER_CDP_URL`, default `http://host.docker.internal:9222`) — a gravação acontece numa janela nativa. Antes de gravar, abra o Chrome com a porta de debug e um perfil dedicado (as flags são do próprio Chrome e funcionam igual em qualquer OS; só o jeito de invocar muda):
-
-**macOS**
-
-```sh
-open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$HOME/.acutis/chrome"
-```
-
-**Linux**
-
-```sh
-google-chrome --remote-debugging-port=9222 --user-data-dir="$HOME/.acutis/chrome" &
-```
-
-**Windows (PowerShell)**
-
-```powershell
-Start-Process "chrome" -ArgumentList "--remote-debugging-port=9222","--user-data-dir=$env:USERPROFILE\.acutis\chrome"
-```
-
-Sem `RECORDER_CDP_URL` (ex.: rodando o webdriver direto no host), o recorder abre o próprio Chromium headed.
+- [Rodar o Acutis](docs/RUN.md) — índice dos modos de execução
+  - [Local](docs/LOCAL.md) — a stack como processos diretos no host
+  - [Docker](docs/DOCKER.md) — a stack em containers, incluindo a gravação via CDP
+  - [Testes](docs/TESTS.md) — as quatro suítes (backend, frontend, webdriver, e2e) e suas peculiaridades
 
 > **TODO ([#56](https://github.com/KauanCalheiro/acutis/issues/56)):** abrir o Chrome na mão é atrito de DX. O plano de longo prazo é empacotar o recorder para rodar no host (companion `acutis-recorder` ou app desktop Electron/Tauri embutindo frontend + webdriver), eliminando este passo. Pensar melhor na estratégia de empacotamento antes da release.

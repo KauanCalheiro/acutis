@@ -3,6 +3,7 @@
 - [x] Docker para desenvolvimento local com hot-reload dos arquivos (backend, frontend, webdriver) — `docker compose -f docker-compose.dev.yml up`
 - [x] Persistir as execuções de cenário e sincronizá-las pelo git
 - [ ] Identificar cenário flaky a partir do histórico de execuções
+- [x] Documentação de execução em `docs/`: [`RUN.md`](docs/RUN.md) indexando [`LOCAL.md`](docs/LOCAL.md), [`DOCKER.md`](docs/DOCKER.md) e [`TESTS.md`](docs/TESTS.md)
 
 ## Identificar cenário flaky
 
