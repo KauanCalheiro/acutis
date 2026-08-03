@@ -35,7 +35,7 @@ php artisan test tests/Feature/V1   # um diretório
 
 - **`composer test` roda `config:clear` antes.** Se você tiver rodado `config:cache` em algum momento, o config cacheado congela o `APP_ENV` de desenvolvimento e os testes passam a bater no banco errado. Chamar `php artisan test` direto pula essa limpeza — é seguro no dia a dia, mas se um teste falhar por motivo inexplicável de ambiente, rode `composer test`.
 - **Banco é SQLite em memória**, fixado em `backend/phpunit.xml` (`DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`). Nenhum teste toca o `database/database.sqlite` de desenvolvimento nem o `database/e2e.sqlite` do E2E.
-- **`RefreshDatabase` não está ativo.** O `tests/Pest.php` só estende o `TestCase` do Laravel em `Feature`; os testes que precisam de tabela montam o próprio estado. Não assuma migrations aplicadas automaticamente ao escrever um teste novo.
+- **Nenhum teste toca o banco, e nenhuma migration roda.** O estado do domínio (projetos, cenários, execuções) vive no filesystem em `~/.acutis` e no git — as únicas migrations são scaffolding do Laravel (`users`, `cache`, `jobs`, `telescope_entries`). Como o banco é `:memory:` e o `tests/Pest.php` não usa `RefreshDatabase`, o primeiro teste que persistir algo vai falhar com `no such table`, erro que não aponta para a causa. Nesse momento, adicione `->use(RefreshDatabase::class)` no `tests/Pest.php` (ou `uses()` no arquivo do teste).
 - Duas suítes declaradas no `phpunit.xml`: `Unit` (`tests/Unit`) e `Feature` (`tests/Feature`). Só a `Feature` recebe o `TestCase` do Laravel.
 
 ## Frontend (Vitest)
