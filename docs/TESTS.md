@@ -35,7 +35,7 @@ php artisan test tests/Feature/V1   # um diretório
 
 - **`composer test` roda `config:clear` antes.** Se você tiver rodado `config:cache` em algum momento, o config cacheado congela o `APP_ENV` de desenvolvimento e os testes passam a bater no banco errado. Chamar `php artisan test` direto pula essa limpeza — é seguro no dia a dia, mas se um teste falhar por motivo inexplicável de ambiente, rode `composer test`.
 - **Banco é SQLite em memória**, fixado em `backend/phpunit.xml` (`DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`). Nenhum teste toca o `database/database.sqlite` de desenvolvimento nem o `database/e2e.sqlite` do E2E.
-- **`RefreshDatabase` está desligado** (comentado em `tests/Pest.php`). Os testes de `Feature` que precisam de tabela montam o próprio estado; não assuma migrations aplicadas automaticamente ao escrever um teste novo.
+- **`RefreshDatabase` não está ativo.** O `tests/Pest.php` só estende o `TestCase` do Laravel em `Feature`; os testes que precisam de tabela montam o próprio estado. Não assuma migrations aplicadas automaticamente ao escrever um teste novo.
 - Duas suítes declaradas no `phpunit.xml`: `Unit` (`tests/Unit`) e `Feature` (`tests/Feature`). Só a `Feature` recebe o `TestCase` do Laravel.
 
 ## Frontend (Vitest)
