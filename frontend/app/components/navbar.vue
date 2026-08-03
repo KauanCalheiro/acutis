@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const pinned = useCookie<boolean>('navbar-expanded', {
-  default: () => false,
+  default: () => false
 })
 const hovering = ref(false)
 const colorPickerOpen = ref(false)
@@ -13,7 +13,7 @@ watch(colorPickerOpen, (open) => {
 const expanded = computed(() =>
   pinned.value
   || hovering.value
-  || (colorPickerOpen.value && pickerKeepsExpanded.value),
+  || (colorPickerOpen.value && pickerKeepsExpanded.value)
 )
 
 const colors = {
@@ -33,12 +33,12 @@ const colors = {
   purple: 'bg-purple-500',
   fuchsia: 'bg-fuchsia-500',
   pink: 'bg-pink-500',
-  rose: 'bg-rose-500',
+  rose: 'bg-rose-500'
 }
 
 const appConfig = useAppConfig()
 const primaryColor = useCookie<string>('primary-color', {
-  default: () => 'blue',
+  default: () => 'blue'
 })
 appConfig.ui.colors.primary = primaryColor.value
 
@@ -52,8 +52,8 @@ const items = [
     label: 'Projetos',
     icon: 'i-ic-round-folder',
     to: '/',
-    testid: 'navbar-projetos',
-  },
+    testid: 'navbar-projetos'
+  }
 ]
 </script>
 
@@ -92,7 +92,7 @@ const items = [
           :delay-duration="0"
           arrow
           :content="{
-            side: 'right',
+            side: 'right'
           }"
         >
           <UButton
@@ -119,7 +119,7 @@ const items = [
       <UPopover
         v-model:open="colorPickerOpen"
         :content="{
-          side: 'right',
+          side: 'right'
         }"
       >
         <BaseButtonIcon
@@ -140,7 +140,7 @@ const items = [
               class="size-6 rounded-full transition-transform hover:scale-110"
               :class="[
                 swatch,
-                color === primaryColor ? 'ring-2 ring-default ring-offset-2 ring-offset-bg' : '',
+                color === primaryColor ? 'ring-2 ring-default ring-offset-2 ring-offset-bg' : ''
               ]"
               :title="color"
               :data-testid="`cor-${color}`"
@@ -154,7 +154,7 @@ const items = [
         :delay-duration="0"
         arrow
         :content="{
-          side: 'right',
+          side: 'right'
         }"
       >
         <UColorModeButton

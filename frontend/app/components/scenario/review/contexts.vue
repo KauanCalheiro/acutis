@@ -52,7 +52,9 @@ function applyTags(tags: string[]) {
     gherkin: stampGherkinTags(draft.value.gherkin, tags),
     playwright: stampPlaywrightTags(draft.value.playwright, tags)
   }
-  nextTick(() => { syncing = false })
+  nextTick(() => {
+    syncing = false
+  })
 }
 
 const tagsText = computed({

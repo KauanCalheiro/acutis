@@ -40,9 +40,9 @@ onMounted(() => repaintFaviconWhenThemeColorsLand())
 watch(
   [
     () => appConfig.ui.colors.primary,
-    () => colorMode.value,
+    () => colorMode.value
   ],
-  () => nextTick(() => repaintFaviconWhenThemeColorsLand()),
+  () => nextTick(() => repaintFaviconWhenThemeColorsLand())
 )
 </script>
 

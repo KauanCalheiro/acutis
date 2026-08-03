@@ -3,11 +3,11 @@ import type { FormSubmitEvent, TabsItem } from '@nuxt/ui'
 import { cloneProjectSchema, createProjectSchema, type CloneProject, type CreateProject, type ProjectFormTab } from '#shared/schemas/project'
 
 const open = defineModel<boolean>('open', {
-  default: false,
+  default: false
 })
 
 const tab = defineModel<ProjectFormTab>('tab', {
-  default: 'template',
+  default: 'template'
 })
 
 const emit = defineEmits<{
@@ -17,16 +17,16 @@ const emit = defineEmits<{
 const tabs: TabsItem[] = [
   {
     label: 'Template',
-    value: 'template',
+    value: 'template'
   },
   {
     label: 'Git',
-    value: 'git',
-  },
+    value: 'git'
+  }
 ]
 
 const templateState = reactive({
-  name: '',
+  name: ''
 })
 
 const cloneState = reactive({
@@ -35,22 +35,22 @@ const cloneState = reactive({
   branch: '',
   auth: 'public' as CloneProject['auth'],
   token: '',
-  ssh_key: '',
+  ssh_key: ''
 })
 
 const authItems = [
   {
     label: 'Público',
-    value: 'public',
+    value: 'public'
   },
   {
     label: 'Token',
-    value: 'token',
+    value: 'token'
   },
   {
     label: 'Chave SSH',
-    value: 'ssh_key',
-  },
+    value: 'ssh_key'
+  }
 ]
 
 const saving = ref(false)
@@ -79,8 +79,8 @@ async function probeRepository() {
     const result = await $fetch<{ public: boolean }>('/api/projects/probe', {
       method: 'POST',
       body: {
-        url,
-      },
+        url
+      }
     })
     if (url !== cloneState.url.trim()) return
 
@@ -120,8 +120,8 @@ function onSubmitTemplate(event: FormSubmitEvent<CreateProject>) {
   return save($fetch('/api/projects', {
     method: 'POST',
     body: {
-      name: event.data.name,
-    },
+      name: event.data.name
+    }
   }))
 }
 
@@ -134,8 +134,8 @@ function onSubmitClone(event: FormSubmitEvent<CloneProject>) {
       branch: event.data.branch || undefined,
       auth: event.data.auth,
       token: event.data.token || undefined,
-      ssh_key: event.data.ssh_key || undefined,
-    },
+      ssh_key: event.data.ssh_key || undefined
+    }
   }))
 }
 </script>
