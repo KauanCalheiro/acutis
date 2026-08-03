@@ -2,6 +2,10 @@
 
 Esta é a versão final do TCC. A versão inicial (com erros e código legado) está preservada em `../legacy-tcc/`.
 
+## Documentação
+
+- [Testes](docs/TESTS.md) — como rodar cada suíte (backend, frontend, webdriver, e2e) na mão e as peculiaridades de cada uma
+
 ## Desenvolvimento (Docker)
 
 ```sh
