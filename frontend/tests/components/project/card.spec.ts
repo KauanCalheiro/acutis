@@ -13,7 +13,7 @@ const project: Project = {
 }
 
 describe('ProjectCard', () => {
-  it('renders name, repository and provider badge', async () => {
+  it('renders name, path and provider badge', async () => {
     const wrapper = await mountSuspended(ProjectCard, {
       props: {
         project
@@ -21,7 +21,8 @@ describe('ProjectCard', () => {
     })
 
     expect(wrapper.text()).toContain('Alpha Store')
-    expect(wrapper.text()).toContain('git@github.com:acme/alpha-store.git')
+    expect(wrapper.text()).toContain('/home/user/.acutis/alpha-store')
+    expect(wrapper.find('[title]').attributes('title')).toBe('git@github.com:acme/alpha-store.git')
     expect(wrapper.text()).toContain('GitHub')
   })
 

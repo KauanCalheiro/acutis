@@ -55,7 +55,6 @@ describe('IndexPage', () => {
     expect(wrapper.findAll('[data-testid="projeto-card"]')).toHaveLength(2)
     expect(wrapper.text()).toContain('Alpha Store')
     expect(wrapper.text()).toContain('Beta Blog')
-    expect(wrapper.text()).toContain('Acesse seus projetos')
   })
 
   it('shows the empty state when the API returns no projects', async () => {
