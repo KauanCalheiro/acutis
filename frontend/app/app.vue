@@ -40,16 +40,16 @@ onMounted(() => repaintFaviconWhenThemeColorsLand())
 watch(
   [
     () => appConfig.ui.colors.primary,
-    () => colorMode.value,
+    () => colorMode.value
   ],
-  () => nextTick(() => repaintFaviconWhenThemeColorsLand()),
+  () => nextTick(() => repaintFaviconWhenThemeColorsLand())
 )
 </script>
 
 <template>
   <UApp>
     <div class="flex min-h-screen">
-      <Navbar />
+      <BaseNavbar />
       <main class="min-w-0 flex-1">
         <NuxtPage />
       </main>

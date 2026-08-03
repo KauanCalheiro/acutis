@@ -12,8 +12,8 @@ function draft(overrides: Partial<TestDraft> = {}): TestDraft {
     tags: ['@read', '@login'],
     domain: 'login',
     path: 'login-do-cliente',
-    gherkin: "@read @login\nFuncionalidade: Login\n  Cenário: entra",
-    playwright: "import { test } from '@playwright/test'\n\ntest.describe('Login', { tag: ['@read', '@login'] }, () => {})",
+    gherkin: '@read @login\nFuncionalidade: Login\n  Cenário: entra',
+    playwright: 'import { test } from \'@playwright/test\'\n\ntest.describe(\'Login\', { tag: [\'@read\', \'@login\'] }, () => {})',
     ...overrides
   })
 }
@@ -38,7 +38,7 @@ describe('ScenarioReviewContexts', () => {
 
     expect(last.tags).toEqual(['@read', '@checkout'])
     expect(last.gherkin.split('\n')[0]).toBe('@read @checkout')
-    expect(last.playwright).toContain("tag: ['@read', '@checkout']")
+    expect(last.playwright).toContain('tag: [\'@read\', \'@checkout\']')
   })
 
   it('replicates an edit in the gherkin tag line back into the tags field', async () => {
@@ -51,6 +51,6 @@ describe('ScenarioReviewContexts', () => {
     const last = emitted.at(-1)![0]
 
     expect(last.tags).toEqual(['@write', '@checkout'])
-    expect(last.playwright).toContain("tag: ['@write', '@checkout']")
+    expect(last.playwright).toContain('tag: [\'@write\', \'@checkout\']')
   })
 })

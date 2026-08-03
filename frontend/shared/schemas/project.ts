@@ -5,7 +5,7 @@ export const createProjectSchema = z.object({
     .string()
     .trim()
     .min(1, 'O nome é obrigatório.')
-    .max(255, 'O nome não pode ter mais de 255 caracteres.'),
+    .max(255, 'O nome não pode ter mais de 255 caracteres.')
 })
 
 export type CreateProject = z.output<typeof createProjectSchema>
@@ -29,7 +29,7 @@ export const cloneProjectSchema = z
     auth: z.enum([
       'public',
       'token',
-      'ssh_key',
+      'ssh_key'
     ]),
     token: z
       .string()
@@ -38,14 +38,14 @@ export const cloneProjectSchema = z
     ssh_key: z
       .string()
       .trim()
-      .optional(),
+      .optional()
   })
   .superRefine((data, ctx) => {
     if (data.auth === 'token' && !data.token) {
       ctx.addIssue({
         code: 'custom',
         path: ['token'],
-        message: 'O token é obrigatório para autenticação por token.',
+        message: 'O token é obrigatório para autenticação por token.'
       })
     }
 
@@ -53,7 +53,7 @@ export const cloneProjectSchema = z
       ctx.addIssue({
         code: 'custom',
         path: ['ssh_key'],
-        message: 'A chave SSH é obrigatória para autenticação por chave.',
+        message: 'A chave SSH é obrigatória para autenticação por chave.'
       })
     }
   })

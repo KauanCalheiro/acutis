@@ -62,12 +62,12 @@ const taglines = [
   'Quem não testa, testa em produção',
   'Seus usuários não são seu QA',
   'Coragem é dar deploy sem isso aqui',
-  'Bugs não se escondem de quem grava tudo',
+  'Bugs não se escondem de quem grava tudo'
 ]
 
 const tagline = useState(
   'home-tagline',
-  () => taglines[Math.floor(Math.random() * taglines.length)],
+  () => taglines[Math.floor(Math.random() * taglines.length)]
 )
 
 const typed = ref(tagline.value ?? '')

@@ -12,16 +12,16 @@ onMounted(() => {
 const tabs: TabsItem[] = [
   {
     label: 'macOS',
-    value: 'macos',
+    value: 'macos'
   },
   {
     label: 'Linux',
-    value: 'linux',
+    value: 'linux'
   },
   {
     label: 'Windows',
-    value: 'windows',
-  },
+    value: 'windows'
+  }
 ]
 
 const route = useRoute()
@@ -31,7 +31,7 @@ const currentUrl = computed(() => `${origin}${route.fullPath}`)
 const commands = computed<Record<string, string>>(() => ({
   macos: `open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir="$HOME/.acutis/chrome" "${currentUrl.value}"`,
   linux: `google-chrome --remote-debugging-port=9222 --user-data-dir="$HOME/.acutis/chrome" "${currentUrl.value}" &`,
-  windows: `Start-Process "chrome" -ArgumentList "--remote-debugging-port=9222","--user-data-dir=$env:USERPROFILE\\.acutis\\chrome","${currentUrl.value}"`,
+  windows: `Start-Process "chrome" -ArgumentList "--remote-debugging-port=9222","--user-data-dir=$env:USERPROFILE\\.acutis\\chrome","${currentUrl.value}"`
 }))
 
 const copied = ref(false)

@@ -142,9 +142,9 @@ const stepColors: Record<TestStep['status'], string> = {
           :src="videoUrl"
           preload="metadata"
           controls
-          @loadedmetadata="seekToPreviewFrame"
           class="mx-auto mb-6 w-3/4 rounded-lg bg-elevated"
           data-testid="execucao-video"
+          @loadedmetadata="seekToPreviewFrame"
         />
 
         <UAlert

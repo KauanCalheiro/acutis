@@ -19,7 +19,7 @@ const textarea = ref<HTMLTextAreaElement | null>(null)
 
 const highlighted = computed(() =>
   // ponytail: v-html do próprio rascunho do usuário; Prism.highlight escapa entidades
-  Prism.highlight(model.value, Prism.languages[language]!, language) + '\n',
+  Prism.highlight(model.value, Prism.languages[language]!, language) + '\n'
 )
 
 function resize() {
