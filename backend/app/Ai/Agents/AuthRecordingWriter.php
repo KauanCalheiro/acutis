@@ -35,7 +35,7 @@ class AuthRecordingWriter implements Agent, HasStructuredOutput
         - Após o evento de submit, aguarde sair da página de login com page.waitForURL(url => !url.toString().includes('/login')) ou aguarde o campo de senha desaparecer.
         - Confie no auto-wait do Playwright para o resto — não adicione esperas redundantes além dessas.
         - Nunca use page.context().storageState({ path }) como checagem de existência nem retorne cedo — sempre execute o login completo primeiro.
-        - Ao final, e só depois de confirmar o login, SEMPRE salve o estado com: await page.context().storageState({ path: 'storage-state.json' }).
+        - Ao final, e só depois de confirmar o login, SEMPRE salve o estado com: await page.context().storageState({ path: process.env.STORAGE_STATE || 'storage-state.json' }).
         - Importe apenas de @playwright/test.
         INSTRUCTIONS;
     }

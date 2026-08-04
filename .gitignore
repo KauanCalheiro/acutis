@@ -4,4 +4,6 @@
 /.acutis/*
 !/.acutis/.gitkeep
 .superpowers/
+docs/superpowers/
 .claude/.obsidian/*
+COMPARATIVO-TCC.md

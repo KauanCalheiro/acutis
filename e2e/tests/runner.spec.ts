@@ -235,7 +235,7 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         await writeFile(join(dir, 'tests', 'env.spec.ts'),
             "import { test, expect } from '@playwright/test'\ntest('le o .env do projeto @env', () => { expect(process.env.PROJECT_SECRET).toBe('from-dotenv') })\n")
 
-        const run = async (data: Record<string, string>) =>
+        const run = async (data: Record<string, unknown>) =>
             (await request.post(`${RUNNER_URL}/runner/project`, { data: { path: dir, ...data }, timeout: 120_000 })).json()
 
         const all = await run({})
@@ -250,6 +250,12 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
 
         const withEnv = await run({ grep: '@env' })
         expect(withEnv.passed).toBe(true)
+
+        const overridden = await run({ grep: '@env', env: { PROJECT_SECRET: 'from-dotenv', FROM_ENVIRONMENT: '1' } })
+        expect(overridden.passed).toBe(true)
+
+        const losing = await run({ grep: '@env', env: { PROJECT_SECRET: 'do-ambiente' } })
+        expect(losing.passed).toBe(false)
     })
 
     test('streams run progress as ndjson over http', async ({ request }) => {

@@ -13,13 +13,15 @@ class RunProject
 
     public function handle(string $slug, ?string $spec = null, ?string $grep = null): ProjectRunData
     {
-        $path = Project::make($slug)->path();
+        $project = Project::make($slug);
+        $environment = $project->environments()->resolve();
 
         $result = Http::timeout(300)
             ->post(acutis()->webdriverUrl.'/runner/project', [
-                'path' => $path,
+                'path' => $project->path(),
                 'spec' => $spec,
                 'grep' => $grep,
+                'env' => blank($environment) ? null : $environment,
             ])
             ->throw()
             ->json();

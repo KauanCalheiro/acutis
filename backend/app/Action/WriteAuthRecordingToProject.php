@@ -41,10 +41,10 @@ class WriteAuthRecordingToProject
             return new GeneratedAuthSetupData(authSetup: $authSetup, credentialsNeeded: true);
         }
 
-        $env = $project->env();
+        $environments = $project->environments();
 
-        $env->set(EnvKey::AUTH_USER, $credentials->username);
-        $env->set(EnvKey::AUTH_PASSWORD, $credentials->password);
+        $environments->set(EnvKey::AUTH_USER, $credentials->username);
+        $environments->set(EnvKey::AUTH_PASSWORD, $credentials->password, secret: true);
 
         return new GeneratedAuthSetupData(authSetup: $authSetup, credentialsNeeded: false);
     }

@@ -18,6 +18,12 @@ export interface RunOptions {
     env?: Record<string, string>
 }
 
+export interface ProjectRunOptions {
+    spec?: string
+    grep?: string
+    env?: Record<string, string>
+}
+
 const RUN_TIMEOUT_MS = 60_000
 const PROJECT_RUN_TIMEOUT_MS = 300_000
 const TEST_TIMEOUT = ['--timeout', '10000']
@@ -90,7 +96,7 @@ export class RunnerService {
         }
     }
 
-    async runProject(dir: string, options: { spec?: string; grep?: string } = {}): Promise<RunResult> {
+    async runProject(dir: string, options: ProjectRunOptions = {}): Promise<RunResult> {
         await this.ensureNodeModules(dir)
         await this.ensureWatchableRun(dir)
         await this.ensureRunTail(dir)
@@ -99,18 +105,18 @@ export class RunnerService {
         if (options.spec) args.push(options.spec)
         if (options.grep) args.push('--grep', options.grep)
 
-        return this.execPlaywright(dir, args, await this.readDotenv(dir))
+        return this.execPlaywright(dir, args, await this.projectEnv(dir, options.env))
     }
 
     async streamProject(
         dir: string,
-        options: { spec?: string; grep?: string },
+        options: ProjectRunOptions,
         onEvent: (event: RunEvent) => void,
     ): Promise<RunResult> {
         await this.ensureNodeModules(dir)
         await this.ensureWatchableRun(dir)
         await this.ensureRunTail(dir)
-        const env = await this.readDotenv(dir)
+        const env = await this.projectEnv(dir, options.env)
 
         const args = [`--reporter=${STREAM_REPORTER_PATH}`, ...TEST_TIMEOUT]
         if (options.spec) args.push(options.spec)
@@ -150,6 +156,10 @@ export class RunnerService {
                 resolvePromise({ passed: code === 0, output: withoutMarkers(output) })
             })
         })
+    }
+
+    private async projectEnv(dir: string, resolved?: Record<string, string>): Promise<Record<string, string>> {
+        return { ...await this.readDotenv(dir), ...resolved }
     }
 
     private async readDotenv(dir: string): Promise<Record<string, string>> {

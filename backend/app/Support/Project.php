@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Support\Project\Auth;
 use App\Support\Project\Env;
+use App\Support\Project\Environments;
 use App\Support\Project\Gitignore;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -45,6 +46,11 @@ final class Project
     public function env(): Env
     {
         return new Env($this);
+    }
+
+    public function environments(): Environments
+    {
+        return new Environments($this);
     }
 
     /** Autenticação do projeto — o setup, as credenciais e o config que o faz rodar. */

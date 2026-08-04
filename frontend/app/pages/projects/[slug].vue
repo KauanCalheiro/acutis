@@ -40,6 +40,7 @@ const scenarios = computed(() => {
 
 const renameOpen = ref(false)
 const settingsOpen = ref(false)
+const environmentsOpen = ref(false)
 const removeOpen = ref(false)
 const removing = ref(false)
 const authOpen = ref(false)
@@ -312,6 +313,14 @@ async function remove() {
       </div>
 
       <div class="flex gap-2 shrink-0">
+        <UButton
+          icon="i-ic-round-layers"
+          :label="project!.environment?.name ?? 'Ambientes'"
+          color="neutral"
+          variant="soft"
+          data-testid="projeto-ambientes"
+          @click="environmentsOpen = true"
+        />
         <BaseButtonIcon
           icon="i-ic-round-code"
           label="Abrir no VS Code"
@@ -521,6 +530,12 @@ async function remove() {
       :slug="project!.slug"
       :name="project!.name"
       @renamed="onRenamed"
+    />
+
+    <ProjectEnvironmentsModal
+      v-model:open="environmentsOpen"
+      :slug="slug"
+      @saved="refresh()"
     />
 
     <ProjectSettingsModal

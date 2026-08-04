@@ -21,6 +21,10 @@ class {Resource}Data extends Data {
 }
 ```
 
+### Método `fromX` num Data
+
+`Data::from()` despacha pelo tipo do argumento procurando um `fromString`/`fromArray`/`fromInt` etc. Parser próprio que possa devolver `null` (linha de comentário, entrada inválida) **não** pode usar esses nomes — bate no despacho e estoura. Nomear fora do padrão (`fromLine`, `fromHeader`) mantém o método um static comum.
+
 ## Saída — `{Resource}Resource`
 
 Caminho: `app/Http/Resources/V1/{Resource}Resource.php`. **Nunca** `parent::toArray()` — expor só campos necessários.

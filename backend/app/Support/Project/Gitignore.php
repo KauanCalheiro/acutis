@@ -15,6 +15,7 @@ final class Gitignore
     private const ENTRIES = [
         'node_modules',
         'storage-state.json',
+        'storage-state.*.json',
         '.env',
         'results',
         'playwright-report',

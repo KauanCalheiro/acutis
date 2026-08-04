@@ -43,10 +43,11 @@ export class RunnerController {
         @Body('path') path: string,
         @Body('spec') spec?: string,
         @Body('grep') grep?: string,
+        @Body('env') env?: Record<string, string>,
     ): Promise<RunResult> {
         this.ensureTestMode()
 
-        return this.runnerService.runProject(path, { spec, grep })
+        return this.runnerService.runProject(path, { spec, grep, env })
     }
 
     @Post('project/stream')
@@ -55,6 +56,7 @@ export class RunnerController {
         @Body('path') path?: string,
         @Body('spec') spec?: string,
         @Body('grep') grep?: string,
+        @Body('env') env?: Record<string, string>,
     ): Promise<void> {
         if (process.env.WEBDRIVER_TEST_MODE !== '1') {
             res.statusCode = 403
@@ -73,7 +75,7 @@ export class RunnerController {
 
         const result = await this.runnerService.streamProject(
             path ?? '',
-            { spec, grep },
+            { spec, grep, env },
             (event) => {
                 if (event.event === 'run:finished') {
                     finished = event

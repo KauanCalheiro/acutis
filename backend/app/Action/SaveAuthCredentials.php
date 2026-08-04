@@ -13,9 +13,9 @@ class SaveAuthCredentials
 
     public function handle(string $slug, AuthCredentialsData $data): void
     {
-        $env = Project::make($slug)->env();
+        $environments = Project::make($slug)->environments();
 
-        $env->set(EnvKey::AUTH_USER, $data->username);
-        $env->set(EnvKey::AUTH_PASSWORD, $data->password);
+        $environments->set(EnvKey::AUTH_USER, $data->username);
+        $environments->set(EnvKey::AUTH_PASSWORD, $data->password, secret: true);
     }
 }

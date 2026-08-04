@@ -23,7 +23,39 @@ export interface ProjectDetail extends Project {
   scenarios: Scenario[]
   auth_status: 'unset' | 'skipped' | 'configured' | 'failing'
   base_url: string | null
+  environment: { slug: string, name: string } | null
   vscode_url: string
+}
+
+export interface EnvironmentVar {
+  key: string
+  value: string | null
+  secret: boolean
+  pending: boolean
+}
+
+export interface EditableVar {
+  key: string
+  value: string
+  secret: boolean
+  pending: boolean
+}
+
+export interface Environment {
+  slug: string
+  name: string
+  vars: EnvironmentVar[]
+}
+
+export interface EnvironmentList {
+  active: string | null
+  environments: Environment[]
+  known_keys: string[]
+  dotenv_keys: string[]
+}
+
+export interface Dotenv {
+  vars: EnvironmentVar[]
 }
 
 export interface ScenarioRunStep {
