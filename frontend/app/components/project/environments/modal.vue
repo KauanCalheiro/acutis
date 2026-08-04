@@ -197,18 +197,16 @@ function saveDotenv() {
     description="Cada ambiente diz contra o que os cenários rodam. O valor marcado como segredo nunca vai para o git — fica só no .env."
   >
     <template #body>
-      <div class="flex gap-2">
-        <UButton
-          v-for="item in tabs"
-          :key="item.value"
-          :icon="item.icon"
-          :label="item.label"
-          :color="tab === item.value ? 'primary' : 'neutral'"
-          :variant="tab === item.value ? 'soft' : 'ghost'"
-          :data-testid="`ambientes-aba-${item.value}`"
-          @click="tab = item.value"
-        />
-      </div>
+      <UTabs
+        v-model="tab"
+        :items="tabs"
+        :content="false"
+        class="w-full"
+      >
+        <template #default="{ item }">
+          <span :data-testid="`ambientes-aba-${item.value}`">{{ item.label }}</span>
+        </template>
+      </UTabs>
 
       <div
         v-if="tab === 'ambientes'"
