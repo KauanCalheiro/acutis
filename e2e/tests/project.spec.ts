@@ -256,6 +256,93 @@ test.describe('project settings', { tag: ['@write', '@project'] }, () => {
     })
 })
 
+test.describe('project environments', { tag: ['@write', '@project'] }, () => {
+    let stopBackend: () => Promise<void>
+    let tmpProjects: string
+
+    const environmentFile = () => readFileSync(join(tmpProjects, 'alpha-store', 'environments', 'homologacao.json'), 'utf8')
+    const dotenv = () => readFileSync(join(tmpProjects, 'alpha-store', '.env'), 'utf8')
+
+    test.beforeAll(async () => {
+        tmpProjects = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
+        cpSync(FIXTURES_DIR, tmpProjects, { recursive: true })
+
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
+    })
+
+    test.afterAll(async () => {
+        await stopBackend()
+        rmSync(tmpProjects, { recursive: true, force: true })
+    })
+
+    test('creates the first environment and runs on it', async ({ page }) => {
+        await page.goto('/projects/alpha-store')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await expect(page.getByTestId('projeto-ambientes')).toHaveText('Ambientes')
+
+        await test.step('open the modal and name the new environment', async () => {
+            await page.getByTestId('projeto-ambientes').click()
+            await page.getByTestId('ambientes-criar').click()
+            await page.getByTestId('ambientes-novo-nome').fill('Homologação')
+            await page.getByTestId('ambientes-criar').click()
+        })
+
+        await expect(page.getByTestId('ambientes-nome')).toHaveValue('Homologação')
+
+        await page.getByTestId('ambientes-fechar').click()
+
+        await expect(page.getByTestId('projeto-ambientes')).toHaveText('Homologação')
+    })
+
+    test('keeps a secret out of the versioned file', async ({ page }) => {
+        await page.goto('/projects/alpha-store')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await test.step('add a variable and mark it as a secret', async () => {
+            await page.getByTestId('projeto-ambientes').click()
+            await page.getByTestId('ambientes-variaveis-adicionar').click()
+            await page.getByTestId('ambientes-variaveis-chave-0').fill('AUTH_PASSWORD')
+            await page.getByTestId('ambientes-variaveis-valor-0').fill('segredo')
+            await page.getByTestId('ambientes-variaveis-segredo-0').click()
+            await page.getByTestId('ambientes-salvar').click()
+        })
+
+        await expect(page.getByTestId('ambientes-variaveis-valor-0')).toHaveValue('')
+
+        expect(environmentFile()).toContain('{{env.HOMOLOGACAO_AUTH_PASSWORD}}')
+        expect(environmentFile()).not.toContain('segredo')
+        expect(dotenv()).toContain('HOMOLOGACAO_AUTH_PASSWORD=segredo')
+    })
+
+    test('fills a secret that no one had filled yet from the env tab', async ({ page }) => {
+        await page.goto('/projects/alpha-store')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await test.step('point the variable at a key nobody filled', async () => {
+            await page.getByTestId('projeto-ambientes').click()
+            await page.getByTestId('ambientes-variaveis-valor-0').fill('{{env.SENHA_COMPARTILHADA}}')
+            await page.getByTestId('ambientes-salvar').click()
+
+            await expect(page.getByTestId('ambientes-variaveis-valor-0')).toHaveValue('')
+        })
+
+        await test.step('fill that key in the env tab', async () => {
+            await page.getByTestId('ambientes-aba-dotenv').click()
+
+            await expect(page.getByTestId('dotenv-variaveis-chave-1')).toHaveValue('SENHA_COMPARTILHADA')
+
+            await page.getByTestId('dotenv-variaveis-valor-1').fill('outro-segredo')
+            await page.getByTestId('dotenv-salvar').click()
+
+            await expect(page.getByTestId('dotenv-variaveis-valor-1')).toHaveValue('')
+        })
+
+        await expect(page.getByTestId('ambientes-erro')).toBeHidden()
+        expect(dotenv()).toContain('SENHA_COMPARTILHADA=outro-segredo')
+    })
+})
+
 test.describe('project management', { tag: ['@write', '@project'] }, () => {
     let stopBackend: () => Promise<void>
     let tmpProjects: string
