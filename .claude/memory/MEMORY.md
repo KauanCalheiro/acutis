@@ -9,9 +9,11 @@ Instruções persistentes ficam em `./.claude/memory/`. Antes de qualquer ação
 | [webdriver.md](webdriver.md) | índice | mexer no serviço webdriver (gateway/recorder/video NestJS, ou a pill/UI injetável) (→ tdd) |
 | [e2e.md](e2e.md) | índice | criar/editar teste cross-tool em `e2e/` (Playwright frontend+webdriver+backend) (→ tags, backend, setup) |
 | [execution.md](execution.md) | índice | subir serviço, rodar comando de dev/teste — escolher modo de execução (→ docker, local) |
+| [environments.md](environments.md) | reference | mexer em variável, segredo ou sessão do projeto testado — `environments/*.json` versionado, `.env` como cofre |
 | [schema.md](schema.md) | reference | antes de migration/model/recurso — fonte de verdade das tabelas (DBML) |
 | [commit.md](commit.md) | feedback | fazer git commit/branch/PR/merge — nunca na main, branch por feature, squash merge com descrição detalhada |
-| [comments.md](comments.md) | feedback | escrever/revisar qualquer código — nunca comentar, renomear em vez de comentar |
+| [specs.md](specs.md) | feedback | escrever spec de brainstorming — vai em `docs/superpowers/`, nunca commitada |
+| [comments.md](comments.md) | feedback | escrever/revisar qualquer código — comentário só descreve o que a função faz, nunca a deliberação |
 | [branches.md](branches.md) | feedback | depois de mergear PR, ou ao pedir limpeza — apagar branch órfã local/remota |
 | [tdd.md](tdd.md) | feedback | qualquer feature/bugfix — red/green/refactor, teste antes do código |
 | [structure.md](structure.md) | índice | procurar onde fica arquivo/pasta no monorepo (→ backend, frontend, webdriver, e2e) |
