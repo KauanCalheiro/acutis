@@ -19,10 +19,24 @@ const vars = defineModel<EditableVar[]>({
   default: () => []
 })
 
-const keyListId = useId()
-const valueListId = useId()
+const keys = ref([...knownKeys])
 
-const pointers = computed(() => pointerKeys.map(key => `{{env.${key}}}`))
+watch(() => knownKeys, (updated) => {
+  keys.value = [...updated]
+})
+
+function pointersFor(variable: EditableVar) {
+  return pointerKeys.map(key => ({
+    label: `{{env.${key}}}`,
+    onSelect: () => (variable.value = `{{env.${key}}}`)
+  }))
+}
+
+function declare(variable: EditableVar, key: string) {
+  if (!keys.value.includes(key)) keys.value.push(key)
+
+  variable.key = key
+}
 
 function add() {
   vars.value = [
@@ -49,42 +63,46 @@ function placeholderOf(variable: EditableVar) {
 
 <template>
   <div class="flex flex-col gap-2">
-    <datalist :id="keyListId">
-      <option
-        v-for="key in knownKeys"
-        :key="key"
-        :value="key"
-      />
-    </datalist>
-
-    <datalist :id="valueListId">
-      <option
-        v-for="pointer in pointers"
-        :key="pointer"
-        :value="pointer"
-      />
-    </datalist>
-
     <div
       v-for="(variable, index) in vars"
       :key="index"
       class="flex items-center gap-2"
     >
-      <UInput
+      <UInputMenu
         v-model="variable.key"
+        :items="keys"
+        create-item="always"
         class="w-1/3"
         placeholder="CHAVE"
-        :list="keyListId"
         :data-testid="`${testid}-chave-${index}`"
+        @create="declare(variable, $event)"
       />
       <UInput
         v-model="variable.value"
         class="flex-1"
         :placeholder="placeholderOf(variable)"
-        :list="valueListId"
         :color="variable.pending ? 'warning' : undefined"
         :data-testid="`${testid}-valor-${index}`"
-      />
+      >
+        <template
+          v-if="variable.secret && pointerKeys.length"
+          #trailing
+        >
+          <UDropdownMenu :items="pointersFor(variable)">
+            <UButton
+              icon="i-ic-round-link"
+              color="neutral"
+              variant="link"
+              aria-label="Apontar para uma chave do .env"
+              :data-testid="`${testid}-apontar-${index}`"
+            />
+
+            <template #item="{ item }">
+              <span :data-testid="`${testid}-ponteiro-${item.label}`">{{ item.label }}</span>
+            </template>
+          </UDropdownMenu>
+        </template>
+      </UInput>
       <UTooltip
         v-if="secrets"
         text="Segredo: o valor sai do arquivo versionado e vai para o .env"

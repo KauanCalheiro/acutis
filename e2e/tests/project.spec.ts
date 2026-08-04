@@ -303,6 +303,7 @@ test.describe('project environments', { tag: ['@write', '@project'] }, () => {
             await page.getByTestId('projeto-ambientes').click()
             await page.getByTestId('ambientes-variaveis-adicionar').click()
             await page.getByTestId('ambientes-variaveis-chave-0').fill('AUTH_PASSWORD')
+            await page.getByTestId('ambientes-variaveis-chave-0').press('Enter')
             await page.getByTestId('ambientes-variaveis-valor-0').fill('segredo')
             await page.getByTestId('ambientes-variaveis-segredo-0').click()
             await page.getByTestId('ambientes-salvar').click()
@@ -313,6 +314,17 @@ test.describe('project environments', { tag: ['@write', '@project'] }, () => {
         expect(environmentFile()).toContain('{{env.HOMOLOGACAO_AUTH_PASSWORD}}')
         expect(environmentFile()).not.toContain('segredo')
         expect(dotenv()).toContain('HOMOLOGACAO_AUTH_PASSWORD=segredo')
+    })
+
+    test('points a secret at a key the env file already has', async ({ page }) => {
+        await page.goto('/projects/alpha-store')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('projeto-ambientes').click()
+        await page.getByTestId('ambientes-variaveis-apontar-0').click()
+        await page.getByTestId('ambientes-variaveis-ponteiro-{{env.HOMOLOGACAO_AUTH_PASSWORD}}').click()
+
+        await expect(page.getByTestId('ambientes-variaveis-valor-0')).toHaveValue('{{env.HOMOLOGACAO_AUTH_PASSWORD}}')
     })
 
     test('fills a secret that no one had filled yet from the env tab', async ({ page }) => {
