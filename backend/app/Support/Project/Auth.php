@@ -62,7 +62,7 @@ final class Auth
                     testMatch: /.*\.spec\.ts/,
                     grepInvert: /@publico/,
                     dependencies: ['setup'],
-                    use: { storageState: 'storage-state.json' },
+                    use: { storageState: process.env.STORAGE_STATE || 'storage-state.json' },
                 },
             ],
         TS;

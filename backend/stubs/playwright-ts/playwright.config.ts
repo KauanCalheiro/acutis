@@ -5,6 +5,8 @@ import { defineConfig } from '@playwright/test'
 // storageState fica indefinido e os cenários rodam normalmente, sem sessão.
 const autenticado = existsSync('tests/auth.setup.ts')
 
+const storageState = process.env.STORAGE_STATE || 'storage-state.json'
+
 export default defineConfig({
     testDir: './tests',
     timeout: 60_000,
@@ -35,7 +37,7 @@ export default defineConfig({
             testMatch: /.*\.spec\.ts/,
             grepInvert: /@publico/,
             dependencies: autenticado ? ['setup'] : [],
-            use: autenticado ? { storageState: 'storage-state.json' } : {},
+            use: autenticado ? { storageState } : {},
         },
     ],
 })
