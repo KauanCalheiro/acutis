@@ -14,4 +14,6 @@ enum EnvKey: string
     case AUTH_USER = 'AUTH_USER';
 
     case AUTH_PASSWORD = 'AUTH_PASSWORD';
+
+    case ACTIVE_ENVIRONMENT = 'ACUTIS_ENV';
 }

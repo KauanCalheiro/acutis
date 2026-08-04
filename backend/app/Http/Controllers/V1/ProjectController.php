@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers\V1;
 
+use App\Action\ActivateProjectEnvironment;
 use App\Action\CloneProjectFromGit;
+use App\Action\CreateProjectEnvironment;
 use App\Action\CreateProjectFromTemplate;
 use App\Action\DeleteProject;
+use App\Action\DeleteProjectEnvironment;
 use App\Action\DeleteProjectScenario;
 use App\Action\FixScenarioSpec;
 use App\Action\GenerateTestsFromRecording;
+use App\Action\ListProjectEnvironments;
 use App\Action\ListProjects;
 use App\Action\PersistScenarioRun;
 use App\Action\ProbeGitRepository;
@@ -15,11 +19,14 @@ use App\Action\RunProject;
 use App\Action\SaveAuthCredentials;
 use App\Action\ShowProject;
 use App\Action\ShowProjectAuth;
+use App\Action\ShowProjectDotenv;
 use App\Action\ShowProjectScenario;
 use App\Action\SkipProjectAuth;
 use App\Action\SuggestScenarioSelectors;
 use App\Action\UpdateProject;
 use App\Action\UpdateProjectAuth;
+use App\Action\UpdateProjectDotenv;
+use App\Action\UpdateProjectEnvironment;
 use App\Action\UpdateProjectScenario;
 use App\Action\UpdateProjectSettings;
 use App\Action\WriteAuthRecordingToProject;
@@ -29,6 +36,8 @@ use App\Data\V1\Auth\AuthRecordingData;
 use App\Data\V1\Auth\UpdateAuthSetupData;
 use App\Data\V1\Project\CloneProjectData;
 use App\Data\V1\Project\CreateProjectData;
+use App\Data\V1\Project\DotenvData;
+use App\Data\V1\Project\EnvironmentData;
 use App\Data\V1\Project\ProbeGitData;
 use App\Data\V1\Project\ProjectSettingsData;
 use App\Data\V1\Project\RunProjectData;
@@ -39,6 +48,9 @@ use App\Data\V1\Recording\RecordingData;
 use App\Data\V1\Recording\TestDraftData;
 use App\Data\V1\Recording\WriteTestData;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\V1\DotenvResource;
+use App\Http\Resources\V1\EnvironmentListResource;
+use App\Http\Resources\V1\EnvironmentResource;
 use App\Http\Resources\V1\FixedSpecResource;
 use App\Http\Resources\V1\GeneratedAuthSetupResource;
 use App\Http\Resources\V1\GitProbeResource;
@@ -132,6 +144,45 @@ class ProjectController extends Controller
         return ProjectSettingsResource::make(UpdateProjectSettings::run($project, $data));
     }
 
+    public function environments(string $project): EnvironmentListResource
+    {
+        return EnvironmentListResource::make(ListProjectEnvironments::run($project));
+    }
+
+    public function storeEnvironment(string $project, EnvironmentData $data): JsonResponse
+    {
+        return EnvironmentResource::make(CreateProjectEnvironment::run($project, $data->name))
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
+    }
+
+    public function updateEnvironment(string $project, string $environment, EnvironmentData $data): EnvironmentResource
+    {
+        return EnvironmentResource::make(UpdateProjectEnvironment::run($project, $environment, $data));
+    }
+
+    public function activateEnvironment(string $project, string $environment): EnvironmentResource
+    {
+        return EnvironmentResource::make(ActivateProjectEnvironment::run($project, $environment));
+    }
+
+    public function destroyEnvironment(string $project, string $environment): Response
+    {
+        DeleteProjectEnvironment::run($project, $environment);
+
+        return response()->noContent();
+    }
+
+    public function dotenv(string $project): DotenvResource
+    {
+        return DotenvResource::make(ShowProjectDotenv::run($project));
+    }
+
+    public function updateDotenv(string $project, DotenvData $data): DotenvResource
+    {
+        return DotenvResource::make(UpdateProjectDotenv::run($project, $data));
+    }
+
     public function authCredentials(string $project, AuthCredentialsData $data): Response
     {
         SaveAuthCredentials::run($project, $data);
@@ -218,11 +269,13 @@ class ProjectController extends Controller
 
     public function runStream(string $project, Request $request): StreamedResponse
     {
-        $path = Project::make($project)->path();
+        $resolved = Project::make($project);
+        $path = $resolved->path();
         $spec = $request->query('spec');
         $grep = $request->query('grep');
+        $environment = $resolved->environments()->resolve();
 
-        return response()->stream(function () use ($path, $spec, $grep): void {
+        return response()->stream(function () use ($path, $spec, $grep, $environment): void {
             set_time_limit(0);
 
             $startedAt = now();
@@ -234,6 +287,7 @@ class ProjectController extends Controller
                     'path' => $path,
                     'spec' => $spec,
                     'grep' => $grep,
+                    'env' => blank($environment) ? null : $environment,
                 ])
                 ->toPsrResponse()
                 ->getBody();
