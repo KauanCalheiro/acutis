@@ -1,20 +1,22 @@
 import { test, expect } from '@playwright/test'
-import { cpSync, existsSync, mkdtempSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { existsSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
 import { startBackend } from '../support/backend'
-
-const FIXTURES_DIR = resolve(import.meta.dirname, '../fixtures/projects')
+import { projectReset, projectsCopy } from '../support/projects'
 
 test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
     let stopBackend: () => Promise<void>
+    let tmpProjects: string
 
     test.beforeAll(async () => {
-        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: FIXTURES_DIR })
+        tmpProjects = projectsCopy()
+
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
 
     test.afterAll(async () => {
         await stopBackend()
+        rmSync(tmpProjects, { recursive: true, force: true })
     })
 
     test.beforeEach(async ({ page }) => {
@@ -102,8 +104,7 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
     let tmpProjects: string
 
     test.beforeAll(async () => {
-        tmpProjects = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
-        cpSync(FIXTURES_DIR, tmpProjects, { recursive: true })
+        tmpProjects = projectsCopy()
 
         stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
@@ -111,8 +112,7 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
     // cada teste mexe/apaga cenários do alpha-store, então reseta a pasta antes de
     // cada um pra não depender da ordem de execução nem do que o teste anterior mudou
     test.beforeEach(() => {
-        rmSync(join(tmpProjects, 'alpha-store'), { recursive: true, force: true })
-        cpSync(join(FIXTURES_DIR, 'alpha-store'), join(tmpProjects, 'alpha-store'), { recursive: true })
+        projectReset(tmpProjects, 'alpha-store')
     })
 
     test.afterAll(async () => {
