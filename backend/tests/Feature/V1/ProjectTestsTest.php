@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\EnvKey;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -138,8 +139,8 @@ it('merges into the environment without clobbering the variables already there',
     $environment = json_decode(File::get($dir.'/environments/ambiente.json'), true);
 
     expect($environment['vars'])->toContain(
-        ['key' => 'USER', 'value' => 'someone', 'secret' => false],
-        ['key' => 'PASSWORD', 'value' => 'oldpass', 'secret' => true],
+        ['key' => EnvKey::USER->value, 'value' => 'someone', 'secret' => false],
+        ['key' => EnvKey::PASSWORD->value, 'value' => 'oldpass', 'secret' => true],
         ['key' => 'SENHA_UNIVATES', 'value' => 'topsecret123', 'secret' => false],
     );
 });

@@ -18,6 +18,31 @@ export function shouldMaskPasswords(): boolean {
     return (window as unknown as { __acutisRecorderMode?: string }).__acutisRecorderMode !== 'auth'
 }
 
+/**
+ * Chama de volta em toda mudança de URL feita pela aplicação. Roteador de SPA troca de tela por
+ * pushState, replaceState (redirect/guard de rota), voltar/avançar do navegador ou só o hash —
+ * escutar apenas pushState perde a maioria das navegações de plataforma. Devolve o desfazer.
+ */
+export function watchNavigation(onNavigate: () => void): () => void {
+    const original = { pushState: history.pushState, replaceState: history.replaceState }
+
+    for (const method of ['pushState', 'replaceState'] as const) {
+        history[method] = function (...args: Parameters<History['pushState']>) {
+            original[method].apply(history, args)
+            onNavigate()
+        }
+    }
+
+    window.addEventListener('popstate', onNavigate)
+    window.addEventListener('hashchange', onNavigate)
+
+    return () => {
+        Object.assign(history, original)
+        window.removeEventListener('popstate', onNavigate)
+        window.removeEventListener('hashchange', onNavigate)
+    }
+}
+
 function ensureAttached(): void {
     if (!hostElement) return
     const parent = document.body ?? document.documentElement
@@ -120,13 +145,7 @@ export function mountRecorder(onClick?: () => void): void {
         dispatch(buildBaseEvent('submit', e.target))
     }, true)
 
-    const originalPushState = history.pushState.bind(history)
-    history.pushState = function (...args: Parameters<typeof history.pushState>) {
-        originalPushState(...args)
-        if (!isPaused.value) dispatch(buildNavigateEvent())
-    }
-
-    window.addEventListener('popstate', () => {
+    watchNavigation(() => {
         if (!isPaused.value) dispatch(buildNavigateEvent())
     })
 }

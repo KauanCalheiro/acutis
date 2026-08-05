@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\EnvKey;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
@@ -28,7 +29,7 @@ it('saves the base url the user typed', function () {
     ])->assertOk()->assertJsonPath('base_url', 'https://www.univates.br/plataforma');
 
     expect(($this->environment)()['vars'])
-        ->toContain(['key' => 'URL', 'value' => 'https://www.univates.br/plataforma', 'secret' => false])
+        ->toContain(['key' => EnvKey::URL->value, 'value' => 'https://www.univates.br/plataforma', 'secret' => false])
         ->and(File::get($this->dir.'/.gitignore'))->toContain('environments');
 });
 
@@ -55,9 +56,9 @@ it('preserves the variables the environment already had', function () {
     putJson("/api/v1/projects/{$this->slug}/settings", ['baseUrl' => 'https://app.test'])->assertOk();
 
     expect(($this->environment)()['vars'])->toContain(
-        ['key' => 'URL', 'value' => 'https://app.test', 'secret' => false],
-        ['key' => 'USER', 'value' => '482910', 'secret' => false],
-        ['key' => 'PASSWORD', 'value' => 'segredo', 'secret' => true],
+        ['key' => EnvKey::URL->value, 'value' => 'https://app.test', 'secret' => false],
+        ['key' => EnvKey::USER->value, 'value' => '482910', 'secret' => false],
+        ['key' => EnvKey::PASSWORD->value, 'value' => 'segredo', 'secret' => true],
     );
 });
 
@@ -66,7 +67,7 @@ it('replaces a base url that was already set', function () {
     putJson("/api/v1/projects/{$this->slug}/settings", ['baseUrl' => 'https://novo.test'])->assertOk();
 
     expect(($this->environment)()['vars'])
-        ->toContain(['key' => 'URL', 'value' => 'https://novo.test', 'secret' => false])
+        ->toContain(['key' => EnvKey::URL->value, 'value' => 'https://novo.test', 'secret' => false])
         ->and(json_encode(($this->environment)()))->not->toContain('antigo.test');
 });
 

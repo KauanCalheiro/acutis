@@ -295,9 +295,21 @@ final class Environments
         }
 
         unset($values[EnvKey::ACTIVE_ENVIRONMENT->value]);
-        $values['STORAGE_STATE'] = "storage-state.{$slug}.json";
+        $values[EnvKey::STORAGE_STATE->value] = $this->storageState();
 
         return $values;
+    }
+
+    /**
+     * Nome do arquivo de sessão do ambiente ativo. Quem grava (auth.setup.ts), quem carrega
+     * (playwright.config.ts) e quem grava cenário autenticado (o recorder) precisam apontar todos
+     * para o mesmo arquivo, senão o login acontece e a sessão nunca é reaproveitada.
+     */
+    public function storageState(): string
+    {
+        $slug = $this->activeSlug();
+
+        return blank($slug) ? 'storage-state.json' : "storage-state.{$slug}.json";
     }
 
     private function activeVar(EnvKey $key): ?EnvironmentVarData

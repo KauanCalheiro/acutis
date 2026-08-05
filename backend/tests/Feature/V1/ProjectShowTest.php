@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\EnvKey;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Process\Process;
 
@@ -34,6 +35,22 @@ function authRun(string $dir, string $file, bool $passed): void
         'playwright' => '',
     ]));
 }
+
+it('shows the session file of the active environment, which is what the recorder loads', function () {
+    File::ensureDirectoryExists($this->dir.'/environments');
+    File::put($this->dir.'/environments/homolog.json', json_encode(['name' => 'Homolog', 'vars' => []]));
+    File::put($this->dir.'/.env', EnvKey::ACTIVE_ENVIRONMENT->value."=homolog\n");
+
+    getJson('/api/v1/projects/minha-loja')
+        ->assertOk()
+        ->assertJsonPath('storage_state', $this->dir.'/storage-state.homolog.json');
+});
+
+it('falls back to the plain session file while the project has no environment', function () {
+    getJson('/api/v1/projects/minha-loja')
+        ->assertOk()
+        ->assertJsonPath('storage_state', $this->dir.'/storage-state.json');
+});
 
 it('shows the project details', function () {
     getJson('/api/v1/projects/minha-loja')

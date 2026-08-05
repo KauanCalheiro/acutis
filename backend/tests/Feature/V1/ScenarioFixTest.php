@@ -1,6 +1,7 @@
 <?php
 
 use App\Ai\Agents\SpecFixer;
+use App\Enums\EnvKey;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 
@@ -91,7 +92,7 @@ it('returns 404 for a scenario that does not exist', function () {
 
 it('fixes the auth setup with the same agent, reading its recorded events', function () {
     fakeFix();
-    File::put($this->dir.'/tests/auth.setup.ts', "await page.locator('#v-9').fill(process.env.USER)");
+    File::put($this->dir.'/tests/auth.setup.ts', "await page.locator('#v-9').fill(process.env.".EnvKey::USER->value.')');
     File::put($this->dir.'/tests/auth.events.json', json_encode([
         ['type' => 'fill', 'label' => 'Matrícula', 'url' => 'https://app.test/login', 'selectors' => ['id' => 'v-9']],
     ]));

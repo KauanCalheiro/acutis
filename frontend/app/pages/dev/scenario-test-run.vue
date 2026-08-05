@@ -55,8 +55,8 @@ You may need to escape symbols like "$" or "*" and quote the arguments.`
 const SYNTAX_ERROR_OUTPUT = `Error: tests/auth.setup.ts: Unexpected token (12:4)
 
   10 |   await setup.step('Preencher credenciais', async () => {
-  11 |     await page.locator('#v-0').fill(process.env.USER ?? '')
-> 12 |     await page.locator('#v-1'.fill(process.env.PASSWORD ?? '')
+  11 |     await page.locator('#v-0').fill(process.env.AUTH_USER ?? '')
+> 12 |     await page.locator('#v-1'.fill(process.env.AUTH_PASSWORD ?? '')
      |     ^`
 </script>
 
