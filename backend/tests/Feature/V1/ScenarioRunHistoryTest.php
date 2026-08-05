@@ -84,11 +84,32 @@ function streamScenario(string ...$bodies): void
     }
 }
 
+/** As execuções gravadas, da mais antiga para a mais recente, como estão no arquivo. */
 function savedRuns(string $history): array
 {
-    return collect(File::glob($history.'/*.json'))
-        ->map(fn (string $file): array => json_decode(File::get($file), true))
+    return collect(File::lines($history.'/history.ndjson'))
+        ->filter()
+        ->map(fn (string $line): array => json_decode($line, true))
+        ->values()
         ->all();
+}
+
+function seedRuns(string $history, int $count): void
+{
+    File::ensureDirectoryExists($history);
+
+    File::put($history.'/history.ndjson', collect(range(1, $count))
+        ->map(fn (int $minute): string => json_encode([
+            'started_at' => sprintf('2026-06-13T09:%02d:00+00:00', $minute),
+            'duration_ms' => 100,
+            'passed' => true,
+            'branch' => null,
+            'author' => null,
+            'video' => false,
+            'steps' => [],
+            'playwright' => '',
+        ]))
+        ->implode("\n")."\n");
 }
 
 it('saves the run to the scenario history', function () {
@@ -152,6 +173,25 @@ it('copies the video of the run into the history', function () {
     expect(savedRuns($this->history)[0]['video'])->toBeTrue();
 });
 
+it('keeps every run of the scenario in a single file', function () {
+    streamScenario(failingRun(), passingRun());
+
+    expect(File::glob($this->history.'/*.json'))->toBe([]);
+    expect(savedRuns($this->history))->toHaveCount(2);
+});
+
+it('drops the oldest runs past the twenty newest', function () {
+    seedRuns($this->history, 20);
+
+    streamScenario(failingRun());
+
+    $runs = savedRuns($this->history);
+
+    expect($runs)->toHaveCount(20);
+    expect($runs[0]['started_at'])->toBe('2026-06-13T09:02:00+00:00');
+    expect($runs[19]['passed'])->toBeFalse();
+});
+
 it('lists the runs in the scenario, newest first', function () {
     streamScenario(failingRun(), passingRun());
 
@@ -164,23 +204,7 @@ it('lists the runs in the scenario, newest first', function () {
 });
 
 it('lists at most the six newest runs', function () {
-    File::ensureDirectoryExists($this->history);
-
-    foreach (range(1, 8) as $minute) {
-        File::put(
-            sprintf('%s/2026-06-13T09-%02d-00.000000Z-a1f%d.json', $this->history, $minute, $minute),
-            json_encode([
-                'started_at' => sprintf('2026-06-13T09:%02d:00+00:00', $minute),
-                'duration_ms' => 100,
-                'passed' => true,
-                'branch' => null,
-                'author' => null,
-                'video' => false,
-                'steps' => [],
-                'playwright' => '',
-            ]),
-        );
-    }
+    seedRuns($this->history, 8);
 
     getJson('/api/v1/projects/minha-loja/scenarios/login/entrar')
         ->assertOk()
@@ -207,7 +231,7 @@ it('commits the run when the project is a git repository', function () {
     streamScenario(passingRun());
 
     expect(gitOutput($this->dir, ['log', '--name-only', '--pretty=format:%s']))
-        ->toContain('runs/login/entrar/')
+        ->toContain('runs/login/entrar/history.ndjson')
         ->toContain('chore: registrar execução de login/entrar');
 
     $run = savedRuns($this->history)[0];
@@ -223,7 +247,7 @@ it('pushes the run when the project has a remote', function () {
 
     streamScenario(passingRun());
 
-    expect(gitOutput($origin, ['log', 'trunk', '--name-only', '--pretty=format:%s']))->toContain('runs/login/entrar/');
+    expect(gitOutput($origin, ['log', 'trunk', '--name-only', '--pretty=format:%s']))->toContain('runs/login/entrar/history.ndjson');
 });
 
 it('still saves the run when the project is not a git repository', function () {

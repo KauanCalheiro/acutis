@@ -15,13 +15,10 @@ class ListScenarioRuns
     /** @return list<ScenarioRunData> */
     public function handle(string $path, string $scenarioId): array
     {
-        $runs = Project::at($path)->scenario($scenarioId)->runs();
-        $video = $runs->video();
-        $files = $runs->files();
+        $history = Project::at($path)->scenario($scenarioId)->runs();
+        $video = $history->video();
 
-        $runs = collect($files)
-            ->take(Runs::SHOWN)
-            ->map(fn (string $file): array => json_decode((string) File::get($file), true));
+        $runs = collect($history->all())->take(Runs::SHOWN);
 
         $recorded = File::exists($video)
             ? $runs->search(fn (array $run): bool => (bool) ($run['video'] ?? false))
