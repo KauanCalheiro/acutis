@@ -3,7 +3,18 @@
 - [x] Docker para desenvolvimento local com hot-reload dos arquivos (backend, frontend, webdriver) — `docker compose -f docker-compose.dev.yml up`
 - [x] Persistir as execuções de cenário e sincronizá-las pelo git
 - [ ] Identificar cenário flaky a partir do histórico de execuções
+- [ ] Aposentar as modais de auth e reaproveitar a tela de cenário
 - [x] Documentação de execução em `docs/`: [`RUN.md`](docs/RUN.md) indexando [`LOCAL.md`](docs/LOCAL.md), [`DOCKER.md`](docs/DOCKER.md) e [`TESTS.md`](docs/TESTS.md)
+
+## Aposentar as modais de auth e reaproveitar a tela de cenário
+
+O setup de autenticação já é um cenário (`Scenario::AUTH_ID`, com execução, histórico e vídeo iguais aos demais), mas tem uma interface paralela só dele em `project/auth/modal.vue` — ver, editar, regravar e pedir credenciais, tudo em modal. A tela de cenário (`projects/[projectSlug]/scenarios/[...scenario].vue`) já faz quase tudo isso.
+
+### Escopo levantado até agora
+
+- **Botão de regravação** na tela de cenário, que hoje só existe na modal.
+- **Tirar uma tab**: o auth não tem Gherkin, então das três (`Eventos`, `Gherkin`, `Playwright`) sobram duas quando o cenário é o de autenticação.
+- **O resto é a levantar** — pedido de credenciais, estado `skipped`/`failing` e os atalhos que hoje saem da modal ainda não têm destino definido na tela.
 
 ## Identificar cenário flaky
 
