@@ -36,7 +36,7 @@ it('always has an environment, with the url as the minimum', function () {
         ->assertOk()
         ->assertJsonPath('active', 'ambiente')
         ->assertJsonPath('environments.0.name', 'Ambiente')
-        ->assertJsonPath('environments.0.vars.0.key', 'URL');
+        ->assertJsonPath('environments.0.vars.0.key', EnvKey::URL->value);
 });
 
 it('requires user and password once the project has authentication', function () {
@@ -44,14 +44,14 @@ it('requires user and password once the project has authentication', function ()
     File::put($this->dir.'/tests/auth.setup.ts', '// login gravado');
 
     expect(array_column(getJson('/api/v1/projects/minha-loja/environments')->assertOk()->json('environments.0.vars'), 'key'))
-        ->toBe(['URL', 'USER', 'PASSWORD']);
+        ->toBe([EnvKey::URL->value, EnvKey::USER->value, EnvKey::PASSWORD->value]);
 });
 
 it('marks the password as a secret when it creates it', function () {
     File::ensureDirectoryExists($this->dir.'/tests');
     File::put($this->dir.'/tests/auth.setup.ts', '// login gravado');
 
-    expect(collect(getJson('/api/v1/projects/minha-loja/environments')->assertOk()->json('environments.0.vars'))->firstWhere('key', 'PASSWORD'))
+    expect(collect(getJson('/api/v1/projects/minha-loja/environments')->assertOk()->json('environments.0.vars'))->firstWhere('key', EnvKey::PASSWORD->value))
         ->toMatchArray(['secret' => true]);
 });
 
@@ -63,7 +63,7 @@ it('brings a required key back when the editor drops it', function () {
         'vars' => [['key' => 'CUPOM_VALIDO', 'value' => 'ABC']],
     ])->assertOk();
 
-    expect(array_column(($this->environment)('ambiente')['vars'], 'key'))->toContain('URL', 'CUPOM_VALIDO');
+    expect(array_column(($this->environment)('ambiente')['vars'], 'key'))->toContain(EnvKey::URL->value, 'CUPOM_VALIDO');
 });
 
 it('creates the environment when the credentials arrive before any of them', function () {
@@ -73,9 +73,9 @@ it('creates the environment when the credentials arrive before any of them', fun
     ])->assertNoContent();
 
     expect(($this->environment)('ambiente')['vars'])->toBe([
-        ['key' => 'URL', 'value' => '', 'secret' => false],
-        ['key' => 'USER', 'value' => 'qa@loja.test', 'secret' => false],
-        ['key' => 'PASSWORD', 'value' => 'segredo', 'secret' => true],
+        ['key' => EnvKey::URL->value, 'value' => '', 'secret' => false],
+        ['key' => EnvKey::USER->value, 'value' => 'qa@loja.test', 'secret' => false],
+        ['key' => EnvKey::PASSWORD->value, 'value' => 'segredo', 'secret' => true],
     ]);
 });
 
@@ -86,29 +86,29 @@ it('creates an environment and slugs its name', function () {
         ->assertJsonPath('name', 'Homologação');
 
     expect(($this->environment)('homologacao')['name'])->toBe('Homologação')
-        ->and(array_column(($this->environment)('homologacao')['vars'], 'key'))->toBe(['URL']);
+        ->and(array_column(($this->environment)('homologacao')['vars'], 'key'))->toBe([EnvKey::URL->value]);
 });
 
 it('seeds the first environment with what the project already had in the env file', function () {
-    File::put($this->dir.'/.env', "URL=https://loja.test\nUSER=qa@loja.test\nPASSWORD=segredo\n");
+    File::put($this->dir.'/.env', EnvKey::URL->value."=https://loja.test\n".EnvKey::USER->value."=qa@loja.test\n".EnvKey::PASSWORD->value."=segredo\n");
 
     getJson('/api/v1/projects/minha-loja/environments')->assertOk();
 
     expect(($this->environment)('ambiente')['vars'])->toBe([
-        ['key' => 'URL', 'value' => 'https://loja.test', 'secret' => false],
-        ['key' => 'USER', 'value' => 'qa@loja.test', 'secret' => false],
-        ['key' => 'PASSWORD', 'value' => 'segredo', 'secret' => true],
+        ['key' => EnvKey::URL->value, 'value' => 'https://loja.test', 'secret' => false],
+        ['key' => EnvKey::USER->value, 'value' => 'qa@loja.test', 'secret' => false],
+        ['key' => EnvKey::PASSWORD->value, 'value' => 'segredo', 'secret' => true],
     ]);
 });
 
 it('seeds the values only into the first environment', function () {
-    File::put($this->dir.'/.env', "URL=https://loja.test\n");
+    File::put($this->dir.'/.env', EnvKey::URL->value."=https://loja.test\n");
 
     getJson('/api/v1/projects/minha-loja/environments')->assertOk();
     postJson('/api/v1/projects/minha-loja/environments', ['name' => 'Produção'])->assertCreated();
 
     expect(($this->environment)('producao')['vars'])
-        ->toBe([['key' => 'URL', 'value' => '', 'secret' => false]]);
+        ->toBe([['key' => EnvKey::URL->value, 'value' => '', 'secret' => false]]);
 });
 
 it('activates the first environment created', function () {
@@ -131,14 +131,14 @@ it('saves plain variables in the versioned file', function () {
     putJson('/api/v1/projects/minha-loja/environments/homolog', [
         'name' => 'Homolog',
         'vars' => [
-            ['key' => 'URL', 'value' => 'https://homolog.loja.test'],
-            ['key' => 'USER', 'value' => 'qa@loja.test'],
+            ['key' => EnvKey::URL->value, 'value' => 'https://homolog.loja.test'],
+            ['key' => EnvKey::USER->value, 'value' => 'qa@loja.test'],
         ],
     ])->assertOk()->assertJsonPath('vars.0.value', 'https://homolog.loja.test');
 
     expect(($this->environment)('homolog')['vars'])->toBe([
-        ['key' => 'URL', 'value' => 'https://homolog.loja.test', 'secret' => false],
-        ['key' => 'USER', 'value' => 'qa@loja.test', 'secret' => false],
+        ['key' => EnvKey::URL->value, 'value' => 'https://homolog.loja.test', 'secret' => false],
+        ['key' => EnvKey::USER->value, 'value' => 'qa@loja.test', 'secret' => false],
     ]);
 });
 
@@ -147,11 +147,11 @@ it('keeps a secret in the environment file, which never goes to git', function (
 
     putJson('/api/v1/projects/minha-loja/environments/homolog', [
         'name' => 'Homolog',
-        'vars' => [['key' => 'PASSWORD', 'value' => 'segredo', 'secret' => true]],
+        'vars' => [['key' => EnvKey::PASSWORD->value, 'value' => 'segredo', 'secret' => true]],
     ])->assertOk()->assertJsonPath('vars.0.value', 'segredo');
 
     expect(($this->environment)('homolog')['vars'])
-        ->toContain(['key' => 'PASSWORD', 'value' => 'segredo', 'secret' => true])
+        ->toContain(['key' => EnvKey::PASSWORD->value, 'value' => 'segredo', 'secret' => true])
         ->and(File::get($this->dir.'/.gitignore'))->toContain('environments');
 });
 
@@ -161,12 +161,12 @@ it('gives each environment its own value for the same key', function () {
 
     putJson('/api/v1/projects/minha-loja/environments/homolog', [
         'name' => 'Homolog',
-        'vars' => [['key' => 'PASSWORD', 'value' => 'senha-de-homolog', 'secret' => true]],
+        'vars' => [['key' => EnvKey::PASSWORD->value, 'value' => 'senha-de-homolog', 'secret' => true]],
     ])->assertOk();
 
     putJson('/api/v1/projects/minha-loja/environments/producao', [
         'name' => 'Producao',
-        'vars' => [['key' => 'PASSWORD', 'value' => 'senha-de-producao', 'secret' => true]],
+        'vars' => [['key' => EnvKey::PASSWORD->value, 'value' => 'senha-de-producao', 'secret' => true]],
     ])->assertOk();
 
     expect(($this->environment)('homolog')['vars'][0]['value'])->toBe('senha-de-homolog')
@@ -193,17 +193,17 @@ it('removes a key from every other environment', function () {
     putJson('/api/v1/projects/minha-loja/environments/homolog', [
         'name' => 'Homolog',
         'vars' => [
-            ['key' => 'URL', 'value' => 'https://homolog.test'],
+            ['key' => EnvKey::URL->value, 'value' => 'https://homolog.test'],
             ['key' => 'CUPOM_VALIDO', 'value' => 'ABC'],
         ],
     ])->assertOk();
 
     putJson('/api/v1/projects/minha-loja/environments/homolog', [
         'name' => 'Homolog',
-        'vars' => [['key' => 'URL', 'value' => 'https://homolog.test']],
+        'vars' => [['key' => EnvKey::URL->value, 'value' => 'https://homolog.test']],
     ])->assertOk();
 
-    expect(array_column(($this->environment)('producao')['vars'], 'key'))->toBe(['URL']);
+    expect(array_column(($this->environment)('producao')['vars'], 'key'))->toBe([EnvKey::URL->value]);
 });
 
 it('keeps the value each environment already had while syncing the keys', function () {
@@ -212,20 +212,20 @@ it('keeps the value each environment already had while syncing the keys', functi
 
     putJson('/api/v1/projects/minha-loja/environments/producao', [
         'name' => 'Producao',
-        'vars' => [['key' => 'URL', 'value' => 'https://loja.test']],
+        'vars' => [['key' => EnvKey::URL->value, 'value' => 'https://loja.test']],
     ])->assertOk();
 
     putJson('/api/v1/projects/minha-loja/environments/homolog', [
         'name' => 'Homolog',
         'vars' => [
-            ['key' => 'URL', 'value' => 'https://homolog.test'],
-            ['key' => 'PASSWORD', 'value' => 'segredo', 'secret' => true],
+            ['key' => EnvKey::URL->value, 'value' => 'https://homolog.test'],
+            ['key' => EnvKey::PASSWORD->value, 'value' => 'segredo', 'secret' => true],
         ],
     ])->assertOk();
 
     expect(($this->environment)('producao')['vars'])->toBe([
-        ['key' => 'URL', 'value' => 'https://loja.test', 'secret' => false],
-        ['key' => 'PASSWORD', 'value' => '', 'secret' => true],
+        ['key' => EnvKey::URL->value, 'value' => 'https://loja.test', 'secret' => false],
+        ['key' => EnvKey::PASSWORD->value, 'value' => '', 'secret' => true],
     ]);
 });
 
@@ -234,16 +234,16 @@ it('is born with the keys the other environments already declare', function () {
     putJson('/api/v1/projects/minha-loja/environments/homolog', [
         'name' => 'Homolog',
         'vars' => [
-            ['key' => 'URL', 'value' => 'https://homolog.test'],
-            ['key' => 'PASSWORD', 'value' => 'segredo', 'secret' => true],
+            ['key' => EnvKey::URL->value, 'value' => 'https://homolog.test'],
+            ['key' => EnvKey::PASSWORD->value, 'value' => 'segredo', 'secret' => true],
         ],
     ])->assertOk();
 
     postJson('/api/v1/projects/minha-loja/environments', ['name' => 'Producao'])->assertCreated();
 
     expect(($this->environment)('producao')['vars'])->toBe([
-        ['key' => 'URL', 'value' => '', 'secret' => false],
-        ['key' => 'PASSWORD', 'value' => '', 'secret' => true],
+        ['key' => EnvKey::URL->value, 'value' => '', 'secret' => false],
+        ['key' => EnvKey::PASSWORD->value, 'value' => '', 'secret' => true],
     ]);
 });
 
@@ -251,7 +251,7 @@ it('marks a variable as pending while it has no value', function () {
     postJson('/api/v1/projects/minha-loja/environments', ['name' => 'Homolog'])->assertCreated();
     putJson('/api/v1/projects/minha-loja/environments/homolog', [
         'name' => 'Homolog',
-        'vars' => [['key' => 'PASSWORD', 'value' => null, 'secret' => true]],
+        'vars' => [['key' => EnvKey::PASSWORD->value, 'value' => null, 'secret' => true]],
     ])->assertOk();
 
     getJson('/api/v1/projects/minha-loja/environments')
@@ -260,7 +260,7 @@ it('marks a variable as pending while it has no value', function () {
 });
 
 it('offers the known keys for autocomplete', function () {
-    File::put($this->dir.'/.env.example', "URL=\nCPF_TESTE=\n");
+    File::put($this->dir.'/.env.example', EnvKey::URL->value."=\nCPF_TESTE=\n");
     postJson('/api/v1/projects/minha-loja/environments', ['name' => 'Homolog'])->assertCreated();
     putJson('/api/v1/projects/minha-loja/environments/homolog', [
         'name' => 'Homolog',
@@ -268,7 +268,7 @@ it('offers the known keys for autocomplete', function () {
     ])->assertOk();
 
     expect(getJson('/api/v1/projects/minha-loja/environments')->assertOk()->json('known_keys'))
-        ->toContain('URL', 'CPF_TESTE', 'CUPOM_VALIDO');
+        ->toContain(EnvKey::URL->value, 'CPF_TESTE', 'CUPOM_VALIDO');
 });
 
 it('validates the variable keys', function () {
@@ -286,8 +286,8 @@ it('rejects the same key twice in one environment', function () {
     putJson('/api/v1/projects/minha-loja/environments/homolog', [
         'name' => 'Homolog',
         'vars' => [
-            ['key' => 'URL', 'value' => 'https://a.test'],
-            ['key' => 'URL', 'value' => 'https://b.test'],
+            ['key' => EnvKey::URL->value, 'value' => 'https://a.test'],
+            ['key' => EnvKey::URL->value, 'value' => 'https://b.test'],
         ],
     ])->assertStatus(422)->assertJsonValidationErrors(['vars.1.key']);
 });
@@ -341,7 +341,7 @@ it('saves the base url into the active environment', function () {
     putJson('/api/v1/projects/minha-loja/settings', ['baseUrl' => 'https://homolog.loja.test'])->assertOk();
 
     expect(($this->environment)('homolog')['vars'])
-        ->toContain(['key' => 'URL', 'value' => 'https://homolog.loja.test', 'secret' => false]);
+        ->toContain(['key' => EnvKey::URL->value, 'value' => 'https://homolog.loja.test', 'secret' => false]);
 
     getJson('/api/v1/projects/minha-loja')->assertOk()->assertJsonPath('base_url', 'https://homolog.loja.test');
 });
@@ -367,13 +367,13 @@ it('saves the credentials into the active environment, with the password as a se
     ])->assertNoContent();
 
     expect(($this->environment)('homolog')['vars'])->toContain(
-        ['key' => 'USER', 'value' => 'qa@loja.test', 'secret' => false],
-        ['key' => 'PASSWORD', 'value' => 'segredo', 'secret' => true],
+        ['key' => EnvKey::USER->value, 'value' => 'qa@loja.test', 'secret' => false],
+        ['key' => EnvKey::PASSWORD->value, 'value' => 'segredo', 'secret' => true],
     );
 });
 
 it('falls back to the default only when the key is not in the env file', function () {
-    File::put($this->dir.'/.env', "URL=https://loja.test\n");
+    File::put($this->dir.'/.env', EnvKey::URL->value."=https://loja.test\n");
 
     $env = Project::make('minha-loja')->env();
 
@@ -386,7 +386,7 @@ it('falls back to the default when the active environment leaves the key empty',
     postJson('/api/v1/projects/minha-loja/environments', ['name' => 'Homolog'])->assertCreated();
     putJson('/api/v1/projects/minha-loja/environments/homolog', [
         'name' => 'Homolog',
-        'vars' => [['key' => 'URL', 'value' => null]],
+        'vars' => [['key' => EnvKey::URL->value, 'value' => null]],
     ])->assertOk();
 
     $environments = Project::make('minha-loja')->environments();
@@ -404,15 +404,15 @@ it('runs against the active environment', function () {
     putJson('/api/v1/projects/minha-loja/environments/homolog', [
         'name' => 'Homolog',
         'vars' => [
-            ['key' => 'URL', 'value' => 'https://homolog.loja.test'],
-            ['key' => 'PASSWORD', 'value' => 'segredo', 'secret' => true],
+            ['key' => EnvKey::URL->value, 'value' => 'https://homolog.loja.test'],
+            ['key' => EnvKey::PASSWORD->value, 'value' => 'segredo', 'secret' => true],
         ],
     ])->assertOk();
 
     postJson('/api/v1/projects/minha-loja/run')->assertOk();
 
-    Http::assertSent(fn ($request) => $request['env']['URL'] === 'https://homolog.loja.test'
-        && $request['env']['PASSWORD'] === 'segredo'
+    Http::assertSent(fn ($request) => $request['env'][EnvKey::URL->value] === 'https://homolog.loja.test'
+        && $request['env'][EnvKey::PASSWORD->value] === 'segredo'
         && $request['env']['CUPOM_VALIDO'] === 'ABC'
         && $request['env']['STORAGE_STATE'] === 'storage-state.homolog.json');
 });

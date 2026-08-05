@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\EnvKey;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
@@ -29,8 +30,8 @@ it('writes the credentials the user typed into the environment', function () {
     $environment = json_decode(File::get($this->dir.'/environments/ambiente.json'), true);
 
     expect($environment['vars'])->toContain(
-        ['key' => 'USER', 'value' => '482910', 'secret' => false],
-        ['key' => 'PASSWORD', 'value' => 'senha-real', 'secret' => true],
+        ['key' => EnvKey::USER->value, 'value' => '482910', 'secret' => false],
+        ['key' => EnvKey::PASSWORD->value, 'value' => 'senha-real', 'secret' => true],
     )->and(File::get($this->dir.'/.gitignore'))->toContain('environments');
 });
 
@@ -47,7 +48,7 @@ it('preserves the variables the environment already had', function () {
 
     $environment = json_decode(File::get($this->dir.'/environments/ambiente.json'), true);
 
-    expect(array_column($environment['vars'], 'key'))->toContain('CHECKOUT_CARD', 'USER', 'PASSWORD');
+    expect(array_column($environment['vars'], 'key'))->toContain('CHECKOUT_CARD', EnvKey::USER->value, EnvKey::PASSWORD->value);
 });
 
 it('validates the credentials', function () {

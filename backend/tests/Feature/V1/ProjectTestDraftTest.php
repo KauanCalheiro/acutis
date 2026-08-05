@@ -2,6 +2,7 @@
 
 use App\Ai\Agents\GherkinWriter;
 use App\Ai\Agents\PlaywrightWriter;
+use App\Enums\EnvKey;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -130,13 +131,13 @@ it('never sends the value of a hidden variable to the model', function () {
 
     putJson("/api/v1/projects/{$slug}/environments/ambiente", [
         'name' => 'Ambiente',
-        'vars' => [['key' => 'PASSWORD', 'value' => 'nunca-mande-isso', 'secret' => true]],
+        'vars' => [['key' => EnvKey::PASSWORD->value, 'value' => 'nunca-mande-isso', 'secret' => true]],
     ])->assertOk();
 
     postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())->assertOk();
 
     PlaywrightWriter::assertPrompted(
-        fn ($prompt) => str_contains($prompt->prompt, 'PASSWORD') && ! str_contains($prompt->prompt, 'nunca-mande-isso')
+        fn ($prompt) => str_contains($prompt->prompt, EnvKey::PASSWORD->value) && ! str_contains($prompt->prompt, 'nunca-mande-isso')
     );
 });
 
