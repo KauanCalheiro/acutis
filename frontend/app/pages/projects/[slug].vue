@@ -204,7 +204,7 @@ function recordAuthenticated() {
 
     authRunOpen.value = false
     startRecording('scenario', {
-      storageState: `${project.value!.path}/storage-state.json`,
+      storageState: project.value!.storage_state,
       url: projectUrl.value
     })
   })

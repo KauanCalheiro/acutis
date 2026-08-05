@@ -29,7 +29,7 @@ As chaves que o acutis conhece estão no enum `EnvKey`: `URL`, `AUTH_USER`, `AUT
 - Cada ambiente tem **seu próprio valor** para a mesma chave; é o que separa staging de produção.
 - `ENVIRONMENT` vazio ou apontando pra ambiente inexistente vale o primeiro da lista, em ordem alfabética por slug.
 - Projeto sem nenhum ambiente se comporta como antes deles existirem: tudo direto no `.env`, que também é a camada base da resolução.
-- Cada ambiente tem sua sessão. `STORAGE_STATE=storage-state.<slug>.json` entra no ambiente resolvido, e o `playwright.config.ts` cai em `storage-state.json` quando a variável não existe.- Chave que a IA declara ao gerar cenário entra no **ambiente ativo**, não no `.env`.
+- Cada ambiente tem sua sessão. `STORAGE_STATE=storage-state.<slug>.json` entra no ambiente resolvido, e o `playwright.config.ts` cai em `storage-state.json` quando a variável não existe. **Ninguém monta esse nome à mão** — quem precisa do arquivo (gravação autenticada, recorder) lê `storage_state` do `GET /projects/{slug}`, que vem de `Environments::storageState()`. Já quebrou: o front pedia `storage-state.json` fixo enquanto o setup gravava em `storage-state.ambiente.json`, e o recorder abria deslogado sem erro nenhum.- Chave que a IA declara ao gerar cenário entra no **ambiente ativo**, não no `.env`.
 - O prompt do `PlaywrightWriter` recebe as variáveis do ambiente ativo para o agente usar `process.env.CHAVE` em vez de literal. **Variável marcada como segredo entra só pelo nome**, nunca com o valor.
 
 **How to apply:** ao ler ou escrever variável do projeto testado, passar por `Project::environments()` (`value`, `set`, `merge`, `resolve`), não por `Project::env()` direto. Este último só cuida do `ENVIRONMENT` e do projeto sem ambiente.

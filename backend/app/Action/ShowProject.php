@@ -17,7 +17,7 @@ class ShowProject
 {
     use AsAction;
 
-    /** @return array{project: ProjectData, branch: ?string, updated_at: string, scenarios: list<ScenarioData>, auth_status: string, base_url: ?string, vscode_url: string} */
+    /** @return array{project: ProjectData, branch: ?string, updated_at: string, scenarios: list<ScenarioData>, auth_status: string, base_url: ?string, storage_state: string, vscode_url: string} */
     public function handle(string $slug): array
     {
         $folder = Project::make($slug);
@@ -43,6 +43,7 @@ class ShowProject
             'scenarios' => ListProjectScenarios::run($path),
             'auth_status' => $this->authStatus($folder, $manifest),
             'base_url' => $baseUrl,
+            'storage_state' => $path.'/'.$folder->environments()->storageState(),
             'requires_url' => blank($baseUrl) && ! ($manifest['url_skipped'] ?? false),
             'vscode_url' => 'vscode://file'.Project::hostPath($slug),
         ];

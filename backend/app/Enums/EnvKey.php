@@ -21,4 +21,7 @@ enum EnvKey: string
     case PASSWORD = 'AUTH_PASSWORD';
 
     case ACTIVE_ENVIRONMENT = 'ENVIRONMENT';
+
+    /** Arquivo de sessão do ambiente ativo: o auth.setup.ts grava nele e os cenários o carregam. */
+    case STORAGE_STATE = 'STORAGE_STATE';
 }

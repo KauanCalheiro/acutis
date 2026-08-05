@@ -23,6 +23,8 @@ export interface ProjectDetail extends Project {
   scenarios: Scenario[]
   auth_status: 'unset' | 'skipped' | 'configured' | 'failing'
   base_url: string | null
+  /** Arquivo de sessão do ambiente ativo, já com caminho absoluto. */
+  storage_state: string
   requires_url: boolean
   vscode_url: string
 }
