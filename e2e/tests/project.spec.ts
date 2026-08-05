@@ -194,8 +194,8 @@ test.describe('project authentication modal', { tag: ['@write', '@project'] }, (
     test('warns that authentication is failing when the last run did not pass', async ({ page }) => {
         mkdirSync(join(tmpProjects, 'beta-blog', 'runs', 'auth'), { recursive: true })
         writeFileSync(
-            join(tmpProjects, 'beta-blog', 'runs', 'auth', '2026-01-01T10-00-00.000000Z-aaaa.json'),
-            JSON.stringify({ started_at: '2026-01-01T10:00:00+00:00', duration_ms: 10, passed: false, steps: [], playwright: '' }),
+            join(tmpProjects, 'beta-blog', 'runs', 'auth', 'history.ndjson'),
+            `${JSON.stringify({ started_at: '2026-01-01T10:00:00+00:00', duration_ms: 10, passed: false, steps: [], playwright: '' })}\n`,
         )
 
         await page.goto('/projects/beta-blog')

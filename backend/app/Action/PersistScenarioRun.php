@@ -8,7 +8,6 @@ use App\Support\Scenario;
 use App\Support\Scenario\Runs;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
 use Lorisleiva\Actions\Concerns\AsAction;
 
 class PersistScenarioRun
@@ -20,16 +19,15 @@ class PersistScenarioRun
     {
         $scenario = Scenario::fromSpec(Project::at($path), $spec);
         $scenarioId = $scenario->id();
-        $directory = $scenario->runs()->directory();
+        $runs = $scenario->runs();
         $specFile = "{$path}/{$spec}";
 
-        File::ensureDirectoryExists($directory);
+        File::ensureDirectoryExists($runs->directory());
 
-        $video = $this->copyVideo($events, $directory);
-        $file = $startedAt->clone()->utc()->format('Y-m-d\TH-i-s.u\Z').'-'.Str::lower(Str::random(4)).'.json';
+        $video = $this->copyVideo($events, $runs->directory());
         $git = Git::in($path);
 
-        File::put("{$directory}/{$file}", json_encode([
+        $runs->append([
             'started_at' => $startedAt->toIso8601String(),
             'duration_ms' => $this->durationMs($events),
             'passed' => $this->passed($events),
@@ -38,9 +36,9 @@ class PersistScenarioRun
             'video' => $video,
             'steps' => $this->steps($events),
             'playwright' => File::exists($specFile) ? Scenario::sourceOf($specFile) : '',
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
+        ]);
 
-        $committed = ["runs/{$scenarioId}/{$file}"];
+        $committed = ['runs/'.$scenarioId.'/'.Runs::HISTORY];
 
         if ($video) {
             $committed[] = 'runs/'.$scenarioId.'/'.Runs::VIDEO;

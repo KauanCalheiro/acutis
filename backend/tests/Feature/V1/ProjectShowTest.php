@@ -24,16 +24,16 @@ afterEach(function () {
     File::deleteDirectory($this->projectsPath);
 });
 
-function authRun(string $dir, string $file, bool $passed): void
+function authRun(string $dir, string $startedAt, bool $passed): void
 {
     File::ensureDirectoryExists($dir.'/runs/auth');
-    File::put($dir."/runs/auth/{$file}.json", json_encode([
-        'started_at' => '2026-01-01T10:00:00+00:00',
+    File::append($dir.'/runs/auth/history.ndjson', json_encode([
+        'started_at' => $startedAt,
         'duration_ms' => 1200,
         'passed' => $passed,
         'steps' => [],
         'playwright' => '',
-    ]));
+    ])."\n");
 }
 
 it('shows the session file of the active environment, which is what the recorder loads', function () {
@@ -78,8 +78,8 @@ it('shows the auth status as configured when auth.setup.ts exists and was never 
 it('shows the auth status as failing when the last recorded run did not pass', function () {
     File::ensureDirectoryExists($this->dir.'/tests');
     File::put($this->dir.'/tests/auth.setup.ts', 'import { test as setup } from "@playwright/test"');
-    authRun($this->dir, '2026-01-01T10-00-00.000000Z-aaaa', passed: true);
-    authRun($this->dir, '2026-01-02T10-00-00.000000Z-bbbb', passed: false);
+    authRun($this->dir, '2026-01-01T10:00:00+00:00', passed: true);
+    authRun($this->dir, '2026-01-02T10:00:00+00:00', passed: false);
 
     getJson('/api/v1/projects/minha-loja')
         ->assertOk()
@@ -89,8 +89,8 @@ it('shows the auth status as failing when the last recorded run did not pass', f
 it('goes back to configured once a newer run passes', function () {
     File::ensureDirectoryExists($this->dir.'/tests');
     File::put($this->dir.'/tests/auth.setup.ts', 'import { test as setup } from "@playwright/test"');
-    authRun($this->dir, '2026-01-01T10-00-00.000000Z-aaaa', passed: false);
-    authRun($this->dir, '2026-01-02T10-00-00.000000Z-bbbb', passed: true);
+    authRun($this->dir, '2026-01-01T10:00:00+00:00', passed: false);
+    authRun($this->dir, '2026-01-02T10:00:00+00:00', passed: true);
 
     getJson('/api/v1/projects/minha-loja')
         ->assertOk()

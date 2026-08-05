@@ -4,7 +4,7 @@
 - [x] Persistir as execuções de cenário e sincronizá-las pelo git
 - [ ] Identificar cenário flaky a partir do histórico de execuções
 - [ ] Aposentar as modais de auth e reaproveitar a tela de cenário
-- [ ] Guardar as execuções de um cenário num arquivo só, não um por execução
+- [x] Guardar as execuções de um cenário num arquivo só, não um por execução
 - [x] Documentação de execução em `docs/`: [`RUN.md`](docs/RUN.md) indexando [`LOCAL.md`](docs/LOCAL.md), [`DOCKER.md`](docs/DOCKER.md) e [`TESTS.md`](docs/TESTS.md)
 
 ## Aposentar as modais de auth e reaproveitar a tela de cenário
@@ -19,18 +19,18 @@ O setup de autenticação já é um cenário (`Scenario::AUTH_ID`, com execuçã
 
 ## Guardar as execuções num arquivo só
 
-Hoje cada execução vira um arquivo em `runs/<cenário>/<timestamp>-<id>.json`, e a pasta cresce sem limite — o projeto `plataforma` já tem 15 arquivos só em `runs/auth/`. Passar para um arquivo único por cenário (histórico como lista dentro dele) reduz o ruído no diff do git, que é por onde o histórico é sincronizado.
+Cada execução era um arquivo em `runs/<cenário>/<timestamp>-<id>.json` e a pasta crescia sem limite. Agora o histórico é `runs/<cenário>/history.ndjson`, uma execução por linha, e o diff do git mostra só a linha nova.
 
-### Pontos a resolver
+### Como ficou
 
-- **Formato.** Lista dentro de um JSON, ou NDJSON com uma execução por linha (append barato, diff limpo, sem reescrever o arquivo inteiro a cada run).
-- **Limite.** Quantas execuções manter — a API já devolve 20; guardar tudo pra sempre reproduz o problema em outra forma.
-- **Migração.** Os projetos existentes já têm as pastas antigas; converter na leitura ou num comando dedicado.
-- **`last.webm`.** O vídeo continua sendo arquivo solto por cenário, então a mudança é só do JSON.
+- **Formato.** NDJSON, append (`Runs::append()`), da mais antiga para a mais recente no arquivo; a leitura (`Runs::all()`) devolve ao contrário, mais recente primeiro.
+- **Limite.** `Runs::KEPT = 20`; ao passar disso o arquivo é reescrito só com as 20 últimas. A API continua mostrando `Runs::SHOWN = 6`.
+- **Migração.** Nenhuma — as pastas antigas dos projetos existentes ficam ignoradas e podem ser apagadas à mão (`.acutis/*/runs/*/[0-9]*.json`).
+- **`last.webm`.** Segue arquivo solto ao lado do `history.ndjson`, sem mudança.
 
 ## Identificar cenário flaky
 
-Com o histórico em `runs/<cenário>/` cada execução guarda status, steps e o código que rodou. Um cenário que alterna sucesso e falha **sem o `playwright` mudar entre as execuções** é flaky — o teste é instável, não o sistema testado. Quando o código mudou junto, é regressão ou correção, não instabilidade.
+Com o histórico em `runs/<cenário>/history.ndjson` cada execução guarda status, steps e o código que rodou. Um cenário que alterna sucesso e falha **sem o `playwright` mudar entre as execuções** é flaky — o teste é instável, não o sistema testado. Quando o código mudou junto, é regressão ou correção, não instabilidade.
 
 ### Pontos a resolver
 
