@@ -646,6 +646,19 @@ test.describe('recording a scenario with the project session already loaded', { 
         }
     })
 
+    test('refuses to record when the session file it was told to load does not exist', async () => {
+        const gateway = await connectGateway()
+
+        try {
+            gateway.send('START_RECORDING', { storageState: join(tmpProject, 'storage-state.inexistente.json') })
+            const failure = await gateway.waitForMessage((message) => message.event === 'recorder:error')
+
+            expect(String(failure.error)).toContain('storage-state.inexistente.json')
+        } finally {
+            gateway.close()
+        }
+    })
+
     test('opens the recorded browser straight at the project url, without anyone typing it', async ({ request }) => {
         const gateway = await connectGateway()
 

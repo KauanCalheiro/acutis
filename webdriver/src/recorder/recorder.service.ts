@@ -70,10 +70,19 @@ export class RecorderService {
             // injetar a do projeto exigiria um contexto novo e tiraria justamente o que se quer aqui.
             this.context = this.browser.contexts()[0] ?? await this.browser.newContext()
         } else {
+            // Sessão pedida e ausente é erro de quem chamou (arquivo do ambiente errado, setup que
+            // não rodou). Abrir deslogado calado gera uma gravação inútil que só se descobre no fim.
+            if (storageStatePath && !existsSync(storageStatePath)) {
+                throw new Error(
+                    `Sessão não encontrada em ${storageStatePath}. `
+                    + 'Rode o setup de autenticação do projeto antes de gravar um cenário autenticado.',
+                )
+            }
+
             this.browser = await chromium.launch({ headless: RECORDER_HEADLESS })
             this.overCdp = false
             this.context = await this.browser.newContext(
-                storageStatePath && existsSync(storageStatePath) ? { storageState: storageStatePath } : {},
+                storageStatePath ? { storageState: storageStatePath } : {},
             )
         }
         this.page = await this.context.newPage()
