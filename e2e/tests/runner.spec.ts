@@ -133,12 +133,12 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         const envSpec = `
             import { test, expect } from '@playwright/test'
             test('reads an injected env var', () => {
-                expect(process.env.AUTH_USER).toBe('733787')
+                expect(process.env.USER).toBe('482910')
             })
         `
 
         const res = await request.post(`${RUNNER_URL}/runner/spec`, {
-            data: { spec: envSpec, env: { AUTH_USER: '733787' } },
+            data: { spec: envSpec, env: { USER: '482910' } },
             timeout: 90_000,
         })
 
@@ -314,7 +314,7 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         await writeFile(join(dir, 'tests', 'ok.spec.ts'),
             "import { test } from '@playwright/test'\ntest('passa', () => {})\n")
 
-        // Filtro que não casa arquivo de teste nenhum — é o que acontece quando o config do projeto
+        // Filtro que não casa arquivo de teste nenhum. É o que acontece quando o config do projeto
         // não conhece o spec pedido (o auth.setup.ts sem o project "setup", por exemplo).
         const res = await request.post(`${RUNNER_URL}/runner/project/stream`, {
             data: { path: dir, spec: 'tests/nao-existe.spec.ts' },
@@ -482,7 +482,7 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
 
                 const raw = await inspectVideo(finishedTest.videoPath)
                 const watchable = await inspectVideo(served)
-                const detail = `vídeo ${status} — bruto ${JSON.stringify(raw)}, servido ${JSON.stringify(watchable)}`
+                const detail = `vídeo ${status}, bruto ${JSON.stringify(raw)}, servido ${JSON.stringify(watchable)}`
 
                 expect(watchable.blankIntro, detail).toBeNull()
             }

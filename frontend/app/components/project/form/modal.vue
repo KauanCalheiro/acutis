@@ -238,7 +238,7 @@ function onSubmitClone(event: FormSubmitEvent<CloneProject>) {
           icon="i-ic-round-public"
           data-testid="projeto-form-publico"
         >
-          Repositório público — sem autenticação
+          Repositório público, sem autenticação
         </UBadge>
 
         <UFormField

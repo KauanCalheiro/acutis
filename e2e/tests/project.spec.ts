@@ -1,20 +1,39 @@
 import { test, expect } from '@playwright/test'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { startBackend } from '../support/backend'
 
 const FIXTURES_DIR = resolve(import.meta.dirname, '../fixtures/projects')
 
+/**
+ * Todo projeto precisa de URL: sem ela a página abre o modal de configurações travado. O .env é
+ * escrito aqui e não vem do fixture porque o repositório ignora .env em qualquer nível.
+ */
+function projectsCopy(): string {
+    const dir = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
+    cpSync(FIXTURES_DIR, dir, { recursive: true })
+
+    for (const project of readdirSync(dir)) {
+        writeFileSync(join(dir, project, '.env'), `URL=https://${project}.test\n`)
+    }
+
+    return dir
+}
+
 test.describe('project page', { tag: ['@read', '@project'] }, () => {
     let stopBackend: () => Promise<void>
+    let tmpProjects: string
 
     test.beforeAll(async () => {
-        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: FIXTURES_DIR })
+        tmpProjects = projectsCopy()
+
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
 
     test.afterAll(async () => {
         await stopBackend()
+        rmSync(tmpProjects, { recursive: true, force: true })
     })
 
     test.beforeEach(async ({ page }) => {
@@ -50,7 +69,7 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
     })
 
     test('links the vscode button to the project folder on the host', async ({ page }) => {
-        await expect(page.getByTestId('projeto-vscode')).toHaveAttribute('href', `vscode://file${join(FIXTURES_DIR, 'alpha-store')}`)
+        await expect(page.getByTestId('projeto-vscode')).toHaveAttribute('href', `vscode://file${join(tmpProjects, 'alpha-store')}`)
     })
 
     test('shows an alert when the project has no authentication configured', async ({ page }) => {
@@ -120,8 +139,7 @@ test.describe('project authentication modal', { tag: ['@write', '@project'] }, (
     let tmpProjects: string
 
     test.beforeAll(async () => {
-        tmpProjects = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
-        cpSync(FIXTURES_DIR, tmpProjects, { recursive: true })
+        tmpProjects = projectsCopy()
 
         stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
@@ -210,8 +228,7 @@ test.describe('project settings', { tag: ['@write', '@project'] }, () => {
     let tmpProjects: string
 
     test.beforeAll(async () => {
-        tmpProjects = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
-        cpSync(FIXTURES_DIR, tmpProjects, { recursive: true })
+        tmpProjects = projectsCopy()
 
         stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
@@ -232,7 +249,9 @@ test.describe('project settings', { tag: ['@write', '@project'] }, () => {
         })
 
         await expect(page.getByTestId('projeto-configuracoes-salvar')).toBeHidden()
-        expect(readFileSync(join(tmpProjects, 'alpha-store', '.env'), 'utf8')).toContain('BASE_URL=https://sistema.exemplo.com/app')
+
+        const environment = readFileSync(join(tmpProjects, 'alpha-store', 'environments', 'ambiente.json'), 'utf8')
+        expect(environment).toContain('https://sistema.exemplo.com/app')
     })
 
     test('reopens showing the url already saved', async ({ page }) => {
@@ -252,106 +271,7 @@ test.describe('project settings', { tag: ['@write', '@project'] }, () => {
         await page.getByTestId('projeto-configuracoes-base-url').fill('nao-e-url')
         await page.getByTestId('projeto-configuracoes-salvar').click()
 
-        await expect(page.getByTestId('projeto-configuracoes-erro')).toBeVisible()
-    })
-})
-
-test.describe('project environments', { tag: ['@write', '@project'] }, () => {
-    let stopBackend: () => Promise<void>
-    let tmpProjects: string
-
-    const environmentFile = () => readFileSync(join(tmpProjects, 'alpha-store', 'environments', 'homologacao.json'), 'utf8')
-    const dotenv = () => readFileSync(join(tmpProjects, 'alpha-store', '.env'), 'utf8')
-
-    test.beforeAll(async () => {
-        tmpProjects = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
-        cpSync(FIXTURES_DIR, tmpProjects, { recursive: true })
-
-        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
-    })
-
-    test.afterAll(async () => {
-        await stopBackend()
-        rmSync(tmpProjects, { recursive: true, force: true })
-    })
-
-    test('creates the first environment and runs on it', async ({ page }) => {
-        await page.goto('/projects/alpha-store')
-        await page.locator('[data-hydrated="true"]').waitFor()
-
-        await expect(page.getByTestId('projeto-ambientes')).toHaveText('Ambientes')
-
-        await test.step('open the modal and name the new environment', async () => {
-            await page.getByTestId('projeto-ambientes').click()
-            await page.getByTestId('ambientes-criar').click()
-            await page.getByTestId('ambientes-novo-nome').fill('Homologação')
-            await page.getByTestId('ambientes-criar').click()
-        })
-
-        await expect(page.getByTestId('ambientes-nome')).toHaveValue('Homologação')
-
-        await page.getByTestId('ambientes-fechar').click()
-
-        await expect(page.getByTestId('projeto-ambientes')).toHaveText('Homologação')
-    })
-
-    test('keeps a secret out of the versioned file', async ({ page }) => {
-        await page.goto('/projects/alpha-store')
-        await page.locator('[data-hydrated="true"]').waitFor()
-
-        await test.step('add a variable and mark it as a secret', async () => {
-            await page.getByTestId('projeto-ambientes').click()
-            await page.getByTestId('ambientes-variaveis-adicionar').click()
-            await page.getByTestId('ambientes-variaveis-chave-0').fill('AUTH_PASSWORD')
-            await page.getByTestId('ambientes-variaveis-chave-0').press('Enter')
-            await page.getByTestId('ambientes-variaveis-valor-0').fill('segredo')
-            await page.getByTestId('ambientes-variaveis-segredo-0').click()
-            await page.getByTestId('ambientes-salvar').click()
-        })
-
-        await expect(page.getByTestId('ambientes-variaveis-valor-0')).toHaveValue('')
-
-        expect(environmentFile()).toContain('{{env.HOMOLOGACAO_AUTH_PASSWORD}}')
-        expect(environmentFile()).not.toContain('segredo')
-        expect(dotenv()).toContain('HOMOLOGACAO_AUTH_PASSWORD=segredo')
-    })
-
-    test('points a secret at a key the env file already has', async ({ page }) => {
-        await page.goto('/projects/alpha-store')
-        await page.locator('[data-hydrated="true"]').waitFor()
-
-        await page.getByTestId('projeto-ambientes').click()
-        await page.getByTestId('ambientes-variaveis-apontar-0').click()
-        await page.getByTestId('ambientes-variaveis-ponteiro-{{env.HOMOLOGACAO_AUTH_PASSWORD}}').click()
-
-        await expect(page.getByTestId('ambientes-variaveis-valor-0')).toHaveValue('{{env.HOMOLOGACAO_AUTH_PASSWORD}}')
-    })
-
-    test('fills a secret that no one had filled yet from the env tab', async ({ page }) => {
-        await page.goto('/projects/alpha-store')
-        await page.locator('[data-hydrated="true"]').waitFor()
-
-        await test.step('point the variable at a key nobody filled', async () => {
-            await page.getByTestId('projeto-ambientes').click()
-            await page.getByTestId('ambientes-variaveis-valor-0').fill('{{env.SENHA_COMPARTILHADA}}')
-            await page.getByTestId('ambientes-salvar').click()
-
-            await expect(page.getByTestId('ambientes-variaveis-valor-0')).toHaveValue('')
-        })
-
-        await test.step('fill that key in the env tab', async () => {
-            await page.getByTestId('ambientes-aba-dotenv').click()
-
-            await expect(page.getByTestId('dotenv-variaveis-chave-1')).toHaveValue('SENHA_COMPARTILHADA')
-
-            await page.getByTestId('dotenv-variaveis-valor-1').fill('outro-segredo')
-            await page.getByTestId('dotenv-salvar').click()
-
-            await expect(page.getByTestId('dotenv-variaveis-valor-1')).toHaveValue('')
-        })
-
-        await expect(page.getByTestId('ambientes-erro')).toBeHidden()
-        expect(dotenv()).toContain('SENHA_COMPARTILHADA=outro-segredo')
+        await expect(page.getByText('A URL base deve ser uma URL válida.', { exact: true })).toBeVisible()
     })
 })
 
@@ -360,8 +280,7 @@ test.describe('project management', { tag: ['@write', '@project'] }, () => {
     let tmpProjects: string
 
     test.beforeAll(async () => {
-        tmpProjects = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
-        cpSync(FIXTURES_DIR, tmpProjects, { recursive: true })
+        tmpProjects = projectsCopy()
 
         stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })

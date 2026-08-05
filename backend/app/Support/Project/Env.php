@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\File;
 
 /**
  * O .env do projeto: URL base, credenciais do login e os valores mascarados que os cenários usam.
- * Nunca reescreve o arquivo inteiro — o que está lá é do usuário e pode ter chaves que não são
+ * Nunca reescreve o arquivo inteiro, porque o que está lá é do usuário e pode ter chaves que não são
  * nossas. Cada escrita espelha as chaves (sem valor) no .env.example e garante o .gitignore.
  */
 final class Env
@@ -46,7 +46,7 @@ final class Env
     }
 
     /**
-     * Chaves que a IA declarou para um cenário — nomes dinâmicos, sem enum possível.
+     * Chaves que a IA declarou para um cenário: nomes dinâmicos, sem enum possível.
      *
      * @param  array<string, string>  $values
      */

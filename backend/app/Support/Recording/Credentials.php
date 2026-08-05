@@ -2,7 +2,7 @@
 
 namespace App\Support\Recording;
 
-/** Usuário e senha reais de um login gravado — ver Recording::credentials(). */
+/** Usuário e senha reais de um login gravado. Ver Recording::credentials(). */
 final class Credentials
 {
     public function __construct(

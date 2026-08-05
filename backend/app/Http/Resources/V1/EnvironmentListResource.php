@@ -13,7 +13,6 @@ class EnvironmentListResource extends JsonResource
             'active' => $this['active'],
             'environments' => EnvironmentResource::collection($this['environments']),
             'known_keys' => $this['known_keys'],
-            'dotenv_keys' => $this['dotenv_keys'],
         ];
     }
 }

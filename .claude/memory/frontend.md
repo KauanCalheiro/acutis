@@ -14,6 +14,7 @@ metadata:
 | [frontend-naming](frontend-naming.md) | Nome de componente — variante em subpasta, nunca sufixo no arquivo (`tabela/mobile.vue`, não `tabelaMobile.vue`) |
 | [frontend-props](frontend-props.md) | `defineProps` — destructure + default, interface nomeada por caminho (sem `withDefaults`) |
 | [frontend-style](frontend-style.md) | Estilo — objetos/arrays sempre multi-linha (uma prop/item por linha) |
+| [frontend-feedback](frontend-feedback.md) | Retorno de interação — sucesso e erro vão para toast, nunca alert inline |
 | [frontend-labels](frontend-labels.md) | Texto de botão/ação — verbo no infinitivo, mesmo tom (Filtrar, Ordenar, Limpar) |
 | [frontend-responsive](frontend-responsive.md) | Responsividade — paddings mobile-first, table overflow-x, ClientOnly em useDevice |
 | [frontend-table](frontend-table.md) | UTable — columns só accessorKey, header/cell via slot, loading via pending |

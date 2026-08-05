@@ -44,7 +44,7 @@ class WriteDraftToProject
             $envValues = Recording::make($data->events)->envValues($data->envVars);
 
             if ($envValues !== []) {
-                Project::make($slug)->env()->merge($envValues);
+                Project::make($slug)->environments()->merge($envValues);
             }
 
             File::put(

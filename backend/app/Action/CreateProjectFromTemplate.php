@@ -3,6 +3,7 @@
 namespace App\Action;
 
 use App\Data\V1\Project\ProjectData;
+use App\Support\Project;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Lorisleiva\Actions\Concerns\AsAction;
@@ -31,6 +32,8 @@ class CreateProjectFromTemplate
         }
 
         $createdAt = WriteAcutisManifest::run($path, $name, $slug);
+
+        Project::at($path)->environments()->ensure();
 
         return new ProjectData(
             name: $name,

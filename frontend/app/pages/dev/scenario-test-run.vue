@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// ponytail: rota de preview (ver .claude/memory/feedback_dev-preview-routes.md) —
+// ponytail: rota de preview (ver .claude/memory/feedback_dev-preview-routes.md):
 // a modal é puramente apresentacional (running/steps via prop), cada botão só
 // define a prop direto, sem chamada de API nem stream de verdade.
 const startingOpen = ref(false)
@@ -29,7 +29,7 @@ const failedSteps = [
 const passedSteps = failedSteps.map(step => ({ ...step, status: 'success' as const, error: null }))
 
 // Cenário que depende de login: a autenticação entra como UM passo, no topo, e os passos internos
-// dela ficam escondidos — senão eles apareceriam intercalados com os do cenário.
+// dela ficam escondidos, senão eles apareceriam intercalados com os do cenário.
 const authenticatingSteps = [
   { title: 'Autenticação', status: 'running' as const },
   { title: 'Dado que eu navego para a página da Plataforma Univates', status: 'waiting' as const },
@@ -55,8 +55,8 @@ You may need to escape symbols like "$" or "*" and quote the arguments.`
 const SYNTAX_ERROR_OUTPUT = `Error: tests/auth.setup.ts: Unexpected token (12:4)
 
   10 |   await setup.step('Preencher credenciais', async () => {
-  11 |     await page.locator('#v-0').fill(process.env.AUTH_USER ?? '')
-> 12 |     await page.locator('#v-1'.fill(process.env.AUTH_PASSWORD ?? '')
+  11 |     await page.locator('#v-0').fill(process.env.USER ?? '')
+> 12 |     await page.locator('#v-1'.fill(process.env.PASSWORD ?? '')
      |     ^`
 </script>
 
@@ -66,7 +66,7 @@ const SYNTAX_ERROR_OUTPUT = `Error: tests/auth.setup.ts: Unexpected token (12:4)
       Preview: Executando teste
     </h1>
     <p class="text-sm text-muted mb-8">
-      Mesmo componente da tela de detalhe do cenário, com dado mocado — um botão por estado.
+      Mesmo componente da tela de detalhe do cenário, com dado mocado. Um botão por estado.
     </p>
 
     <div class="flex flex-wrap gap-3">

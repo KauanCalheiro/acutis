@@ -13,7 +13,7 @@ final class Scenario
 {
     private const RUNNER_WRAPPER_IMPORT = '/(from\s+[\'"])(?:\.\.?\/)+acutis-run([\'"])/';
 
-    /** O setup de autenticação é infraestrutura do projeto, não um cenário listado — mas usa as mesmas peças. */
+    /** O setup de autenticação é infraestrutura do projeto, não um cenário listado, mas usa as mesmas peças. */
     public const AUTH_ID = 'auth';
 
     public const AUTH_SPEC = 'tests/auth.setup.ts';
@@ -50,7 +50,7 @@ final class Scenario
         return $this->id === self::AUTH_ID;
     }
 
-    /** Spec relativo — o do setup de autenticação ou o do cenário; 404 se não existir. */
+    /** Spec relativo: o do setup de autenticação ou o do cenário; 404 se não existir. */
     public function spec(): string
     {
         if (! $this->isAuth()) {
@@ -69,7 +69,7 @@ final class Scenario
         return $this->project->path().'/'.$this->spec();
     }
 
-    /** Conteúdo do spec como o usuário escreveu — sem o wrapper que o runner injeta. */
+    /** Conteúdo do spec como o usuário escreveu, sem o wrapper que o runner injeta. */
     public function source(): string
     {
         return self::sourceOf($this->file());

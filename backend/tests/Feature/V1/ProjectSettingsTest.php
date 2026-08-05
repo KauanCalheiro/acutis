@@ -15,6 +15,7 @@ beforeEach(function () {
 
     $this->slug = Str::slug('Portal Sistema');
     $this->dir = $this->projectsPath.'/'.$this->slug;
+    $this->environment = fn (): array => json_decode(File::get($this->dir.'/environments/ambiente.json'), true);
 });
 
 afterEach(function () {
@@ -26,8 +27,9 @@ it('saves the base url the user typed', function () {
         'baseUrl' => 'https://www.univates.br/plataforma',
     ])->assertOk()->assertJsonPath('base_url', 'https://www.univates.br/plataforma');
 
-    expect(File::get($this->dir.'/.env'))->toContain('BASE_URL=https://www.univates.br/plataforma')
-        ->and(File::get($this->dir.'/.gitignore'))->toContain('.env');
+    expect(($this->environment)()['vars'])
+        ->toContain(['key' => 'URL', 'value' => 'https://www.univates.br/plataforma', 'secret' => false])
+        ->and(File::get($this->dir.'/.gitignore'))->toContain('environments');
 });
 
 it('shows the saved base url on the project', function () {
@@ -44,24 +46,51 @@ it('has no base url until someone sets one', function () {
         ->assertJsonPath('base_url', null);
 });
 
-it('preserves env keys the project already had', function () {
-    File::put($this->dir.'/.env', "AUTH_USER=733787\nAUTH_PASSWORD=segredo\n");
+it('preserves the variables the environment already had', function () {
+    postJson("/api/v1/projects/{$this->slug}/auth/credentials", [
+        'username' => '482910',
+        'password' => 'segredo',
+    ])->assertNoContent();
 
     putJson("/api/v1/projects/{$this->slug}/settings", ['baseUrl' => 'https://app.test'])->assertOk();
 
-    expect(File::get($this->dir.'/.env'))
-        ->toContain('AUTH_USER=733787')
-        ->toContain('AUTH_PASSWORD=segredo')
-        ->toContain('BASE_URL=https://app.test');
+    expect(($this->environment)()['vars'])->toContain(
+        ['key' => 'URL', 'value' => 'https://app.test', 'secret' => false],
+        ['key' => 'USER', 'value' => '482910', 'secret' => false],
+        ['key' => 'PASSWORD', 'value' => 'segredo', 'secret' => true],
+    );
 });
 
 it('replaces a base url that was already set', function () {
     putJson("/api/v1/projects/{$this->slug}/settings", ['baseUrl' => 'https://antigo.test'])->assertOk();
     putJson("/api/v1/projects/{$this->slug}/settings", ['baseUrl' => 'https://novo.test'])->assertOk();
 
-    expect(File::get($this->dir.'/.env'))
-        ->toContain('BASE_URL=https://novo.test')
-        ->not->toContain('antigo.test');
+    expect(($this->environment)()['vars'])
+        ->toContain(['key' => 'URL', 'value' => 'https://novo.test', 'secret' => false])
+        ->and(json_encode(($this->environment)()))->not->toContain('antigo.test');
+});
+
+it('asks for the base url while the project has none', function () {
+    getJson("/api/v1/projects/{$this->slug}")->assertOk()->assertJsonPath('requires_url', true);
+});
+
+it('stops asking once the url is filled', function () {
+    putJson("/api/v1/projects/{$this->slug}/settings", ['baseUrl' => 'https://app.test'])->assertOk();
+
+    getJson("/api/v1/projects/{$this->slug}")->assertOk()->assertJsonPath('requires_url', false);
+});
+
+it('stops asking when the user chooses to leave it blank', function () {
+    postJson("/api/v1/projects/{$this->slug}/settings/skip")->assertNoContent();
+
+    getJson("/api/v1/projects/{$this->slug}")
+        ->assertOk()
+        ->assertJsonPath('requires_url', false)
+        ->assertJsonPath('base_url', null);
+});
+
+it('returns 404 when skipping the url of a project that does not exist', function () {
+    postJson('/api/v1/projects/inexistente/settings/skip')->assertNotFound();
 });
 
 it('validates the base url', function () {

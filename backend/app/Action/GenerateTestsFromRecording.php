@@ -6,9 +6,11 @@ use App\Ai\Agents\GherkinWriter;
 use App\Ai\Agents\PlaywrightWriter;
 use App\Ai\StructuredOutput;
 use App\Ai\Tools\RunPlaywrightTest;
+use App\Data\V1\Project\EnvironmentVarData;
 use App\Data\V1\Recording\GeneratedTestsData;
 use App\Data\V1\Recording\RecordingData;
 use App\Data\V1\Recording\TestRunData;
+use App\Support\Project;
 use App\Support\Recording;
 use App\Support\TestArtifact;
 use Lorisleiva\Actions\Concerns\AsAction;
@@ -21,8 +23,10 @@ class GenerateTestsFromRecording
 
     private const MAX_RUN_ATTEMPTS = 3;
 
-    public function handle(RecordingData $recording): GeneratedTestsData
+    public function handle(string $slug, RecordingData $recording): GeneratedTestsData
     {
+        $variables = $this->declaredVariables($slug);
+
         $events = json_encode(
             Recording::make($recording->events)->redacted(),
             JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
@@ -36,7 +40,8 @@ class GenerateTestsFromRecording
 
         $playwrightResponse = app(PlaywrightWriter::class)->prompt(
             "URL base: {$recording->baseUrl}\n\nCenário Gherkin:\n{$gherkin}\n\nEventos gravados:\n{$events}"
-                .$this->noticeablePauses($recording->events),
+                .$this->noticeablePauses($recording->events)
+                .$variables,
         );
         $playwright = StructuredOutput::field($playwrightResponse, 'playwright');
         $envVars = StructuredOutput::fieldArray($playwrightResponse, 'envVars');
@@ -44,7 +49,7 @@ class GenerateTestsFromRecording
         $testRun = null;
 
         if ($recording->executionUrl !== null) {
-            [$playwright, $testRun, $envVars] = $this->runUntilItPasses($recording, $gherkin, $events, $playwright, $envVars);
+            [$playwright, $testRun, $envVars] = $this->runUntilItPasses($recording, $gherkin, $events, $playwright, $envVars, $variables);
         }
 
         $tag = $this->readWriteTag($recording->events);
@@ -66,7 +71,7 @@ class GenerateTestsFromRecording
 
     /**
      * A tag @publico é o que separa, na hora de rodar, quem usa a sessão do projeto de quem roda
-     * limpo — é ela que permite testar a própria tela de login num projeto autenticado.
+     * limpo. É ela que permite testar a própria tela de login num projeto autenticado.
      *
      * @return array{string, string}
      */
@@ -86,7 +91,7 @@ class GenerateTestsFromRecording
             fn (array $event): bool => in_array($event['type'] ?? '', ['fill', 'submit'], true),
         );
 
-        // ponytail: heurística fill/submit = escrita; clique que muta sem formulário passa por @read — o agente decide melhor, isto é só o fallback
+        // ponytail: heurística fill/submit = escrita; clique que muta sem formulário passa por @read, e o agente decide melhor, isto é só o fallback
         return $mutates ? '@write' : '@read';
     }
 
@@ -129,6 +134,7 @@ class GenerateTestsFromRecording
         string $events,
         string $playwright,
         array $envVars,
+        string $variables,
     ): array {
         $attempts = 0;
 
@@ -158,11 +164,31 @@ class GenerateTestsFromRecording
                     ."\n\nErro da execução:\n{$result->output}"
                     ."\n\nSpec com falha:\n{$playwright}"
                     ."\n\nCenário Gherkin:\n{$gherkin}"
-                    ."\n\nEventos gravados:\n{$events}",
+                    ."\n\nEventos gravados:\n{$events}"
+                    .$variables,
             );
             $playwright = StructuredOutput::field($retryResponse, 'playwright');
             $envVars = StructuredOutput::fieldArray($retryResponse, 'envVars');
         }
+    }
+
+    /** As variáveis do ambiente ativo; a escondida entra só pelo nome, nunca com o valor. */
+    private function declaredVariables(string $slug): string
+    {
+        $vars = Project::make($slug)->environments()->activeVars();
+
+        if (blank($vars)) {
+            return '';
+        }
+
+        $lines = array_map(
+            fn (EnvironmentVarData $var): string => $var->secret
+                ? "- {$var->key} (escondida, valor não enviado)"
+                : "- {$var->key} = {$var->value}",
+            $vars,
+        );
+
+        return "\n\nVariáveis do ambiente (use process.env.CHAVE em vez do valor literal):\n".implode("\n", $lines);
     }
 
     private function noticeablePauses(array $events): string
@@ -189,7 +215,7 @@ class GenerateTestsFromRecording
             return '';
         }
 
-        return "\n\nPausas notáveis (a página provavelmente carregava ou hidratava — espere a condição antes do passo):\n"
+        return "\n\nPausas notáveis (a página provavelmente carregava ou hidratava, então espere a condição antes do passo):\n"
             .implode("\n", $pauses);
     }
 }

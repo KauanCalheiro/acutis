@@ -108,7 +108,7 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
 
-    // cada teste mexe/apaga cenários do alpha-store — reseta a pasta antes de
+    // cada teste mexe/apaga cenários do alpha-store, então reseta a pasta antes de
     // cada um pra não depender da ordem de execução nem do que o teste anterior mudou
     test.beforeEach(() => {
         rmSync(join(tmpProjects, 'alpha-store'), { recursive: true, force: true })
@@ -289,7 +289,7 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
                 status: 200,
                 contentType: 'application/json',
                 body: JSON.stringify({
-                    playwright: "await page.getByTestId('login-usuario').fill('733787')",
+                    playwright: "await page.getByTestId('login-usuario').fill('482910')",
                     summary: 'Troquei o id gerado #v-0 pelo data-testid login-usuario.',
                 }),
             })
@@ -325,7 +325,7 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
             await expect(page.getByTestId('correcao-proposta')).toBeHidden()
         })
 
-        expect(patched!.playwright).toBe("await page.getByTestId('login-usuario').fill('733787')")
+        expect(patched!.playwright).toBe("await page.getByTestId('login-usuario').fill('482910')")
     })
 
     test('reports failure when the test dies with a step still running', async ({ page }) => {

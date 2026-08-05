@@ -61,7 +61,7 @@ it('never sets the base url — that comes from the project settings only', func
         'executionUrl' => 'https://homolog.sistema.test',
     ]))->assertOk();
 
-    expect(File::get($dir.'/.env'))->not->toContain('BASE_URL')
+    expect(File::get($dir.'/.env'))->not->toContain('URL')
         ->and(File::get($dir.'/playwright.config.ts'))->toBe($config);
 });
 
@@ -98,36 +98,36 @@ it('keeps the real password out of the response body', function () {
     expect($response->getContent())->not->toContain('topsecret123');
 });
 
-it('writes the recorded credentials into .env and a placeholder .env.example', function () {
+it('writes the recorded credentials into the environment', function () {
     AuthRecordingWriter::fake();
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
 
     $dir = $this->projectsPath."/{$slug}";
+    $environment = json_decode(File::get($dir.'/environments/ambiente.json'), true);
 
-    expect(File::get($dir.'/.env'))
-        ->toContain('AUTH_USER=user1')
-        ->toContain('AUTH_PASSWORD=topsecret123')
-        ->and(File::get($dir.'/.env.example'))
-        ->toContain('AUTH_USER=')
-        ->toContain('AUTH_PASSWORD=')
-        ->not->toContain('topsecret123')
-        ->and(File::get($dir.'/.gitignore'))->toContain('.env');
+    expect($environment['vars'])->toContain(
+        ['key' => 'USER', 'value' => 'user1', 'secret' => false],
+        ['key' => 'PASSWORD', 'value' => 'topsecret123', 'secret' => true],
+    )->and(File::get($dir.'/.gitignore'))->toContain('environments');
 });
 
-it('preserves env keys the project already had', function () {
+it('replaces the credentials the environment already had', function () {
     AuthRecordingWriter::fake();
     $slug = recordProject();
     $dir = $this->projectsPath."/{$slug}";
-    File::put($dir.'/.env', "CHECKOUT_CARD=4111111111111111\nAUTH_USER=antigo\n");
 
+    postJson("/api/v1/projects/{$slug}/auth/credentials", [
+        'username' => 'antigo',
+        'password' => 'antiga',
+    ])->assertNoContent();
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
 
-    expect(File::get($dir.'/.env'))
-        ->toContain('CHECKOUT_CARD=4111111111111111')
-        ->toContain('AUTH_USER=user1')
-        ->not->toContain('AUTH_USER=antigo');
+    $environment = json_decode(File::get($dir.'/environments/ambiente.json'), true);
+
+    expect($environment['vars'])->toContain(['key' => 'USER', 'value' => 'user1', 'secret' => false])
+        ->and(json_encode($environment))->not->toContain('antigo');
 });
 
 it('leaves a config it cannot parse untouched', function () {
@@ -195,8 +195,10 @@ it('asks for credentials when it cannot extract them from the recording', functi
 
     $dir = $this->projectsPath."/{$slug}";
 
+    $environment = json_decode(File::get($dir.'/environments/ambiente.json'), true);
+
     expect(File::exists($dir.'/tests/auth.setup.ts'))->toBeTrue()
-        ->and(File::exists($dir.'/.env'))->toBeFalse();
+        ->and(collect($environment['vars'])->firstWhere('key', 'USER')['value'])->toBe('');
 });
 
 it('persists the recorded events so the fixer can read them later, with the password redacted', function () {
@@ -231,11 +233,11 @@ it('leaves a base url the user configured untouched', function () {
     AuthRecordingWriter::fake();
     $slug = recordProject();
     $dir = $this->projectsPath."/{$slug}";
-    File::put($dir.'/.env', "BASE_URL=https://escolhida-pelo-usuario.test\n");
+    File::put($dir.'/.env', "URL=https://escolhida-pelo-usuario.test\n");
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
 
     expect(File::get($dir.'/.env'))
-        ->toContain('BASE_URL=https://escolhida-pelo-usuario.test')
+        ->toContain('URL=https://escolhida-pelo-usuario.test')
         ->not->toContain('sistema.test/login');
 });

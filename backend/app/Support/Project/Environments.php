@@ -15,6 +15,10 @@ final class Environments
 {
     private const DIRECTORY = 'environments';
 
+    private const DEFAULT_SLUG = 'ambiente';
+
+    private const DEFAULT_NAME = 'Ambiente';
+
     public function __construct(private readonly Project $project) {}
 
     /** @return list<Environment> */
@@ -51,6 +55,8 @@ final class Environments
             JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
         )."\n");
 
+        $this->project->gitignore()->ensure();
+
         return $this;
     }
 
@@ -84,7 +90,7 @@ final class Environments
     }
 
     /** @return ?Environment */
-    public function masked(string $slug): ?array
+    public function displayed(string $slug): ?array
     {
         $environment = $this->find($slug);
 
@@ -92,10 +98,8 @@ final class Environments
             return null;
         }
 
-        $dotenv = $this->project->env()->all();
-
         $environment['vars'] = array_map(
-            fn (EnvironmentVarData $var): EnvironmentVarData => $var->masked($dotenv),
+            fn (EnvironmentVarData $var): EnvironmentVarData => $var->displayed(),
             $environment['vars'],
         );
 
@@ -103,49 +107,129 @@ final class Environments
     }
 
     /** @return list<Environment> */
-    public function maskedAll(): array
+    public function displayedAll(): array
     {
-        return array_map(fn (array $environment): array => $this->masked($environment['slug']), $this->all());
+        return array_map(fn (array $environment): array => $this->displayed($environment['slug']), $this->all());
     }
 
-    /** @return list<string> */
-    public function secretKeys(): array
+    /**
+     * A chave é estrutura compartilhada: existe em todos os ambientes, com o mesmo flag de
+     * segredo. Só o valor muda de um para o outro. Quem acabou de ser salvo manda no conjunto,
+     * senão remover uma variável num ambiente nunca a removeria dos demais.
+     */
+    public function alignTo(string $slug): self
     {
-        $keys = [];
+        $reference = $this->find($slug);
+
+        if (blank($reference)) {
+            return $this;
+        }
 
         foreach ($this->all() as $environment) {
-            foreach ($environment['vars'] as $var) {
-                if ($var->secret && filled($var->pointerKey())) {
-                    $keys[] = $var->pointerKey();
+            if ($environment['slug'] === $slug) {
+                continue;
+            }
+
+            $vars = array_map(
+                fn (EnvironmentVarData $var): EnvironmentVarData => new EnvironmentVarData(
+                    key: $var->key,
+                    value: EnvironmentVarData::keyed($environment['vars'], $var->key)?->value ?? '',
+                    secret: $var->secret,
+                ),
+                $reference['vars'],
+            );
+
+            $this->put($environment['slug'], $environment['name'], $vars);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Um projeto sempre tem ambiente, e todo ambiente sempre tem as chaves que o acutis precisa
+     * para rodar: a URL do sistema, mais usuário e senha quando existe autenticação gravada.
+     */
+    public function ensure(): self
+    {
+        if (blank($this->all())) {
+            $this->put(self::DEFAULT_SLUG, self::DEFAULT_NAME, $this->seededFromDotenv())
+                ->activate(self::DEFAULT_SLUG);
+        }
+
+        foreach ($this->all() as $environment) {
+            $vars = $environment['vars'];
+            $before = count($vars);
+
+            foreach ($this->requiredKeys() as $key) {
+                if (EnvironmentVarData::keyed($vars, $key->value) === null) {
+                    $vars[] = new EnvironmentVarData($key->value, '', $key === EnvKey::PASSWORD);
                 }
+            }
+
+            if (count($vars) !== $before) {
+                $this->put($environment['slug'], $environment['name'], $vars);
             }
         }
 
-        return array_values(array_unique($keys));
+        return $this;
     }
 
-    public function secured(string $slug, EnvironmentVarData $var, ?EnvironmentVarData $stored = null): EnvironmentVarData
+    /** @return list<EnvKey> */
+    private function requiredKeys(): array
     {
-        $pointed = $var->pointedTo($slug, $stored);
+        return $this->project->auth()->exists()
+            ? [EnvKey::URL, EnvKey::USER, EnvKey::PASSWORD]
+            : [EnvKey::URL];
+    }
 
-        if (filled($var->value) && ! $var->isPointer()) {
-            $this->project->env()->merge([$pointed->pointerKey() => $var->value]);
+    /** @return list<EnvironmentVarData> */
+    private function seededFromDotenv(): array
+    {
+        $dotenv = $this->project->env()->all();
+        $vars = [];
+
+        foreach ([EnvKey::URL, EnvKey::USER, EnvKey::PASSWORD] as $key) {
+            if (filled($dotenv[$key->value] ?? null)) {
+                $vars[] = new EnvironmentVarData($key->value, $dotenv[$key->value], $key === EnvKey::PASSWORD);
+            }
         }
 
-        return $pointed;
+        return $vars;
+    }
+
+    /** @return list<EnvironmentVarData> */
+    public function activeVars(): array
+    {
+        $slug = $this->activeSlug();
+        $environment = filled($slug) ? $this->find($slug) : null;
+
+        return $environment['vars'] ?? [];
+    }
+
+    /** @return list<EnvironmentVarData> */
+    public function declaredKeys(): array
+    {
+        $environment = $this->all()[0] ?? null;
+
+        if (blank($environment)) {
+            return [];
+        }
+
+        return array_map(
+            fn (EnvironmentVarData $var): EnvironmentVarData => new EnvironmentVarData($var->key, '', $var->secret),
+            $environment['vars'],
+        );
     }
 
     public function value(EnvKey $key, ?string $default = null): ?string
     {
         $var = $this->activeVar($key);
 
-        if ($var === null) {
+        if ($var === null || blank($var->value)) {
             return $this->project->env()->get($key, $default);
         }
 
-        $value = $var->resolve($this->project->env()->all());
-
-        return blank($value) ? $default : $value;
+        return $var->value;
     }
 
     public function set(EnvKey $key, string $value, bool $secret = false): self
@@ -161,14 +245,35 @@ final class Environments
 
         $vars = $environment['vars'];
         $stored = EnvironmentVarData::keyed($vars, $key->value);
+        $index = array_search($stored, $vars, true);
         $var = new EnvironmentVarData($key->value, $value, $secret);
 
-        if ($secret) {
-            $var = $this->secured($slug, $var, $stored);
+        $index === false ? $vars[] = $var : $vars[$index] = $var;
+
+        return $this->put($slug, $environment['name'], $vars);
+    }
+
+    /** @param  array<string, string>  $values */
+    public function merge(array $values): self
+    {
+        $slug = $this->activeSlug();
+        $environment = filled($slug) ? $this->find($slug) : null;
+
+        if (blank($environment)) {
+            $this->project->env()->merge($values);
+
+            return $this;
         }
 
-        $index = array_search($stored, $vars, true);
-        $index === false ? $vars[] = $var : $vars[$index] = $var;
+        $vars = $environment['vars'];
+
+        foreach ($values as $key => $value) {
+            $stored = EnvironmentVarData::keyed($vars, $key);
+            $index = array_search($stored, $vars, true);
+            $var = new EnvironmentVarData($key, $value, $stored?->secret ?? false);
+
+            $index === false ? $vars[] = $var : $vars[$index] = $var;
+        }
 
         return $this->put($slug, $environment['name'], $vars);
     }
@@ -183,11 +288,10 @@ final class Environments
             return [];
         }
 
-        $dotenv = $this->project->env()->all();
-        $values = $dotenv;
+        $values = $this->project->env()->all();
 
         foreach ($environment['vars'] as $var) {
-            $values[$var->key] = $var->resolve($dotenv);
+            $values[$var->key] = (string) $var->value;
         }
 
         unset($values[EnvKey::ACTIVE_ENVIRONMENT->value]);

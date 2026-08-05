@@ -11,6 +11,7 @@ Testes cross-tool (webdriver + frontend + backend) vivem em `e2e/` na raiz do mo
 
 | Arquivo | Assunto |
 |---------|---------|
+| [e2e-running-permission](e2e-running-permission.md) | Rodar a suíte só quando o usuário pedir |
 | [e2e-tags](e2e-tags.md) | Tags read/write+domínio, `@manual`, steps em inglês imperativo |
 | [e2e-running](e2e-running.md) | Rodar por domínio, o build do `pretest`, conflito de porta com a stack local |
 | [e2e-backend](e2e-backend.md) | Banco dedicado, seed determinístico, porta 4200 compartilhada |

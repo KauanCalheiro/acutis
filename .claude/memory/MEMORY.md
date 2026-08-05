@@ -11,8 +11,9 @@ Instruções persistentes ficam em `./.claude/memory/`. Antes de qualquer ação
 | [execution.md](execution.md) | índice | subir serviço, rodar comando de dev/teste — escolher modo de execução (→ docker, local) |
 | [environments.md](environments.md) | reference | mexer em variável, segredo ou sessão do projeto testado — `environments/*.json` versionado, `.env` como cofre |
 | [schema.md](schema.md) | reference | antes de migration/model/recurso — fonte de verdade das tabelas (DBML) |
-| [commit.md](commit.md) | feedback | fazer git commit/branch/PR/merge — nunca na main, branch por feature, squash merge com descrição detalhada |
+| [commit.md](commit.md) | feedback | fazer git commit/branch/PR/merge — só quando pedido explicitamente, nunca na main, squash merge com descrição detalhada |
 | [specs.md](specs.md) | feedback | escrever spec de brainstorming — vai em `docs/superpowers/`, nunca commitada |
+| [dashes.md](dashes.md) | feedback | escrever qualquer texto (código, memória, commit, resposta) — nunca `" - "` entre espaços |
 | [comments.md](comments.md) | feedback | escrever/revisar qualquer código — comentário só descreve o que a função faz, nunca a deliberação |
 | [branches.md](branches.md) | feedback | depois de mergear PR, ou ao pedir limpeza — apagar branch órfã local/remota |
 | [tdd.md](tdd.md) | feedback | qualquer feature/bugfix — red/green/refactor, teste antes do código |

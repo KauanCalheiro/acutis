@@ -25,7 +25,7 @@ class GherkinWriter implements Agent, HasStructuredOutput
         - Use as palavras-chave Funcionalidade, Cenário, Dado, Quando, Então, E.
         - Agrupe o fluxo em cenários coesos; prefira um cenário por objetivo do usuário.
         - Use os labels dos eventos para nomear campos e botões como o usuário os vê.
-        - Valores de senha chegam mascarados como •••• — nunca invente a senha real.
+        - Valores de senha chegam mascarados como ••••. Nunca invente a senha real.
 
         Tags (obrigatório):
         - Acima da linha Funcionalidade, escreva uma linha de tags.

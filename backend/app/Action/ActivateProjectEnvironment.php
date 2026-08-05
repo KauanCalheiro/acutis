@@ -20,6 +20,6 @@ class ActivateProjectEnvironment
 
         $environments->activate($environmentSlug);
 
-        return $environments->masked($environmentSlug);
+        return $environments->displayed($environmentSlug);
     }
 }

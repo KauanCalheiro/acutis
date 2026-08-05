@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { SelectorSuggestion } from '~/types/project'
 
-// ponytail: rota de preview (ver .claude/memory/feedback_dev-preview-routes.md) —
+// ponytail: rota de preview (ver .claude/memory/feedback_dev-preview-routes.md):
 // o modal é puramente apresentacional (loading/suggestions/error via prop),
-// então cada botão só define o prop direto — sem chamada de API, sem "modo preview".
+// então cada botão só define o prop direto, sem chamada de API, sem "modo preview".
 const loadingOpen = ref(false)
 const errorOpen = ref(false)
 const successOpen = ref(false)
@@ -31,7 +31,7 @@ const mockSuggestions: SelectorSuggestion[] = [
       Preview: Ver sugestões
     </h1>
     <p class="text-sm text-muted mb-8">
-      Mesmo componente da tela de detalhe do cenário, com dado mocado — um botão por estado.
+      Mesmo componente da tela de detalhe do cenário, com dado mocado. Um botão por estado.
     </p>
 
     <div class="flex flex-wrap gap-3">

@@ -2,9 +2,14 @@
 interface ProjectSettingsModal {
   slug: string
   baseUrl: string | null
+  required?: boolean
 }
 
-const { slug, baseUrl } = defineProps<ProjectSettingsModal>()
+const {
+  slug,
+  baseUrl,
+  required = false
+} = defineProps<ProjectSettingsModal>()
 
 const open = defineModel<boolean>('open', {
   default: false
@@ -16,18 +21,39 @@ const emit = defineEmits<{
 
 const url = ref('')
 const saving = ref(false)
-const error = ref<string | null>(null)
+const skipping = ref(false)
+const toast = useToast()
+
+function complain(message: string) {
+  toast.add({
+    title: message,
+    color: 'error',
+    icon: 'i-ic-round-error'
+  })
+}
 
 watch(open, (isOpen) => {
   if (!isOpen) return
 
   url.value = baseUrl ?? ''
-  error.value = null
 })
+
+async function skip() {
+  skipping.value = true
+
+  try {
+    await $fetch(`/api/projects/${slug}/settings/skip`, { method: 'POST' })
+    open.value = false
+    emit('saved')
+  } catch (err) {
+    complain(extractServerError(err, 'Não foi possível deixar a URL em branco.'))
+  } finally {
+    skipping.value = false
+  }
+}
 
 async function save() {
   saving.value = true
-  error.value = null
 
   try {
     await $fetch(`/api/projects/${slug}/settings`, {
@@ -36,8 +62,14 @@ async function save() {
     })
     open.value = false
     emit('saved')
+
+    toast.add({
+      title: 'Configurações salvas',
+      color: 'success',
+      icon: 'i-ic-round-check-circle'
+    })
   } catch (err) {
-    error.value = extractServerError(err, 'Não foi possível salvar as configurações.')
+    complain(extractServerError(err, 'Não foi possível salvar as configurações.'))
   } finally {
     saving.value = false
   }
@@ -47,9 +79,20 @@ async function save() {
 <template>
   <BaseModal
     v-model:open="open"
+    :dismissable="!required"
     title="Configurações do projeto"
   >
     <template #body>
+      <UAlert
+        v-if="required"
+        color="neutral"
+        variant="soft"
+        icon="i-ic-round-info"
+        description="A URL é um facilitador: com ela o navegador já abre no sistema ao gravar. Sem ela, a gravação sempre começa numa página em branco e você digita o endereço na mão."
+        class="mb-4"
+        data-testid="projeto-configuracoes-obrigatorio"
+      />
+
       <UFormField
         label="URL base"
         description="Endereço do sistema que este projeto testa. É onde o navegador abre ao gravar, e a base que os testes usam ao rodar."
@@ -62,19 +105,20 @@ async function save() {
           @keyup.enter="save"
         />
       </UFormField>
-
-      <UAlert
-        v-if="error"
-        color="error"
-        variant="soft"
-        :description="error"
-        class="mt-4"
-        data-testid="projeto-configuracoes-erro"
-      />
     </template>
 
     <template #footer>
       <UButton
+        v-if="required"
+        label="Deixar em branco"
+        color="neutral"
+        variant="ghost"
+        :loading="skipping"
+        data-testid="projeto-configuracoes-pular"
+        @click="skip"
+      />
+      <UButton
+        v-else
         label="Cancelar"
         color="neutral"
         variant="ghost"

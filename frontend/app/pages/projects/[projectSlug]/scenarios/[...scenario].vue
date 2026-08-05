@@ -305,7 +305,7 @@ const tabs: TabsItem[] = [
           v-if="!scenario!.gherkin"
           icon="i-ic-round-description"
           title="Sem descrição em Gherkin"
-          description="Este cenário não tem arquivo .feature — só o código Playwright da aba ao lado."
+          description="Este cenário não tem arquivo .feature, só o código Playwright da aba ao lado."
           testid="cenario-gherkin-vazio"
         />
         <BaseCodefield
@@ -322,7 +322,7 @@ const tabs: TabsItem[] = [
           v-if="!scenario!.playwright.trim()"
           icon="i-ic-round-code-off"
           title="Sem código Playwright"
-          description="O arquivo .spec.ts deste cenário está vazio — edite o cenário pra escrever o teste."
+          description="O arquivo .spec.ts deste cenário está vazio. Edite o cenário pra escrever o teste."
           testid="cenario-playwright-vazio"
         />
         <BaseCodefield

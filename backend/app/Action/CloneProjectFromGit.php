@@ -6,6 +6,7 @@ use App\Data\V1\Project\CloneProjectData;
 use App\Data\V1\Project\ProjectData;
 use App\Enums\GitProvider;
 use App\Support\Git;
+use App\Support\Project;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Lorisleiva\Actions\Concerns\AsAction;
@@ -49,6 +50,8 @@ class CloneProjectFromGit
         }
 
         $createdAt = WriteAcutisManifest::run($path, $name, $slug);
+
+        Project::at($path)->environments()->ensure();
         $repository = Git::in($path)->remoteUrl();
 
         return new ProjectData(

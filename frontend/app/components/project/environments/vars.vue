@@ -3,15 +3,11 @@ import type { EditableVar } from '~/types/project'
 
 interface ProjectEnvironmentsVars {
   knownKeys?: string[]
-  pointerKeys?: string[]
-  secrets?: boolean
   testid?: string
 }
 
 const {
   knownKeys = [],
-  pointerKeys = [],
-  secrets = false,
   testid = 'variaveis'
 } = defineProps<ProjectEnvironmentsVars>()
 
@@ -19,24 +15,7 @@ const vars = defineModel<EditableVar[]>({
   default: () => []
 })
 
-const keys = ref([...knownKeys])
-
-watch(() => knownKeys, (updated) => {
-  keys.value = [...updated]
-})
-
-function pointersFor(variable: EditableVar) {
-  return pointerKeys.map(key => ({
-    label: `{{env.${key}}}`,
-    onSelect: () => (variable.value = `{{env.${key}}}`)
-  }))
-}
-
-function declare(variable: EditableVar, key: string) {
-  if (!keys.value.includes(key)) keys.value.push(key)
-
-  variable.key = key
-}
+const keyListId = useId()
 
 function add() {
   vars.value = [
@@ -54,59 +33,66 @@ function remove(index: number) {
   vars.value = vars.value.filter((_, position) => position !== index)
 }
 
-function placeholderOf(variable: EditableVar) {
-  if (!variable.secret) return 'valor'
+const revealed = ref<number[]>([])
 
-  return variable.pending ? 'ainda sem valor' : 'guardado — digite para trocar'
+function toggleReveal(index: number) {
+  revealed.value = revealed.value.includes(index)
+    ? revealed.value.filter(position => position !== index)
+    : [...revealed.value, index]
+}
+
+function typeOf(variable: EditableVar, index: number) {
+  return variable.secret && !revealed.value.includes(index) ? 'password' : 'text'
 }
 </script>
 
 <template>
   <div class="flex flex-col gap-2">
+    <datalist :id="keyListId">
+      <option
+        v-for="key in knownKeys"
+        :key="key"
+        :value="key"
+      />
+    </datalist>
+
     <div
       v-for="(variable, index) in vars"
       :key="index"
       class="flex items-center gap-2"
     >
-      <UInputMenu
+      <UInput
         v-model="variable.key"
-        :items="keys"
-        create-item="always"
         class="w-1/3"
         placeholder="CHAVE"
+        :list="keyListId"
         :data-testid="`${testid}-chave-${index}`"
-        @create="declare(variable, $event)"
       />
+
       <UInput
         v-model="variable.value"
         class="flex-1"
-        :placeholder="placeholderOf(variable)"
+        :type="typeOf(variable, index)"
+        placeholder="valor"
         :color="variable.pending ? 'warning' : undefined"
         :data-testid="`${testid}-valor-${index}`"
       >
         <template
-          v-if="variable.secret && pointerKeys.length"
+          v-if="variable.secret"
           #trailing
         >
-          <UDropdownMenu :items="pointersFor(variable)">
-            <UButton
-              icon="i-ic-round-link"
-              color="neutral"
-              variant="link"
-              aria-label="Apontar para uma chave do .env"
-              :data-testid="`${testid}-apontar-${index}`"
-            />
-
-            <template #item="{ item }">
-              <span :data-testid="`${testid}-ponteiro-${item.label}`">{{ item.label }}</span>
-            </template>
-          </UDropdownMenu>
+          <UButton
+            :icon="revealed.includes(index) ? 'i-ic-round-visibility-off' : 'i-ic-round-visibility'"
+            color="neutral"
+            variant="link"
+            :aria-label="revealed.includes(index) ? 'Esconder o valor' : 'Revelar o valor'"
+            :data-testid="`${testid}-revelar-${index}`"
+            @click="toggleReveal(index)"
+          />
         </template>
       </UInput>
-      <UTooltip
-        v-if="secrets"
-        text="Segredo: o valor sai do arquivo versionado e vai para o .env"
-      >
+
+      <UTooltip text="Segredo: o valor fica mascarado na tela">
         <UButton
           icon="i-ic-round-lock"
           :color="variable.secret ? 'primary' : 'neutral'"
@@ -116,6 +102,7 @@ function placeholderOf(variable: EditableVar) {
           @click="variable.secret = !variable.secret"
         />
       </UTooltip>
+
       <UButton
         icon="i-ic-round-close"
         color="error"

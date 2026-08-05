@@ -69,7 +69,7 @@ export class RunnerController {
 
         // O motivo de uma falha antes do primeiro teste (config que não casa o spec, import
         // quebrado, dependência faltando) só existe na saída do processo, que o reporter nunca vê.
-        // Por isso o run:finished é segurado e reemitido com o output — sem ele quem escuta recebe
+        // Por isso o run:finished é segurado e reemitido com o output, porque sem ele quem escuta recebe
         // "falhou" e mais nada, e a interface não tem o que mostrar.
         let finished: RunEvent | null = null
 

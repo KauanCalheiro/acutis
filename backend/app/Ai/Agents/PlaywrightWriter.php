@@ -22,17 +22,19 @@ class PlaywrightWriter implements Agent, HasStructuredOutput
         - Implemente exatamente o cenário descrito no Gherkin; os eventos são a fonte de seletores e valores.
         - Prioridade de seletor: dataTestId (page.getByTestId) > id (page.locator('#...')) > finder.
         - Estruture com test.describe e test.step espelhando os passos do Gherkin.
-        - O test.describe SEMPRE declara as mesmas tags do Gherkin via option tag: test.describe('Título', { tag: ['@read'] }, () => { ... }) — a primeira é exatamente uma entre @read e @write.
-        - Navegue sempre com URL absoluta construída a partir da URL base fornecida — nunca page.goto('/') relativo.
+        - O test.describe SEMPRE declara as mesmas tags do Gherkin via option tag: test.describe('Título', { tag: ['@read'] }, () => { ... }), e a primeira é exatamente uma entre @read e @write.
+        - Navegue sempre com URL absoluta construída a partir da URL base fornecida. Nunca page.goto('/') relativo.
         - Inclua expect de URL após cada navegação registrada nos eventos.
-        - Valores de senha chegam mascarados como •••• — use process.env.<NOME_EM_MAIUSCULAS> (nunca o valor mascarado) e reporte esse nome exato em envVars, na mesma ordem em que os eventos mascarados aparecem na gravação.
+        - Valores de senha chegam mascarados como ••••, então use process.env.<NOME_EM_MAIUSCULAS> (nunca o valor mascarado) e reporte esse nome exato em envVars, na mesma ordem em que os eventos mascarados aparecem na gravação.
+        - Se o prompt listar "Variáveis do ambiente" e algum valor da gravação for igual ao valor de uma delas, escreva process.env.CHAVE no lugar do literal e reporte a chave em envVars.
+        - Variável listada como escondida não traz valor: use process.env.CHAVE direto e reporte a chave em envVars.
         - Importe apenas de @playwright/test.
 
         Esperas:
         - Nunca use waitForTimeout nem esperas de tempo fixo; sempre espere uma condição.
         - Após cada evento navigate, aguarde a nova página com await page.waitForURL(...) antes da próxima interação.
         - Se o prompt listar "Pausas notáveis", o usuário esperou a página carregar ou hidratar naquele ponto: antes da ação correspondente, aguarde o elemento alvo com await expect(locator).toBeVisible().
-        - No restante, confie no auto-wait do Playwright — não adicione esperas redundantes.
+        - No restante, confie no auto-wait do Playwright e não adicione esperas redundantes.
         INSTRUCTIONS;
     }
 

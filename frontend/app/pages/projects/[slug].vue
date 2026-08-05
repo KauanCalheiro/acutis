@@ -40,7 +40,16 @@ const scenarios = computed(() => {
 
 const renameOpen = ref(false)
 const settingsOpen = ref(false)
+
+onMounted(() => {
+  if (project.value?.requires_url) settingsOpen.value = true
+})
 const environmentsOpen = ref(false)
+
+async function onEnvironmentsSaved() {
+  await refreshNuxtData(`environments-${slug.value}`)
+  await refresh()
+}
 const removeOpen = ref(false)
 const removing = ref(false)
 const authOpen = ref(false)
@@ -60,7 +69,7 @@ const authButtonColor = computed(() => ({
   skipped: 'neutral'
 }[project.value!.auth_status] as 'success' | 'error' | 'neutral'))
 
-/** O setup de auth é executado pelo mesmo streaming dos cenários — é a execução que define o status. */
+/** O setup de auth é executado pelo mesmo streaming dos cenários, e é a execução que define o status. */
 function runAuthSetup() {
   authRunOpen.value = true
   authFix.value = null
@@ -140,7 +149,7 @@ const { state: webdriver, startRecording, stopRecording } = useWebdriver()
 const reviewOpen = ref(false)
 
 /**
- * `publico` marca o cenário com @publico e o faz rodar fora da sessão — a tela de login é o caso
+ * `publico` marca o cenário com @publico e o faz rodar fora da sessão, e a tela de login é o caso
  * óbvio. `simples` é o projeto sem autenticação: não carimba nada, porque se auth for configurada
  * depois esses cenários vão precisar da sessão.
  */
@@ -168,7 +177,7 @@ const recordingOptions = computed(() => [[
   }
 ]])
 
-/** URL base configurada no projeto — é onde o navegador abre ao gravar. */
+/** URL base configurada no projeto. É onde o navegador abre ao gravar. */
 const projectUrl = computed(() => project.value!.base_url ?? undefined)
 
 function recordPlain() {
@@ -183,7 +192,7 @@ function recordPublic() {
 
 /**
  * Roda o auth.setup.ts antes de abrir o navegador: a sessão injetada sempre nasce válida, sem
- * heurística de expiração. Falhou o login, nem abre — o resultado aparece no mesmo modal de sempre.
+ * heurística de expiração. Falhou o login, nem abre, e o resultado aparece no mesmo modal de sempre.
  */
 function recordAuthenticated() {
   recordingMode.value = 'authenticated'
@@ -206,7 +215,7 @@ function recordDefault() {
   return hasAuth.value ? recordAuthenticated() : recordPlain()
 }
 
-/** Regravar mantém o tipo escolhido — trocar de autenticado pra público no meio seria surpresa. */
+/** Regravar mantém o tipo escolhido, porque trocar de autenticado pra público no meio seria surpresa. */
 function recordAgain() {
   if (recordingMode.value === 'authenticated') return recordAuthenticated()
   if (recordingMode.value === 'public') return recordPublic()
@@ -241,7 +250,7 @@ function stopAndReview() {
   stopRecording()
 }
 
-/** Regravar o login abre no sistema, mas sem sessão — é justamente o login que vamos capturar. */
+/** Regravar o login abre no sistema, mas sem sessão, porque é justamente o login que vamos capturar. */
 function startAuthRecording() {
   authRecording.value = true
   startRecording('auth', { url: projectUrl.value })
@@ -313,13 +322,10 @@ async function remove() {
       </div>
 
       <div class="flex gap-2 shrink-0">
-        <UButton
-          icon="i-ic-round-layers"
-          :label="project!.environment?.name ?? 'Ambientes'"
-          color="neutral"
-          variant="soft"
-          data-testid="projeto-ambientes"
-          @click="environmentsOpen = true"
+        <ProjectEnvironmentsSelect
+          :slug="slug"
+          @edit="environmentsOpen = true"
+          @activated="refresh()"
         />
         <BaseButtonIcon
           icon="i-ic-round-code"
@@ -535,13 +541,14 @@ async function remove() {
     <ProjectEnvironmentsModal
       v-model:open="environmentsOpen"
       :slug="slug"
-      @saved="refresh()"
+      @saved="onEnvironmentsSaved"
     />
 
     <ProjectSettingsModal
       v-model:open="settingsOpen"
       :slug="slug"
       :base-url="project!.base_url"
+      :required="project!.requires_url"
       @saved="refresh()"
     />
 

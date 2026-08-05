@@ -18,7 +18,7 @@ beforeEach(function () {
         'created_at' => '2026-01-01T00:00:00+00:00',
         'version' => 1,
     ]));
-    File::put($this->dir.'/tests/login.spec.ts', "await page.locator('#v-0').fill('733787')");
+    File::put($this->dir.'/tests/login.spec.ts', "await page.locator('#v-0').fill('482910')");
     File::put($this->dir.'/tests/login.events.json', json_encode([
         ['type' => 'fill', 'label' => 'Usuário ou código', 'url' => 'https://app.test/login', 'selectors' => ['id' => 'v-0']],
     ]));
@@ -35,7 +35,7 @@ function fakeFix(): void
     ])]);
 
     SpecFixer::fake([[
-        'playwright' => "await page.getByTestId('login-usuario').fill('733787')",
+        'playwright' => "await page.getByTestId('login-usuario').fill('482910')",
         'summary' => 'Troquei o id gerado #v-0 pelo data-testid login-usuario.',
     ]]);
 }
@@ -48,7 +48,7 @@ it('proposes a fixed spec from the failing step', function () {
         'error' => "locator('#v-0') resolved to hidden",
     ])
         ->assertOk()
-        ->assertJsonPath('playwright', "await page.getByTestId('login-usuario').fill('733787')")
+        ->assertJsonPath('playwright', "await page.getByTestId('login-usuario').fill('482910')")
         ->assertJsonPath('summary', 'Troquei o id gerado #v-0 pelo data-testid login-usuario.');
 });
 
@@ -74,7 +74,7 @@ it('does not write the proposal to disk', function () {
         'error' => 'erro',
     ])->assertOk();
 
-    expect(File::get($this->dir.'/tests/login.spec.ts'))->toBe("await page.locator('#v-0').fill('733787')");
+    expect(File::get($this->dir.'/tests/login.spec.ts'))->toBe("await page.locator('#v-0').fill('482910')");
 });
 
 it('requires the failing step and the error', function () {
@@ -91,7 +91,7 @@ it('returns 404 for a scenario that does not exist', function () {
 
 it('fixes the auth setup with the same agent, reading its recorded events', function () {
     fakeFix();
-    File::put($this->dir.'/tests/auth.setup.ts', "await page.locator('#v-9').fill(process.env.AUTH_USER)");
+    File::put($this->dir.'/tests/auth.setup.ts', "await page.locator('#v-9').fill(process.env.USER)");
     File::put($this->dir.'/tests/auth.events.json', json_encode([
         ['type' => 'fill', 'label' => 'Matrícula', 'url' => 'https://app.test/login', 'selectors' => ['id' => 'v-9']],
     ]));

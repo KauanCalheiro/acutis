@@ -37,14 +37,14 @@ class WriteAuthRecordingToProject
             json_encode($recording->withoutPasswords(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         );
 
+        $environments = $project->environments()->ensure();
+
         if (! $credentials) {
             return new GeneratedAuthSetupData(authSetup: $authSetup, credentialsNeeded: true);
         }
 
-        $environments = $project->environments();
-
-        $environments->set(EnvKey::AUTH_USER, $credentials->username);
-        $environments->set(EnvKey::AUTH_PASSWORD, $credentials->password, secret: true);
+        $environments->set(EnvKey::USER, $credentials->username);
+        $environments->set(EnvKey::PASSWORD, $credentials->password, secret: true);
 
         return new GeneratedAuthSetupData(authSetup: $authSetup, credentialsNeeded: false);
     }

@@ -78,7 +78,7 @@ onMounted(resize)
 </style>
 
 <style>
-/* ponytail: paleta própria em vez de um tema Prism fixo — assim acompanha .dark do Nuxt UI;
+/* ponytail: paleta própria em vez de um tema Prism fixo, assim acompanha .dark do Nuxt UI;
    token.* são gerados via v-html, escopo global necessário pra CSS scoped não alcançar */
 .codefield .token.comment {
   color: #6a737d;

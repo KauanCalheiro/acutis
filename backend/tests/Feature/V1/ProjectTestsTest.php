@@ -101,7 +101,7 @@ it('writes the recorded events alongside the generated artifacts', function () {
         ->and(json_decode($events, true)[1]['value'])->toBe('••••');
 });
 
-it('writes the env var the ai declared for a masked value into .env and .env.example', function () {
+it('writes the env var the ai declared for a masked value into the environment', function () {
     $slug = project();
 
     postJson("/api/v1/projects/{$slug}/tests", writePayload([
@@ -115,15 +115,18 @@ it('writes the env var the ai declared for a masked value into .env and .env.exa
 
     $dir = $this->projectsPath."/{$slug}";
 
-    expect(File::get($dir.'/.env'))->toContain('SENHA_UNIVATES=topsecret123')
-        ->and(File::get($dir.'/.env.example'))->toContain('SENHA_UNIVATES=')->not->toContain('topsecret123')
-        ->and(File::get($dir.'/.gitignore'))->toContain('.env');
+    $environment = json_decode(File::get($dir.'/environments/ambiente.json'), true);
+
+    expect($environment['vars'])->toContain(['key' => 'SENHA_UNIVATES', 'value' => 'topsecret123', 'secret' => false])
+        ->and(File::get($dir.'/.gitignore'))->toContain('environments');
 });
 
-it('merges into an existing .env without clobbering unrelated keys', function () {
+it('merges into the environment without clobbering the variables already there', function () {
     $slug = project();
     $dir = $this->projectsPath."/{$slug}";
-    File::put($dir.'/.env', "AUTH_USER=someone\nAUTH_PASSWORD=oldpass\n");
+
+    postJson("/api/v1/projects/{$slug}/auth/credentials", ['username' => 'someone', 'password' => 'oldpass'])
+        ->assertNoContent();
 
     postJson("/api/v1/projects/{$slug}/tests", writePayload([
         'envVars' => ['SENHA_UNIVATES'],
@@ -132,10 +135,13 @@ it('merges into an existing .env without clobbering unrelated keys', function ()
         ],
     ]))->assertOk();
 
-    expect(File::get($dir.'/.env'))
-        ->toContain('AUTH_USER=someone')
-        ->toContain('AUTH_PASSWORD=oldpass')
-        ->toContain('SENHA_UNIVATES=topsecret123');
+    $environment = json_decode(File::get($dir.'/environments/ambiente.json'), true);
+
+    expect($environment['vars'])->toContain(
+        ['key' => 'USER', 'value' => 'someone', 'secret' => false],
+        ['key' => 'PASSWORD', 'value' => 'oldpass', 'secret' => true],
+        ['key' => 'SENHA_UNIVATES', 'value' => 'topsecret123', 'secret' => false],
+    );
 });
 
 it('logs a warning when there is a sensitive value but the ai declared no env var for it', function () {
