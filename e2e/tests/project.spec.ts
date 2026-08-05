@@ -1,25 +1,8 @@
 import { test, expect } from '@playwright/test'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { startBackend } from '../support/backend'
-
-const FIXTURES_DIR = resolve(import.meta.dirname, '../fixtures/projects')
-
-/**
- * Todo projeto precisa de URL: sem ela a página abre o modal de configurações travado. O .env é
- * escrito aqui e não vem do fixture porque o repositório ignora .env em qualquer nível.
- */
-function projectsCopy(): string {
-    const dir = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
-    cpSync(FIXTURES_DIR, dir, { recursive: true })
-
-    for (const project of readdirSync(dir)) {
-        writeFileSync(join(dir, project, '.env'), `URL=https://${project}.test\n`)
-    }
-
-    return dir
-}
+import { projectsCopy } from '../support/projects'
 
 test.describe('project page', { tag: ['@read', '@project'] }, () => {
     let stopBackend: () => Promise<void>

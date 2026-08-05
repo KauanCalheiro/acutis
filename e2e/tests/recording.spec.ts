@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test'
 import { createServer, type Server } from 'node:http'
-import { readFileSync, writeFileSync, cpSync, mkdtempSync, rmSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { startBackend } from '../support/backend'
+import { projectsCopy } from '../support/projects'
 import { startWebdriver, WEBDRIVER_URL } from '../support/webdriver'
 import { chromium } from '@playwright/test'
 import type { ChildProcess } from 'node:child_process'
@@ -174,8 +175,7 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
 
         stopScenarioWebdriver = await startWebdriver()
 
-        tmpProjects = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
-        cpSync(resolve(import.meta.dirname, '../fixtures/projects'), tmpProjects, { recursive: true })
+        tmpProjects = projectsCopy(scenarioBaseUrl)
         stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
 
@@ -299,8 +299,7 @@ test.describe('recording authentication from the project page', { tag: ['@write'
 
         stopAuthWebdriver = await startWebdriver()
 
-        tmpProjects = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
-        cpSync(resolve(import.meta.dirname, '../fixtures/projects'), tmpProjects, { recursive: true })
+        tmpProjects = projectsCopy(authBaseUrl)
         stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
 
@@ -532,15 +531,19 @@ test.describe('recording over cdp against a host chrome', { tag: ['@write', '@re
 test.describe('recording error when the host chrome is unreachable', { tag: ['@write', '@recording'] }, () => {
     let stopBadWebdriver: () => Promise<void>
     let stopBackend: () => Promise<void>
+    let tmpProjects: string
 
     test.beforeAll(async () => {
         stopBadWebdriver = await startWebdriver({ RECORDER_CDP_URL: 'http://127.0.0.1:9997' })
-        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: resolve(import.meta.dirname, '../fixtures/projects') })
+
+        tmpProjects = projectsCopy()
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
 
     test.afterAll(async () => {
         await stopBadWebdriver()
         await stopBackend()
+        rmSync(tmpProjects, { recursive: true, force: true })
     })
 
     test('surfaces a clear error on the project page and resets the button', async ({ page }) => {
