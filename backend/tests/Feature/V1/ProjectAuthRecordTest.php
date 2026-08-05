@@ -1,6 +1,7 @@
 <?php
 
 use App\Ai\Agents\AuthRecordingWriter;
+use App\Enums\EnvKey;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -89,6 +90,34 @@ it('shows the recorded events to the writer, redacting the real password first',
     );
 });
 
+it('tells the writer which url the login landed on, so it never invents one', function () {
+    AuthRecordingWriter::fake();
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
+        'events' => array_merge(recordPayload()['events'], [
+            ['type' => 'navigate', 'timestamp' => 5, 'url' => 'https://sistema.test/inicio', 'selectors' => null, 'label' => null, 'value' => null, 'inputType' => null],
+            ['type' => 'navigate', 'timestamp' => 6, 'url' => 'https://sistema.test/inicio/pedidos', 'selectors' => null, 'label' => null, 'value' => null, 'inputType' => null],
+        ]),
+    ]))->assertOk();
+
+    AuthRecordingWriter::assertPrompted(
+        fn ($prompt) => str_contains($prompt->prompt, 'URL pós-login: https://sistema.test/inicio')
+    );
+});
+
+it('tells the writer there is no landing url when the recording never left the login', function () {
+    AuthRecordingWriter::fake();
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    AuthRecordingWriter::assertPrompted(
+        fn ($prompt) => str_contains($prompt->prompt, 'URL pós-login: nenhuma navegação após o submit foi gravada')
+            && ! str_contains($prompt->prompt, 'URL pós-login: https')
+    );
+});
+
 it('keeps the real password out of the response body', function () {
     AuthRecordingWriter::fake();
     $slug = recordProject();
@@ -108,8 +137,8 @@ it('writes the recorded credentials into the environment', function () {
     $environment = json_decode(File::get($dir.'/environments/ambiente.json'), true);
 
     expect($environment['vars'])->toContain(
-        ['key' => 'USER', 'value' => 'user1', 'secret' => false],
-        ['key' => 'PASSWORD', 'value' => 'topsecret123', 'secret' => true],
+        ['key' => EnvKey::USER->value, 'value' => 'user1', 'secret' => false],
+        ['key' => EnvKey::PASSWORD->value, 'value' => 'topsecret123', 'secret' => true],
     )->and(File::get($dir.'/.gitignore'))->toContain('environments');
 });
 
@@ -126,7 +155,7 @@ it('replaces the credentials the environment already had', function () {
 
     $environment = json_decode(File::get($dir.'/environments/ambiente.json'), true);
 
-    expect($environment['vars'])->toContain(['key' => 'USER', 'value' => 'user1', 'secret' => false])
+    expect($environment['vars'])->toContain(['key' => EnvKey::USER->value, 'value' => 'user1', 'secret' => false])
         ->and(json_encode($environment))->not->toContain('antigo');
 });
 
@@ -198,7 +227,7 @@ it('asks for credentials when it cannot extract them from the recording', functi
     $environment = json_decode(File::get($dir.'/environments/ambiente.json'), true);
 
     expect(File::exists($dir.'/tests/auth.setup.ts'))->toBeTrue()
-        ->and(collect($environment['vars'])->firstWhere('key', 'USER')['value'])->toBe('');
+        ->and(collect($environment['vars'])->firstWhere('key', EnvKey::USER->value)['value'])->toBe('');
 });
 
 it('persists the recorded events so the fixer can read them later, with the password redacted', function () {
@@ -233,11 +262,11 @@ it('leaves a base url the user configured untouched', function () {
     AuthRecordingWriter::fake();
     $slug = recordProject();
     $dir = $this->projectsPath."/{$slug}";
-    File::put($dir.'/.env', "URL=https://escolhida-pelo-usuario.test\n");
+    File::put($dir.'/.env', EnvKey::URL->value."=https://escolhida-pelo-usuario.test\n");
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
 
     expect(File::get($dir.'/.env'))
-        ->toContain('URL=https://escolhida-pelo-usuario.test')
+        ->toContain(EnvKey::URL->value.'=https://escolhida-pelo-usuario.test')
         ->not->toContain('sistema.test/login');
 });

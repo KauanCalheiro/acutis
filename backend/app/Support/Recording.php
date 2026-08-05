@@ -45,6 +45,40 @@ final class Recording
         return $this->mask(fn (array $event): bool => ($event['inputType'] ?? null) === 'password');
     }
 
+    /**
+     * A URL em que a gravação caiu depois do login: a primeira navegação após o submit (ou após o
+     * campo de senha, quando não houve submit) que saiu da URL onde o login foi enviado. É a única
+     * URL que pode virar asserção no teste — qualquer outra seria inventada.
+     */
+    public function landingUrl(): ?string
+    {
+        $submitIndex = null;
+
+        foreach ($this->events as $index => $event) {
+            $type = $event['type'] ?? null;
+
+            if ($type === 'submit' || ($type === 'fill' && ($event['inputType'] ?? null) === 'password')) {
+                $submitIndex = $index;
+            }
+        }
+
+        if ($submitIndex === null) {
+            return null;
+        }
+
+        $submitUrl = $this->events[$submitIndex]['url'] ?? null;
+
+        foreach (array_slice($this->events, $submitIndex + 1) as $event) {
+            $url = $event['url'] ?? null;
+
+            if (($event['type'] ?? null) === 'navigate' && $url && $url !== $submitUrl) {
+                return $url;
+            }
+        }
+
+        return null;
+    }
+
     /** Usuário e senha reais do login gravado, ou null quando não dá para identificá-los. */
     public function credentials(): ?Credentials
     {

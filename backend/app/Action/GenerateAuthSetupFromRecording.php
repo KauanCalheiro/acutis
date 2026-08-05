@@ -14,13 +14,17 @@ class GenerateAuthSetupFromRecording
 
     public function handle(AuthRecordingData $input): string
     {
+        $recording = Recording::make($input->events);
+
         $events = json_encode(
-            Recording::make($input->events)->withoutPasswords(),
+            $recording->withoutPasswords(),
             JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
         );
 
+        $landingUrl = $recording->landingUrl() ?? 'nenhuma navegação após o submit foi gravada';
+
         return StructuredOutput::field(app(AuthRecordingWriter::class)->prompt(
-            "URL base: {$input->baseUrl}\n\nEventos gravados:\n{$events}",
+            "URL base: {$input->baseUrl}\nURL pós-login: {$landingUrl}\n\nEventos gravados:\n{$events}",
         ), 'authSetup');
     }
 }
