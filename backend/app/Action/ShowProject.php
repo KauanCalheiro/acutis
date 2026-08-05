@@ -34,30 +34,22 @@ class ShowProject
             created_at: $manifest['created_at'] ?? null,
         );
 
+        $baseUrl = $folder->environments()->value(EnvKey::URL);
+
         return [
             'project' => $project,
             'branch' => Git::in($path)->branch(),
             'updated_at' => Carbon::createFromTimestamp(File::lastModified($path))->toIso8601String(),
             'scenarios' => ListProjectScenarios::run($path),
             'auth_status' => $this->authStatus($folder, $manifest),
-            'base_url' => $folder->environments()->value(EnvKey::BASE_URL),
-            'environment' => $this->activeEnvironment($folder),
+            'base_url' => $baseUrl,
+            'requires_url' => blank($baseUrl) && ! ($manifest['url_skipped'] ?? false),
             'vscode_url' => 'vscode://file'.Project::hostPath($slug),
         ];
     }
 
-    /** @return ?array{slug: string, name: string} */
-    private function activeEnvironment(Project $folder): ?array
-    {
-        $environments = $folder->environments();
-        $slug = $environments->activeSlug();
-        $active = filled($slug) ? $environments->find($slug) : null;
-
-        return blank($active) ? null : ['slug' => $active['slug'], 'name' => $active['name']];
-    }
-
     /**
-     * Status vem da última execução registrada, não da existência do arquivo — um setup que
+     * Status vem da última execução registrada, não da existência do arquivo. Um setup que
      * falhou não conta como configurado. Sem execução nenhuma (projeto clonado, script escrito
      * à mão) não dá pra afirmar que falha, então vale o benefício da dúvida.
      */

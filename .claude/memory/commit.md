@@ -5,7 +5,11 @@ metadata:
   type: feedback
 ---
 
-**BLOQUEIO ABSOLUTO: NUNCA commitar diretamente em `main`.** Todo trabalho em branch dedicada → PR/MR → merge. Sem exceção, nem para docs, nem para hotfix.
+**Commitar só quando o usuário pedir explicitamente.** Terminar de implementar não autoriza commit; deixar no working tree é o estado padrão de entrega. Vale igual para `git add`, `commit`, `push`, abrir PR e mergear.
+
+**Autorização é pontual, nunca permanente.** "pode commitar", "pode fazer o fluxo de commit" valem para aquele pedido e acabam ali — o trabalho seguinte precisa de um novo "pode".
+
+**BLOQUEIO ABSOLUTO: NUNCA commitar diretamente em `main`.** Todo trabalho em branch dedicada → PR/MR → merge. Sem exceção, nem para docs, nem para hotfix. Depois de mergear, a branch é apagada — conferir em que branch se está **antes** de commitar, senão o próximo commit cai na `main`.
 
 Commits devem ser semânticos e de uma única linha curta. Sem co-author do Claude.
 

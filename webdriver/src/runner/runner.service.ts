@@ -31,7 +31,7 @@ const STORAGE_STATE_FILE = 'storage-state.json'
 const STREAM_MARKER = '@@ACUTIS_RUN@@'
 
 /**
- * As linhas de marcador são o canal de eventos do reporter, não mensagem para gente ler — sem
+ * As linhas de marcador são o canal de eventos do reporter, não mensagem para gente ler. Sem
  * tirá-las, o erro que a interface mostra ao usuário vem cheio de JSON interno.
  */
 function withoutMarkers(output: string): string {

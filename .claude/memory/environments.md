@@ -1,24 +1,36 @@
 ---
 name: environments
-description: Ambientes do projeto testado — environments/*.json versionado, .env como cofre; ler antes de mexer em variável, segredo ou sessão
+description: Ambientes do projeto testado, um arquivo por ambiente fora do git; ler antes de mexer em variável, segredo ou sessão
 metadata:
   type: reference
 ---
 
-Cada projeto testado tem N ambientes em `environments/<slug>.json`, **versionados**. O `.env` do projeto é gitignorado e serve de cofre.
+Cada projeto testado tem N ambientes em `environments/<slug>.json`. **Nenhum deles vai para o git**, porque `environments` está no `.gitignore` que o acutis garante.
+
+```json
+{ "name": "Homologação", "vars": [
+    { "key": "URL",      "value": "https://homolog.acme.com" },
+    { "key": "USER",     "value": "qa@acme.com" },
+    { "key": "PASSWORD", "value": "senha-de-homolog", "secret": true } ] }
+```
 
 | Onde | O quê |
 |------|-------|
-| `environments/<slug>.json` | `{ name, vars: [{ key, value, secret }] }` — vai pro git |
-| `.env` | valores reais, `ACUTIS_ENV` (ambiente ativo) e as chaves apontadas por segredo |
-| `.env.example` | espelho só das chaves; `ACUTIS_ENV` fica de fora |
+| `environments/<slug>.json` | nome e variáveis daquele ambiente, com valor real |
+| `.env` | `ENVIRONMENT` (ambiente ativo) e, em projeto sem ambiente nenhum, os valores soltos |
+| `.env.example` | espelho de chaves; serve de autocomplete |
+
+As chaves que o acutis conhece estão no enum `EnvKey`: `URL`, `USER`, `PASSWORD` e `ENVIRONMENT`.
 
 ## Invariantes
 
-- **Segredo nunca tem valor no arquivo versionado.** `secret: true` ⇒ `value` é sempre `{{env.CHAVE}}`. A conversão é da API (`Environments::secured`), não do cliente.
-- **Valor de segredo nunca sai pela API**, em nenhuma tela.
-- `ACUTIS_ENV` vazio ou apontando pra ambiente inexistente ⇒ vale o primeiro da lista (ordem alfabética por slug).
-- Projeto sem nenhum ambiente se comporta como antes deles existirem: tudo direto no `.env`.
-- Cada ambiente tem sua sessão — `STORAGE_STATE=storage-state.<slug>.json` entra no ambiente resolvido, e o `playwright.config.ts` cai em `storage-state.json` quando a variável não existe.
+- **`secret` é só máscara de tela.** Não muda onde o valor é guardado: não existe ponteiro, cofre nem chave cunhada. O campo vira `type=password` com botão de revelar.
+- **A chave é estrutura compartilhada.** Toda variável existe em todos os ambientes, com o mesmo flag de segredo; só o valor muda. Salvar um ambiente manda no conjunto de chaves dos demais (`Environments::alignTo`), e ambiente novo nasce com as chaves já declaradas.
+- Cada ambiente tem **seu próprio valor** para a mesma chave; é o que separa staging de produção.
+- `ENVIRONMENT` vazio ou apontando pra ambiente inexistente vale o primeiro da lista, em ordem alfabética por slug.
+- Projeto sem nenhum ambiente se comporta como antes deles existirem: tudo direto no `.env`, que também é a camada base da resolução.
+- Cada ambiente tem sua sessão. `STORAGE_STATE=storage-state.<slug>.json` entra no ambiente resolvido, e o `playwright.config.ts` cai em `storage-state.json` quando a variável não existe.
+- Chave que a IA declara ao gerar cenário entra no **ambiente ativo**, não no `.env`.
+- O prompt do `PlaywrightWriter` recebe as variáveis do ambiente ativo para o agente usar `process.env.CHAVE` em vez de literal. **Variável marcada como segredo entra só pelo nome**, nunca com o valor.
 
-**How to apply:** ao ler ou escrever variável do projeto testado, passar por `Project::environments()` (`value`/`set`/`resolve`), não por `Project::env()` direto — só o `Env` e o editor do `.env` falam com o arquivo.
+**How to apply:** ao ler ou escrever variável do projeto testado, passar por `Project::environments()` (`value`, `set`, `merge`, `resolve`), não por `Project::env()` direto. Este último só cuida do `ENVIRONMENT` e do projeto sem ambiente.

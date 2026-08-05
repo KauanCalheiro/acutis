@@ -10,7 +10,7 @@ let hostElement: HTMLDivElement | null = null
 let keepAliveObserver: MutationObserver | null = null
 
 /**
- * Por padrão a senha é sempre mascarada antes de sair do navegador — só o modo 'auth'
+ * Por padrão a senha é sempre mascarada antes de sair do navegador, e só o modo 'auth'
  * (gravação específica pra configurar autenticação) desativa isso, pra extrair credenciais
  * reais no backend. Gravação de cenário normal nunca vê esse valor.
  */

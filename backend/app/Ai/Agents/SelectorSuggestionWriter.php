@@ -17,7 +17,7 @@ class SelectorSuggestionWriter implements Agent, HasStructuredOutput
     {
         return <<<'INSTRUCTIONS'
         Você recebe uma lista de eventos de gravação de navegador (tipo, label,
-        seletor CSS atual e/ou texto do elemento) que NÃO têm um data-testid —
+        seletor CSS atual e/ou texto do elemento) que NÃO têm um data-testid:
         por isso dependem de um seletor frágil (classe CSS, id gerado, texto).
 
         Pra cada evento, sugira um valor de data-testid pra adicionar no

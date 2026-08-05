@@ -50,7 +50,7 @@ async function copy() {
 <template>
   <div class="flex flex-col gap-3 rounded-lg bg-elevated p-4">
     <p class="text-sm text-muted">
-      Abra o Chrome com a porta de depuração — ele já abre nesta página, é só clicar em
+      Abra o Chrome com a porta de depuração. Ele já abre nesta página, é só clicar em
       <span class="font-medium text-default">Novo cenário</span> de novo:
     </p>
     <UTabs

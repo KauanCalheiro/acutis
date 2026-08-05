@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\File;
 
 /**
  * A autenticação do projeto: o tests/auth.setup.ts e o playwright.config.ts que faz o Playwright
- * encontrá-lo. As credenciais que ele usa são só duas chaves do .env — ver EnvKey e Project::env().
+ * encontrá-lo. As credenciais que ele usa são só duas chaves do .env. Ver EnvKey e Project::env().
  */
 final class Auth
 {
@@ -22,7 +22,7 @@ final class Auth
     /**
      * O playwright.config.ts é do usuário: o stub só entra quando o projeto ainda não tem um
      * (clone sem config). Mesclar TypeScript exigiria um parser e sobrescrever apagaria o
-     * trabalho dele. A URL base não é definida aqui — ela vem só das configurações do projeto.
+     * trabalho dele. A URL base não é definida aqui. Ela vem só das configurações do projeto.
      */
     public function ensureConfig(): void
     {
@@ -40,7 +40,7 @@ final class Auth
     }
 
     /**
-     * Sem o project "setup" o Playwright nunca acha o auth.setup.ts — o testMatch padrão só pega
+     * Sem o project "setup" o Playwright nunca acha o auth.setup.ts, porque o testMatch padrão só pega
      * *.spec.ts, e a execução morre com "No tests found" antes de qualquer passo. Projetos criados
      * antes disso existir ficariam com a autenticação escrita e inexecutável, então o bloco entra
      * sozinho. Só quando dá para fazer isso com segurança: config que já declara os próprios

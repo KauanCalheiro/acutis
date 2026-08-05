@@ -19,13 +19,12 @@ use App\Action\RunProject;
 use App\Action\SaveAuthCredentials;
 use App\Action\ShowProject;
 use App\Action\ShowProjectAuth;
-use App\Action\ShowProjectDotenv;
 use App\Action\ShowProjectScenario;
 use App\Action\SkipProjectAuth;
+use App\Action\SkipProjectUrl;
 use App\Action\SuggestScenarioSelectors;
 use App\Action\UpdateProject;
 use App\Action\UpdateProjectAuth;
-use App\Action\UpdateProjectDotenv;
 use App\Action\UpdateProjectEnvironment;
 use App\Action\UpdateProjectScenario;
 use App\Action\UpdateProjectSettings;
@@ -36,7 +35,6 @@ use App\Data\V1\Auth\AuthRecordingData;
 use App\Data\V1\Auth\UpdateAuthSetupData;
 use App\Data\V1\Project\CloneProjectData;
 use App\Data\V1\Project\CreateProjectData;
-use App\Data\V1\Project\DotenvData;
 use App\Data\V1\Project\EnvironmentData;
 use App\Data\V1\Project\ProbeGitData;
 use App\Data\V1\Project\ProjectSettingsData;
@@ -48,7 +46,6 @@ use App\Data\V1\Recording\RecordingData;
 use App\Data\V1\Recording\TestDraftData;
 use App\Data\V1\Recording\WriteTestData;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\V1\DotenvResource;
 use App\Http\Resources\V1\EnvironmentListResource;
 use App\Http\Resources\V1\EnvironmentResource;
 use App\Http\Resources\V1\FixedSpecResource;
@@ -144,6 +141,13 @@ class ProjectController extends Controller
         return ProjectSettingsResource::make(UpdateProjectSettings::run($project, $data));
     }
 
+    public function skipUrl(string $project): Response
+    {
+        SkipProjectUrl::run($project);
+
+        return response()->noContent();
+    }
+
     public function environments(string $project): EnvironmentListResource
     {
         return EnvironmentListResource::make(ListProjectEnvironments::run($project));
@@ -171,16 +175,6 @@ class ProjectController extends Controller
         DeleteProjectEnvironment::run($project, $environment);
 
         return response()->noContent();
-    }
-
-    public function dotenv(string $project): DotenvResource
-    {
-        return DotenvResource::make(ShowProjectDotenv::run($project));
-    }
-
-    public function updateDotenv(string $project, DotenvData $data): DotenvResource
-    {
-        return DotenvResource::make(UpdateProjectDotenv::run($project, $data));
     }
 
     public function authCredentials(string $project, AuthCredentialsData $data): Response
@@ -243,7 +237,7 @@ class ProjectController extends Controller
     {
         $path = Project::make($project)->path();
 
-        $generated = GenerateTestsFromRecording::run($data);
+        $generated = GenerateTestsFromRecording::run($project, $data);
         $title = TestArtifact::title($generated->gherkin);
 
         return TestDraftResource::make(new TestDraftData(

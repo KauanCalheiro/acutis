@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\File;
 
 /**
  * O .gitignore do projeto. Segredo escrito sem estar ignorado é segredo versionado, então toda
- * escrita que possa criar .env ou storage-state.json garante isto por dentro — nenhuma delas
+ * escrita que possa criar .env ou storage-state.json garante isto por dentro, e nenhuma delas
  * depende de alguém lembrar de chamar depois.
  */
 final class Gitignore
@@ -17,6 +17,7 @@ final class Gitignore
         'storage-state.json',
         'storage-state.*.json',
         '.env',
+        'environments',
         'results',
         'playwright-report',
         'test-results',
@@ -29,7 +30,7 @@ final class Gitignore
         return File::exists($this->file());
     }
 
-    /** Acrescenta o que falta e preserva o que já estava lá — o arquivo é do usuário. */
+    /** Acrescenta o que falta e preserva o que já estava lá, porque o arquivo é do usuário. */
     public function ensure(): void
     {
         $existing = $this->exists() ? File::get($this->file()) : '';

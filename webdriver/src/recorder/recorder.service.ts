@@ -66,7 +66,7 @@ export class RecorderService {
                 )
             }
             this.overCdp = true
-            // Modo CDP grava no contexto do Chrome do usuário, que já traz a sessão real dele —
+            // Modo CDP grava no contexto do Chrome do usuário, que já traz a sessão real dele:
             // injetar a do projeto exigiria um contexto novo e tiraria justamente o que se quer aqui.
             this.context = this.browser.contexts()[0] ?? await this.browser.newContext()
         } else {
@@ -115,8 +115,8 @@ export class RecorderService {
             void this.page.screencast.start({ path: videoPath, size: RECORDING_VIEWPORT }).then(() => onStarted(recordingStartedAt))
         })
 
-        // Abre já no sistema: a URL vem do BASE_URL do projeto, então ninguém precisa digitá-la de
-        // novo — e a gravação não começa com um navigate para about:blank.
+        // Abre já no sistema: a URL vem do URL do projeto, então ninguém precisa digitá-la de
+        // novo, e a gravação não começa com um navigate para about:blank.
         if (url) {
             await this.page.goto(url).catch(() => { /* site fora do ar: o usuário navega à mão */ })
         }
@@ -154,7 +154,7 @@ export class RecorderService {
     }
 
     /**
-     * A última navegação pode não ter sido reportada pelo script injetado — redirecionamento logo
+     * A última navegação pode não ter sido reportada pelo script injetado: redirecionamento logo
      * antes de parar, rota de SPA, ou a página fechando antes do relato chegar. Sem isso a gravação
      * perde justamente a tela onde o fluxo termina, que é o que vira asserção de URL no teste.
      */
@@ -180,7 +180,7 @@ export class RecorderService {
     }
 
     /**
-     * No modo CDP o contexto é o navegador real do usuário — pode ter cookies/localStorage
+     * No modo CDP o contexto é o navegador real do usuário, que pode ter cookies/localStorage
      * de outras abas/sites acumulados. Filtra pela origem da página gravada para nunca
      * vazar sessão de um site não relacionado ao login gravado.
      */
@@ -204,7 +204,7 @@ export class RecorderService {
         }
     }
 
-    /** O DevTools do Chrome rejeita Host header que não seja IP/localhost — hostnames como host.docker.internal viram IP. */
+    /** O DevTools do Chrome rejeita Host header que não seja IP/localhost, então hostnames como host.docker.internal viram IP. */
     private async resolveCdpUrl(rawUrl: string): Promise<string> {
         const url = new URL(rawUrl)
         if (url.hostname === 'localhost' || isIP(url.hostname)) return rawUrl

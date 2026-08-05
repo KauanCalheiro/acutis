@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Dotenv, EditableVar, Environment, EnvironmentList, EnvironmentVar } from '~/types/project'
+import type { EditableVar, Environment, EnvironmentList, EnvironmentVar } from '~/types/project'
 
 interface ProjectEnvironmentsModal {
   slug: string
@@ -19,35 +19,39 @@ const list = ref<EnvironmentList | null>(null)
 const selected = ref<string | null>(null)
 const name = ref('')
 const vars = ref<EditableVar[]>([])
-const dotenv = ref<EditableVar[]>([])
-const tab = ref('ambientes')
 const creating = ref(false)
 const newName = ref('')
 const confirmingRemove = ref(false)
+const confirmingClose = ref(false)
 const loading = ref(false)
 const saving = ref(false)
-const error = ref<string | null>(null)
+const toast = useToast()
+
+function complain(message: string) {
+  toast.add({
+    title: message,
+    color: 'error',
+    icon: 'i-ic-round-error'
+  })
+}
 
 const environments = computed(() => list.value?.environments ?? [])
 const current = computed(() => environments.value.find(environment => environment.slug === selected.value) ?? null)
 
-const tabs = [
-  {
-    value: 'ambientes',
-    label: 'Ambientes',
-    icon: 'i-ic-round-layers'
-  },
-  {
-    value: 'dotenv',
-    label: '.env do projeto',
-    icon: 'i-ic-round-vpn-key'
-  }
-]
+const snapshot = ref('')
+const dirty = computed(() => Boolean(current.value) && edited() !== snapshot.value)
+
+function edited() {
+  return JSON.stringify({
+    name: name.value,
+    vars: vars.value
+  })
+}
 
 function editable(variable: EnvironmentVar): EditableVar {
   return {
     key: variable.key,
-    value: variable.secret ? '' : (variable.value ?? ''),
+    value: variable.value ?? '',
     secret: variable.secret,
     pending: variable.pending
   }
@@ -58,20 +62,43 @@ function select(environment: Environment) {
   name.value = environment.name
   vars.value = environment.vars.map(editable)
   confirmingRemove.value = false
+  confirmingClose.value = false
+  snapshot.value = edited()
+}
+
+function revert() {
+  if (current.value) select(current.value)
+}
+
+function dismissConfirmations(event: MouseEvent) {
+  const target = event.target as HTMLElement
+
+  if (!target.closest('[data-testid="ambientes-remover"]')) confirmingRemove.value = false
+  if (!target.closest('[data-testid="ambientes-fechar"]')) confirmingClose.value = false
+
+  if (!target.closest('[data-testid="ambientes-criar"], [data-testid="ambientes-novo-nome"]')) {
+    creating.value = false
+    newName.value = ''
+  }
+}
+
+function close() {
+  if (dirty.value && !confirmingClose.value) {
+    confirmingClose.value = true
+
+    return
+  }
+
+  open.value = false
 }
 
 async function load() {
   loading.value = true
-  error.value = null
 
   try {
-    const [environmentList, projectDotenv] = await Promise.all([
-      $fetch<EnvironmentList>(`/api/projects/${slug}/environments`),
-      $fetch<Dotenv>(`/api/projects/${slug}/env`)
-    ])
+    const environmentList = await $fetch<EnvironmentList>(`/api/projects/${slug}/environments`)
 
     list.value = environmentList
-    dotenv.value = projectDotenv.vars.map(editable)
 
     const active = environmentList.environments.find(environment => environment.slug === environmentList.active)
     const target = active ?? environmentList.environments[0]
@@ -79,7 +106,7 @@ async function load() {
     if (target) select(target)
     else selected.value = null
   } catch (err) {
-    error.value = extractServerError(err, 'Não foi possível carregar os ambientes.')
+    complain(extractServerError(err, 'Não foi possível carregar os ambientes.'))
   } finally {
     loading.value = false
   }
@@ -89,16 +116,21 @@ watch(open, (isOpen) => {
   if (isOpen) load()
 })
 
-async function act(action: () => Promise<unknown>, message: string) {
+async function act(action: () => Promise<unknown>, done: string, failure: string) {
   saving.value = true
-  error.value = null
 
   try {
     await action()
     await load()
     emit('saved')
+
+    toast.add({
+      title: done,
+      color: 'success',
+      icon: 'i-ic-round-check-circle'
+    })
   } catch (err) {
-    error.value = extractServerError(err, message)
+    complain(extractServerError(err, failure))
   } finally {
     saving.value = false
   }
@@ -118,6 +150,7 @@ async function create() {
 
       selected.value = created.slug
     },
+    'Ambiente criado',
     'Não foi possível criar o ambiente.'
   )
 
@@ -140,14 +173,8 @@ function save() {
         }))
       }
     }),
+    'Ambiente salvo',
     'Não foi possível salvar o ambiente.'
-  )
-}
-
-function activate(environment: Environment) {
-  return act(
-    () => $fetch(`/api/projects/${slug}/environments/${environment.slug}/activate`, { method: 'POST' }),
-    'Não foi possível ativar o ambiente.'
   )
 }
 
@@ -167,25 +194,11 @@ async function remove() {
       await $fetch(`/api/projects/${slug}/environments/${removed}`, { method: 'DELETE' })
       selected.value = null
     },
+    'Ambiente removido',
     'Não foi possível remover o ambiente.'
   )
 
   confirmingRemove.value = false
-}
-
-function saveDotenv() {
-  return act(
-    () => $fetch(`/api/projects/${slug}/env`, {
-      method: 'PUT',
-      body: {
-        vars: dotenv.value.map(variable => ({
-          key: variable.key.trim(),
-          value: variable.value === '' ? null : variable.value
-        }))
-      }
-    }),
-    'Não foi possível salvar o .env.'
-  )
 }
 </script>
 
@@ -193,154 +206,118 @@ function saveDotenv() {
   <BaseModal
     v-model:open="open"
     wide
+    :dismissable="!dirty"
     title="Ambientes"
-    description="Cada ambiente diz contra o que os cenários rodam. O valor marcado como segredo nunca vai para o git — fica só no .env."
+    description="Cada ambiente diz contra o que os cenários rodam. Os arquivos ficam fora do git, então cada máquina tem os seus."
   >
     <template #body>
-      <UTabs
-        v-model="tab"
-        :items="tabs"
-        :content="false"
-        class="w-full"
-      >
-        <template #default="{ item }">
-          <span :data-testid="`ambientes-aba-${item.value}`">{{ item.label }}</span>
-        </template>
-      </UTabs>
+      <div @click.capture="dismissConfirmations">
+        <div class="flex flex-col gap-4 sm:flex-row">
+          <div class="flex flex-col gap-3 sm:w-56 shrink-0">
+            <UButton
+              v-for="environment in environments"
+              :key="environment.slug"
+              :label="environment.name"
+              :color="environment.slug === selected ? 'primary' : 'neutral'"
+              :variant="environment.slug === selected ? 'soft' : 'ghost'"
+              :trailing-icon="environment.slug === list?.active ? 'i-ic-round-check-circle' : undefined"
+              class="justify-between"
+              :data-testid="`ambientes-selecionar-${environment.slug}`"
+              @click="select(environment)"
+            />
 
-      <div
-        v-if="tab === 'ambientes'"
-        class="mt-4 flex flex-col gap-4 sm:flex-row"
-      >
-        <div class="flex flex-col gap-1 sm:w-56 shrink-0">
-          <UButton
-            v-for="environment in environments"
-            :key="environment.slug"
-            :label="environment.name"
-            :color="environment.slug === selected ? 'primary' : 'neutral'"
-            :variant="environment.slug === selected ? 'soft' : 'ghost'"
-            :trailing-icon="environment.slug === list?.active ? 'i-ic-round-check-circle' : undefined"
-            class="justify-between"
-            :data-testid="`ambientes-selecionar-${environment.slug}`"
-            @click="select(environment)"
-          />
-
-          <UInput
-            v-if="creating"
-            v-model="newName"
-            autofocus
-            placeholder="Nome do ambiente"
-            data-testid="ambientes-novo-nome"
-            @keyup.enter="create"
-          />
-          <UButton
-            :icon="creating ? 'i-ic-round-check' : 'i-ic-round-add'"
-            :label="creating ? 'Criar' : 'Novo ambiente'"
-            color="neutral"
-            variant="soft"
-            :loading="saving"
-            :disabled="creating && !newName.trim()"
-            data-testid="ambientes-criar"
-            @click="creating ? create() : (creating = true)"
-          />
-        </div>
-
-        <div
-          v-if="current"
-          class="flex-1 flex flex-col gap-4 min-w-0"
-        >
-          <UFormField label="Nome">
             <UInput
-              v-model="name"
-              class="w-full"
-              data-testid="ambientes-nome"
-            />
-          </UFormField>
-
-          <ProjectEnvironmentsVars
-            v-model="vars"
-            secrets
-            :known-keys="list?.known_keys"
-            :pointer-keys="list?.dotenv_keys"
-            testid="ambientes-variaveis"
-          />
-
-          <div class="flex flex-wrap gap-2">
-            <UButton
-              label="Salvar"
-              :loading="saving"
-              data-testid="ambientes-salvar"
-              @click="save"
+              v-if="creating"
+              v-model="newName"
+              autofocus
+              placeholder="Nome do ambiente"
+              data-testid="ambientes-novo-nome"
+              @keyup.enter="create"
+              @keyup.esc="creating = false"
             />
             <UButton
-              v-if="current.slug !== list?.active"
-              label="Ativar"
+              :icon="creating ? 'i-ic-round-check' : 'i-ic-round-add'"
+              :label="creating ? 'Criar' : 'Novo ambiente'"
               color="neutral"
               variant="soft"
               :loading="saving"
-              data-testid="ambientes-ativar"
-              @click="activate(current)"
-            />
-            <UButton
-              :label="confirmingRemove ? 'Confirmar remoção' : 'Remover'"
-              color="error"
-              :variant="confirmingRemove ? 'solid' : 'ghost'"
-              :loading="saving"
-              data-testid="ambientes-remover"
-              @click="remove"
+              :disabled="creating && !newName.trim()"
+              data-testid="ambientes-criar"
+              @click="creating ? create() : (creating = true)"
             />
           </div>
+
+          <div
+            v-if="current"
+            class="flex-1 flex flex-col gap-4 min-w-0"
+          >
+            <UFormField label="Nome">
+              <UInput
+                v-model="name"
+                class="w-full"
+                data-testid="ambientes-nome"
+              />
+            </UFormField>
+
+            <ProjectEnvironmentsVars
+              v-model="vars"
+              :known-keys="list?.known_keys"
+              testid="ambientes-variaveis"
+            />
+
+            <div class="flex flex-wrap gap-2">
+              <UButton
+                label="Salvar"
+                :loading="saving"
+                :disabled="!dirty"
+                data-testid="ambientes-salvar"
+                @click="save"
+              />
+              <UButton
+                v-if="dirty"
+                label="Reverter"
+                color="neutral"
+                variant="soft"
+                data-testid="ambientes-reverter"
+                @click="revert"
+              />
+              <UButton
+                :label="confirmingRemove ? 'Confirmar remoção' : 'Remover'"
+                color="error"
+                :variant="confirmingRemove ? 'solid' : 'ghost'"
+                :loading="saving"
+                data-testid="ambientes-remover"
+                @click="remove"
+              />
+            </div>
+          </div>
+
+          <BaseEmpty
+            v-else-if="!loading"
+            icon="i-ic-round-layers"
+            testid="ambientes-vazio"
+            title="Nenhum ambiente ainda"
+            description="Crie o primeiro ambiente para separar desenvolvimento, homologação e produção. Ele já nasce com o que o projeto tem configurado hoje."
+          />
         </div>
-
-        <BaseEmpty
-          v-else-if="!loading"
-          icon="i-ic-round-layers"
-          testid="ambientes-vazio"
-          title="Nenhum ambiente ainda"
-          description="Crie o primeiro ambiente para separar desenvolvimento, homologação e produção. Ele já nasce com o que o projeto tem configurado hoje."
-        />
       </div>
-
-      <div
-        v-else
-        class="mt-4 flex flex-col gap-4"
-      >
-        <p class="text-sm text-muted">
-          Este arquivo fica fora do git. É aqui que mora o valor de cada segredo que os ambientes apontam — inclusive os que ainda estão em branco.
-        </p>
-
-        <ProjectEnvironmentsVars
-          v-model="dotenv"
-          :known-keys="list?.known_keys"
-          testid="dotenv-variaveis"
-        />
-
-        <UButton
-          label="Salvar"
-          class="self-start"
-          :loading="saving"
-          data-testid="dotenv-salvar"
-          @click="saveDotenv"
-        />
-      </div>
-
-      <UAlert
-        v-if="error"
-        color="error"
-        variant="soft"
-        :description="error"
-        class="mt-4"
-        data-testid="ambientes-erro"
-      />
     </template>
 
     <template #footer>
+      <p
+        v-if="confirmingClose"
+        class="mr-auto self-center text-sm text-warning"
+        data-testid="ambientes-fechar-aviso"
+      >
+        Há alterações não salvas neste ambiente.
+      </p>
+
       <UButton
-        label="Fechar"
-        color="neutral"
-        variant="ghost"
+        :label="confirmingClose ? 'Descartar alterações' : 'Fechar'"
+        :color="confirmingClose ? 'warning' : 'neutral'"
+        :variant="confirmingClose ? 'soft' : 'ghost'"
         data-testid="ambientes-fechar"
-        @click="open = false"
+        @click="close"
       />
     </template>
   </BaseModal>

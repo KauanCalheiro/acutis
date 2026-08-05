@@ -23,14 +23,16 @@ class UpdateProjectEnvironment
         }
 
         $vars = array_map(
-            fn (EnvironmentVarData $var): EnvironmentVarData => $var->secret
-                ? $environments->secured($environmentSlug, $var, EnvironmentVarData::keyed($current['vars'], $var->key))
-                : new EnvironmentVarData($var->key, $var->value ?? ''),
+            fn (EnvironmentVarData $var): EnvironmentVarData => new EnvironmentVarData(
+                key: $var->key,
+                value: $var->value ?? '',
+                secret: $var->secret,
+            ),
             $data->vars,
         );
 
-        $environments->put($environmentSlug, $data->name, $vars);
+        $environments->put($environmentSlug, $data->name, $vars)->ensure()->alignTo($environmentSlug);
 
-        return $environments->masked($environmentSlug);
+        return $environments->displayed($environmentSlug);
     }
 }

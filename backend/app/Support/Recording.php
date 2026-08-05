@@ -7,7 +7,7 @@ use App\Support\Recording\Credentials;
 /**
  * Os eventos de uma gravação. Duas máscaras convivem aqui de propósito: a do fluxo de cenário,
  * que confia na flag `sensitive` posta pelo gravador, e a do login, que reconhece o campo pelo
- * inputType — a gravação de auth não marca a senha como sensível.
+ * inputType, e a gravação de auth não marca a senha como sensível.
  */
 final class Recording
 {
@@ -23,7 +23,7 @@ final class Recording
     }
 
     /**
-     * Troca o valor de eventos marcados como sensíveis por '••••' — usar antes de mandar eventos
+     * Troca o valor de eventos marcados como sensíveis por '••••'. Usar antes de mandar eventos
      * gravados pra IA ou gravar em disco.
      *
      * @return array<int, array<string, mixed>>
@@ -72,7 +72,7 @@ final class Recording
 
         $password = $this->events[$passwordIndex]['value'] ?? null;
 
-        // Sem um dos dois não há login executável — quem chamou precisa pedir ao usuário.
+        // Sem um dos dois não há login executável, então quem chamou precisa pedir ao usuário.
         return $username && $password ? new Credentials($username, $password) : null;
     }
 
@@ -108,7 +108,7 @@ final class Recording
 
     /**
      * Alerta quando a quantidade de env vars declaradas pela IA não bate com a quantidade de
-     * valores sensíveis da gravação — sinal de que algum .env ficaria vazio ou algum valor
+     * valores sensíveis da gravação, sinal de que algum .env ficaria vazio ou algum valor
      * sensível seria descartado sem aviso.
      *
      * @param  list<string>  $envVars
@@ -125,7 +125,7 @@ final class Recording
         }
 
         return sprintf(
-            'Gravação tem %d valor(es) sensível(is) mas a IA declarou %d env var(s) — algum .env pode ter ficado vazio ou sem escrever.',
+            'Gravação tem %d valor(es) sensível(is) mas a IA declarou %d env var(s), e algum .env pode ter ficado vazio ou sem escrever.',
             $sensitiveCount,
             count($envVars),
         );

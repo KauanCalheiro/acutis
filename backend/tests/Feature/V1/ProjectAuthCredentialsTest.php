@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 use function Pest\Laravel\postJson;
+use function Pest\Laravel\putJson;
 
 beforeEach(function () {
     $this->projectsPath = sys_get_temp_dir().'/acutis-test-'.uniqid();
@@ -19,32 +20,34 @@ afterEach(function () {
     File::deleteDirectory($this->projectsPath);
 });
 
-it('writes the credentials the user typed into .env', function () {
+it('writes the credentials the user typed into the environment', function () {
     postJson("/api/v1/projects/{$this->slug}/auth/credentials", [
-        'username' => '733787',
+        'username' => '482910',
         'password' => 'senha-real',
     ])->assertNoContent();
 
-    expect(File::get($this->dir.'/.env'))
-        ->toContain('AUTH_USER=733787')
-        ->toContain('AUTH_PASSWORD=senha-real')
-        ->and(File::get($this->dir.'/.env.example'))
-        ->toContain('AUTH_USER=')
-        ->not->toContain('senha-real')
-        ->and(File::get($this->dir.'/.gitignore'))->toContain('.env');
+    $environment = json_decode(File::get($this->dir.'/environments/ambiente.json'), true);
+
+    expect($environment['vars'])->toContain(
+        ['key' => 'USER', 'value' => '482910', 'secret' => false],
+        ['key' => 'PASSWORD', 'value' => 'senha-real', 'secret' => true],
+    )->and(File::get($this->dir.'/.gitignore'))->toContain('environments');
 });
 
-it('preserves env keys the project already had', function () {
-    File::put($this->dir.'/.env', "CHECKOUT_CARD=4111111111111111\n");
+it('preserves the variables the environment already had', function () {
+    putJson("/api/v1/projects/{$this->slug}/environments/ambiente", [
+        'name' => 'Ambiente',
+        'vars' => [['key' => 'CHECKOUT_CARD', 'value' => '4111111111111111']],
+    ])->assertOk();
 
     postJson("/api/v1/projects/{$this->slug}/auth/credentials", [
         'username' => 'user',
         'password' => 'pass',
     ])->assertNoContent();
 
-    expect(File::get($this->dir.'/.env'))
-        ->toContain('CHECKOUT_CARD=4111111111111111')
-        ->toContain('AUTH_USER=user');
+    $environment = json_decode(File::get($this->dir.'/environments/ambiente.json'), true);
+
+    expect(array_column($environment['vars'], 'key'))->toContain('CHECKOUT_CARD', 'USER', 'PASSWORD');
 });
 
 it('validates the credentials', function () {

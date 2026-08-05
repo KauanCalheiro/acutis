@@ -10,6 +10,7 @@ use Laravel\Ai\Responses\Data\Usage;
 use Laravel\Ai\Responses\StructuredTextResponse;
 
 use function Pest\Laravel\postJson;
+use function Pest\Laravel\putJson;
 
 beforeEach(function () {
     $this->projectsPath = sys_get_temp_dir().'/acutis-test-'.uniqid();
@@ -100,6 +101,55 @@ it('annotates noticeable pauses so the generated spec waits for loading', functi
 
     PlaywrightWriter::assertPrompted(
         fn ($prompt) => str_contains($prompt->prompt, 'Pausas notáveis') && str_contains($prompt->prompt, '4.7s')
+    );
+});
+
+it('tells the model which variables the environment declares', function () {
+    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
+    PlaywrightWriter::fake([['playwright' => 'spec']]);
+    Http::fake();
+    $slug = draftProject();
+
+    putJson("/api/v1/projects/{$slug}/environments/ambiente", [
+        'name' => 'Ambiente',
+        'vars' => [['key' => 'CUPOM_VALIDO', 'value' => 'ABC123']],
+    ])->assertOk();
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())->assertOk();
+
+    PlaywrightWriter::assertPrompted(
+        fn ($prompt) => str_contains($prompt->prompt, 'CUPOM_VALIDO') && str_contains($prompt->prompt, 'ABC123')
+    );
+});
+
+it('never sends the value of a hidden variable to the model', function () {
+    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
+    PlaywrightWriter::fake([['playwright' => 'spec']]);
+    Http::fake();
+    $slug = draftProject();
+
+    putJson("/api/v1/projects/{$slug}/environments/ambiente", [
+        'name' => 'Ambiente',
+        'vars' => [['key' => 'PASSWORD', 'value' => 'nunca-mande-isso', 'secret' => true]],
+    ])->assertOk();
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())->assertOk();
+
+    PlaywrightWriter::assertPrompted(
+        fn ($prompt) => str_contains($prompt->prompt, 'PASSWORD') && ! str_contains($prompt->prompt, 'nunca-mande-isso')
+    );
+});
+
+it('lists a variable the project declared but nobody filled yet', function () {
+    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
+    PlaywrightWriter::fake([['playwright' => 'spec']]);
+    Http::fake();
+    $slug = draftProject();
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())->assertOk();
+
+    PlaywrightWriter::assertPrompted(
+        fn ($prompt) => str_contains($prompt->prompt, 'Variáveis do ambiente') && str_contains($prompt->prompt, '- URL = ')
     );
 });
 

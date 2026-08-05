@@ -18,7 +18,7 @@ interface ScenarioTestRunModal {
   playwright?: string | null
   /** Saída do runner quando a execução morreu antes de qualquer passo. */
   output?: string | null
-  /** Autenticação não é cenário — muda o título e o rótulo, o resto do modal é igual. */
+  /** Autenticação não é cenário: muda o título e o rótulo, o resto do modal é igual. */
   kind?: 'cenario' | 'autenticacao'
 }
 

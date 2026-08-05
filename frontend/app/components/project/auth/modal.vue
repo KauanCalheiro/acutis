@@ -84,7 +84,7 @@ function recordAgain() {
   step.value = 'intro'
 }
 
-/** O resultado aparece no modal de execução, o mesmo dos cenários — daí fechar este antes. */
+/** O resultado aparece no modal de execução, o mesmo dos cenários, daí fechar este antes. */
 function runAuth() {
   open.value = false
   emit('test')
@@ -256,7 +256,7 @@ defineExpose({
         class="flex flex-col gap-3"
       >
         <p class="text-sm">
-          Vamos gravar o login de verdade: clique em "Gravar" e faça o login normalmente na aba que abrir. A IA transforma essa gravação num teste de autenticação — sem adivinhar seletor, sem digitar sua senha em formulário nenhum.
+          Vamos gravar o login de verdade: clique em "Gravar" e faça o login normalmente na aba que abrir. A IA transforma essa gravação num teste de autenticação, sem adivinhar seletor e sem digitar sua senha em formulário nenhum.
         </p>
         <p class="text-xs text-dimmed">
           A senha digitada na gravação fica salva localmente no `.env` do projeto, nunca no script gerado nem versionada. Assim que o teste estiver escrito, ele é executado para confirmar que o login funciona.

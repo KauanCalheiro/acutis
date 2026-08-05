@@ -47,7 +47,7 @@ watch(
 </script>
 
 <template>
-  <UApp>
+  <UApp :toaster="{ position: 'top-center' }">
     <div class="flex min-h-screen">
       <BaseNavbar />
       <main class="min-w-0 flex-1">

@@ -29,7 +29,7 @@ function testedAt(run: ScenarioRun) {
       v-if="runs.length === 0"
       icon="i-ic-round-play-circle-outline"
       title="Nenhum teste executado ainda"
-      description="Rode o cenário em Testar — cada execução fica registrada aqui com o resultado e o código que rodou."
+      description="Rode o cenário em Testar. Cada execução fica registrada aqui com o resultado e o código que rodou."
       testid="cenario-execucoes-vazio"
     />
 

@@ -16,7 +16,7 @@ export default defineConfig({
         ['html', { outputFolder: './results/report', open: 'never' }],
     ],
     use: {
-        baseURL: process.env.BASE_URL || 'http://localhost:3000',
+        baseURL: process.env.URL || 'http://localhost:3000',
         headless: true,
         video: { mode: 'on', show: { actions: { duration: 500, fontSize: 1 }, test: { level: 'step' } } },
         launchOptions: { slowMo: 500 },
@@ -26,7 +26,7 @@ export default defineConfig({
     projects: [
         { name: 'setup', testMatch: /auth\.setup\.ts/ },
         {
-            // Cenários marcados @publico rodam sem sessão — é o que permite testar a própria
+            // Cenários marcados @publico rodam sem sessão, e é o que permite testar a própria
             // tela de login, cadastro ou uma landing num projeto que tem autenticação.
             name: 'publicos',
             testMatch: /.*\.spec\.ts/,

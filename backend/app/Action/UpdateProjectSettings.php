@@ -13,7 +13,7 @@ class UpdateProjectSettings
 
     public function handle(string $slug, ProjectSettingsData $data): string
     {
-        Project::make($slug)->environments()->set(EnvKey::BASE_URL, $data->baseUrl);
+        Project::make($slug)->environments()->set(EnvKey::URL, $data->baseUrl);
 
         return $data->baseUrl;
     }

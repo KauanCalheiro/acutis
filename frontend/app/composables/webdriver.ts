@@ -109,9 +109,9 @@ export function useWebdriver() {
   }
 
   interface RecordingOptions {
-    /** Caminho do storage-state.json do projeto — abre a gravação já dentro do sistema. */
+    /** Caminho do storage-state.json do projeto. Abre a gravação já dentro do sistema. */
     storageState?: string
-    /** URL do sistema (BASE_URL do projeto) — abre direto nela, sem o usuário digitar. */
+    /** URL do sistema (URL do projeto). Abre direto nela, sem o usuário digitar. */
     url?: string
   }
 

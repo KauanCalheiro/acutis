@@ -434,13 +434,13 @@ test.describe('recording authentication from the project page', { tag: ['@write'
         await test.step('the modal asks for the credentials instead of running', async () => {
             await expect(page.getByTestId('auth-credenciais')).toBeVisible({ timeout: 15_000 })
 
-            await page.getByTestId('auth-credenciais-usuario').fill('733787')
+            await page.getByTestId('auth-credenciais-usuario').fill('482910')
             await page.getByTestId('auth-credenciais-senha').fill('senha-real')
             await page.getByTestId('auth-credenciais-salvar').click()
         })
 
         await expect(page.getByTestId('execucao-status')).toBeVisible({ timeout: 15_000 })
-        expect(saved).toMatchObject({ username: '733787', password: 'senha-real' })
+        expect(saved).toMatchObject({ username: '482910', password: 'senha-real' })
     })
 })
 

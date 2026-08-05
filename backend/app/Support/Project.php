@@ -42,7 +42,7 @@ final class Project
         return $this->path;
     }
 
-    /** Variáveis de ambiente do projeto — URL base, credenciais, valores mascarados dos cenários. */
+    /** Variáveis de ambiente do projeto: URL base, credenciais, valores mascarados dos cenários. */
     public function env(): Env
     {
         return new Env($this);
@@ -53,7 +53,7 @@ final class Project
         return new Environments($this);
     }
 
-    /** Autenticação do projeto — o setup, as credenciais e o config que o faz rodar. */
+    /** Autenticação do projeto: o setup, as credenciais e o config que o faz rodar. */
     public function auth(): Auth
     {
         return new Auth($this);
@@ -65,7 +65,7 @@ final class Project
         return Scenario::make($this, $id);
     }
 
-    /** O .gitignore do projeto — o que nunca deve ser versionado. */
+    /** O .gitignore do projeto: o que nunca deve ser versionado. */
     public function gitignore(): Gitignore
     {
         return new Gitignore($this);

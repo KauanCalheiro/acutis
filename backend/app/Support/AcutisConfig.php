@@ -10,7 +10,7 @@ final class AcutisConfig
         public readonly string $webdriverUrl,
     ) {}
 
-    /** Constrói a partir da config atual (lê a cada chamada — respeita overrides em runtime/testes). */
+    /** Constrói a partir da config atual (lê a cada chamada, respeitando overrides em runtime/testes). */
     public static function resolve(): self
     {
         $projectsPath = self::toAbsolutePath((string) config('acutis.projects.path'));
@@ -23,7 +23,7 @@ final class AcutisConfig
     }
 
     /**
-     * O caminho atravessa a fronteira HTTP até o webdriver, que resolve relativo ao cwd dele —
+     * O caminho atravessa a fronteira HTTP até o webdriver, que resolve relativo ao cwd dele:
      * um caminho relativo aponta pra lugar nenhum do outro lado.
      */
     private static function toAbsolutePath(string $path): string
