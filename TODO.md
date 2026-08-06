@@ -2,7 +2,8 @@
 
 - [x] Docker para desenvolvimento local com hot-reload dos arquivos (backend, frontend, webdriver) — `docker compose -f docker-compose.dev.yml up`
 - [x] Persistir as execuções de cenário e sincronizá-las pelo git
-- [ ] Aposentar as modais de auth e reaproveitar a tela de cenário
+- [ ] Colocar config global ou de projeto para usar a IA, escolher seu provedor e chave de API, e modelo, vamos comecar consi
+- [ ] Aposentar as modais de auth e reaproveitar a tela de cenário, vamos comecar considerando um modelo automatico mas vamos reescrever depois, podemos injetact via config o middleware
 - [ ] Busca e paginação nas execuções do cenário
 - [ ] Fluxo de fix deve rodar algumas vezes com a intencao de passar... (max_retries de 3)
 - [ ] Estamos passando muita coisa direta para o modelo... precisamos passar de uma forma mais estruturada
