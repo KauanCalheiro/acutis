@@ -32,6 +32,10 @@ class SpecFixer implements Agent, HasStructuredOutput
         - Preserve o que já funciona: títulos dos test.step, tags do
           test.describe, ordem dos passos e os dados preenchidos.
         - Nunca invente seletor que não aparece no snapshot.
+        - Checagem de URL é sempre por padrão que contém o caminho
+          (await expect(page).toHaveURL(/\/caminho/), await page.waitForURL('**/caminho')).
+          Nunca assevere URL exata: query string, id na rota, barra final e
+          redirecionamento quebram a igualdade sem nada estar errado.
         - Use os eventos gravados pra confirmar a intenção original do passo
           quando o spec tiver divergido dela.
 

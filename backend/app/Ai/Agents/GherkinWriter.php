@@ -3,12 +3,12 @@
 namespace App\Ai\Agents;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Laravel\Ai\Attributes\Model;
+use Laravel\Ai\Attributes\UseCheapestModel;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Promptable;
 
-#[Model('gemini-2.5-flash-lite')]
+#[UseCheapestModel]
 class GherkinWriter implements Agent, HasStructuredOutput
 {
     use Promptable;

@@ -309,4 +309,41 @@ it('leaves a base url the user configured untouched', function () {
         ->not->toContain('sistema.test/login');
 });
 
+it('has the setup build its urls from the environment variable, not from the recorded host', function () {
+    AuthRecordingWriter::fake();
+    $slug = recordProject();
 
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    $env = 'process.env.'.EnvKey::URL->value;
+
+    expect(app(AuthRecordingWriter::class)->instructions())->toContain($env);
+    AuthRecordingWriter::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, $env));
+});
+
+it('hands the post-login path ready-made, so the agent never remounts it from the base', function () {
+    AuthRecordingWriter::fake();
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
+        'baseUrl' => 'https://sistema.test/intranet',
+        'events' => [
+            ['type' => 'navigate', 'timestamp' => 1, 'url' => 'https://sistema.test/intranet/login', 'selectors' => null, 'label' => null, 'value' => null, 'inputType' => null],
+            ['type' => 'fill', 'timestamp' => 2, 'url' => 'https://sistema.test/intranet/login', 'selectors' => ['dataTestId' => 'user'], 'label' => 'Usuário', 'value' => 'user1', 'inputType' => 'text'],
+            ['type' => 'fill', 'timestamp' => 3, 'url' => 'https://sistema.test/intranet/login', 'selectors' => ['dataTestId' => 'pass'], 'label' => 'Senha', 'value' => 'topsecret123', 'inputType' => 'password'],
+            ['type' => 'submit', 'timestamp' => 4, 'url' => 'https://sistema.test/intranet/login', 'selectors' => ['dataTestId' => 'entrar'], 'label' => 'Entrar', 'value' => null, 'inputType' => null],
+            ['type' => 'navigate', 'timestamp' => 5, 'url' => 'https://sistema.test/intranet/', 'selectors' => null, 'label' => null, 'value' => null, 'inputType' => null],
+        ],
+    ]))->assertOk();
+
+    AuthRecordingWriter::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, 'Caminho pós-login')
+        && str_contains($prompt->prompt, ': /intranet/'));
+});
+
+it('has the setup check the url by pattern, never by exact equality', function () {
+    expect(app(AuthRecordingWriter::class)->instructions())
+        ->toContain('nunca repita segmento')
+        ->toContain("waitForURL('**/")
+        ->toContain('toHaveURL(/')
+        ->not->toContain('toHaveURL(`');
+});

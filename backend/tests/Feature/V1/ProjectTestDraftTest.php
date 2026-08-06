@@ -154,6 +154,46 @@ it('lists a variable the project declared but nobody filled yet', function () {
     );
 });
 
+it('names the environment key of the base url instead of leaving the model to coin one', function () {
+    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
+    PlaywrightWriter::fake([['playwright' => 'spec']]);
+    Http::fake();
+    $slug = draftProject();
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())->assertOk();
+
+    $env = 'process.env.'.EnvKey::URL->value;
+
+    expect(app(PlaywrightWriter::class)->instructions())->toContain($env);
+    PlaywrightWriter::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, $env));
+});
+
+it('has the spec never repeat a path segment that the base url already carries', function () {
+    expect(app(PlaywrightWriter::class)->instructions())->toContain('nunca repita segmento');
+});
+
+it('has the spec check the url by pattern, never by exact equality', function () {
+    expect(app(PlaywrightWriter::class)->instructions())
+        ->toContain("waitForURL('**/")
+        ->toContain('toHaveURL(/');
+});
+
+it('runs the generated spec with the execution url in the variable the spec reads', function () {
+    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
+    PlaywrightWriter::fake([['playwright' => "await page.goto(process.env.URL + '/entrar')"]]);
+    Http::fake([
+        '*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok']),
+    ]);
+    $slug = draftProject();
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload([
+        'executionUrl' => 'https://homolog.sistema.test',
+    ]))->assertOk();
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/runner/spec')
+        && $request['env'][EnvKey::URL->value] === 'https://homolog.sistema.test');
+});
+
 it('parses structured output even when the model wraps it in code fences', function () {
     GherkinWriter::fake([new StructuredTextResponse([], "```json\n{\"gherkin\": \"Funcionalidade: Cercado\", \"domain\": \"cercado\"}\n```", new Usage, new Meta('gemini', 'x'))]);
     PlaywrightWriter::fake([new StructuredTextResponse([], "{\"playwright\": \"spec limpo\"}\n```", new Usage, new Meta('gemini', 'x'))]);
