@@ -27,7 +27,7 @@ watch(open, (isOpen) => {
   }
 })
 
-const scenarioId = computed(() => scenario.spec.replace(/^tests\//, '').replace(/\.spec\.ts$/, ''))
+const scenarioId = computed(() => scenario.spec.replace(/^tests\//, '').replace(/\.(spec|setup)\.ts$/, ''))
 
 async function save() {
   saving.value = true
@@ -53,11 +53,14 @@ async function save() {
 <template>
   <BaseModal
     v-model:open="open"
-    title="Editar cenário"
+    :title="scenario.is_auth ? 'Editar autenticação' : 'Editar cenário'"
     wide
   >
     <template #body>
-      <ScenarioReviewContexts v-model:draft="draft" />
+      <ScenarioReviewContexts
+        v-model:draft="draft"
+        :is-auth="scenario.is_auth"
+      />
 
       <UAlert
         v-if="error"

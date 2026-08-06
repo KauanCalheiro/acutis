@@ -2,13 +2,11 @@
 interface ProjectSettingsModal {
   slug: string
   baseUrl: string | null
-  required?: boolean
 }
 
 const {
   slug,
-  baseUrl,
-  required = false
+  baseUrl
 } = defineProps<ProjectSettingsModal>()
 
 const open = defineModel<boolean>('open', {
@@ -79,12 +77,11 @@ async function save() {
 <template>
   <BaseModal
     v-model:open="open"
-    :dismissable="!required"
+    :dismissable="false"
     title="Configurações do projeto"
   >
     <template #body>
       <UAlert
-        v-if="required"
         color="neutral"
         variant="soft"
         icon="i-ic-round-info"
@@ -109,21 +106,12 @@ async function save() {
 
     <template #footer>
       <UButton
-        v-if="required"
         label="Deixar em branco"
         color="neutral"
         variant="ghost"
         :loading="skipping"
         data-testid="projeto-configuracoes-pular"
         @click="skip"
-      />
-      <UButton
-        v-else
-        label="Cancelar"
-        color="neutral"
-        variant="ghost"
-        data-testid="projeto-configuracoes-cancelar"
-        @click="open = false"
       />
       <UButton
         label="Salvar"

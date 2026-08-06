@@ -281,7 +281,7 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
     })
 })
 
-test.describe('recording authentication from the project page', { tag: ['@write', '@recording'] }, () => {
+test.describe('recording authentication from the auth scenario page', { tag: ['@write', '@recording'] }, () => {
     let authFixtureServer: Server
     let authBaseUrl: string
     let stopAuthWebdriver: () => Promise<void>
@@ -318,6 +318,7 @@ test.describe('recording authentication from the project page', { tag: ['@write'
 
         await page.route('**/api/projects/alpha-store/auth/record', async (route) => {
             posted = route.request().postDataJSON()
+            await new Promise((resolve) => setTimeout(resolve, 1000))
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -347,15 +348,14 @@ test.describe('recording authentication from the project page', { tag: ['@write'
             })
         })
 
-        await test.step('open the project page and wait for the webdriver connection', async () => {
-            await page.goto('/projects/alpha-store')
+        await test.step('open the auth scenario page and wait for the webdriver connection', async () => {
+            await page.goto('/projects/alpha-store/scenarios/auth')
             await page.locator('[data-hydrated="true"]').waitFor()
-            await expect(page.getByTestId('cenario-novo')).toBeEnabled({ timeout: 10_000 })
+            await expect(page.getByTestId('auth-gravar-vazio')).toBeEnabled({ timeout: 10_000 })
         })
 
-        await test.step('open the auth modal and start recording', async () => {
-            await page.getByTestId('projeto-auth').click()
-            await page.getByTestId('auth-gerar').click()
+        await test.step('start recording from the empty state', async () => {
+            await page.getByTestId('auth-gravar-vazio').click()
             await expect(page.getByTestId('cenario-parar')).toBeVisible({ timeout: 10_000 })
         })
 
@@ -372,6 +372,7 @@ test.describe('recording authentication from the project page', { tag: ['@write'
 
         await test.step('stopping the recording writes the setup and executes it', async () => {
             await page.getByTestId('cenario-parar').click()
+            await expect(page.getByRole('dialog').getByTestId('auth-carregando'), 'a escrita carrega dentro de uma modal').toBeVisible({ timeout: 15_000 })
             await expect(page.getByTestId('execucao-status')).toBeVisible({ timeout: 15_000 })
         })
 
@@ -411,15 +412,14 @@ test.describe('recording authentication from the project page', { tag: ['@write'
             })
         })
 
-        await test.step('open the project page and wait for the webdriver connection', async () => {
-            await page.goto('/projects/alpha-store')
+        await test.step('open the auth scenario page and wait for the webdriver connection', async () => {
+            await page.goto('/projects/alpha-store/scenarios/auth')
             await page.locator('[data-hydrated="true"]').waitFor()
-            await expect(page.getByTestId('cenario-novo')).toBeEnabled({ timeout: 10_000 })
+            await expect(page.getByTestId('auth-gravar-vazio')).toBeEnabled({ timeout: 10_000 })
         })
 
         await test.step('record a login and stop', async () => {
-            await page.getByTestId('projeto-auth').click()
-            await page.getByTestId('auth-gerar').click()
+            await page.getByTestId('auth-gravar-vazio').click()
             await expect(page.getByTestId('cenario-parar')).toBeVisible({ timeout: 10_000 })
 
             const goto = await page.request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: authBaseUrl } })
@@ -430,7 +430,7 @@ test.describe('recording authentication from the project page', { tag: ['@write'
             await page.getByTestId('cenario-parar').click()
         })
 
-        await test.step('the modal asks for the credentials instead of running', async () => {
+        await test.step('the page asks for the credentials instead of running', async () => {
             await expect(page.getByTestId('auth-credenciais')).toBeVisible({ timeout: 15_000 })
 
             await page.getByTestId('auth-credenciais-usuario').fill('482910')

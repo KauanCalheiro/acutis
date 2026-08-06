@@ -7,7 +7,6 @@ use App\Support\Project;
 use App\Support\Scenario;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
 use Lorisleiva\Actions\Concerns\AsAction;
 
 class ShowProjectScenario
@@ -18,23 +17,28 @@ class ShowProjectScenario
     {
         $project = Project::make($slug);
         $path = $project->path();
-        $scenario = $project->scenario($scenarioId)->data();
+        $scenario = $project->scenario($scenarioId);
+        $data = $scenario->data();
 
-        $spec = "{$path}/{$scenario->spec}";
-        $feature = $scenario->feature ? "{$path}/{$scenario->feature}" : null;
-        $eventsFile = Str::replaceLast('.spec.ts', '.events.json', $spec);
+        $spec = "{$path}/{$data->spec}";
+        $feature = $data->feature ? "{$path}/{$data->feature}" : null;
+        $eventsFile = "{$path}/".Scenario::eventsPathOf($data->spec);
+
+        // O cenário de autenticação existe antes do arquivo: é a tela dele que oferece a gravação.
+        $written = File::exists($spec);
 
         return new ScenarioShowData(
-            title: $scenario->title,
-            spec: $scenario->spec,
-            feature: $scenario->feature,
-            tags: $scenario->tags,
-            domain: $scenario->domain,
-            playwright: Scenario::sourceOf($spec),
+            title: $data->title,
+            spec: $data->spec,
+            feature: $data->feature,
+            tags: $data->tags,
+            domain: $data->domain,
+            playwright: $written ? Scenario::sourceOf($spec) : '',
             gherkin: $feature ? File::get($feature) : null,
             events: File::exists($eventsFile) ? json_decode(File::get($eventsFile), true) : [],
-            updatedAt: Carbon::createFromTimestamp(File::lastModified($spec))->toIso8601String(),
+            updatedAt: ($written ? Carbon::createFromTimestamp(File::lastModified($spec)) : Carbon::now())->toIso8601String(),
             runs: ListScenarioRuns::run($path, $scenarioId),
+            isAuth: $scenario->isAuth(),
         );
     }
 }

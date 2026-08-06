@@ -77,6 +77,61 @@ it('shows a scenario nested in a domain', function () {
         ->assertJsonPath('spec', 'tests/checkout/pagamento.spec.ts');
 });
 
+it('shows the auth setup as a scenario of its own', function () {
+    File::ensureDirectoryExists($this->dir.'/tests');
+    File::ensureDirectoryExists($this->dir.'/features');
+    File::put($this->dir.'/tests/auth.setup.ts', "import { test as setup } from '@playwright/test'\nsetup('entrar', async () => {})");
+    File::put($this->dir.'/features/auth.feature', 'Funcionalidade: Entrar na plataforma');
+    File::put($this->dir.'/tests/auth.events.json', json_encode([
+        ['type' => 'fill', 'label' => 'Usuário'],
+    ]));
+
+    getJson('/api/v1/projects/minha-loja/scenarios/auth')
+        ->assertOk()
+        ->assertJsonPath('is_auth', true)
+        ->assertJsonPath('title', 'Entrar na plataforma')
+        ->assertJsonPath('spec', 'tests/auth.setup.ts')
+        ->assertJsonPath('feature', 'features/auth.feature')
+        ->assertJsonPath('gherkin', 'Funcionalidade: Entrar na plataforma')
+        ->assertJsonPath('playwright', "import { test as setup } from '@playwright/test'\nsetup('entrar', async () => {})")
+        ->assertJsonPath('events.0.label', 'Usuário')
+        ->assertJsonPath('tags', [])
+        ->assertJsonPath('domain', null);
+});
+
+it('titles the auth scenario by hand while it has no feature', function () {
+    File::ensureDirectoryExists($this->dir.'/tests');
+    File::put($this->dir.'/tests/auth.setup.ts', "setup('entrar', async () => {})");
+
+    getJson('/api/v1/projects/minha-loja/scenarios/auth')
+        ->assertOk()
+        ->assertJsonPath('title', 'Autenticação')
+        ->assertJsonPath('feature', null)
+        ->assertJsonPath('gherkin', null);
+});
+
+it('shows an empty auth scenario when the project never configured it', function () {
+    getJson('/api/v1/projects/minha-loja/scenarios/auth')
+        ->assertOk()
+        ->assertJsonPath('is_auth', true)
+        ->assertJsonPath('title', 'Autenticação')
+        ->assertJsonPath('spec', 'tests/auth.setup.ts')
+        ->assertJsonPath('playwright', '')
+        ->assertJsonPath('gherkin', null)
+        ->assertJsonPath('events', [])
+        ->assertJsonPath('runs', [])
+        ->assertJsonStructure(['updated_at']);
+});
+
+it('marks a regular scenario as not being the auth one', function () {
+    File::ensureDirectoryExists($this->dir.'/tests');
+    File::put($this->dir.'/tests/login.spec.ts', "test.describe('Login', () => {})");
+
+    getJson('/api/v1/projects/minha-loja/scenarios/login')
+        ->assertOk()
+        ->assertJsonPath('is_auth', false);
+});
+
 it('returns 404 for an unknown scenario', function () {
     File::ensureDirectoryExists($this->dir.'/tests');
 

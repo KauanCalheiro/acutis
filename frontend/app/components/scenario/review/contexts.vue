@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import type { TestDraft } from '~/types/project'
 
+interface ScenarioReviewContexts {
+  /**
+   * O cenário de autenticação mora num caminho fixo e roda como setup de todos os outros, então
+   * arquivo, domínio e tags não são dele.
+   */
+  isAuth?: boolean
+}
+
+const { isAuth = false } = defineProps<ScenarioReviewContexts>()
+
 const draft = defineModel<TestDraft>('draft', {
   required: true
 })
@@ -86,6 +96,7 @@ watch(() => draft.value.playwright, (playwright) => {
         />
       </UFormField>
       <UFormField
+        v-if="!isAuth"
         label="Arquivo"
         help="Nome do .spec.ts / .feature"
       >
@@ -98,6 +109,7 @@ watch(() => draft.value.playwright, (playwright) => {
     </div>
 
     <UFormField
+      v-if="!isAuth"
       label="Domínio"
       help="Pasta onde o cenário será salvo (ex.: login, checkout)"
     >
@@ -109,6 +121,7 @@ watch(() => draft.value.playwright, (playwright) => {
     </UFormField>
 
     <UFormField
+      v-if="!isAuth"
       label="Tags"
       help="Separadas por espaço (ex.: @read @criando)"
     >

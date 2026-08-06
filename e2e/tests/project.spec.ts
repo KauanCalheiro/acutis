@@ -59,17 +59,23 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
         await expect(page.getByTestId('projeto-auth-aviso')).toBeVisible()
     })
 
-    test('opens the auth modal from the alert', async ({ page }) => {
+    test('opens the auth scenario page from the alert', async ({ page }) => {
         await page.getByTestId('projeto-auth-configurar').click()
 
-        await expect(page.getByTestId('auth-gerar')).toBeVisible()
+        await expect(page).toHaveURL('/projects/alpha-store/scenarios/auth')
+        await expect(page.getByTestId('auth-intro')).toBeVisible()
+    })
+
+    test('opens the auth scenario page from the header button', async ({ page }) => {
+        await page.getByTestId('projeto-auth').click()
+
+        await expect(page).toHaveURL('/projects/alpha-store/scenarios/auth')
     })
 
     test('icon-only actions show an immediate tooltip on hover', async ({ page }) => {
         for (const [testid, label] of [
             ['projeto-remover', 'Remover projeto'],
             ['projeto-editar', 'Renomear projeto'],
-            ['projeto-configuracoes', 'Configurações'],
             ['projeto-voltar', 'Voltar'],
             ['projeto-vscode', 'Abrir no VS Code'],
         ] as const) {
@@ -117,7 +123,7 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
     })
 })
 
-test.describe('project authentication modal', { tag: ['@write', '@project'] }, () => {
+test.describe('project authentication entry', { tag: ['@write', '@project'] }, () => {
     let stopBackend: () => Promise<void>
     let tmpProjects: string
 
@@ -137,58 +143,31 @@ test.describe('project authentication modal', { tag: ['@write', '@project'] }, (
         await page.locator('[data-hydrated="true"]').waitFor()
     })
 
-    test('loads the existing script when authentication is already configured', async ({ page }) => {
+    test('lands on the configured login, script and all', async ({ page }) => {
         await page.goto('/projects/beta-blog')
         await page.locator('[data-hydrated="true"]').waitFor()
 
         await page.getByTestId('projeto-auth').click()
+        await page.locator('[data-hydrated="true"]').waitFor()
 
-        await expect(page.getByTestId('auth-script')).toHaveValue(/login gravado/)
+        await expect(page).toHaveURL('/projects/beta-blog/scenarios/auth')
+        await page.getByTestId('cenario-tab-playwright').click()
+        await expect(page.getByTestId('cenario-playwright')).toHaveValue(/login gravado/)
     })
 
-    test('edits and saves the existing script', async ({ page }) => {
+    test('reaches the auth page from the failing alert', async ({ page }) => {
+        mkdirSync(join(tmpProjects, 'beta-blog', 'runs', 'auth'), { recursive: true })
+        writeFileSync(
+            join(tmpProjects, 'beta-blog', 'runs', 'auth', 'history.ndjson'),
+            `${JSON.stringify({ started_at: '2026-01-01T10:00:00+00:00', duration_ms: 10, passed: false, steps: [], playwright: '' })}\n`,
+        )
+
         await page.goto('/projects/beta-blog')
         await page.locator('[data-hydrated="true"]').waitFor()
 
-        await page.getByTestId('projeto-auth').click()
-        await page.getByTestId('auth-editar').click()
-        await page.getByTestId('auth-script-editor').fill('conteudo editado pelo usuario')
-        await page.getByTestId('auth-salvar').click()
+        await page.getByTestId('projeto-auth-revisar').click()
 
-        await expect(page.getByTestId('auth-script')).toHaveValue('conteudo editado pelo usuario')
-    })
-
-    test('returns to the intro when "record again" is chosen', async ({ page }) => {
-        await page.goto('/projects/beta-blog')
-        await page.locator('[data-hydrated="true"]').waitFor()
-
-        await page.getByTestId('projeto-auth').click()
-        await page.getByTestId('auth-gravar-novamente').click()
-
-        await expect(page.getByTestId('auth-gerar')).toBeVisible()
-    })
-
-    test('offers running the configured login without recording it again', async ({ page }) => {
-        await page.goto('/projects/beta-blog')
-        await page.locator('[data-hydrated="true"]').waitFor()
-
-        await page.getByTestId('projeto-auth').click()
-        await expect(page.getByTestId('auth-testar')).toBeVisible()
-
-        await page.getByTestId('auth-testar').click()
-
-        await test.step('the auth modal gives way to the run modal', async () => {
-            await expect(page.getByTestId('auth-testar')).toBeHidden()
-            await expect(page.getByTestId('execucao-detalhes').or(page.getByTestId('execucao-iniciando'))).toBeVisible({ timeout: 15_000 })
-        })
-    })
-
-    test('cancel closes the modal without starting a recording', async ({ page }) => {
-        await page.getByTestId('projeto-auth').click()
-        await page.getByTestId('auth-cancelar').click()
-
-        await expect(page.getByTestId('auth-gerar')).toBeHidden()
-        await expect(page.getByTestId('cenario-parar')).toBeHidden()
+        await expect(page).toHaveURL('/projects/beta-blog/scenarios/auth')
     })
 
     test('warns that authentication is failing when the last run did not pass', async ({ page }) => {
@@ -221,15 +200,36 @@ test.describe('project settings', { tag: ['@write', '@project'] }, () => {
         rmSync(tmpProjects, { recursive: true, force: true })
     })
 
-    test('saves the base url of the system under test', async ({ page }) => {
+    /** A URL vem do .env que o projectsCopy escreve; apagá-la é o que deixa o projeto sem URL nenhuma. */
+    function withoutUrl(project: string): void {
+        writeFileSync(join(tmpProjects, project, '.env'), '')
+    }
+
+    test('refuses something that is not a url', async ({ page }) => {
+        withoutUrl('echo-docs')
+
+        await page.goto('/projects/echo-docs')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('projeto-configuracoes-base-url').fill('nao-e-url')
+        await page.getByTestId('projeto-configuracoes-salvar').click()
+
+        await expect(page.getByText('A URL base deve ser uma URL válida.', { exact: true })).toBeVisible()
+    })
+
+    test('asks for the base url as soon as a project without one opens', async ({ page }) => {
+        withoutUrl('alpha-store')
+
         await page.goto('/projects/alpha-store')
         await page.locator('[data-hydrated="true"]').waitFor()
 
-        await test.step('open the settings from the header and save a url', async () => {
-            await page.getByTestId('projeto-configuracoes').click()
-            await page.getByTestId('projeto-configuracoes-base-url').fill('https://sistema.exemplo.com/app')
-            await page.getByTestId('projeto-configuracoes-salvar').click()
+        await test.step('the modal comes up on its own, with no button to call it', async () => {
+            await expect(page.getByTestId('projeto-configuracoes-base-url')).toBeVisible()
+            await expect(page.getByTestId('projeto-configuracoes')).toHaveCount(0)
         })
+
+        await page.getByTestId('projeto-configuracoes-base-url').fill('https://sistema.exemplo.com/app')
+        await page.getByTestId('projeto-configuracoes-salvar').click()
 
         await expect(page.getByTestId('projeto-configuracoes-salvar')).toBeHidden()
 
@@ -237,24 +237,16 @@ test.describe('project settings', { tag: ['@write', '@project'] }, () => {
         expect(environment).toContain('https://sistema.exemplo.com/app')
     })
 
-    test('reopens showing the url already saved', async ({ page }) => {
+    test('shows the saved url as the URL variable of the active environment', async ({ page }) => {
         await page.goto('/projects/alpha-store')
         await page.locator('[data-hydrated="true"]').waitFor()
 
-        await page.getByTestId('projeto-configuracoes').click()
+        await expect(page.getByTestId('projeto-configuracoes-base-url')).toBeHidden()
 
-        await expect(page.getByTestId('projeto-configuracoes-base-url')).toHaveValue('https://sistema.exemplo.com/app')
-    })
+        await page.getByTestId('projeto-ambientes').click()
 
-    test('refuses something that is not a url', async ({ page }) => {
-        await page.goto('/projects/alpha-store')
-        await page.locator('[data-hydrated="true"]').waitFor()
-
-        await page.getByTestId('projeto-configuracoes').click()
-        await page.getByTestId('projeto-configuracoes-base-url').fill('nao-e-url')
-        await page.getByTestId('projeto-configuracoes-salvar').click()
-
-        await expect(page.getByText('A URL base deve ser uma URL válida.', { exact: true })).toBeVisible()
+        await expect(page.getByTestId('ambientes-variaveis-chave-0')).toHaveValue('URL')
+        await expect(page.getByTestId('ambientes-variaveis-valor-0')).toHaveValue('https://sistema.exemplo.com/app')
     })
 })
 

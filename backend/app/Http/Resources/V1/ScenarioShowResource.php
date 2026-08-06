@@ -23,6 +23,7 @@ class ScenarioShowResource extends JsonResource
             'gherkin' => $scenario->gherkin,
             'events' => $scenario->events,
             'updated_at' => $scenario->updatedAt,
+            'is_auth' => $scenario->isAuth,
             'runs' => ScenarioRunResource::collection($scenario->runs),
         ];
     }
