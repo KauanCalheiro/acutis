@@ -95,7 +95,7 @@ test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
 
         await expect(page.getByTestId('execucao-playwright')).toHaveValue(/test\.describe\('Login do cliente'/)
         await expect(page.getByTestId('execucao-video')).toBeHidden()
-        await expect(page.getByTestId('execucao-corrigir'), 'corrigir é só da execução ao vivo').toBeHidden()
+        await expect(page.getByTestId('execucao-corrigir'), 'execução falha guardada também oferece correção').toBeVisible()
     })
 })
 

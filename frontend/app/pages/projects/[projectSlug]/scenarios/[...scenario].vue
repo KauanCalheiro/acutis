@@ -86,7 +86,6 @@ const {
   steps,
   running,
   passed: runPassed,
-  live: liveRun,
   videoUrl,
   testedAt,
   output: runOutput,
@@ -107,7 +106,6 @@ function openRun(run: ScenarioRun) {
   testedAt.value = formatTestedAt(new Date(run.started_at))
   executedPlaywright.value = run.playwright
   runPassed.value = run.passed
-  liveRun.value = false
   fix.value = null
   fixError.value = null
   running.value = false
@@ -517,7 +515,6 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
     <ScenarioTestRunModal
       v-model:open="runOpen"
       :running="running"
-      :live="liveRun"
       :passed="runPassed"
       :steps="steps"
       :video-url="videoUrl"
