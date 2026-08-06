@@ -1,7 +1,9 @@
 <?php
 
 use App\Ai\Agents\Auth\AuthFixer;
+use App\Ai\Agents\Auth\AuthValidator;
 use App\Ai\Agents\Scenario\ScenarioFixer;
+use App\Ai\Agents\Scenario\ScenarioValidator;
 use App\Enums\EnvKey;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
@@ -24,6 +26,17 @@ beforeEach(function () {
     File::put($this->dir.'/tests/login.events.json', json_encode([
         ['type' => 'fill', 'label' => 'Usuário ou código', 'url' => 'https://app.test/login', 'selectors' => ['id' => 'v-0']],
     ]));
+
+    File::ensureDirectoryExists($this->dir.'/environments');
+    File::put($this->dir.'/environments/ambiente.json', json_encode([
+        'name' => 'Ambiente',
+        'vars' => [['key' => EnvKey::URL->value, 'value' => 'https://app.test', 'secret' => false]],
+    ]));
+});
+
+beforeEach(function () {
+    fakeCleanValidator(ScenarioValidator::class);
+    fakeCleanValidator(AuthValidator::class);
 });
 
 afterEach(function () {
@@ -32,8 +45,10 @@ afterEach(function () {
 
 function fakeFix(?string $playwright = null): void
 {
-    Http::fake(['*/runner/snapshot' => Http::response([
-        'elements' => [['tag' => 'input', 'label' => 'Usuário ou código', 'testId' => 'login-usuario']],
+    Http::fake(['*/runner/spec' => Http::response([
+        'passed' => false,
+        'output' => "locator('#v-0') resolved to hidden",
+        'html' => '<form><input data-testid="login-usuario" name="user"></form>',
     ])]);
 
     ScenarioFixer::fake([[
@@ -54,7 +69,7 @@ it('proposes a fixed spec from the failing step', function () {
         ->assertJsonPath('summary', 'Troquei o id gerado #v-0 pelo data-testid login-usuario.');
 });
 
-it('prompts the agent with the failing step, the error, the spec and the snapshot', function () {
+it('prompts the agent with the failing step, the error, the spec and the broken page', function () {
     fakeFix();
 
     postJson('/api/v1/projects/minha-loja/scenarios/login/fix', [
@@ -68,8 +83,20 @@ it('prompts the agent with the failing step, the error, the spec and the snapsho
         return $payload['run']['step'] === 'Quando preencho o campo "Usuário ou código"'
             && str_contains($payload['run']['error'], "locator('#v-0') resolved to hidden")
             && str_contains($payload['spec'], "page.locator('#v-0')")
-            && str_contains(json_encode($payload['snapshot']), 'login-usuario');
+            && str_contains($payload['html'], 'login-usuario');
     });
+});
+
+it('runs the failing spec once, so the html it hands over is the page as it broke', function () {
+    fakeFix();
+
+    postJson('/api/v1/projects/minha-loja/scenarios/login/fix', [
+        'step' => 'passo',
+        'error' => 'erro',
+    ])->assertOk();
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/runner/spec')
+        && str_contains($request['spec'], "page.locator('#v-0')"));
 });
 
 it('gives the fixer the original events so it can confirm the intent of the step', function () {
@@ -81,7 +108,7 @@ it('gives the fixer the original events so it can confirm the intent of the step
     ])->assertOk();
 
     ScenarioFixer::assertPrompted(
-        fn ($prompt) => str_contains(json_encode(promptPayload($prompt)['events']), 'Usuário ou código')
+        fn ($prompt) => collect(promptPayload($prompt)['events'])->contains('label', 'Usuário ou código')
     );
 });
 
@@ -114,7 +141,7 @@ it('fixes the auth setup with the auth fixer, reading its recorded events', func
         ['type' => 'fill', 'label' => 'Matrícula', 'url' => 'https://app.test/login', 'selectors' => ['id' => 'v-9']],
     ]));
 
-    Http::fake(['*/runner/snapshot' => Http::response(['elements' => []])]);
+    Http::fake(['*/runner/spec' => Http::response(['passed' => false, 'output' => 'erro', 'html' => '<form></form>'])]);
     AuthFixer::fake([[
         'playwright' => "await page.getByTestId('login-matricula').fill(process.env.".EnvKey::USER->value.')',
         'summary' => 'Troquei o id gerado pelo data-testid.',
@@ -129,14 +156,14 @@ it('fixes the auth setup with the auth fixer, reading its recorded events', func
         $payload = promptPayload($prompt);
 
         return str_contains($payload['spec'], "page.locator('#v-9')")
-            && str_contains(json_encode($payload['events']), 'Matrícula');
+            && collect($payload['events'])->contains('label', 'Matrícula');
     });
 });
 
 it('sends a fix that checks the url by exact equality back for another pass', function () {
     $url = EnvKey::URL->value;
 
-    Http::fake(['*/runner/snapshot' => Http::response(['elements' => []])]);
+    Http::fake(['*/runner/spec' => Http::response(['passed' => false, 'output' => 'erro', 'html' => '<form></form>'])]);
     ScenarioFixer::fake([
         ['playwright' => "await expect(page).toHaveURL(`\${process.env.{$url}}/entrar`)", 'summary' => 'primeira tentativa'],
         ['playwright' => 'await expect(page).toHaveURL(/\/entrar/)', 'summary' => 'segunda tentativa'],

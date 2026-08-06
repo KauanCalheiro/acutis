@@ -6,7 +6,6 @@ use Symfony\Component\Process\Process;
 use function Pest\Laravel\postJson;
 
 beforeEach(function () {
-    // repo git local acessível sem credencial = comporta-se como público
     $this->sourceRepo = sys_get_temp_dir().'/acutis-probe-'.uniqid();
     File::ensureDirectoryExists($this->sourceRepo);
     (new Process(['git', 'init', '-q'], $this->sourceRepo))->mustRun();

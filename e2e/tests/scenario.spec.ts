@@ -156,8 +156,10 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
 
-    // cada teste mexe/apaga cenários do alpha-store, então reseta a pasta antes de
-    // cada um pra não depender da ordem de execução nem do que o teste anterior mudou
+    /**
+     * Cada teste mexe ou apaga cenários do alpha-store, então a pasta é resetada antes de cada um:
+     * assim nenhum depende da ordem de execução nem do que o anterior deixou para trás.
+     */
     test.beforeEach(() => {
         projectReset(tmpProjects, 'alpha-store')
         projectReset(tmpProjects, 'beta-blog')

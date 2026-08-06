@@ -2,6 +2,7 @@
 
 use App\Ai\Agents\Scenario\GherkinWriter;
 use App\Ai\Agents\Scenario\ScenarioFixer;
+use App\Ai\Agents\Scenario\ScenarioValidator;
 use App\Ai\Agents\Scenario\ScenarioWriter;
 use App\Ai\Tools\RunSpec;
 use App\Enums\EnvKey;
@@ -18,6 +19,10 @@ use function Pest\Laravel\putJson;
 beforeEach(function () {
     $this->projectsPath = sys_get_temp_dir().'/acutis-test-'.uniqid();
     config()->set('acutis.projects.path', $this->projectsPath);
+});
+
+beforeEach(function () {
+    fakeCleanValidator(ScenarioValidator::class);
 });
 
 afterEach(function () {
@@ -321,7 +326,10 @@ it('returns the env var the writer named for each marker, ordered by the marker 
     GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
     ScenarioWriter::fake([[
         'playwright' => 'process.env.SENHA_UNIVATES',
-        'envVars' => ['SENSIVEL_2' => 'TOKEN_UNIVATES', 'SENSIVEL_1' => 'SENHA_UNIVATES'],
+        'envVars' => [
+            ['marker' => 'SENSIVEL_2', 'name' => 'TOKEN_UNIVATES'],
+            ['marker' => 'SENSIVEL_1', 'name' => 'SENHA_UNIVATES'],
+        ],
     ]]);
     Http::fake();
     $slug = draftProject();

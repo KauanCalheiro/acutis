@@ -11,6 +11,20 @@ pest()->extend(TestCase::class)->in('Feature', 'Unit/Ai/Tools');
 /** A URL base usada nas fixtures de spec, com caminho para pegar segmento repetido. */
 const SPEC_BASE_URL = 'https://sistema.test/intranet';
 
+/**
+ * Finge o revisor de IA sem nada a apontar, para o loop ser dirigido só pelas regras.
+ *
+ * Closure e não array de propósito: o revisor é chamado a cada volta, e um array de resposta única
+ * acabaria no meio do loop. Sem resposta, o pacote gera dados falsos a partir do schema e inventa
+ * issue, o que mandaria o teste para o Fixer sem motivo.
+ *
+ * @param  class-string  $agent
+ */
+function fakeCleanValidator(string $agent): void
+{
+    $agent::fake(fn (): array => ['fiel' => true, 'issues' => []]);
+}
+
 /** O payload estruturado que o agente recebeu, já decodificado. */
 function promptPayload(object $prompt): array
 {

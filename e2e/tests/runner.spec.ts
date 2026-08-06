@@ -229,40 +229,6 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         expect((await res.json()).html).toBeUndefined()
     })
 
-    test('captures interactive elements from a page snapshot', async ({ request }) => {
-        test.setTimeout(120_000)
-
-        const { createServer } = await import('node:http')
-        const server = createServer((_req, res) => {
-            res.writeHead(200, { 'Content-Type': 'text/html' })
-            res.end('<!doctype html><html><head><title>Login</title></head><body>'
-                + '<input id="user" name="user" data-testid="login-user" placeholder="usuário" />'
-                + '<button data-testid="login-submit">Entrar</button>'
-                + '</body></html>')
-        })
-        await new Promise<void>((r) => server.listen(0, r))
-        const { port } = server.address() as { port: number }
-
-        try {
-            const res = await request.post(`${RUNNER_URL}/runner/snapshot`, {
-                data: { url: `http://127.0.0.1:${port}/` },
-                timeout: 90_000,
-            })
-
-            expect(res.ok()).toBe(true)
-            const body = await res.json()
-            expect(body.title).toBe('Login')
-            const testIds = body.elements.map((e: { testId: string | null }) => e.testId)
-            expect(testIds).toContain('login-user')
-            expect(testIds).toContain('login-submit')
-
-            const userField = body.elements.find((e: { testId: string | null }) => e.testId === 'login-user')
-            expect(userField.selector).toBe('[data-testid="login-user"]')
-        } finally {
-            await new Promise<void>((r) => server.close(() => r()))
-        }
-    })
-
     test('runs a whole project, by tag, and a single spec', async ({ request }) => {
         test.setTimeout(180_000)
 
@@ -347,6 +313,10 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         expect(finished?.passed).toBe(false)
     })
 
+    /**
+     * O filtro pedido não casa arquivo de teste nenhum, que é o que acontece quando o config do
+     * projeto não conhece o spec (o auth.setup.ts sem o project "setup", por exemplo).
+     */
     test('carries the runner output when the run dies before any test reports', async ({ request }) => {
         test.setTimeout(120_000)
 
@@ -361,8 +331,6 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         await writeFile(join(dir, 'tests', 'ok.spec.ts'),
             "import { test } from '@playwright/test'\ntest('passa', () => {})\n")
 
-        // Filtro que não casa arquivo de teste nenhum. É o que acontece quando o config do projeto
-        // não conhece o spec pedido (o auth.setup.ts sem o project "setup", por exemplo).
         const res = await request.post(`${RUNNER_URL}/runner/project/stream`, {
             data: { path: dir, spec: 'tests/nao-existe.spec.ts' },
             timeout: 90_000,

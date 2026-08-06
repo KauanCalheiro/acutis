@@ -1,6 +1,7 @@
 <?php
 
 use App\Ai\Agents\Auth\AuthFixer;
+use App\Ai\Agents\Auth\AuthValidator;
 use App\Ai\Agents\Auth\AuthWriter;
 use App\Ai\Agents\Scenario\GherkinWriter;
 use App\Enums\EnvKey;
@@ -15,6 +16,8 @@ beforeEach(function () {
     config()->set('acutis.projects.path', $this->projectsPath);
 
     GherkinWriter::fake([['gherkin' => "@write\nFuncionalidade: Entrar no sistema", 'domain' => 'login']]);
+
+    fakeCleanValidator(AuthValidator::class);
 });
 
 afterEach(function () {
@@ -284,6 +287,22 @@ it('persists the recorded events so the fixer can read them later, with the cred
     expect($events)->toHaveCount(4)
         ->and($events[2]['value'])->toBe('{{'.EnvKey::PASSWORD->value.'}}')
         ->and($events[1]['value'])->toBe('{{'.EnvKey::USER->value.'}}');
+});
+
+it('writes the captured html of the login to its own file, out of the events', function () {
+    AuthWriter::fake([['authSetup' => authSetup()]]);
+    $slug = recordProject();
+
+    $events = recordPayload()['events'];
+    $events[1]['html'] = '<form><input name="user"><input name="pass"></form>';
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload(['events' => $events]))->assertOk();
+
+    $dir = $this->projectsPath."/{$slug}/tests";
+
+    expect(File::get($dir.'/auth.events.json'))->not->toContain('<form')
+        ->and(json_decode(File::get($dir.'/auth.dom.json'), true))
+        ->toBe([1 => '<form><input name="user"><input name="pass"></form>']);
 });
 
 it('writes the gherkin of the login next to the setup', function () {
