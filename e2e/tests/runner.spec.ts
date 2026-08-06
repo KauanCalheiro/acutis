@@ -182,6 +182,53 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         }
     })
 
+    test('returns the html of the broken page when the spec fails', async ({ request }) => {
+        test.setTimeout(120_000)
+
+        const { createServer } = await import('node:http')
+        const server = createServer((_req, res) => {
+            res.writeHead(200, { 'Content-Type': 'text/html' })
+            res.end('<!doctype html><html><body><script>var ruido = 1</script><button data-testid="salvar-pedido">Salvar</button></body></html>')
+        })
+        await new Promise<void>((r) => server.listen(0, r))
+        const { port } = server.address() as { port: number }
+
+        const brokenSpec = `
+            import { test, expect } from '@playwright/test'
+            test('procura um elemento que nao existe', async ({ page }) => {
+                await page.goto('/')
+                await expect(page.getByTestId('nao-existe')).toBeVisible({ timeout: 2000 })
+            })
+        `
+
+        try {
+            const res = await request.post(`${RUNNER_URL}/runner/spec`, {
+                data: { spec: brokenSpec, baseUrl: `http://127.0.0.1:${port}` },
+                timeout: 90_000,
+            })
+
+            expect(res.ok()).toBe(true)
+            const body = await res.json()
+            expect(body.passed).toBe(false)
+            expect(body.html).toContain('salvar-pedido')
+            expect(body.html).not.toContain('var ruido')
+        } finally {
+            await new Promise<void>((r) => server.close(() => r()))
+        }
+    })
+
+    test('does not carry html when the spec passes, because there is nothing to look at', async ({ request }) => {
+        test.setTimeout(120_000)
+
+        const res = await request.post(`${RUNNER_URL}/runner/spec`, {
+            data: { spec: PASSING_SPEC },
+            timeout: 90_000,
+        })
+
+        expect(res.ok()).toBe(true)
+        expect((await res.json()).html).toBeUndefined()
+    })
+
     test('captures interactive elements from a page snapshot', async ({ request }) => {
         test.setTimeout(120_000)
 

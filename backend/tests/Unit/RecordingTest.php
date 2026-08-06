@@ -119,6 +119,50 @@ it('marks the password field even when there is no username field before it', fu
     expect(valuesOf($events))->toBe(['{{AUTH_PASSWORD}}']);
 });
 
+function eventsWithHtml(): array
+{
+    return [
+        ['type' => 'navigate', 'url' => 'x', 'inputType' => null, 'value' => null, 'html' => null],
+        ['type' => 'click', 'url' => 'x', 'inputType' => null, 'value' => null, 'html' => '<div><button class="btn">Salvar</button></div>'],
+        ['type' => 'fill', 'url' => 'x', 'inputType' => 'text', 'value' => 'user1', 'html' => '<div><input name="user"></div>'],
+    ];
+}
+
+it('leaves the captured html out of the events by default', function () {
+    expect(Recording::make(eventsWithHtml())->events()[1])->not->toHaveKey('html');
+});
+
+it('carries the captured html when it is asked for', function () {
+    expect(Recording::make(eventsWithHtml())->events(html: true)[1]['html'])
+        ->toBe('<div><button class="btn">Salvar</button></div>');
+});
+
+it('never sends the captured html to the model, because it lives in its own file', function () {
+    $events = Recording::make(eventsWithHtml())->redacted();
+
+    expect(json_encode($events))->not->toContain('Salvar')
+        ->and($events[1])->not->toHaveKey('html');
+});
+
+it('keeps the html out of the login events too', function () {
+    $events = Recording::make(eventsWithHtml())->withoutPasswords();
+
+    expect($events[1])->not->toHaveKey('html');
+});
+
+it('keeps the captured html keyed by the event it came from', function () {
+    $html = Recording::make(eventsWithHtml())->html();
+
+    expect($html)->toBe([
+        1 => '<div><button class="btn">Salvar</button></div>',
+        2 => '<div><input name="user"></div>',
+    ]);
+});
+
+it('has no html at all for a recording made before the capture existed', function () {
+    expect(Recording::make(events())->html())->toBe([]);
+});
+
 it('resolves the real value of each marker the ai named, by marker and not by position', function () {
     $values = Recording::make(sensitiveEvents(['primeiro-valor', 'segundo-valor']))
         ->envValues(['SENSIVEL_2' => 'SEGUNDO_TOKEN', 'SENSIVEL_1' => 'PRIMEIRO_TOKEN']);

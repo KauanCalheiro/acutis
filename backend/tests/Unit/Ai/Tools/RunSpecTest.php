@@ -71,6 +71,24 @@ it('keeps the last result for the action to read after the prompt', function () 
         ->and($tool->last()->output)->toBe('ok');
 });
 
+it('keeps the html of the broken page, which is what shows the element that changed', function () {
+    fakeRun(['passed' => false, 'output' => 'erro', 'html' => '<button data-testid="salvar-pedido">Salvar</button>']);
+
+    $tool = new RunSpec;
+    runSpec($tool);
+
+    expect($tool->last()->html)->toContain('salvar-pedido');
+});
+
+it('has no html when the run passed, because there is no broken page to look at', function () {
+    fakeRun(['passed' => true, 'output' => 'ok']);
+
+    $tool = new RunSpec;
+    runSpec($tool);
+
+    expect($tool->last()->html)->toBeNull();
+});
+
 it('keeps the storage state the run produced, which is what the auth setup exists to write', function () {
     fakeRun(['passed' => true, 'output' => 'ok', 'storageState' => ['cookies' => []]]);
 

@@ -47,14 +47,14 @@ it('carries the failed step and the error when the fix came from a real run', fu
     ]);
 });
 
-it('leaves out the snapshot section when no page was captured', function () {
-    expect(fixPayload())->not->toHaveKey('snapshot');
+it('leaves out the html section when no page was captured', function () {
+    expect(fixPayload())->not->toHaveKey('html');
 });
 
-it('carries the snapshot of the real page when there is one', function () {
-    $payload = fixPayload(['snapshot' => ['role' => 'button', 'name' => 'Entrar']]);
+it('carries the html of the page as it broke, which is where the new selector shows up', function () {
+    $payload = fixPayload(['html' => '<button data-testid="salvar-pedido">Salvar</button>']);
 
-    expect($payload['snapshot'])->toBe(['role' => 'button', 'name' => 'Entrar']);
+    expect($payload['html'])->toContain('salvar-pedido');
 });
 
 it('leaves out the events section when the caller has none to give', function () {

@@ -102,6 +102,31 @@ it('writes the recorded events alongside the generated artifacts', function () {
         ->and(json_decode($events, true)[1]['value'])->toBe('{{SENSIVEL_1}}');
 });
 
+it('writes the captured html to its own file, keeping the events readable', function () {
+    $slug = project();
+
+    postJson("/api/v1/projects/{$slug}/tests", writePayload([
+        'events' => [
+            ['type' => 'navigate', 'timestamp' => 1, 'url' => 'https://sistema.test/', 'selectors' => null, 'label' => null, 'value' => null, 'html' => null],
+            ['type' => 'click', 'timestamp' => 2, 'url' => 'https://sistema.test/', 'selectors' => ['cssStable' => '.btn'], 'label' => 'Salvar', 'value' => null, 'html' => '<div><button class="btn">Salvar</button></div>'],
+        ],
+    ]))->assertOk();
+
+    $dir = $this->projectsPath."/{$slug}/tests/login";
+
+    expect(File::get($dir.'/login-do-cliente.events.json'))->not->toContain('<button')
+        ->and(json_decode(File::get($dir.'/login-do-cliente.dom.json'), true))
+        ->toBe(['1' => '<div><button class="btn">Salvar</button></div>']);
+});
+
+it('keeps the captured html out of git, since only the machine that recorded it needs it', function () {
+    $slug = project();
+
+    postJson("/api/v1/projects/{$slug}/tests", writePayload())->assertOk();
+
+    expect(File::get($this->projectsPath."/{$slug}/.gitignore"))->toContain('*.dom.json');
+});
+
 it('writes the env var the ai declared for a masked value into the environment', function () {
     $slug = project();
 
