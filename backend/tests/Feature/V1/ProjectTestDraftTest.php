@@ -1,7 +1,9 @@
 <?php
 
-use App\Ai\Agents\GherkinWriter;
-use App\Ai\Agents\PlaywrightWriter;
+use App\Ai\Agents\Scenario\GherkinWriter;
+use App\Ai\Agents\Scenario\ScenarioFixer;
+use App\Ai\Agents\Scenario\ScenarioWriter;
+use App\Ai\Tools\RunSpec;
 use App\Enums\EnvKey;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
@@ -40,10 +42,26 @@ function draftPayload(array $overrides = []): array
     ], $overrides);
 }
 
+/** O spec limpo que o writer devolve quando nada precisa de correção. */
+function draftSpec(): string
+{
+    return "import { test, expect } from '@playwright/test'\n"
+        ."test.describe('Fluxo', { tag: ['@read'] }, () => {\n"
+        ."    test('abre', async ({ page }) => {\n"
+        .'        await page.goto(`${process.env.'.EnvKey::URL->value."}/entrar`)\n"
+        ."    })\n"
+        .'})';
+}
+
+function fakeDraft(?string $playwright = null, array $overrides = []): void
+{
+    GherkinWriter::fake([['gherkin' => "Funcionalidade: Login do Usuário\n  Cenário: entra", 'domain' => 'login', ...$overrides]]);
+    ScenarioWriter::fake([['playwright' => $playwright ?? draftSpec()]]);
+    Http::fake(['*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok'])]);
+}
+
 it('returns an editable draft with title, tags, domain and path without writing files', function () {
-    GherkinWriter::fake([['gherkin' => "Funcionalidade: Login do Usuário\n  Cenário: entra", 'domain' => 'login']]);
-    PlaywrightWriter::fake([['playwright' => "import { test } from '@playwright/test' // spec gerado"]]);
-    Http::fake();
+    fakeDraft();
     $slug = draftProject();
 
     postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())
@@ -53,7 +71,7 @@ it('returns an editable draft with title, tags, domain and path without writing 
         ->assertJsonPath('domain', 'login')
         ->assertJsonPath('path', 'login-do-usuario')
         ->assertJsonPath('gherkin', "@read\nFuncionalidade: Login do Usuário\n  Cenário: entra")
-        ->assertJson(fn ($json) => $json->where('playwright', fn ($v) => str_contains($v, 'spec gerado'))->etc());
+        ->assertJson(fn ($json) => $json->where('playwright', fn ($v) => str_contains($v, 'test.describe'))->etc());
 
     $dir = $this->projectsPath."/{$slug}";
     expect(File::exists($dir.'/tests/login-do-usuario.spec.ts'))->toBeFalse()
@@ -61,9 +79,7 @@ it('returns an editable draft with title, tags, domain and path without writing 
 });
 
 it('suggests a non-colliding path when a spec of the same name exists', function () {
-    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
-    PlaywrightWriter::fake([['playwright' => 'spec']]);
-    Http::fake();
+    fakeDraft(overrides: ['gherkin' => 'Funcionalidade: Login']);
     $slug = draftProject();
 
     File::ensureDirectoryExists($this->projectsPath."/{$slug}/tests");
@@ -75,9 +91,7 @@ it('suggests a non-colliding path when a spec of the same name exists', function
 });
 
 it('tags the draft @write when the recording mutates data', function () {
-    GherkinWriter::fake([['gherkin' => "Funcionalidade: Cadastro\n  Cenário: cria", 'domain' => 'cadastro']]);
-    PlaywrightWriter::fake([['playwright' => 'spec']]);
-    Http::fake();
+    fakeDraft(overrides: ['gherkin' => "Funcionalidade: Cadastro\n  Cenário: cria", 'domain' => 'cadastro']);
     $slug = draftProject();
 
     $payload = draftPayload();
@@ -90,9 +104,7 @@ it('tags the draft @write when the recording mutates data', function () {
 });
 
 it('annotates noticeable pauses so the generated spec waits for loading', function () {
-    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Fluxo', 'domain' => 'fluxo']]);
-    PlaywrightWriter::fake([['playwright' => 'spec']]);
-    Http::fake();
+    fakeDraft();
     $slug = draftProject();
 
     $payload = draftPayload();
@@ -100,15 +112,15 @@ it('annotates noticeable pauses so the generated spec waits for loading', functi
 
     postJson("/api/v1/projects/{$slug}/tests/draft", $payload)->assertOk();
 
-    PlaywrightWriter::assertPrompted(
-        fn ($prompt) => str_contains($prompt->prompt, 'Pausas notáveis') && str_contains($prompt->prompt, '4.7s')
+    ScenarioWriter::assertPrompted(
+        fn ($prompt) => promptPayload($prompt)['pauses'] === [
+            ['beforeEvent' => 1, 'seconds' => 4.7, 'type' => 'click', 'target' => 'Ir'],
+        ]
     );
 });
 
 it('tells the model which variables the environment declares', function () {
-    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
-    PlaywrightWriter::fake([['playwright' => 'spec']]);
-    Http::fake();
+    fakeDraft();
     $slug = draftProject();
 
     putJson("/api/v1/projects/{$slug}/environments/ambiente", [
@@ -118,15 +130,14 @@ it('tells the model which variables the environment declares', function () {
 
     postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())->assertOk();
 
-    PlaywrightWriter::assertPrompted(
-        fn ($prompt) => str_contains($prompt->prompt, 'CUPOM_VALIDO') && str_contains($prompt->prompt, 'ABC123')
+    ScenarioWriter::assertPrompted(
+        fn ($prompt) => collect(promptPayload($prompt)['environment'])
+            ->contains(['key' => 'CUPOM_VALIDO', 'value' => 'ABC123'])
     );
 });
 
 it('never sends the value of a hidden variable to the model', function () {
-    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
-    PlaywrightWriter::fake([['playwright' => 'spec']]);
-    Http::fake();
+    fakeDraft();
     $slug = draftProject();
 
     putJson("/api/v1/projects/{$slug}/environments/ambiente", [
@@ -136,54 +147,131 @@ it('never sends the value of a hidden variable to the model', function () {
 
     postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())->assertOk();
 
-    PlaywrightWriter::assertPrompted(
-        fn ($prompt) => str_contains($prompt->prompt, EnvKey::PASSWORD->value) && ! str_contains($prompt->prompt, 'nunca-mande-isso')
+    ScenarioWriter::assertPrompted(
+        fn ($prompt) => collect(promptPayload($prompt)['environment'])
+            ->contains(['key' => EnvKey::PASSWORD->value, 'secret' => true])
+            && ! str_contains($prompt->prompt, 'nunca-mande-isso')
     );
 });
 
 it('lists a variable the project declared but nobody filled yet', function () {
-    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
-    PlaywrightWriter::fake([['playwright' => 'spec']]);
-    Http::fake();
+    fakeDraft();
     $slug = draftProject();
 
     postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())->assertOk();
 
-    PlaywrightWriter::assertPrompted(
-        fn ($prompt) => str_contains($prompt->prompt, 'Variáveis do ambiente') && str_contains($prompt->prompt, '- URL = ')
+    ScenarioWriter::assertPrompted(
+        fn ($prompt) => collect(promptPayload($prompt)['environment'])
+            ->contains('key', EnvKey::URL->value)
     );
 });
 
 it('names the environment key of the base url instead of leaving the model to coin one', function () {
-    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
-    PlaywrightWriter::fake([['playwright' => 'spec']]);
-    Http::fake();
+    fakeDraft();
     $slug = draftProject();
 
     postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())->assertOk();
 
-    $env = 'process.env.'.EnvKey::URL->value;
-
-    expect(app(PlaywrightWriter::class)->instructions())->toContain($env);
-    PlaywrightWriter::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, $env));
+    ScenarioWriter::assertPrompted(
+        fn ($prompt) => promptPayload($prompt)['baseUrl'] === [
+            'value' => 'http://127.0.0.1:52346',
+            'env' => EnvKey::URL->value,
+        ]
+    );
 });
 
-it('has the spec never repeat a path segment that the base url already carries', function () {
-    expect(app(PlaywrightWriter::class)->instructions())->toContain('nunca repita segmento');
+it('sends a spec that repeats a segment the base url already carries back to the fixer', function () {
+    $slug = draftProject();
+
+    putJson("/api/v1/projects/{$slug}/environments/ambiente", [
+        'name' => 'Ambiente',
+        'vars' => [['key' => EnvKey::URL->value, 'value' => 'https://sistema.test/intranet']],
+    ])->assertOk();
+
+    $url = EnvKey::URL->value;
+    fakeDraft("await page.goto(`\${process.env.{$url}}/intranet/produtos`)");
+    ScenarioFixer::fake([['playwright' => "await page.goto(`\${process.env.{$url}}/produtos`)", 'summary' => 'Tirei o segmento repetido.']]);
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload(['baseUrl' => 'https://sistema.test/intranet']))
+        ->assertOk()
+        ->assertJson(fn ($json) => $json->where('playwright', fn ($v) => ! str_contains($v, '/intranet/produtos'))->etc());
+
+    ScenarioFixer::assertPrompted(
+        fn ($prompt) => collect(promptPayload($prompt)['violations'])->contains('rule', 'segmento-repetido')
+    );
 });
 
-it('has the spec check the url by pattern, never by exact equality', function () {
-    expect(app(PlaywrightWriter::class)->instructions())
-        ->toContain("waitForURL('**/")
-        ->toContain('toHaveURL(/');
+it('sends a spec that asserts the url by exact equality back to the fixer', function () {
+    $url = EnvKey::URL->value;
+    fakeDraft("await expect(page).toHaveURL(`\${process.env.{$url}}/entrar`)");
+    ScenarioFixer::fake([['playwright' => 'await expect(page).toHaveURL(/\/entrar/)', 'summary' => 'Troquei a igualdade exata por padrão.']]);
+    $slug = draftProject();
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())->assertOk();
+
+    ScenarioFixer::assertPrompted(
+        fn ($prompt) => collect(promptPayload($prompt)['violations'])->contains('rule', 'url-exata')
+    );
+});
+
+it('never calls the fixer when the generated spec breaks no rule', function () {
+    fakeDraft();
+    ScenarioFixer::fake();
+    $slug = draftProject();
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())->assertOk();
+
+    ScenarioFixer::assertNeverPrompted();
+});
+
+it('stops fixing at the limit instead of looping forever', function () {
+    $url = EnvKey::URL->value;
+    $broken = "await page.waitForTimeout(3000)\nawait page.goto(`\${process.env.{$url}}/entrar`)";
+
+    $calls = 0;
+
+    fakeDraft($broken);
+    ScenarioFixer::fake(function () use (&$calls, $broken): array {
+        $calls++;
+
+        return ['playwright' => $broken, 'summary' => 'não resolvi'];
+    });
+    $slug = draftProject();
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())
+        ->assertOk()
+        ->assertJson(fn ($json) => $json->where('warnings', fn ($v) => collect($v)->contains(
+            fn (string $w) => str_contains($w, 'espera-fixa'),
+        ))->etc());
+
+    expect($calls)->toBe(2);
+});
+
+it('warns the user about a declared key with no value instead of sending it to the fixer', function () {
+    $slug = draftProject();
+
+    putJson("/api/v1/projects/{$slug}/environments/ambiente", [
+        'name' => 'Ambiente',
+        'vars' => [
+            ['key' => EnvKey::URL->value, 'value' => 'http://127.0.0.1:52346'],
+            ['key' => 'BASE_AUTH', 'value' => ''],
+        ],
+    ])->assertOk();
+
+    fakeDraft("await page.goto(process.env.BASE_AUTH + '/entrar')");
+    ScenarioFixer::fake();
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())
+        ->assertOk()
+        ->assertJson(fn ($json) => $json->where('warnings', fn ($v) => collect($v)->contains(
+            fn (string $w) => str_contains($w, 'BASE_AUTH'),
+        ))->etc());
+
+    ScenarioFixer::assertNeverPrompted();
 });
 
 it('runs the generated spec with the execution url in the variable the spec reads', function () {
-    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
-    PlaywrightWriter::fake([['playwright' => "await page.goto(process.env.URL + '/entrar')"]]);
-    Http::fake([
-        '*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok']),
-    ]);
+    fakeDraft();
     $slug = draftProject();
 
     postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload([
@@ -194,9 +282,31 @@ it('runs the generated spec with the execution url in the variable the spec read
         && $request['env'][EnvKey::URL->value] === 'https://homolog.sistema.test');
 });
 
+it('hands the writer a run tool already pointed at the execution url', function () {
+    fakeDraft();
+    $slug = draftProject();
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload([
+        'executionUrl' => 'https://homolog.sistema.test',
+    ]))->assertOk();
+
+    ScenarioWriter::assertPrompted(fn ($prompt) => collect($prompt->agent->tools())
+        ->contains(fn ($tool) => $tool instanceof RunSpec));
+});
+
+it('gives the writer no run tool when there is nowhere to run the spec', function () {
+    fakeDraft();
+    $slug = draftProject();
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())->assertOk();
+
+    ScenarioWriter::assertPrompted(fn ($prompt) => ! collect($prompt->agent->tools())
+        ->contains(fn ($tool) => $tool instanceof RunSpec));
+});
+
 it('parses structured output even when the model wraps it in code fences', function () {
     GherkinWriter::fake([new StructuredTextResponse([], "```json\n{\"gherkin\": \"Funcionalidade: Cercado\", \"domain\": \"cercado\"}\n```", new Usage, new Meta('gemini', 'x'))]);
-    PlaywrightWriter::fake([new StructuredTextResponse([], "{\"playwright\": \"spec limpo\"}\n```", new Usage, new Meta('gemini', 'x'))]);
+    ScenarioWriter::fake([new StructuredTextResponse([], "{\"playwright\": \"spec limpo\"}\n```", new Usage, new Meta('gemini', 'x'))]);
     Http::fake();
     $slug = draftProject();
 
@@ -207,24 +317,26 @@ it('parses structured output even when the model wraps it in code fences', funct
         ->assertJsonPath('playwright', 'spec limpo');
 });
 
-it('returns the env vars the writer declares for masked values', function () {
+it('returns the env var the writer named for each marker, ordered by the marker number', function () {
     GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
-    PlaywrightWriter::fake([['playwright' => 'process.env.SENHA_UNIVATES', 'envVars' => ['SENHA_UNIVATES']]]);
+    ScenarioWriter::fake([[
+        'playwright' => 'process.env.SENHA_UNIVATES',
+        'envVars' => ['SENSIVEL_2' => 'TOKEN_UNIVATES', 'SENSIVEL_1' => 'SENHA_UNIVATES'],
+    ]]);
     Http::fake();
     $slug = draftProject();
 
     $payload = draftPayload();
     $payload['events'][] = ['type' => 'fill', 'timestamp' => 3, 'url' => 'http://127.0.0.1:52346/', 'selectors' => ['id' => 'senha'], 'label' => 'Senha', 'value' => 'topsecret123', 'sensitive' => true];
+    $payload['events'][] = ['type' => 'fill', 'timestamp' => 4, 'url' => 'http://127.0.0.1:52346/', 'selectors' => ['id' => 'token'], 'label' => 'Token', 'value' => 'abc123token', 'sensitive' => true];
 
     postJson("/api/v1/projects/{$slug}/tests/draft", $payload)
         ->assertOk()
-        ->assertJsonPath('envVars', ['SENHA_UNIVATES']);
+        ->assertJsonPath('envVars', ['SENHA_UNIVATES', 'TOKEN_UNIVATES']);
 });
 
-it('redacts a sensitive event value before showing it to the writers', function () {
-    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Login', 'domain' => 'login']]);
-    PlaywrightWriter::fake([['playwright' => 'spec']]);
-    Http::fake();
+it('marks a sensitive event value before showing it to the writers', function () {
+    fakeDraft();
     $slug = draftProject();
 
     $payload = draftPayload();
@@ -233,21 +345,18 @@ it('redacts a sensitive event value before showing it to the writers', function 
     postJson("/api/v1/projects/{$slug}/tests/draft", $payload)->assertOk();
 
     GherkinWriter::assertPrompted(fn ($prompt) => ! str_contains($prompt->prompt, 'topsecret123'));
-    PlaywrightWriter::assertPrompted(fn ($prompt) => ! str_contains($prompt->prompt, 'topsecret123'));
+    ScenarioWriter::assertPrompted(fn ($prompt) => ! str_contains($prompt->prompt, 'topsecret123')
+        && str_contains($prompt->prompt, '{{SENSIVEL_1}}'));
 });
 
 it('returns 404 when drafting for a project that does not exist', function () {
-    GherkinWriter::fake();
-    PlaywrightWriter::fake();
-    Http::fake();
+    fakeDraft();
 
     postJson('/api/v1/projects/inexistente/tests/draft', draftPayload())->assertNotFound();
 });
 
 it('validates the recording payload before drafting', function () {
-    GherkinWriter::fake();
-    PlaywrightWriter::fake();
-    Http::fake();
+    fakeDraft();
     $slug = draftProject();
 
     postJson("/api/v1/projects/{$slug}/tests/draft", ['events' => []])
@@ -256,9 +365,7 @@ it('validates the recording payload before drafting', function () {
 });
 
 it('marks the scenario as public when it was recorded without a session', function () {
-    GherkinWriter::fake([['gherkin' => "Funcionalidade: Ver a landing\n  Cenário: abre", 'domain' => 'institucional']]);
-    PlaywrightWriter::fake([['playwright' => "import { test } from '@playwright/test'\ntest.describe('landing', () => {})"]]);
-    Http::fake();
+    fakeDraft(overrides: ['gherkin' => "Funcionalidade: Ver a landing\n  Cenário: abre", 'domain' => 'institucional']);
     $slug = draftProject();
 
     postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload(['publico' => true]))
@@ -271,9 +378,7 @@ it('marks the scenario as public when it was recorded without a session', functi
 });
 
 it('leaves the scenario authenticated by default, without the public tag', function () {
-    GherkinWriter::fake([['gherkin' => "Funcionalidade: Ver o painel\n  Cenário: abre", 'domain' => 'painel']]);
-    PlaywrightWriter::fake([['playwright' => "import { test } from '@playwright/test'\ntest.describe('painel', () => {})"]]);
-    Http::fake();
+    fakeDraft(overrides: ['gherkin' => "Funcionalidade: Ver o painel\n  Cenário: abre", 'domain' => 'painel']);
     $slug = draftProject();
 
     postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())

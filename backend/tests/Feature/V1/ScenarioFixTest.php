@@ -1,6 +1,7 @@
 <?php
 
-use App\Ai\Agents\SpecFixer;
+use App\Ai\Agents\Auth\AuthFixer;
+use App\Ai\Agents\Scenario\ScenarioFixer;
 use App\Enums\EnvKey;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
@@ -29,14 +30,14 @@ afterEach(function () {
     File::deleteDirectory($this->projectsPath);
 });
 
-function fakeFix(): void
+function fakeFix(?string $playwright = null): void
 {
     Http::fake(['*/runner/snapshot' => Http::response([
         'elements' => [['tag' => 'input', 'label' => 'Usuário ou código', 'testId' => 'login-usuario']],
     ])]);
 
-    SpecFixer::fake([[
-        'playwright' => "await page.getByTestId('login-usuario').fill('482910')",
+    ScenarioFixer::fake([[
+        'playwright' => $playwright ?? "await page.getByTestId('login-usuario').fill('482910')",
         'summary' => 'Troquei o id gerado #v-0 pelo data-testid login-usuario.',
     ]]);
 }
@@ -61,10 +62,27 @@ it('prompts the agent with the failing step, the error, the spec and the snapsho
         'error' => "locator('#v-0') resolved to hidden",
     ])->assertOk();
 
-    SpecFixer::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, 'Quando preencho o campo "Usuário ou código"')
-        && str_contains($prompt->prompt, "locator('#v-0') resolved to hidden")
-        && str_contains($prompt->prompt, "page.locator('#v-0')")
-        && str_contains($prompt->prompt, 'login-usuario'));
+    ScenarioFixer::assertPrompted(function ($prompt) {
+        $payload = promptPayload($prompt);
+
+        return $payload['run']['step'] === 'Quando preencho o campo "Usuário ou código"'
+            && str_contains($payload['run']['error'], "locator('#v-0') resolved to hidden")
+            && str_contains($payload['spec'], "page.locator('#v-0')")
+            && str_contains(json_encode($payload['snapshot']), 'login-usuario');
+    });
+});
+
+it('gives the fixer the original events so it can confirm the intent of the step', function () {
+    fakeFix();
+
+    postJson('/api/v1/projects/minha-loja/scenarios/login/fix', [
+        'step' => 'passo',
+        'error' => 'erro',
+    ])->assertOk();
+
+    ScenarioFixer::assertPrompted(
+        fn ($prompt) => str_contains(json_encode(promptPayload($prompt)['events']), 'Usuário ou código')
+    );
 });
 
 it('does not write the proposal to disk', function () {
@@ -90,24 +108,46 @@ it('returns 404 for a scenario that does not exist', function () {
     ])->assertNotFound();
 });
 
-it('fixes the auth setup with the same agent, reading its recorded events', function () {
-    fakeFix();
+it('fixes the auth setup with the auth fixer, reading its recorded events', function () {
     File::put($this->dir.'/tests/auth.setup.ts', "await page.locator('#v-9').fill(process.env.".EnvKey::USER->value.')');
     File::put($this->dir.'/tests/auth.events.json', json_encode([
         ['type' => 'fill', 'label' => 'Matrícula', 'url' => 'https://app.test/login', 'selectors' => ['id' => 'v-9']],
     ]));
+
+    Http::fake(['*/runner/snapshot' => Http::response(['elements' => []])]);
+    AuthFixer::fake([[
+        'playwright' => "await page.getByTestId('login-matricula').fill(process.env.".EnvKey::USER->value.')',
+        'summary' => 'Troquei o id gerado pelo data-testid.',
+    ]]);
 
     postJson('/api/v1/projects/minha-loja/scenarios/auth/fix', [
         'step' => 'login',
         'error' => "locator('#v-9') resolved to hidden",
     ])->assertOk();
 
-    SpecFixer::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, "page.locator('#v-9')")
-        && str_contains($prompt->prompt, 'Matrícula'));
+    AuthFixer::assertPrompted(function ($prompt) {
+        $payload = promptPayload($prompt);
+
+        return str_contains($payload['spec'], "page.locator('#v-9')")
+            && str_contains(json_encode($payload['events']), 'Matrícula');
+    });
 });
 
-it('has the fix check the url by pattern, never by exact equality', function () {
-    expect(app(SpecFixer::class)->instructions())->toContain('toHaveURL(/');
+it('sends a fix that checks the url by exact equality back for another pass', function () {
+    $url = EnvKey::URL->value;
+
+    Http::fake(['*/runner/snapshot' => Http::response(['elements' => []])]);
+    ScenarioFixer::fake([
+        ['playwright' => "await expect(page).toHaveURL(`\${process.env.{$url}}/entrar`)", 'summary' => 'primeira tentativa'],
+        ['playwright' => 'await expect(page).toHaveURL(/\/entrar/)', 'summary' => 'segunda tentativa'],
+    ]);
+
+    postJson('/api/v1/projects/minha-loja/scenarios/login/fix', [
+        'step' => 'passo',
+        'error' => 'erro',
+    ])
+        ->assertOk()
+        ->assertJsonPath('summary', 'segunda tentativa');
 });
 
 it('returns 404 for the auth setup when the project has none', function () {

@@ -1,6 +1,6 @@
 <?php
 
-use App\Ai\Agents\SelectorSuggestionWriter;
+use App\Ai\Agents\Selector\SelectorWriter;
 use Illuminate\Support\Facades\File;
 
 use function Pest\Laravel\postJson;
@@ -29,13 +29,8 @@ it('suggests a test id for an event without one', function () {
         ['type' => 'click', 'label' => 'Entrar', 'selectors' => ['cssStable' => '.btn-primary']],
     ]));
 
-    SelectorSuggestionWriter::fake([[
-        'suggestions' => [[
-            'event' => 'Entrar',
-            'currentSelector' => '.btn-primary',
-            'suggestedTestId' => 'login-entrar',
-            'reason' => 'Seletor de classe CSS pode mudar com estilização.',
-        ]],
+    SelectorWriter::fake([[
+        'suggestions' => [['index' => 0, 'suggestedTestId' => 'login-entrar', 'reason' => 'Seletor de classe CSS pode mudar com estilização.']],
     ]]);
 
     postJson('/api/v1/projects/minha-loja/scenarios/login/suggestions')
@@ -44,24 +39,53 @@ it('suggests a test id for an event without one', function () {
         ->assertJsonPath('0.suggestedTestId', 'login-entrar');
 });
 
+it('fills the event and the current selector from the recording, not from the model', function () {
+    File::put($this->dir.'/tests/login.events.json', json_encode([
+        ['type' => 'click', 'label' => 'Entrar', 'selectors' => ['cssStable' => '.btn-primary']],
+    ]));
+
+    SelectorWriter::fake([[
+        'suggestions' => [['index' => 0, 'suggestedTestId' => 'login-entrar', 'reason' => 'classe CSS muda com estilização']],
+    ]]);
+
+    postJson('/api/v1/projects/minha-loja/scenarios/login/suggestions')
+        ->assertOk()
+        ->assertJsonPath('0.currentSelector', '.btn-primary')
+        ->assertJsonPath('0.event', 'Entrar');
+});
+
 it('does not send events that already have a test id to the ai', function () {
     File::put($this->dir.'/tests/login.events.json', json_encode([
         ['type' => 'click', 'label' => 'Já tem testid', 'selectors' => ['dataTestId' => 'login-entrar']],
         ['type' => 'fill', 'label' => 'Usuário', 'selectors' => ['cssStable' => '#user']],
     ]));
 
-    SelectorSuggestionWriter::fake([[
-        'suggestions' => [[
-            'event' => 'Usuário',
-            'currentSelector' => '#user',
-            'suggestedTestId' => 'login-usuario',
-            'reason' => 'Seletor de id pode não ser estável.',
-        ]],
+    SelectorWriter::fake([[
+        'suggestions' => [['index' => 1, 'suggestedTestId' => 'login-usuario', 'reason' => 'Seletor de id pode não ser estável.']],
     ]]);
 
     postJson('/api/v1/projects/minha-loja/scenarios/login/suggestions')->assertOk()->assertJsonCount(1);
 
-    SelectorSuggestionWriter::assertPrompted(fn ($prompt) => ! str_contains($prompt->prompt, 'Já tem testid'));
+    SelectorWriter::assertPrompted(fn ($prompt) => ! str_contains($prompt->prompt, 'Já tem testid'));
+});
+
+it('drops a suggestion whose test id breaks the naming rule', function () {
+    File::put($this->dir.'/tests/login.events.json', json_encode([
+        ['type' => 'click', 'label' => 'Entrar', 'selectors' => ['cssStable' => '.btn-primary']],
+        ['type' => 'click', 'label' => 'Sair', 'selectors' => ['cssStable' => '.btn-ghost']],
+    ]));
+
+    SelectorWriter::fake([[
+        'suggestions' => [
+            ['index' => 0, 'suggestedTestId' => 'login-entrar', 'reason' => 'ok'],
+            ['index' => 1, 'suggestedTestId' => 'loginSair', 'reason' => 'ok'],
+        ],
+    ]]);
+
+    postJson('/api/v1/projects/minha-loja/scenarios/login/suggestions')
+        ->assertOk()
+        ->assertJsonCount(1)
+        ->assertJsonPath('0.suggestedTestId', 'login-entrar');
 });
 
 it('returns an empty list without calling the ai when every event already has a test id', function () {
@@ -73,7 +97,7 @@ it('returns an empty list without calling the ai when every event already has a 
         ->assertOk()
         ->assertJsonCount(0);
 
-    SelectorSuggestionWriter::assertNeverPrompted();
+    SelectorWriter::assertNeverPrompted();
 });
 
 it('returns 404 for an unknown scenario', function () {

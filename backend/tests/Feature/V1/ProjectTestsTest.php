@@ -99,7 +99,7 @@ it('writes the recorded events alongside the generated artifacts', function () {
     expect($events)->toContain('"type":"navigate"')
         ->toContain('"type":"fill"')
         ->not->toContain('topsecret123')
-        ->and(json_decode($events, true)[1]['value'])->toBe('••••');
+        ->and(json_decode($events, true)[1]['value'])->toBe('{{SENSIVEL_1}}');
 });
 
 it('writes the env var the ai declared for a masked value into the environment', function () {
