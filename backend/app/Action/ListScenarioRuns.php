@@ -4,7 +4,6 @@ namespace App\Action;
 
 use App\Data\V1\Project\ScenarioRunData;
 use App\Support\Project;
-use App\Support\Scenario\Runs;
 use Illuminate\Support\Facades\File;
 use Lorisleiva\Actions\Concerns\AsAction;
 
@@ -18,7 +17,7 @@ class ListScenarioRuns
         $history = Project::at($path)->scenario($scenarioId)->runs();
         $video = $history->video();
 
-        $runs = collect($history->all())->take(Runs::SHOWN);
+        $runs = collect($history->all());
 
         $recorded = File::exists($video)
             ? $runs->search(fn (array $run): bool => (bool) ($run['video'] ?? false))

@@ -12,8 +12,6 @@ final class Runs
 
     public const HISTORY = 'history.ndjson';
 
-    public const SHOWN = 6;
-
     /** Execuções guardadas no arquivo; as mais antigas caem fora. */
     public const KEPT = 20;
 
