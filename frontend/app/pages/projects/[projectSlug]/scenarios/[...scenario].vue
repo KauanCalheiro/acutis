@@ -236,7 +236,8 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
           selectors: event.selectors ?? null,
           label: event.label ?? null,
           value: event.value ?? null,
-          inputType: event.inputType ?? null
+          inputType: event.inputType ?? null,
+          html: event.html ?? null
         }))
       }
     })

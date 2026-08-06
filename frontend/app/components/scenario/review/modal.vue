@@ -62,7 +62,8 @@ const mappedEvents = computed(() => timeline.value.map(event => ({
   selectors: event.selectors ?? null,
   label: event.label ?? null,
   value: event.value ?? null,
-  sensitive: event.sensitive ?? false
+  sensitive: event.sensitive ?? false,
+  html: event.html ?? null
 })))
 
 async function generate() {

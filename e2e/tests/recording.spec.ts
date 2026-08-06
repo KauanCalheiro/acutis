@@ -228,6 +228,41 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
         await expect(page.getByTestId('cenario-card')).toHaveCount(2)
     })
 
+    test('writes the recorded dom next to the spec, which is where the fixer reads it later', async ({ page }) => {
+        await page.route('**/api/projects/alpha-store/tests/draft', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    title: 'Fluxo gravado',
+                    tags: ['@read'],
+                    domain: 'navegacao',
+                    path: 'fluxo-gravado',
+                    gherkin: '@read\nFuncionalidade: Fluxo gravado',
+                    playwright: "import { test } from '@playwright/test' // spec",
+                }),
+            })
+        })
+
+        await test.step('send the draft, letting the real backend write it to disk', async () => {
+            await page.getByTestId('revisao-gerar').click()
+            await expect(page.getByTestId('contexto-titulo')).toHaveValue('Fluxo gravado', { timeout: 10_000 })
+
+            const written = page.waitForResponse(
+                (r) => r.url().endsWith('/api/projects/alpha-store/tests') && r.request().method() === 'POST',
+            )
+
+            await page.getByTestId('contexto-enviar').click()
+            expect((await written).status()).toBe(200)
+        })
+
+        const dom = JSON.parse(
+            readFileSync(join(tmpProjects, 'alpha-store', 'tests', 'navegacao', 'fluxo-gravado.dom.json'), 'utf8'),
+        )
+
+        expect(Object.values(dom).join('\n')).toContain('id="btn"')
+    })
+
     test('shows the generation warnings with the draft, pointing at the environment', async ({ page }) => {
         await page.route('**/api/projects/alpha-store/tests/draft', async (route) => {
             await route.fulfill({
@@ -261,7 +296,7 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
     })
 
     test('drafts the scenario, lets the user edit the contexts, then posts the edited draft', async ({ page }) => {
-        let drafted: { baseUrl?: string, events?: Array<{ type?: string }> } | null = null
+        let drafted: { baseUrl?: string, events?: Array<{ type?: string, html?: string | null }> } | null = null
         await page.route('**/api/projects/alpha-store/tests/draft', async (route) => {
             drafted = route.request().postDataJSON()
             await route.fulfill({
@@ -307,6 +342,12 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
         await expect(page.getByTestId('revisao-video')).toBeHidden({ timeout: 10_000 })
         expect(drafted!.baseUrl).toBe(scenarioBaseUrl)
         expect(drafted!.events!.some((e) => e.type === 'click')).toBe(true)
+
+        await test.step('the dom around the clicked element travels with the event, which is what tells duplicated selectors apart', () => {
+            const clicked = drafted!.events!.find((e) => e.type === 'click')
+
+            expect(clicked!.html).toContain('id="btn"')
+        })
         expect(posted!.title).toBe('Fluxo revisado')
         expect(posted!.path).toBe('fluxo-gravado')
         expect(posted!.domain).toBe('navegacao')
@@ -345,7 +386,7 @@ test.describe('recording authentication from the auth scenario page', { tag: ['@
     test('records a login, writes the setup and runs it right away', async ({ page }) => {
         let posted: {
             baseUrl?: string
-            events?: Array<{ type?: string, value?: string | null }>
+            events?: Array<{ type?: string, value?: string | null, html?: string | null }>
         } | null = null
 
         await page.route('**/api/projects/alpha-store/auth/record', async (route) => {
@@ -411,6 +452,12 @@ test.describe('recording authentication from the auth scenario page', { tag: ['@
         await expect(page.getByTestId('execucao-detalhes')).toContainText('Autenticação')
         expect(posted!.baseUrl).toBe(authBaseUrl)
         expect(posted!.events!.some((e) => e.type === 'fill' && e.value === 'admin')).toBe(true)
+
+        await test.step('the dom around each field travels with the login events too', () => {
+            const filled = posted!.events!.find((e) => e.type === 'fill')
+
+            expect(filled!.html).toContain('id="name"')
+        })
 
         await test.step('the real password is forwarded unmasked for this auth-mode recording', () => {
             expect(posted!.events!.some((e) => e.type === 'fill' && e.value === 's3cr3t')).toBe(true)
