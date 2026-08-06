@@ -7,6 +7,7 @@ use App\Data\V1\Recording\WriteTestData;
 use App\Support\Primitives\Environments;
 use App\Support\Project;
 use App\Support\Recording;
+use App\Support\Scenario;
 use App\Support\TestArtifact;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -54,9 +55,11 @@ class WriteDraftToProject
             }
 
             File::put(
-                "{$path}/tests/{$domain}/{$name}.events.json",
+                "{$path}/".Scenario::eventsPathOf($spec),
                 json_encode($recording->redacted($environments), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             );
+
+            $this->writeHtml($path, $spec, $recording->html());
         }
 
         return new ProjectTestData(
@@ -64,6 +67,24 @@ class WriteDraftToProject
             playwright: $playwright,
             spec: $spec,
             feature: $feature,
+        );
+    }
+
+    /**
+     * O DOM capturado vai para arquivo próprio, ao lado do spec: no de eventos ele os tornaria
+     * ilegíveis, e é a tool que o busca quando o agente precisa, um evento por vez.
+     *
+     * @param  array<int, string>  $html
+     */
+    private function writeHtml(string $path, string $spec, array $html): void
+    {
+        if ($html === []) {
+            return;
+        }
+
+        File::put(
+            "{$path}/".Scenario::htmlPathOf($spec),
+            json_encode($html, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         );
     }
 

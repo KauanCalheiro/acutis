@@ -9,6 +9,7 @@ class TestDraftData extends Data
     /**
      * @param  list<string>  $tags
      * @param  list<string>  $envVars
+     * @param  list<string>  $warnings  o que só o usuário resolve, como variável declarada sem valor
      */
     public function __construct(
         public string $title,
@@ -18,5 +19,6 @@ class TestDraftData extends Data
         public string $gherkin,
         public string $playwright,
         public array $envVars = [],
+        public array $warnings = [],
     ) {}
 }

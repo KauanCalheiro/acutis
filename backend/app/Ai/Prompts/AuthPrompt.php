@@ -31,6 +31,15 @@ final class AuthPrompt
         ]);
     }
 
+    /** O login também vira Gherkin, e o escritor dele só precisa da URL base e dos eventos. */
+    public static function gherkin(AuthRecordingData $input, Recording $recording): string
+    {
+        return Payload::encode([
+            'baseUrl' => Payload::baseUrl(new Url($input->baseUrl)),
+            'events' => $recording->withoutPasswords(),
+        ]);
+    }
+
     /**
      * Null quando nenhuma navegação após o submit foi gravada, e aí não há URL a confirmar: o
      * login se confirma pelo sumiço do campo de senha.

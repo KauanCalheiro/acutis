@@ -7,7 +7,8 @@ use App\Data\V1\Project\SelectorSuggestionData;
 
 /**
  * O padrão é <recurso>-<acao>: uma palavra só nomeia o elemento sem dizer o que ele faz, e dois
- * botões da mesma tela acabam disputando o mesmo testid.
+ * botões da mesma tela acabam disputando o mesmo testid. Quem está fora do kebab é acusado pela
+ * Kebab, então aqui passa só o que já sobreviveu a ela.
  */
 final class ResourceAction
 {
@@ -22,7 +23,6 @@ final class ResourceAction
         foreach ($suggestions as $suggestion) {
             $testId = $suggestion->suggestedTestId;
 
-            // Fora do kebab quem acusa é a Kebab; aqui só o que já passou por ela.
             if (preg_match(Kebab::PATTERN, $testId) !== 1 || str_contains($testId, '-')) {
                 continue;
             }

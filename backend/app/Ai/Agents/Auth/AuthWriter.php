@@ -5,8 +5,8 @@ namespace App\Ai\Agents\Auth;
 use App\Ai\Rules\AuthRules;
 use App\Ai\Tools\CheckRules;
 use App\Ai\Tools\ListProjectFiles;
-use App\Ai\Tools\PageSnapshot;
 use App\Ai\Tools\ReadProjectFile;
+use App\Ai\Tools\RecordedHtml;
 use App\Ai\Tools\RunSpec;
 use App\Support\Primitives\Environments;
 use App\Support\Primitives\Playwright;
@@ -31,6 +31,8 @@ class AuthWriter implements Agent, HasStructuredOutput, HasTools
         private readonly Url $base,
         private readonly Environments $environments,
         private readonly ?RunSpec $run = null,
+        /** @var array<int, string> índice do evento → DOM ao redor do elemento */
+        private readonly array $html = [],
     ) {}
 
     /** Sem URL de execução não há onde rodar, e aí a tool de execução nem é oferecida. */
@@ -38,12 +40,12 @@ class AuthWriter implements Agent, HasStructuredOutput, HasTools
     {
         return array_values(array_filter([
             $this->run,
+            $this->html === [] ? null : new RecordedHtml($this->html),
             new CheckRules(fn (string $spec): array => AuthRules::check(
                 new Playwright($spec),
                 $this->base,
                 $this->environments,
             )),
-            new PageSnapshot,
             new ReadProjectFile($this->project),
             new ListProjectFiles($this->project),
             new WebSearch(maxSearches: 2),
@@ -64,7 +66,9 @@ class AuthWriter implements Agent, HasStructuredOutput, HasTools
         - Com landing preenchido, confirme o login esperando o caminho dele. Com landing null nenhuma navegação foi gravada: confirme pelo sumiço do campo de senha, ou por um elemento que só existe depois de autenticar.
         - Termine salvando a sessão em storageState, e só depois de confirmar o login.
 
-        Antes de responder: rode com run_spec, se a tool estiver disponível, e passe por check_rules. Só responda com o arquivo que sobreviveu às duas.
+        Quando o seletor de um evento não bastar, como em elementos iguais na mesma tela, peça o DOM daquele evento com RecordedHtml pelo índice dele.
+
+        Antes de responder: rode com RunSpec, se a tool estiver disponível, e passe por CheckRules. Só responda com o arquivo que sobreviveu às duas.
         INSTRUCTIONS;
     }
 

@@ -6,13 +6,14 @@ use App\Ai\Rules\Violation;
 
 /**
  * O que um Fixer recebe, venha a correção da validação ou de uma execução vermelha. As seções que
- * não têm o que dizer ficam de fora: um "run": null só ocuparia atenção sem informar nada.
+ * não têm o que dizer ficam de fora: um "run": null só ocuparia atenção sem informar nada. O
+ * fixable da violação também não vai: é roteamento interno, e o modelo não faria nada com ele.
  */
 final class FixPrompt
 {
     /**
      * @param  list<Violation>  $violations
-     * @param  array<array-key, mixed>|null  $snapshot
+     * @param  string|null  $html  a página no instante da falha, vinda da própria execução
      * @param  list<array<string, mixed>>  $events
      */
     public static function of(
@@ -20,13 +21,12 @@ final class FixPrompt
         array $violations = [],
         ?string $step = null,
         ?string $error = null,
-        ?array $snapshot = null,
+        ?string $html = null,
         array $events = [],
     ): string {
         $payload = [
             'spec' => $spec,
             'violations' => array_map(
-                // O fixable é roteamento interno; para o modelo não há o que fazer com ele.
                 fn (Violation $violation): array => [
                     'rule' => $violation->rule,
                     'message' => $violation->message,
@@ -39,8 +39,8 @@ final class FixPrompt
             $payload['run'] = ['step' => $step, 'error' => $error];
         }
 
-        if ($snapshot !== null) {
-            $payload['snapshot'] = $snapshot;
+        if ($html !== null) {
+            $payload['html'] = $html;
         }
 
         if ($events !== []) {

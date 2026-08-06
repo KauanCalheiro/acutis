@@ -7,13 +7,15 @@ use App\Support\Primitives\Environments;
 use App\Support\Primitives\Playwright;
 use App\Support\Primitives\Url;
 
-/** Sem await o passo roda em paralelo com o resto do teste e a execução quebra. */
+/**
+ * Sem await o passo roda em paralelo com o resto do teste e a execução quebra. O padrão captura o
+ * await de cada step, ou vazio quando não há: é o vazio que acusa.
+ */
 final class StepAwait
 {
     /** @return list<Violation> */
     public static function check(Playwright $playwright, Url $base, Environments $environments): array
     {
-        // Captura o await de cada step, ou vazio quando não há: é o vazio que acusa.
         preg_match_all(
             '/(?:^|[^\w.])((?:await\s+)?)(?:test|setup)\.step\s*\(/m',
             $playwright->value,

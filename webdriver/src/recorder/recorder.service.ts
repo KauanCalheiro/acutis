@@ -178,6 +178,7 @@ export class RecorderService {
             type: 'navigate',
             timestamp: Date.now(),
             url,
+            html: null,
             selectors: null,
             label: null,
             value: null,

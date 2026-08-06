@@ -32,6 +32,26 @@ final class Recording
     }
 
     /**
+     * Os eventos gravados. O DOM capturado fica de fora por padrão: é grande e só serve sob
+     * demanda, então mandá-lo em todo prompt ou gravá-lo no arquivo de eventos é justamente o
+     * que se quer evitar. Quem precisa dele pede.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function events(bool $html = false): array
+    {
+        if ($html) {
+            return $this->events;
+        }
+
+        return array_map(function (array $event): array {
+            unset($event['html']);
+
+            return $event;
+        }, $this->events);
+    }
+
+    /**
      * Troca o valor de cada evento sensível pelo marcador. Usar antes de mandar eventos gravados
      * pra IA ou gravar em disco.
      *
@@ -52,7 +72,26 @@ final class Recording
             $event['value'] = self::marker($environments->keyOf($value) ?? self::SENSITIVE.$position);
 
             return $event;
-        }, $this->events);
+        }, $this->events());
+    }
+
+    /**
+     * O DOM ao redor de cada elemento, na chave do evento que o produziu. Fica fora dos eventos e
+     * fora do primeiro prompt: só chega ao modelo se ele pedir, pelo índice.
+     *
+     * @return array<int, string>
+     */
+    public function html(): array
+    {
+        $html = [];
+
+        foreach ($this->events as $index => $event) {
+            if (filled($event['html'] ?? null)) {
+                $html[$index] = (string) $event['html'];
+            }
+        }
+
+        return $html;
     }
 
     /**
@@ -64,7 +103,7 @@ final class Recording
      */
     public function withoutPasswords(): array
     {
-        $events = $this->events;
+        $events = $this->events();
         $password = $this->passwordIndex();
 
         foreach ($events as $index => $event) {
@@ -116,7 +155,10 @@ final class Recording
         return null;
     }
 
-    /** Usuário e senha reais do login gravado, ou null quando não dá para identificá-los. */
+    /**
+     * Usuário e senha reais do login gravado, ou null quando não dá para identificá-los. Sem um
+     * dos dois não há login executável, então quem chamou precisa pedir ao usuário.
+     */
     public function credentials(): ?Credentials
     {
         $passwordIndex = $this->passwordIndex();
@@ -130,7 +172,6 @@ final class Recording
         $username = $userIndex === null ? null : ($this->events[$userIndex]['value'] ?? null);
         $password = $this->events[$passwordIndex]['value'] ?? null;
 
-        // Sem um dos dois não há login executável, então quem chamou precisa pedir ao usuário.
         return $username && $password ? new Credentials($username, $password) : null;
     }
 

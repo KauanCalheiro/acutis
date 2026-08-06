@@ -6,11 +6,13 @@ import { access, mkdir, readdir, readFile, rm, symlink, writeFile } from 'node:f
 import { join, relative, resolve } from 'node:path'
 import { RUNNER_DIR, STREAM_REPORTER_PATH } from '../config/paths.js'
 import type { RunEvent } from '../types/run.js'
+import { pruneHtml } from './html.js'
 
 export interface RunResult {
     passed: boolean
     output: string
     storageState?: unknown
+    html?: string
 }
 
 export interface RunOptions {
@@ -57,9 +59,17 @@ const WATCHABLE_RUN_SETTINGS = [
 const WEBDRIVER_ROOT = resolve(import.meta.dirname, '../..')
 const RUN_TAIL_MS = 1500
 const RUN_TAIL_ENV = 'ACUTIS_RUN_TAIL_MS'
+const FAILURE_HTML_FILE = 'failure.html'
 const WRAPPER_FILE = 'acutis-run.ts'
+/**
+ * O HTML da página no instante da falha sai daqui de dentro, da própria execução: é o mesmo
+ * navegador, com a mesma sessão, olhando a página como ela está agora. Capturar de fora exigiria
+ * carregar a sessão num segundo navegador, e num projeto autenticado o que voltaria seria a tela
+ * de login em vez da página que quebrou.
+ */
 const WRAPPER_SOURCE = [
     "import { test as base } from '@playwright/test'",
+    "import { writeFileSync } from 'node:fs'",
     '',
     "export * from '@playwright/test'",
     '',
@@ -69,6 +79,10 @@ const WRAPPER_SOURCE = [
     '    acutisTail: [async ({ page }, use) => {',
     '        await use()',
     '        if (TAIL_MS > 0) await page.waitForTimeout(TAIL_MS).catch(() => {})',
+    "        if (base.info().status === 'passed') return",
+    '        try {',
+    `            writeFileSync(${JSON.stringify(FAILURE_HTML_FILE)}, await page.content())`,
+    '        } catch {}',
     '    }, { auto: true }],',
     '})',
     '',
@@ -95,8 +109,13 @@ export class RunnerService {
         try {
             const result = await this.execPlaywright(dir, ['--reporter=line'], options.env)
             const storageState = await this.readStorageState(dir)
+            const html = await this.readFailureHtml(dir)
 
-            return storageState === undefined ? result : { ...result, storageState }
+            return {
+                ...result,
+                ...(storageState === undefined ? {} : { storageState }),
+                ...(html === undefined ? {} : { html }),
+            }
         } finally {
             await rm(dir, { recursive: true, force: true })
         }
@@ -258,6 +277,15 @@ export class RunnerService {
     private async readStorageState(dir: string): Promise<unknown> {
         try {
             return JSON.parse(await readFile(join(dir, STORAGE_STATE_FILE), 'utf8'))
+        } catch {
+            return undefined
+        }
+    }
+
+    /** Só existe quando a execução terminou vermelha, que é quando alguém precisa olhar a página. */
+    private async readFailureHtml(dir: string): Promise<string | undefined> {
+        try {
+            return pruneHtml(await readFile(join(dir, FAILURE_HTML_FILE), 'utf8'))
         } catch {
             return undefined
         }

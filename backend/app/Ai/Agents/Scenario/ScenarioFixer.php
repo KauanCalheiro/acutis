@@ -5,8 +5,8 @@ namespace App\Ai\Agents\Scenario;
 use App\Ai\Rules\SpecRules;
 use App\Ai\Tools\CheckRules;
 use App\Ai\Tools\ListProjectFiles;
-use App\Ai\Tools\PageSnapshot;
 use App\Ai\Tools\ReadProjectFile;
+use App\Ai\Tools\RecordedHtml;
 use App\Ai\Tools\RunSpec;
 use App\Support\Primitives\Environments;
 use App\Support\Primitives\Playwright;
@@ -31,18 +31,20 @@ class ScenarioFixer implements Agent, HasStructuredOutput, HasTools
         private readonly Url $base,
         private readonly Environments $environments,
         private readonly ?RunSpec $run = null,
+        /** @var array<int, string> índice do evento → DOM ao redor do elemento */
+        private readonly array $html = [],
     ) {}
 
     public function tools(): iterable
     {
         return array_values(array_filter([
             $this->run,
+            $this->html === [] ? null : new RecordedHtml($this->html),
             new CheckRules(fn (string $spec): array => SpecRules::check(
                 new Playwright($spec),
                 $this->base,
                 $this->environments,
             )),
-            new PageSnapshot,
             new ReadProjectFile($this->project),
             new ListProjectFiles($this->project),
             new WebSearch(maxSearches: 2),
@@ -54,17 +56,20 @@ class ScenarioFixer implements Agent, HasStructuredOutput, HasTools
         return <<<'INSTRUCTIONS'
         Você conserta um teste Playwright que não passou.
 
-        O prompt é um JSON com: spec (o arquivo atual), violations (as regras quebradas, cada uma com rule e message) e, quando houver, run (o passo e o erro da execução), snapshot (os elementos da página real) e events (a gravação original).
+        O prompt é um JSON com: spec (o arquivo atual), violations (as regras quebradas, cada uma com rule e message) e, quando houver, run (o passo e o erro da execução), html (a página no instante em que quebrou) e events (a gravação original).
 
-        - Conserte a causa, não o sintoma: elemento hidden pede o equivalente visível do snapshot, não uma espera maior.
+        - Conserte a causa, não o sintoma: elemento hidden pede o equivalente visível do html, não uma espera maior.
+        - O html é a página como está agora, já autenticada: é ali que aparece o elemento que mudou de nome.
         - A causa mais comum é seletor frágil, como id gerado pelo framework (#v-0, :r3:), classe de estilização ou texto que muda com i18n. Prefira, nesta ordem: getByTestId, getByLabel, getByRole com nome acessível.
         - Cada violation diz o que precisa mudar; resolva todas.
         - Preserve o que já funciona: títulos dos steps, tags do describe, ordem dos passos e os dados preenchidos.
-        - Nunca invente seletor que não apareça no snapshot ou nos eventos.
+        - Nunca invente seletor que não apareça no html ou nos eventos.
         - Use os eventos para confirmar a intenção original quando o arquivo tiver divergido dela.
         - O valor de playwright é conteúdo de arquivo em disco: uma instrução por linha, quebras reais, indentação de 4 espaços. Nunca junte tudo numa linha só.
 
-        Antes de responder: rode com run_spec, se a tool estiver disponível, e passe por check_rules.
+        O DOM de um evento gravado sai do RecordedHtml, pelo índice; sirva-se dele quando precisar ver o que havia em volta na hora da ação.
+
+        Antes de responder: rode com RunSpec, se a tool estiver disponível, e passe por CheckRules.
 
         No summary, explique em uma frase, em português, o que mudou e por quê.
         INSTRUCTIONS;

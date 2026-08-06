@@ -78,6 +78,7 @@ final class RunSpec implements Tool
         return $this->last;
     }
 
+    /** Devolve null quando o serviço não responde: exceção aqui mataria o loop inteiro do agente. */
     private function run(string $spec): ?PlaywrightRunResult
     {
         $this->attempts++;
@@ -92,7 +93,6 @@ final class RunSpec implements Tool
                 ->throw()
                 ->json();
         } catch (Throwable) {
-            // O agente precisa de uma resposta para seguir; exceção aqui mataria o loop inteiro.
             return null;
         }
 
@@ -102,6 +102,7 @@ final class RunSpec implements Tool
             passed: (bool) ($result['passed'] ?? false),
             output: (string) ($result['output'] ?? ''),
             storageState: $result['storageState'] ?? null,
+            html: $result['html'] ?? null,
         );
     }
 }

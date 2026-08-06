@@ -10,6 +10,7 @@ use App\Support\Primitives\Url;
 /**
  * O caminho concatenado é só o que sobra depois da URL base. Base https://sistema.test/intranet
  * com o evento em /intranet/produtos vira `${base}/produtos`, nunca `${base}/intranet/produtos`.
+ * O padrão procura o caminho colado logo depois da variável, em template string ou concatenação.
  */
 final class RepeatedSegment
 {
@@ -18,7 +19,6 @@ final class RepeatedSegment
     {
         $path = $base->path();
 
-        // O caminho colado logo depois da variável, seja em template string ou em concatenação.
         if ($path === '' || ! $playwright->matches('/(\}|\+\s*[\'"`])'.preg_quote($path, '/').'\b/')) {
             return [];
         }

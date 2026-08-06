@@ -248,6 +248,7 @@ class ProjectController extends Controller
             gherkin: $generated->gherkin,
             playwright: $generated->playwright,
             envVars: $generated->envVars,
+            warnings: $generated->warnings,
         ));
     }
 
