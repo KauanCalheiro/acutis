@@ -2,7 +2,9 @@
 
 namespace App\Ai\Agents\Selector;
 
+use App\Ai\Limits;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Attributes\UseCheapestModel;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
@@ -13,6 +15,7 @@ use Laravel\Ai\Promptable;
  * roda teste, e o padrão do nome é regex, conferido por SelectorRules. Assimetria proposital.
  */
 #[UseCheapestModel]
+#[Timeout(Limits::TIMEOUT)]
 class SelectorWriter implements Agent, HasStructuredOutput
 {
     use Promptable;

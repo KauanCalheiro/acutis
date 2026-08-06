@@ -2,11 +2,13 @@
 
 namespace App\Ai\Agents\Scenario;
 
+use App\Ai\Limits;
 use App\Ai\Prompts\ValidatorPrompt;
 use App\Ai\Rules\Violation;
 use App\Ai\StructuredOutput;
 use App\Support\Primitives\Playwright;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Attributes\UseCheapestModel;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
@@ -17,6 +19,7 @@ use Laravel\Ai\Promptable;
  * confere forma, isto confere intenção, e por isso vem depois e não no lugar delas.
  */
 #[UseCheapestModel]
+#[Timeout(Limits::TIMEOUT)]
 class ScenarioValidator implements Agent, HasStructuredOutput
 {
     use Promptable;
