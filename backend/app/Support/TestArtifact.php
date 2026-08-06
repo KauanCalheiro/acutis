@@ -48,9 +48,9 @@ final class TestArtifact
         return $candidate;
     }
 
+    /** ponytail: troca só a primeira linha `Funcionalidade:`; se não houver, deixa como está. */
     public static function stampTitle(string $gherkin, string $title): string
     {
-        // ponytail: troca só a primeira linha `Funcionalidade:`; se não houver, deixa como está
         return preg_replace('/Funcionalidade:\s*.+/u', "Funcionalidade: {$title}", $gherkin, 1) ?? $gherkin;
     }
 
@@ -67,6 +67,7 @@ final class TestArtifact
         return $tags === [] ? $body : implode(' ', $tags)."\n".$body;
     }
 
+    /** ponytail: mesmo casamento de describe usado na geração; sem describe, deixa como está. */
     public static function stampPlaywrightTags(string $playwright, array $tags): string
     {
         if ($tags === []) {
@@ -79,7 +80,6 @@ final class TestArtifact
             return preg_replace('/tag:\s*\[[^\]]*\]/', $list, $playwright, 1) ?? $playwright;
         }
 
-        // ponytail: mesmo casamento de describe usado na geração; sem describe, deixa como está
         return preg_replace(
             '/test\.describe\(\s*((["\']).+?\2)\s*,\s*(?=\(|async)/',
             "test.describe($1, {{$list}}, ",

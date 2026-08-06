@@ -13,6 +13,10 @@ class ShowProjectScenario
 {
     use AsAction;
 
+    /**
+     * O `written` diz se o arquivo existe em disco: o cenário de autenticação existe antes dele,
+     * porque é a tela do cenário que oferece a gravação que vai criá-lo.
+     */
     public function handle(string $slug, string $scenarioId): ScenarioShowData
     {
         $project = Project::make($slug);
@@ -24,7 +28,6 @@ class ShowProjectScenario
         $feature = $data->feature ? "{$path}/{$data->feature}" : null;
         $eventsFile = "{$path}/".Scenario::eventsPathOf($data->spec);
 
-        // O cenário de autenticação existe antes do arquivo: é a tela dele que oferece a gravação.
         $written = File::exists($spec);
 
         return new ScenarioShowData(

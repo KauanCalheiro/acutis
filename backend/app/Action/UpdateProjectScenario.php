@@ -16,6 +16,10 @@ class UpdateProjectScenario
 {
     use AsAction;
 
+    /**
+     * O setup de autenticação mora num caminho fixo, então segue lá mesmo quando o título muda:
+     * renomeá-lo pelo título quebraria a execução, que o procura pelo caminho.
+     */
     public function handle(string $slug, string $scenarioId, UpdateScenarioData $data): ScenarioShowData
     {
         $project = Project::make($slug);
@@ -26,7 +30,6 @@ class UpdateProjectScenario
         $domain = Str::slug($data->domain ?? '') ?: null;
         $name = Str::slug($data->path) ?: 'teste';
 
-        // O setup de autenticação mora num caminho fixo: renomeá-lo pelo título quebraria a execução.
         $newSpecRelative = match (true) {
             $auth => Scenario::AUTH_SPEC,
             (bool) $domain => "tests/{$domain}/{$name}.spec.ts",

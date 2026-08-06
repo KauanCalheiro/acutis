@@ -47,7 +47,12 @@ class PersistScenarioRun
         $git->commit("chore: registrar execução de {$scenarioId}", $committed)->push();
     }
 
-    /** @param  list<array<string, mixed>>  $events */
+    /**
+     * A timeline dos passos. O timeout do teste chega depois do passo já ter fechado verde, então
+     * a falha corrige a linha que já existe em vez de empilhar outra com o mesmo título.
+     *
+     * @param  list<array<string, mixed>>  $events
+     */
     private function steps(array $events): array
     {
         $timeline = collect($events)
@@ -82,7 +87,6 @@ class PersistScenarioRun
                 continue;
             }
 
-            // O timeout do teste chega depois do passo já ter fechado verde: corrige a linha dele, não empilha outra.
             $green = $event['status'] === 'failed'
                 ? $timeline->keys()->last(fn (int $key): bool => $timeline[$key]['title'] === $event['title'] && $timeline[$key]['status'] === 'success')
                 : null;
