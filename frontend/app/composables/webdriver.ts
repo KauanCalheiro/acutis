@@ -2,6 +2,8 @@ export interface RecorderEvent {
   event: string
   type?: string
   url?: string
+  /** O DOM ao redor do elemento no instante da ação, podado em 8KB pelo pill. */
+  html?: string | null
   label?: string | null
   value?: string | null
   sensitive?: boolean
