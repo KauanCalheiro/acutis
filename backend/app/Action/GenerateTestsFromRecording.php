@@ -10,6 +10,7 @@ use App\Data\V1\Project\EnvironmentVarData;
 use App\Data\V1\Recording\GeneratedTestsData;
 use App\Data\V1\Recording\RecordingData;
 use App\Data\V1\Recording\TestRunData;
+use App\Enums\EnvKey;
 use App\Support\Project;
 use App\Support\Recording;
 use App\Support\TestArtifact;
@@ -26,6 +27,7 @@ class GenerateTestsFromRecording
     public function handle(string $slug, RecordingData $recording): GeneratedTestsData
     {
         $variables = $this->declaredVariables($slug);
+        $baseUrl = $this->baseUrl($recording->baseUrl);
 
         $events = json_encode(
             Recording::make($recording->events)->redacted(),
@@ -39,7 +41,7 @@ class GenerateTestsFromRecording
         $domain = StructuredOutput::field($gherkinResponse, 'domain');
 
         $playwrightResponse = app(PlaywrightWriter::class)->prompt(
-            "URL base: {$recording->baseUrl}\n\nCenário Gherkin:\n{$gherkin}\n\nEventos gravados:\n{$events}"
+            "{$baseUrl}\n\nCenário Gherkin:\n{$gherkin}\n\nEventos gravados:\n{$events}"
                 .$this->noticeablePauses($recording->events)
                 .$variables,
         );
@@ -49,7 +51,7 @@ class GenerateTestsFromRecording
         $testRun = null;
 
         if ($recording->executionUrl !== null) {
-            [$playwright, $testRun, $envVars] = $this->runUntilItPasses($recording, $gherkin, $events, $playwright, $envVars, $variables);
+            [$playwright, $testRun, $envVars] = $this->runUntilItPasses($recording, $gherkin, $events, $playwright, $envVars, $variables, $baseUrl);
         }
 
         $tag = $this->readWriteTag($recording->events);
@@ -135,6 +137,7 @@ class GenerateTestsFromRecording
         string $playwright,
         array $envVars,
         string $variables,
+        string $baseUrl,
     ): array {
         $attempts = 0;
 
@@ -144,6 +147,7 @@ class GenerateTestsFromRecording
             $result = app(RunPlaywrightTest::class)->run(
                 str_replace($recording->baseUrl, $recording->executionUrl, $playwright),
                 $recording->executionUrl,
+                [EnvKey::URL->value => $recording->executionUrl],
             );
 
             if ($result->passed) {
@@ -160,7 +164,7 @@ class GenerateTestsFromRecording
             }
 
             $retryResponse = app(PlaywrightWriter::class)->prompt(
-                "O teste Playwright abaixo falhou ao executar. Corrija o spec mantendo a URL base {$recording->baseUrl}."
+                "O teste Playwright abaixo falhou ao executar. Corrija o spec mantendo a URL base.\n{$baseUrl}"
                     ."\n\nErro da execução:\n{$result->output}"
                     ."\n\nSpec com falha:\n{$playwright}"
                     ."\n\nCenário Gherkin:\n{$gherkin}"
@@ -170,6 +174,17 @@ class GenerateTestsFromRecording
             $playwright = StructuredOutput::field($retryResponse, 'playwright');
             $envVars = StructuredOutput::fieldArray($retryResponse, 'envVars');
         }
+    }
+
+    /**
+     * A URL base vai para o prompt junto do nome da variável que a guarda. Sem esse nome o modelo
+     * cunhava um a partir do rótulo, e o spec saía apontando para process.env.BASE_URL.
+     */
+    private function baseUrl(string $baseUrl): string
+    {
+        $key = EnvKey::URL->value;
+
+        return "URL base (é a variável {$key}; no spec use process.env.{$key}, não o literal): {$baseUrl}";
     }
 
     /** As variáveis do ambiente ativo; a escondida entra só pelo nome, nunca com o valor. */

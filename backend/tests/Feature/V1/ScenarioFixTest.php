@@ -106,6 +106,10 @@ it('fixes the auth setup with the same agent, reading its recorded events', func
         && str_contains($prompt->prompt, 'Matrícula'));
 });
 
+it('has the fix check the url by pattern, never by exact equality', function () {
+    expect(app(SpecFixer::class)->instructions())->toContain('toHaveURL(/');
+});
+
 it('returns 404 for the auth setup when the project has none', function () {
     postJson('/api/v1/projects/minha-loja/scenarios/auth/fix', [
         'step' => 'passo',
