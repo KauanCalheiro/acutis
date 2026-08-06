@@ -97,6 +97,25 @@ describe('stream reporter', () => {
         expect(steps.at(-1)!.error).toBe("locator('#v-0') resolved to hidden")
     })
 
+    it('reopens the last finished step when the timeout hit it without marking it', () => {
+        const emitted = record((reporter) => {
+            reporter.onTestBegin(test)
+            reporter.onStepBegin(test, null, step('Abrir a home'))
+            reporter.onStepEnd(test, null, step('Abrir a home'))
+            reporter.onStepBegin(test, null, step('Clicar em Entrar'))
+            reporter.onStepEnd(test, null, step('Clicar em Entrar'))
+            reporter.onTestEnd(test, timedOut())
+        })
+
+        const steps = emitted.filter(event => event.event === 'step')
+
+        expect(steps.at(-1)).toMatchObject({
+            title: 'Clicar em Entrar',
+            status: 'failed',
+            error: 'Test timeout of 30000ms exceeded.',
+        })
+    })
+
     it('keeps a passing test free of failed steps', () => {
         const emitted = record((reporter) => {
             reporter.onTestBegin(test)

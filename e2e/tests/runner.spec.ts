@@ -337,7 +337,7 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         })
     })
 
-    test('kills a test that runs past the ten second timeout', async ({ request }) => {
+    test('kills a test that runs past the thirty second timeout', async ({ request }) => {
         test.setTimeout(120_000)
 
         const { mkdtemp, mkdir, writeFile } = await import('node:fs/promises')
@@ -349,7 +349,7 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         await writeFile(join(dir, 'playwright.config.ts'),
             "import { defineConfig } from '@playwright/test'\nexport default defineConfig({ testDir: './tests' })\n")
         await writeFile(join(dir, 'tests', 'lento.spec.ts'),
-            "import { test } from '@playwright/test'\ntest('demora demais', async () => { await new Promise((resolve) => setTimeout(resolve, 30_000)) })\n")
+            "import { test } from '@playwright/test'\ntest('demora demais', async () => { await new Promise((resolve) => setTimeout(resolve, 90_000)) })\n")
 
         const startedAt = Date.now()
         const res = await request.post(`${RUNNER_URL}/runner/project/stream`, { data: { path: dir }, timeout: 90_000 })
@@ -360,8 +360,8 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         const events = (await res.text()).split('\n').filter(Boolean).map((line) => JSON.parse(line))
         const failure = events.find((e) => e.event === 'test' && e.status === 'failed')
 
-        expect(String(failure?.error)).toContain('Test timeout of 10000ms exceeded')
-        expect(elapsed, 'o teste lento não pode chegar ao fim dos 30s').toBeLessThan(25_000)
+        expect(String(failure?.error)).toContain('Test timeout of 30000ms exceeded')
+        expect(elapsed, 'o teste lento não pode chegar ao fim dos 90s').toBeLessThan(60_000)
     })
 
     test('streams test.step progress alongside the test events', async ({ request }) => {

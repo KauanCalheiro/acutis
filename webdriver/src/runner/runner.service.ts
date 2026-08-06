@@ -24,9 +24,15 @@ export interface ProjectRunOptions {
     env?: Record<string, string>
 }
 
-const RUN_TIMEOUT_MS = 60_000
+const RUN_TIMEOUT_MS = 120_000
 const PROJECT_RUN_TIMEOUT_MS = 300_000
-const TEST_TIMEOUT = ['--timeout', '10000']
+/**
+ * Rodamos com slowMo, vídeo e trace ligados pra execução ser assistível, então o relógio do teste
+ * corre bem mais devagar que o do Playwright puro: um cenário de cinco passos passa de 10s só com a
+ * lentidão que nós mesmos injetamos. O kill do processo fica sempre acima disto, senão a execução
+ * morre antes do reporter contar o que houve.
+ */
+const TEST_TIMEOUT = ['--timeout', '30000']
 const STORAGE_STATE_FILE = 'storage-state.json'
 const STREAM_MARKER = '@@ACUTIS_RUN@@'
 

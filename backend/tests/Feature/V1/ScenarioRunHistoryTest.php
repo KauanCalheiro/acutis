@@ -67,6 +67,21 @@ function abortedRun(): string
     ]);
 }
 
+/** O passo fecha verde e o timeout do teste o corrige depois, com o mesmo título. */
+function correctedRun(): string
+{
+    return runEvents([
+        ['event' => 'run:started', 'total' => 1, 'steps' => ['Acessar a home', 'Clicar em Entrar']],
+        ['event' => 'step', 'testId' => 'a1', 'title' => 'Acessar a home', 'status' => 'pending'],
+        ['event' => 'step', 'testId' => 'a1', 'title' => 'Acessar a home', 'status' => 'success', 'durationMs' => 120, 'error' => null],
+        ['event' => 'step', 'testId' => 'a1', 'title' => 'Clicar em Entrar', 'status' => 'pending'],
+        ['event' => 'step', 'testId' => 'a1', 'title' => 'Clicar em Entrar', 'status' => 'success', 'durationMs' => 6055, 'error' => null],
+        ['event' => 'step', 'testId' => 'a1', 'title' => 'Clicar em Entrar', 'status' => 'failed', 'durationMs' => 0, 'error' => 'Test timeout of 10000ms exceeded.'],
+        ['event' => 'test', 'id' => 'a1', 'title' => 'Entrar', 'status' => 'failed', 'durationMs' => 10100, 'error' => 'Test timeout of 10000ms exceeded.', 'videoPath' => null],
+        ['event' => 'run:finished', 'status' => 'failed', 'passed' => false],
+    ]);
+}
+
 function streamScenario(string ...$bodies): void
 {
     $sequence = Http::sequence();
@@ -150,6 +165,25 @@ it('keeps the steps that never ran after the failure', function () {
             'status' => 'waiting',
             'duration_ms' => 0,
             'error' => null,
+        ],
+    ]);
+});
+
+it('corrects a step that closed green before the test timeout hit it', function () {
+    streamScenario(correctedRun());
+
+    expect(savedRuns($this->history)[0]['steps'])->toBe([
+        [
+            'title' => 'Acessar a home',
+            'status' => 'success',
+            'duration_ms' => 120,
+            'error' => null,
+        ],
+        [
+            'title' => 'Clicar em Entrar',
+            'status' => 'failed',
+            'duration_ms' => 0,
+            'error' => 'Test timeout of 10000ms exceeded.',
         ],
     ]);
 });
