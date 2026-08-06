@@ -56,6 +56,48 @@ it('flags an auth setup that imports the plain test helper instead of the setup 
     expect(violated(checkAuthSetup($spec)))->toContain('setup-import');
 });
 
+it('flags a setup that saves the session and returns before logging in', function () {
+    $spec = str_replace(
+        "    await setup.step('abrir a tela de login', async () => {",
+        <<<'TS'
+            if (!process.env.AUTH_USER) {
+                await page.context().storageState({ path: 'storage-state.json' })
+
+                return
+            }
+
+            await setup.step('abrir a tela de login', async () => {
+        TS,
+        cleanAuthSetup(),
+    );
+
+    expect(violated(checkAuthSetup($spec)))->toContain('login-contornado');
+});
+
+it('flags any early return in the setup, since it means the login did not happen', function () {
+    $spec = str_replace(
+        "    await setup.step('abrir a tela de login', async () => {",
+        "    if (process.env.CI) return\n\n    await setup.step('abrir a tela de login', async () => {",
+        cleanAuthSetup(),
+    );
+
+    expect(violated(checkAuthSetup($spec)))->toContain('login-contornado');
+});
+
+it('flags a return however deep it sits, since a setup that logs in needs none', function () {
+    $spec = str_replace(
+        '        await page.goto(`${base}/login`)',
+        "        await page.goto(`\${base}/login`)\n            if (!process.env.AUTH_USER) return",
+        cleanAuthSetup(),
+    );
+
+    expect(violated(checkAuthSetup($spec)))->toContain('login-contornado');
+});
+
+it('finds nothing to flag in a setup that simply runs to the end', function () {
+    expect(violated(checkAuthSetup(cleanAuthSetup())))->not->toContain('login-contornado');
+});
+
 it('carries every shared spec rule, so the auth setup is held to the same bar', function () {
     $spec = str_replace(
         'await page.goto(`${base}/login`)',

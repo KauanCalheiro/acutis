@@ -41,6 +41,19 @@ it('never lists the dependency folder, which would bury the listing', function (
     expect(listFiles())->not->toContain('node_modules');
 });
 
+it('never lists what holds a secret, so the agent is not even tempted', function () {
+    File::ensureDirectoryExists($this->project.'/environments');
+    File::put($this->project.'/environments/ambiente.json', '{}');
+    File::put($this->project.'/.env', 'AUTH_PASSWORD=segredo123');
+    File::put($this->project.'/storage-state.json', '{}');
+
+    $listing = listFiles();
+
+    expect($listing)->not->toContain('environments/')
+        ->and($listing)->not->toContain('.env')
+        ->and($listing)->not->toContain('storage-state.json');
+});
+
 it('never lists the git folder', function () {
     expect(listFiles())->not->toContain('.git/config');
 });

@@ -54,6 +54,31 @@ it('refuses a path that climbs out and back in through another directory', funct
         ->not->toContain('nao pode sair daqui');
 });
 
+it('refuses the environment file, which holds the credentials in plain text', function () {
+    File::ensureDirectoryExists($this->project.'/environments');
+    File::put($this->project.'/environments/ambiente.json', '{"vars":[{"key":"AUTH_PASSWORD","value":"segredo123"}]}');
+
+    expect(readInProject('environments/ambiente.json'))->not->toContain('segredo123');
+});
+
+it('refuses the dotenv, which holds the credentials in plain text', function () {
+    File::put($this->project.'/.env', "AUTH_PASSWORD=segredo123\n");
+
+    expect(readInProject('.env'))->not->toContain('segredo123');
+});
+
+it('refuses the saved session, which is a credential in another shape', function () {
+    File::put($this->project.'/storage-state.json', '{"cookies":[{"name":"sessao","value":"tok-abc"}]}');
+
+    expect(readInProject('storage-state.json'))->not->toContain('tok-abc');
+});
+
+it('says why the secret file was refused, so the agent stops trying', function () {
+    File::put($this->project.'/.env', "AUTH_PASSWORD=segredo123\n");
+
+    expect(readInProject('.env'))->toContain('segredo');
+});
+
 it('says the file is outside the project instead of throwing, so the agent can correct itself', function () {
     expect(readInProject($this->outside.'/segredo.txt'))->toContain('fora do projeto');
 });

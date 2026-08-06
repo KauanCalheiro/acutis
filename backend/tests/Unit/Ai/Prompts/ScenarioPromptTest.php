@@ -38,6 +38,18 @@ it('carries the base url next to the name of the variable that holds it', functi
     expect(specPayload()['baseUrl'])->toBe(['value' => SPEC_BASE_URL, 'env' => 'URL']);
 });
 
+it('says whether the scenario runs with the project session or without it', function () {
+    expect(specPayload()['publico'])->toBeFalse();
+});
+
+it('marks the scenario as public when it was recorded without a session', function () {
+    $publico = new RecordingData(baseUrl: SPEC_BASE_URL, events: scenarioEvents(), publico: true);
+
+    $payload = json_decode(ScenarioPrompt::spec($publico, 'Funcionalidade: x', specEnvironments()), true);
+
+    expect($payload['publico'])->toBeTrue();
+});
+
 it('carries the gherkin the spec has to implement', function () {
     expect(specPayload()['gherkin'])->toContain('Funcionalidade: Consulta de produtos');
 });
