@@ -5,11 +5,28 @@
 - [ ] Colocar config global ou de projeto para usar a IA, escolher seu provedor e chave de API, e modelo, vamos comecar consi
 - [ ] Aposentar as modais de auth e reaproveitar a tela de cenário, vamos comecar considerando um modelo automatico mas vamos reescrever depois, podemos injetact via config o middleware
 - [ ] Busca e paginação nas execuções do cenário
-- [ ] Fluxo de fix deve rodar algumas vezes com a intencao de passar... (max_retries de 3)
-- [ ] Estamos passando muita coisa direta para o modelo... precisamos passar de uma forma mais estruturada
-- [ ] Vamos criar um agente para cada coisa AuthWritter, AuthFixer, AuthRevisor etc... e dar tool etc.. para garantir que os modelos vão conseguir acertar e melhorar a experiencia do usuario
+- [x] Fluxo de fix deve rodar algumas vezes com a intencao de passar... (max_retries de 3)
+- [x] Estamos passando muita coisa direta para o modelo... precisamos passar de uma forma mais estruturada
+- [x] Vamos criar um agente para cada coisa AuthWritter, AuthFixer, AuthRevisor etc... e dar tool etc.. para garantir que os modelos vão conseguir acertar e melhorar a experiencia do usuario
+- [ ] Mostrar os `warnings` da geração na interface
 - [x] Guardar as execuções de um cenário num arquivo só, não um por execução
 - [x] Documentação de execução em `docs/`: [`RUN.md`](docs/RUN.md) indexando [`LOCAL.md`](docs/LOCAL.md), [`DOCKER.md`](docs/DOCKER.md) e [`TESTS.md`](docs/TESTS.md)
+
+## Mostrar os `warnings` da geração na interface
+
+A geração devolve `warnings` em `TestDraftResource` e `GeneratedAuthSetupResource`, e **nenhuma tela lê**. É por ali que sai o que o Fixer não resolve — variável declarada sem valor, que só o usuário preenche — e o que o loop tentou até o limite sem conseguir. Hoje a informação existe na resposta HTTP e morre ali.
+
+### Pontos a resolver
+
+- **Onde aparece.** No rascunho, junto do spec gerado; e na gravação de auth, junto do `credentialsNeeded`, que já tem tratamento parecido.
+- **Peso visual.** Não é erro (a geração terminou e entregou arquivo), é ressalva. Provavelmente o mesmo tom do aviso de credencial faltando.
+- **Ação.** Aviso de variável vazia deveria levar para a tela de ambiente, que é onde ele se resolve.
+
+## Buracos menores da refatoração dos agentes
+
+- **`html` não declarado no `RecorderEvent`** (`frontend/app/composables/webdriver.ts`). O pill passou a capturar o DOM ao redor de cada elemento e o campo viaja pelo WS, pela memória do browser e pelo POST sem estar no tipo. Não quebra o typecheck porque os campos são opcionais, mas é contrato implícito, e cada evento carrega até 8KB.
+- **Comentários inline pendentes**: 16 blocos no `webdriver/` (`recorder.service.ts`, `runner.controller.ts`, `stream-reporter.cjs`, `env.ts`) e 19 no `frontend/`. São explicações de "por quê" ancoradas em linha; empurrar quatro delas para o docblock de um mesmo método vira depósito, então pedem um passe pensado.
+- **Suíte E2E completa nunca rodou** depois da refatoração — só o describe `spec runner` (16/16). Os domínios de draft, auth e fix têm E2E que não foi executado.
 
 ## Aposentar as modais de auth e reaproveitar a tela de cenário
 
