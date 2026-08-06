@@ -17,4 +17,5 @@ Instruções persistentes ficam em `./.claude/memory/`. Antes de qualquer ação
 | [comments.md](comments.md) | feedback | escrever/revisar qualquer código — comentário só descreve o que a função faz, nunca a deliberação |
 | [branches.md](branches.md) | feedback | depois de mergear PR, ou ao pedir limpeza — apagar branch órfã local/remota |
 | [tdd.md](tdd.md) | feedback | qualquer feature/bugfix — red/green/refactor, teste antes do código |
+| [trace.md](trace.md) | feedback | antes de editar qualquer arquivo — traçar o fluxo real até ele, nunca escolher por achismo |
 | [structure.md](structure.md) | índice | procurar onde fica arquivo/pasta no monorepo (→ backend, frontend, webdriver, e2e) |

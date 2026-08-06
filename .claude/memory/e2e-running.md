@@ -22,9 +22,11 @@ pnpm exec playwright test --grep "project settings" # só um describe
 
 ## O build está no `pretest`, não no `playwright test`
 
-`pnpm test` dispara `pretest`: seed do banco (`scripts/setup.sh`) + `build:ui` e `build` do webdriver. `pnpm exec playwright test` **pula tudo isso**.
+`pnpm test` dispara `pretest`: seed do banco e **`pnpm build` do frontend** (`scripts/setup.sh`) + `build:ui` e `build` do webdriver. `pnpm exec playwright test` **pula tudo isso** — e o `webServer` do Playwright é `pnpm preview`, que serve o `.output` da última build.
 
-**How to apply:** editou `webdriver/src/**`? Rode `pnpm test` uma vez antes de escopar com `pnpm exec` — senão os testes rodam contra um bundle velho e passam/falham por motivo errado. Mesma armadilha do `pnpm dev` não ser watch mode (ver [execution](execution.md)).
+**How to apply:** editou `frontend/app/**` ou `webdriver/src/**`? Rodar o build daquele serviço (`pnpm --dir ../frontend build`) antes de escopar com `pnpm exec` — senão os testes rodam contra um bundle velho e passam/falham por motivo errado. Mesma armadilha do `pnpm dev` não ser watch mode (ver [execution](execution.md)).
+
+**Why:** quatro testes de mudanças no frontend falharam em bloco, todos com "element(s) not found", como se o código não tivesse sido escrito. Estava escrito; o `preview` servia a build anterior. Falha em bloco logo depois de mexer no frontend = build velha, não regressão.
 
 ## Portas: E2E e dev convivem
 

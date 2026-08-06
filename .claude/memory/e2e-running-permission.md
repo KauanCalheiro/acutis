@@ -1,12 +1,20 @@
 ---
 name: e2e-running-permission
-description: Rodar a suíte E2E só quando o usuário pedir; backend, lint e typecheck podem rodar à vontade
+description: Rodar sempre o teste E2E que foi mexido, nunca a suíte inteira sem o usuário pedir
 metadata:
   type: feedback
 ---
 
-**Não rodar E2E por conta própria.** `pnpm exec playwright test` só quando o usuário pedir explicitamente.
+**Escreveu ou alterou um teste E2E? Rodar aquele teste, sempre**, antes de dizer que a mudança está pronta — escopado no que foi mexido, com `--grep` no título do teste ou no `describe`:
 
-**Why:** cada rodada leva minutos, sobe três serviços e ocupa o terminal. Quem decide quando pagar esse custo é o usuário.
+```sh
+cd e2e
+pnpm exec playwright test --grep "creates a project from the template"
+pnpm exec playwright test tests/home.spec.ts
+```
 
-**How to apply:** ao terminar uma mudança que toca o frontend, rodar `pnpm lint`, `pnpm typecheck` e a suíte do backend (que são rápidas), escrever ou ajustar o teste E2E que a mudança pede e **parar aí**, dizendo que o E2E está escrito e esperando ordem para rodar. Ver [e2e-running](e2e-running.md) para os comandos.
+**A suíte inteira (`pnpm test`, ou `playwright test` sem escopo) só quando o usuário pedir.**
+
+**Why:** entregar teste escrito e não executado é entregar suposição — o usuário perguntou "eles foram executados?" depois de três mudanças em que só o lint e o typecheck tinham rodado. Rodar o teste específico custa segundos; é a suíte inteira que custa minutos e ocupa o terminal, e é só essa que o usuário decide quando pagar.
+
+**How to apply:** ao terminar uma mudança que toca o frontend, rodar `pnpm lint`, `pnpm typecheck`, a suíte do backend e o teste E2E específico da mudança. Reportar o resultado real da execução; se o teste falhar, corrigir antes de entregar. Ver [e2e-running](e2e-running.md) para as armadilhas do `--grep` e do build no `pretest`.
