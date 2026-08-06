@@ -92,10 +92,20 @@ const TESTS_DIR = 'tests'
 
 @Injectable()
 export class RunnerService {
+    /**
+     * Roda um spec avulso. O import é reapontado para o wrapper porque é ele que captura a página
+     * quando a execução termina vermelha; sem isso o spec importa o Playwright direto e o HTML da
+     * falha nunca é escrito.
+     */
     async run(spec: string, options: RunOptions = {}): Promise<RunResult> {
         const dir = join(RUNNER_DIR, randomUUID())
         await mkdir(dir, { recursive: true })
-        await writeFile(join(dir, 'generated.spec.ts'), spec)
+
+        await writeFile(join(dir, WRAPPER_FILE), WRAPPER_SOURCE)
+        await writeFile(
+            join(dir, 'generated.spec.ts'),
+            spec.replace(PLAYWRIGHT_IMPORT, '$1./acutis-run$2'),
+        )
 
         if (options.baseUrl) {
             await writeFile(join(dir, 'playwright.config.ts'), [
