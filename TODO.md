@@ -2,8 +2,11 @@
 
 - [x] Docker para desenvolvimento local com hot-reload dos arquivos (backend, frontend, webdriver) — `docker compose -f docker-compose.dev.yml up`
 - [x] Persistir as execuções de cenário e sincronizá-las pelo git
-- [ ] Identificar cenário flaky a partir do histórico de execuções
 - [ ] Aposentar as modais de auth e reaproveitar a tela de cenário
+- [ ] Busca e paginação nas execuções do cenário
+- [ ] Fluxo de fix deve rodar algumas vezes com a intencao de passar... (max_retries de 3)
+- [ ] Estamos passando muita coisa direta para o modelo... precisamos passar de uma forma mais estruturada
+- [ ] Vamos criar um agente para cada coisa AuthWritter, AuthFixer, AuthRevisor etc... e dar tool etc.. para garantir que os modelos vão conseguir acertar e melhorar a experiencia do usuario
 - [x] Guardar as execuções de um cenário num arquivo só, não um por execução
 - [x] Documentação de execução em `docs/`: [`RUN.md`](docs/RUN.md) indexando [`LOCAL.md`](docs/LOCAL.md), [`DOCKER.md`](docs/DOCKER.md) e [`TESTS.md`](docs/TESTS.md)
 
@@ -28,13 +31,12 @@ Cada execução era um arquivo em `runs/<cenário>/<timestamp>-<id>.json` e a pa
 - **Migração.** Nenhuma — as pastas antigas dos projetos existentes ficam ignoradas e podem ser apagadas à mão (`.acutis/*/runs/*/[0-9]*.json`).
 - **`last.webm`.** Segue arquivo solto ao lado do `history.ndjson`, sem mudança.
 
-## Identificar cenário flaky
+## Busca e paginação nas execuções
 
-Com o histórico em `runs/<cenário>/history.ndjson` cada execução guarda status, steps e o código que rodou. Um cenário que alterna sucesso e falha **sem o `playwright` mudar entre as execuções** é flaky — o teste é instável, não o sistema testado. Quando o código mudou junto, é regressão ou correção, não instabilidade.
+A seção Testes da tela de cenário mostra as execuções que a API devolve (`Runs::SHOWN = 6`) numa lista solta, sem filtro nem navegação — o arquivo já guarda 20 (`Runs::KEPT`), então metade do histórico não tem como ser vista pela interface.
 
 ### Pontos a resolver
 
-- **Critério.** Quantas execuções olhar (as 20 que a API já devolve?) e a partir de quantas alternâncias marcar como flaky. Uma falha isolada no meio de sucessos não é o mesmo que alternar a cada execução.
-- **Step culpado.** O step que falha nas execuções instáveis costuma ser sempre o mesmo — apontá-lo vale mais que marcar o cenário inteiro.
-- **Onde aparece.** Badge no card do cenário na listagem do projeto, ou na própria seção Testes da página do cenário.
-- **Ação.** Só sinalizar, ou oferecer a correção por IA que já existe (`SpecFixer`) alimentada com as execuções que falharam?
+- **Onde pagina.** No backend, com a API aceitando página/tamanho como os outros recursos, ou no frontend sobre o que já vem — o arquivo é pequeno e cabe inteiro numa resposta.
+- **O que a busca filtra.** Data, status, branch, autor, ou o texto do step que falhou. Filtrar por status e por step falho é o que serve pra caçar regressão.
+- **Relação com o limite.** Paginar além de 20 exige guardar mais, então esta decisão e o `Runs::KEPT` andam juntas.
