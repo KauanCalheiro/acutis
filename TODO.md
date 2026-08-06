@@ -5,7 +5,8 @@
 - [ ] Colocar config global ou de projeto para usar a IA, escolher seu provedor e chave de API, e modelo, vamos comecar consi
 - [ ] Aposentar as modais de auth e reaproveitar a tela de cenário, vamos comecar considerando um modelo automatico mas vamos reescrever depois, podemos injetact via config o middleware
 - [ ] Busca e paginação nas execuções do cenário
-- [x] Fluxo de fix deve rodar algumas vezes com a intencao de passar... (max_retries de 3)
+- [ ] Levantar o teto do salto Nuxt para Laravel, hoje no default do undici
+- [x] Fluxo de fix deve rodar algumas vezes com a intencao de passar... (`MAX_FIX_ATTEMPTS = 2`, ou seja até três passagens, nas três Actions que geram)
 - [x] Estamos passando muita coisa direta para o modelo... precisamos passar de uma forma mais estruturada
 - [x] Vamos criar um agente para cada coisa AuthWritter, AuthFixer, AuthRevisor etc... e dar tool etc.. para garantir que os modelos vão conseguir acertar e melhorar a experiencia do usuario
 - [x] Mostrar os `warnings` da geração na interface
@@ -30,7 +31,6 @@ Formato decidido com o usuário: a memória `frontend-feedback` manda retorno de
 
 - **`html` não declarado no `RecorderEvent`** (`frontend/app/composables/webdriver.ts`). O pill passou a capturar o DOM ao redor de cada elemento e o campo viaja pelo WS, pela memória do browser e pelo POST sem estar no tipo. Não quebra o typecheck porque os campos são opcionais, mas é contrato implícito, e cada evento carrega até 8KB.
 - **Comentários inline pendentes**: 15 linhas `//` no `webdriver/src` (fora dos `.spec.ts`) e 16 no `frontend/app`. São explicações de "por quê" ancoradas em linha; empurrar quatro delas para o docblock de um mesmo método vira depósito, então pedem um passe pensado.
-- ~~**Suíte E2E completa nunca rodou**~~ Rodou: `pnpm test` na raiz do `e2e/`, 118 passed em 2.1m, com todos os domínios incluídos.
 
 ## Aposentar as modais de auth e reaproveitar a tela de cenário
 
@@ -58,6 +58,16 @@ Cada execução era um arquivo em `runs/<cenário>/<timestamp>-<id>.json` e a pa
 - **Limite.** `Runs::KEPT = 20`; ao passar disso o arquivo é reescrito só com as 20 últimas. A API continua mostrando `Runs::SHOWN = 6`.
 - **Migração.** Nenhuma — as pastas antigas dos projetos existentes ficam ignoradas e podem ser apagadas à mão (`.acutis/*/runs/*/[0-9]*.json`).
 - **`last.webm`.** Segue arquivo solto ao lado do `history.ndjson`, sem mudança.
+
+## Teto do salto Nuxt para Laravel
+
+Os tetos de uma chamada de IA foram levantados: 500s no cliente HTTP do `laravel/ai` (`Limits::TIMEOUT`, por `#[Timeout]` nos nove agentes) e 600s de execução do PHP (`AppServiceProvider`). Sobrou um salto sem teto declarado: `frontend/server/utils/client.ts` cria o `ofetch` sem `timeout`, então vale o default do undici, tipicamente 300s de headers timeout.
+
+### Pontos a resolver
+
+- **Confirmar o número.** O default nunca foi medido aqui, só lido. Antes de mexer, provocar uma resposta lenta de propósito e ver onde ela morre.
+- **Onde mexe.** O `timeout` do ofetch usa `AbortSignal` e não substitui o `headersTimeout` do undici; subir aquele limite pede um dispatcher próprio.
+- **Se vale a pena.** A falha real que motivou os outros tetos levava 82s. Enquanto nenhuma geração passar de 300s, isto é teoria.
 
 ## Busca e paginação nas execuções
 
