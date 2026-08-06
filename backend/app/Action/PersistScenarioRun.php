@@ -76,9 +76,20 @@ class PersistScenarioRun
                 fn (array $step): bool => $step['title'] === $event['title'] && $step['status'] === 'waiting'
             );
 
-            $waiting === false
+            if ($waiting !== false) {
+                $timeline->put($waiting, $ran);
+
+                continue;
+            }
+
+            // O timeout do teste chega depois do passo já ter fechado verde: corrige a linha dele, não empilha outra.
+            $green = $event['status'] === 'failed'
+                ? $timeline->keys()->last(fn (int $key): bool => $timeline[$key]['title'] === $event['title'] && $timeline[$key]['status'] === 'success')
+                : null;
+
+            $green === null
                 ? $timeline->push($ran)
-                : $timeline->put($waiting, $ran);
+                : $timeline->put($green, $ran);
         }
 
         return $timeline->values()->all();

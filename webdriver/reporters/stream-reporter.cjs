@@ -44,6 +44,8 @@ function firstError(errors) {
 class StreamReporter {
     constructor() {
         this.openSteps = new Map()
+        this.lastStep = new Map()
+        this.failedSteps = new Set()
         this.authAsDependency = false
     }
 
@@ -92,6 +94,8 @@ class StreamReporter {
 
         this.closeStep(test.id, step.title)
 
+        step.error ? this.failedSteps.add(test.id) : this.lastStep.set(test.id, step.title)
+
         emit({
             event: 'step',
             testId: test.id,
@@ -109,12 +113,25 @@ class StreamReporter {
         if (index >= 0) open.splice(index, 1)
     }
 
+    /**
+     * O timeout do teste não vira erro de passo: o Playwright fecha o passo em que ele bateu sem
+     * `step.error` e anexa a mensagem ao teste. Sem reemitir, a timeline fica toda verde debaixo de
+     * uma execução vermelha, e ninguém descobre onde parou.
+     */
     failOpenSteps(test, error) {
-        for (const title of this.openSteps.get(test.id) ?? []) {
+        const open = this.openSteps.get(test.id) ?? []
+
+        for (const title of open) {
             emit({ event: 'step', testId: test.id, title, status: 'failed', durationMs: 0, error })
         }
 
         this.openSteps.delete(test.id)
+
+        if (open.length > 0 || this.failedSteps.has(test.id)) return
+
+        const last = this.lastStep.get(test.id)
+
+        if (last) emit({ event: 'step', testId: test.id, title: last, status: 'failed', durationMs: 0, error })
     }
 
     onTestEnd(test, result) {

@@ -68,7 +68,12 @@ export function useRunStream(slug: () => string) {
           return
         }
 
-        const index = steps.value.findLastIndex(step => step.title === data.title && step.status === 'running')
+        // O timeout do teste chega depois do passo já ter fechado verde: corrige a linha dele.
+        const running = steps.value.findLastIndex(step => step.title === data.title && step.status === 'running')
+        const index = running !== -1 || data.status !== 'failed'
+          ? running
+          : steps.value.findLastIndex(step => step.title === data.title && step.status === 'success')
+
         if (index !== -1) steps.value[index] = { title: data.title, status: data.status, error: data.error }
       }
 

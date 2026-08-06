@@ -405,6 +405,40 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         await expect(page.getByTestId('execucao-corrigir')).toBeVisible()
     })
 
+    test('turns a green step red when the timeout correction arrives for it', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.route('**/api/projects/alpha-store/run-stream*', async (route) => {
+            const events = [
+                { event: 'run:started', total: 1, steps: ['Abrir página de login', 'Entrar com usuário/código'] },
+                { event: 'test', id: 't1', title: 'login', status: 'pending' },
+                { event: 'step', testId: 't1', title: 'Abrir página de login', status: 'pending' },
+                { event: 'step', testId: 't1', title: 'Abrir página de login', status: 'success', durationMs: 100 },
+                { event: 'step', testId: 't1', title: 'Entrar com usuário/código', status: 'pending' },
+                { event: 'step', testId: 't1', title: 'Entrar com usuário/código', status: 'success', durationMs: 6055 },
+                { event: 'step', testId: 't1', title: 'Entrar com usuário/código', status: 'failed', durationMs: 0, error: 'Test timeout of 10000ms exceeded.' },
+                { event: 'test', id: 't1', title: 'login', status: 'failed', durationMs: 10100, error: 'Test timeout of 10000ms exceeded.', videoPath: null },
+                { event: 'run:finished', status: 'failed', passed: false },
+            ]
+            await route.fulfill({
+                status: 200,
+                contentType: 'text/event-stream',
+                body: events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join(''),
+            })
+        })
+
+        await page.getByTestId('cenario-testar').click()
+
+        await expect(page.getByTestId('execucao-status')).toContainText('Falha')
+
+        const steps = page.getByTestId('execucao-step')
+        await expect(steps, 'a correção corrige a linha, não empilha outra').toHaveCount(2)
+        await expect(steps.nth(1)).toHaveAttribute('data-status', 'failed')
+        await expect(steps.nth(1).getByTestId('execucao-step-erro')).toContainText('Test timeout of 10000ms exceeded.')
+        await expect(page.getByTestId('execucao-corrigir')).toBeVisible()
+    })
+
     test('reports failure even when no step was marked as failed', async ({ page }) => {
         await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
         await page.locator('[data-hydrated="true"]').waitFor()
