@@ -42,6 +42,15 @@ it('flags the base url host written literally in the spec', function () {
     expect(violated($violations))->toContain('host-literal');
 });
 
+it('flags a url built by hand for another host, which skips the redirect the system does', function () {
+    $violations = checkSpec(cleanSpec(<<<'TS'
+                const sso = `sso.${new URL(base).hostname}`
+                await page.goto(`https://${sso}/login`)
+    TS));
+
+    expect(violated($violations))->toContain('url-absoluta');
+});
+
 it('flags a url assertion made by exact string instead of pattern', function () {
     $violations = checkSpec(cleanSpec(<<<'TS'
                 await page.goto(`${base}/produtos`)
