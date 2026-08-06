@@ -34,7 +34,6 @@ export function useRunStream(slug: () => string) {
   const steps = ref<RunStep[]>([])
   const running = ref(false)
   const passed = ref(false)
-  const live = ref(false)
   const videoUrl = ref<string | null>(null)
   const testedAt = ref<string | null>(null)
   const output = ref<string | null>(null)
@@ -50,7 +49,6 @@ export function useRunStream(slug: () => string) {
   function start(spec: string, onFinish?: () => void) {
     reset()
     running.value = true
-    live.value = true
 
     const query = new URLSearchParams({ spec })
     const source = new EventSource(`/api/projects/${slug()}/run-stream?${query}`)
@@ -98,5 +96,5 @@ export function useRunStream(slug: () => string) {
 
   const failedStep = computed(() => steps.value.find(step => step.status === 'failed'))
 
-  return { steps, running, passed, live, videoUrl, testedAt, output, failedStep, start, reset }
+  return { steps, running, passed, videoUrl, testedAt, output, failedStep, start, reset }
 }

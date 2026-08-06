@@ -455,7 +455,6 @@ async function remove() {
     <ScenarioTestRunModal
       v-model:open="authRunOpen"
       :running="authRun.running.value"
-      :live="authRun.live.value"
       :passed="authRun.passed.value"
       :steps="authRun.steps.value"
       :video-url="authRun.videoUrl.value"
