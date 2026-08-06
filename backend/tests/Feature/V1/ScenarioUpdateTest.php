@@ -83,6 +83,42 @@ it('rejects renaming onto a scenario that already exists', function () {
     expect(File::exists($this->dir.'/tests/login.spec.ts'))->toBeTrue();
 });
 
+it('edits the auth setup without ever moving its files', function () {
+    File::ensureDirectoryExists($this->dir.'/tests');
+    File::ensureDirectoryExists($this->dir.'/features');
+    File::put($this->dir.'/tests/auth.setup.ts', "setup('entrar', async () => {})");
+    File::put($this->dir.'/features/auth.feature', 'Funcionalidade: Entrar');
+
+    patchJson('/api/v1/projects/minha-loja/scenarios/auth', updatePayload([
+        'title' => 'Entrar na plataforma',
+        'path' => 'entrar-na-plataforma',
+        'domain' => 'acesso',
+        'playwright' => "setup('entrar', async () => { await page.goto('/') })",
+        'tags' => [],
+    ]))
+        ->assertOk()
+        ->assertJsonPath('spec', 'tests/auth.setup.ts')
+        ->assertJsonPath('feature', 'features/auth.feature')
+        ->assertJsonPath('is_auth', true)
+        ->assertJsonPath('title', 'Entrar na plataforma');
+
+    expect(File::exists($this->dir.'/tests/auth.setup.ts'))->toBeTrue();
+    expect(File::exists($this->dir.'/tests/acesso/entrar-na-plataforma.spec.ts'))->toBeFalse();
+    expect(File::get($this->dir.'/tests/auth.setup.ts'))->toContain("await page.goto('/')");
+    expect(File::get($this->dir.'/features/auth.feature'))->toContain('Funcionalidade: Entrar na plataforma');
+});
+
+it('writes the auth feature on the first edit of a setup without one', function () {
+    File::ensureDirectoryExists($this->dir.'/tests');
+    File::put($this->dir.'/tests/auth.setup.ts', "setup('entrar', async () => {})");
+
+    patchJson('/api/v1/projects/minha-loja/scenarios/auth', updatePayload(['title' => 'Entrar', 'tags' => []]))
+        ->assertOk()
+        ->assertJsonPath('feature', 'features/auth.feature');
+
+    expect(File::get($this->dir.'/features/auth.feature'))->toContain('Funcionalidade: Entrar');
+});
+
 it('returns 404 for an unknown scenario', function () {
     File::ensureDirectoryExists($this->dir.'/tests');
 

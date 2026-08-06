@@ -137,3 +137,15 @@ export function useWebdriver() {
     stopRecording
   }
 }
+
+/** A origem em que a gravação começou, que é a URL base que o backend precisa para escrever o teste. */
+export function eventsBaseUrl(events: RecorderEvent[]): string | null {
+  const first = events.find(event => event.url)
+  if (!first?.url) return null
+
+  try {
+    return new URL(first.url).origin
+  } catch {
+    return null
+  }
+}

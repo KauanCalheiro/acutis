@@ -99,6 +99,53 @@ test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
     })
 })
 
+test.describe('auth scenario page', { tag: ['@read', '@scenario'] }, () => {
+    let stopBackend: () => Promise<void>
+    let tmpProjects: string
+
+    test.beforeAll(async () => {
+        tmpProjects = projectsCopy()
+
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
+    })
+
+    test.afterAll(async () => {
+        await stopBackend()
+        rmSync(tmpProjects, { recursive: true, force: true })
+    })
+
+    test('shows the configured login as a scenario of its own', async ({ page }) => {
+        await page.goto('/projects/beta-blog/scenarios/auth')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await expect(page.getByTestId('cenario-titulo')).toHaveText('Autenticação')
+        await expect(page.getByTestId('cenario-caminho')).toHaveText('tests/auth.setup.ts')
+
+        await page.getByTestId('cenario-tab-playwright').click()
+        await expect(page.getByTestId('cenario-playwright')).toHaveValue(/login gravado/)
+    })
+
+    test('offers recording again and testing, but never deleting', async ({ page }) => {
+        await page.goto('/projects/beta-blog/scenarios/auth')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await expect(page.getByTestId('auth-gravar')).toHaveText(/Gravar novamente/)
+        await expect(page.getByTestId('cenario-testar')).toBeVisible()
+        await expect(page.getByTestId('cenario-excluir')).toBeHidden()
+        await expect(page.getByTestId('cenario-sugestoes')).toBeHidden()
+    })
+
+    test('invites the recording when the project has no login yet', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/auth')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await expect(page.getByTestId('auth-intro')).toContainText('Vamos gravar o login de verdade')
+        await expect(page.getByTestId('auth-gravar-vazio')).toBeVisible()
+        await expect(page.getByTestId('cenario-testar')).toBeHidden()
+        await expect(page.getByTestId('cenario-editar')).toBeHidden()
+    })
+})
+
 test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
     let stopBackend: () => Promise<void>
     let tmpProjects: string
@@ -113,6 +160,7 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
     // cada um pra não depender da ordem de execução nem do que o teste anterior mudou
     test.beforeEach(() => {
         projectReset(tmpProjects, 'alpha-store')
+        projectReset(tmpProjects, 'beta-blog')
     })
 
     test.afterAll(async () => {
@@ -407,5 +455,25 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         for (const i of [0, 1, 2]) {
             await expect(steps.nth(i)).toHaveAttribute('data-status', 'waiting')
         }
+    })
+
+    test('edits the auth setup through the same modal, minus file, domain and tags', async ({ page }) => {
+        await page.goto('/projects/beta-blog/scenarios/auth')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('cenario-editar').click()
+
+        await expect(page.getByTestId('contexto-path'), 'o caminho do auth é fixo').toBeHidden()
+        await expect(page.getByTestId('contexto-dominio')).toBeHidden()
+        await expect(page.getByTestId('contexto-tags'), 'o auth roda como setup dos outros, não é um cenário marcado').toBeHidden()
+
+        await page.getByTestId('contexto-titulo').fill('Entrar no blog')
+        await page.getByTestId('contexto-cenario').fill('Funcionalidade: Entrar no blog')
+        await page.getByTestId('cenario-editar-salvar').click()
+
+        await expect(page).toHaveURL('/projects/beta-blog/scenarios/auth')
+        await expect(page.getByTestId('cenario-titulo')).toHaveText('Entrar no blog')
+        await expect(page.getByTestId('cenario-caminho')).toHaveText('tests/auth.setup.ts')
+        expect(existsSync(join(tmpProjects, 'beta-blog', 'features', 'auth.feature'))).toBe(true)
     })
 })

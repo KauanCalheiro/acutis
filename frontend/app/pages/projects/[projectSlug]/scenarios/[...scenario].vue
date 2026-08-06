@@ -11,7 +11,7 @@ onMounted(() => {
   hydrated.value = true
 })
 
-const { data: project } = await useFetch<ProjectDetail>(`/api/projects/${slug.value}`)
+const { data: project, refresh: refreshProject } = await useFetch<ProjectDetail>(`/api/projects/${slug.value}`)
 const { data: scenario, refresh: refreshScenario } = await useFetch<ScenarioDetail>(`/api/projects/${slug.value}/scenarios/${scenarioId.value}`)
 
 if (!project.value || !scenario.value) {
@@ -70,7 +70,7 @@ watch(suggestionsOpen, async (isOpen) => {
 })
 
 function scenarioIdFor(spec: string) {
-  return spec.replace(/^tests\//, '').replace(/\.spec\.ts$/, '')
+  return spec.replace(/^tests\//, '').replace(/\.(spec|setup)\.ts$/, '')
 }
 
 async function onUpdated(updated: ScenarioDetail) {
@@ -175,7 +175,12 @@ function runTest() {
   fix.value = null
   fixError.value = null
 
-  startRun(scenario.value!.spec, refreshScenario)
+  startRun(scenario.value!.spec, async () => {
+    await refreshScenario()
+
+    // É a execução do login que decide o status de autenticação do projeto.
+    if (isAuth.value) await refreshProject()
+  })
 }
 
 const tab = ref('eventos')
@@ -184,6 +189,72 @@ const tabs: TabsItem[] = [
   { label: 'Gherkin', value: 'gherkin' },
   { label: 'Playwright', value: 'playwright' }
 ]
+
+const isAuth = computed(() => scenario.value!.is_auth)
+
+/** Sem login gravado a tela não tem cenário nenhum pra mostrar: ela é o convite pra gravar. */
+const written = computed(() => !isAuth.value || scenario.value!.playwright.trim().length > 0)
+
+const { state: webdriver, startRecording, stopRecording } = useWebdriver()
+const credentialsOpen = ref(false)
+const writingAuth = ref(false)
+const authError = ref<string | null>(null)
+
+const AUTH_PHRASES = [
+  'Analisando os eventos gravados',
+  'Identificando os campos de usuário e senha',
+  'Escrevendo o fluxo de autenticação'
+]
+
+/** Gravar o login abre no sistema sem sessão, porque é justamente o login que vamos capturar. */
+function recordLogin() {
+  authError.value = null
+  startRecording('auth', { url: project.value!.base_url ?? undefined })
+}
+
+watch(() => webdriver.value.videoSessionId, async (sessionId) => {
+  if (!sessionId || !isAuth.value) return
+
+  const baseUrl = eventsBaseUrl(webdriver.value.events)
+
+  if (!baseUrl) {
+    authError.value = 'A gravação não registrou nenhuma página. Tente gravar novamente.'
+    return
+  }
+
+  writingAuth.value = true
+
+  try {
+    const response = await $fetch<{ authSetup: string, credentialsNeeded: boolean }>(`/api/projects/${slug.value}/auth/record`, {
+      method: 'POST',
+      body: {
+        baseUrl,
+        events: webdriver.value.events.map(event => ({
+          type: event.type,
+          timestamp: event.timestamp,
+          url: event.url ?? null,
+          selectors: event.selectors ?? null,
+          label: event.label ?? null,
+          value: event.value ?? null,
+          inputType: event.inputType ?? null
+        }))
+      }
+    })
+
+    await refreshScenario()
+
+    if (response.credentialsNeeded) {
+      credentialsOpen.value = true
+      return
+    }
+
+    runTest()
+  } catch {
+    authError.value = 'Não foi possível gerar a autenticação a partir da gravação. Tente novamente.'
+  } finally {
+    writingAuth.value = false
+  }
+})
 </script>
 
 <template>
@@ -224,6 +295,7 @@ const tabs: TabsItem[] = [
 
       <div class="flex gap-2 shrink-0">
         <BaseButtonIcon
+          v-if="!isAuth"
           icon="i-ic-round-delete"
           label="Excluir"
           color="error"
@@ -232,6 +304,7 @@ const tabs: TabsItem[] = [
           @click="removeOpen = true"
         />
         <BaseButtonIcon
+          v-if="written"
           icon="i-ic-round-edit"
           label="Editar"
           color="neutral"
@@ -240,6 +313,7 @@ const tabs: TabsItem[] = [
           @click="editOpen = true"
         />
         <UButton
+          v-if="!isAuth"
           label="Ver sugestões"
           trailing-icon="i-ic-round-auto-awesome"
           color="neutral"
@@ -248,6 +322,27 @@ const tabs: TabsItem[] = [
           @click="suggestionsOpen = true"
         />
         <UButton
+          v-if="isAuth && webdriver.recording"
+          label="Parar gravação"
+          trailing-icon="i-ic-round-stop"
+          color="error"
+          class="animate-pulse"
+          data-testid="cenario-parar"
+          @click="stopRecording"
+        />
+        <UButton
+          v-else-if="isAuth && written"
+          label="Gravar novamente"
+          trailing-icon="i-ic-round-fiber-manual-record"
+          color="neutral"
+          variant="soft"
+          :disabled="!webdriver.connected"
+          :loading="writingAuth"
+          data-testid="auth-gravar"
+          @click="recordLogin"
+        />
+        <UButton
+          v-if="written"
           label="Testar"
           trailing-icon="i-ic-round-play-arrow"
           :loading="running"
@@ -269,11 +364,58 @@ const tabs: TabsItem[] = [
         :label="tag"
       />
     </div>
-    <p class="text-xs text-dimmed mt-2">
+    <p
+      v-if="written"
+      class="text-xs text-dimmed mt-2"
+    >
       Última modificação: {{ updatedAt }}
     </p>
 
+    <div
+      v-if="authError || webdriver.error"
+      class="mt-6 flex flex-col gap-3"
+    >
+      <UAlert
+        color="error"
+        variant="soft"
+        data-testid="webdriver-erro"
+        :description="authError ?? webdriver.error!"
+      />
+      <WebdriverSetup v-if="webdriver.error?.includes('Chrome')" />
+    </div>
+
+    <div
+      v-if="!written"
+      class="mt-8 flex flex-col items-center gap-3 py-10 text-center"
+      data-testid="auth-intro"
+    >
+      <div class="flex size-12 items-center justify-center rounded-lg bg-elevated">
+        <UIcon
+          name="i-ic-round-lock"
+          class="size-7 text-dimmed"
+        />
+      </div>
+      <p class="font-semibold">
+        Autenticação ainda não gravada
+      </p>
+      <p class="max-w-md text-sm text-muted">
+        Vamos gravar o login de verdade: clique em "Gravar login" e entre normalmente na aba que abrir. A IA transforma essa gravação num teste de autenticação, sem adivinhar seletor e sem você digitar sua senha em formulário nenhum.
+      </p>
+      <p class="max-w-md text-xs text-dimmed">
+        A senha digitada na gravação fica salva localmente no <code>.env</code> do projeto, nunca no script gerado nem versionada. Assim que o teste estiver escrito, ele é executado para confirmar que o login funciona.
+      </p>
+      <UButton
+        label="Gravar login"
+        trailing-icon="i-ic-round-fiber-manual-record"
+        class="mt-2"
+        :disabled="!webdriver.connected"
+        data-testid="auth-gravar-vazio"
+        @click="recordLogin"
+      />
+    </div>
+
     <UTabs
+      v-if="written"
       v-model="tab"
       :items="tabs"
       :content="false"
@@ -284,7 +426,10 @@ const tabs: TabsItem[] = [
       </template>
     </UTabs>
 
-    <div class="mt-4">
+    <div
+      v-if="written"
+      class="mt-4"
+    >
       <template v-if="tab === 'eventos'">
         <BaseEmpty
           v-if="scenario!.events.length === 0"
@@ -336,6 +481,7 @@ const tabs: TabsItem[] = [
     </div>
 
     <ScenarioTestRunHistory
+      v-if="written"
       :runs="scenario!.runs"
       @open="openRun"
     />
@@ -376,12 +522,32 @@ const tabs: TabsItem[] = [
       :steps="steps"
       :video-url="videoUrl"
       :project-name="project!.name"
-      :scenario-name="scenario!.title"
+      :kind="isAuth ? 'autenticacao' : 'cenario'"
+      :scenario-name="isAuth ? scenario!.spec : scenario!.title"
       :branch="project!.branch"
       :tested-at="testedAt"
       :playwright="executedPlaywright"
       :output="runOutput"
       @fix="requestFix"
+    />
+
+    <BaseModal
+      v-model:open="writingAuth"
+      :dismissable="false"
+      loading
+    >
+      <template #body>
+        <BaseLoadingPhrases
+          :phrases="AUTH_PHRASES"
+          data-testid="auth-carregando"
+        />
+      </template>
+    </BaseModal>
+
+    <ProjectAuthCredentials
+      v-model:open="credentialsOpen"
+      :slug="slug"
+      @saved="runTest"
     />
 
     <ScenarioFixModal

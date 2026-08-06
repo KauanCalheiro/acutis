@@ -22,5 +22,6 @@ class ScenarioShowData extends Data
         public array $events,
         public string $updatedAt,
         public array $runs,
+        public bool $isAuth = false,
     ) {}
 }

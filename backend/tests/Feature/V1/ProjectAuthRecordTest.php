@@ -1,6 +1,7 @@
 <?php
 
 use App\Ai\Agents\AuthRecordingWriter;
+use App\Ai\Agents\GherkinWriter;
 use App\Enums\EnvKey;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
@@ -11,6 +12,8 @@ use function Pest\Laravel\postJson;
 beforeEach(function () {
     $this->projectsPath = sys_get_temp_dir().'/acutis-test-'.uniqid();
     config()->set('acutis.projects.path', $this->projectsPath);
+
+    GherkinWriter::fake([['gherkin' => "@write\nFuncionalidade: Entrar no sistema", 'domain' => 'login']]);
 });
 
 afterEach(function () {
@@ -243,6 +246,41 @@ it('persists the recorded events so the fixer can read them later, with the pass
         ->and($events[1]['value'])->toBe('user1');
 });
 
+it('writes the gherkin of the login next to the setup', function () {
+    AuthRecordingWriter::fake();
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    expect(File::get($this->projectsPath."/{$slug}/features/auth.feature"))
+        ->toContain('Funcionalidade: Entrar no sistema');
+});
+
+it('keeps the auth feature in its fixed path, whatever domain the writer suggests', function () {
+    AuthRecordingWriter::fake();
+    GherkinWriter::fake([['gherkin' => 'Funcionalidade: Entrar', 'domain' => 'acesso-restrito']]);
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    $dir = $this->projectsPath."/{$slug}";
+
+    expect(File::exists($dir.'/features/auth.feature'))->toBeTrue()
+        ->and(File::exists($dir.'/features/acesso-restrito/auth.feature'))->toBeFalse();
+});
+
+it('shows the gherkin writer the same redacted events, never the real password', function () {
+    AuthRecordingWriter::fake();
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    GherkinWriter::assertPrompted(
+        fn ($prompt) => str_contains($prompt->prompt, '••••')
+            && ! str_contains($prompt->prompt, 'topsecret123')
+    );
+});
+
 it('returns 404 for a project that does not exist', function () {
     AuthRecordingWriter::fake();
 
@@ -270,3 +308,5 @@ it('leaves a base url the user configured untouched', function () {
         ->toContain(EnvKey::URL->value.'=https://escolhida-pelo-usuario.test')
         ->not->toContain('sistema.test/login');
 });
+
+

@@ -5,6 +5,7 @@ namespace App\Action;
 use App\Data\V1\Project\ScenarioShowData;
 use App\Data\V1\Project\UpdateScenarioData;
 use App\Support\Project;
+use App\Support\Scenario;
 use App\Support\TestArtifact;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -19,12 +20,23 @@ class UpdateProjectScenario
     {
         $project = Project::make($slug);
         $path = $project->path();
+        $auth = $project->scenario($scenarioId)->isAuth();
         $scenario = $project->scenario($scenarioId)->data();
 
         $domain = Str::slug($data->domain ?? '') ?: null;
         $name = Str::slug($data->path) ?: 'teste';
-        $newSpecRelative = $domain ? "tests/{$domain}/{$name}.spec.ts" : "tests/{$name}.spec.ts";
-        $newFeatureRelative = $domain ? "features/{$domain}/{$name}.feature" : "features/{$name}.feature";
+
+        // O setup de autenticação mora num caminho fixo: renomeá-lo pelo título quebraria a execução.
+        $newSpecRelative = match (true) {
+            $auth => Scenario::AUTH_SPEC,
+            (bool) $domain => "tests/{$domain}/{$name}.spec.ts",
+            default => "tests/{$name}.spec.ts",
+        };
+        $newFeatureRelative = match (true) {
+            $auth => Scenario::AUTH_FEATURE,
+            (bool) $domain => "features/{$domain}/{$name}.feature",
+            default => "features/{$name}.feature",
+        };
 
         if ($newSpecRelative !== $scenario->spec && File::exists("{$path}/{$newSpecRelative}")) {
             throw ValidationException::withMessages([
@@ -57,7 +69,11 @@ class UpdateProjectScenario
             }
         }
 
-        $newScenarioId = $domain ? "{$domain}/{$name}" : $name;
+        $newScenarioId = match (true) {
+            $auth => Scenario::AUTH_ID,
+            (bool) $domain => "{$domain}/{$name}",
+            default => $name,
+        };
 
         return ShowProjectScenario::run($slug, $newScenarioId);
     }

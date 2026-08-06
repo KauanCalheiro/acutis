@@ -78,6 +78,7 @@ export interface ScenarioDetail extends Scenario {
   gherkin: string | null
   events: RecorderEvent[]
   updated_at: string
+  is_auth: boolean
   runs: ScenarioRun[]
 }
 

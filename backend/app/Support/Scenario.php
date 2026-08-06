@@ -18,6 +18,10 @@ final class Scenario
 
     public const AUTH_SPEC = 'tests/auth.setup.ts';
 
+    public const AUTH_FEATURE = 'features/auth.feature';
+
+    private const AUTH_TITLE = 'Autenticação';
+
     private function __construct(
         private readonly Project $project,
         private readonly string $id,
@@ -108,6 +112,10 @@ final class Scenario
     /** Cenário do projeto pelo id (spec sem "tests/" nem ".spec.ts"); 404 se não existir. */
     public function data(): ScenarioData
     {
+        if ($this->isAuth()) {
+            return $this->authData();
+        }
+
         $specRelative = "tests/{$this->id}.spec.ts";
 
         $scenario = collect(ListProjectScenarios::run($this->project->path()))
@@ -118,5 +126,27 @@ final class Scenario
         }
 
         return $scenario;
+    }
+
+    /** O setup de autenticação não é listado, então os dados dele saem dos caminhos fixos. */
+    private function authData(): ScenarioData
+    {
+        $feature = $this->project->path().'/'.self::AUTH_FEATURE;
+        $written = File::exists($feature);
+
+        return new ScenarioData(
+            title: $written ? self::featureTitle((string) File::get($feature)) : self::AUTH_TITLE,
+            spec: self::AUTH_SPEC,
+            feature: $written ? self::AUTH_FEATURE : null,
+            tags: [],
+            domain: null,
+        );
+    }
+
+    private static function featureTitle(string $gherkin): string
+    {
+        return preg_match('/Funcionalidade:\s*(.+)/u', $gherkin, $matches)
+            ? trim($matches[1])
+            : self::AUTH_TITLE;
     }
 }

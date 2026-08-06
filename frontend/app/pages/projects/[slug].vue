@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { ProjectDetail } from '~/types/project'
-import type { RecorderEvent } from '~/composables/webdriver'
 
 const route = useRoute()
 const slug = computed(() => route.params.slug as string)
@@ -41,9 +40,15 @@ const scenarios = computed(() => {
 const renameOpen = ref(false)
 const settingsOpen = ref(false)
 
+/**
+ * A URL base é a variável `URL` do ambiente ativo, e quem a edita é o modal de ambientes. Este
+ * modal só aparece sozinho no projeto que ainda não tem URL nenhuma, para a primeira gravação já
+ * abrir no sistema; por isso não há botão que o chame.
+ */
 onMounted(() => {
   if (project.value?.requires_url) settingsOpen.value = true
 })
+
 const environmentsOpen = ref(false)
 
 async function onEnvironmentsSaved() {
@@ -52,12 +57,10 @@ async function onEnvironmentsSaved() {
 }
 const removeOpen = ref(false)
 const removing = ref(false)
-const authOpen = ref(false)
-const authRecording = ref(false)
-const authModal = ref<{ submitRecording: (baseUrl: string, events: RecorderEvent[]) => Promise<void> } | null>(null)
 const skippingAuth = ref(false)
 
 const AUTH_SPEC = 'tests/auth.setup.ts'
+const authPage = computed(() => `/projects/${slug.value}/scenarios/auth`)
 
 const authRun = useRunStream(() => slug.value)
 const authRunOpen = ref(false)
@@ -68,69 +71,6 @@ const authButtonColor = computed(() => ({
   unset: 'neutral',
   skipped: 'neutral'
 }[project.value!.auth_status] as 'success' | 'error' | 'neutral'))
-
-/** O setup de auth é executado pelo mesmo streaming dos cenários, e é a execução que define o status. */
-function runAuthSetup() {
-  authRunOpen.value = true
-  authFix.value = null
-  authFixError.value = null
-  authRun.start(AUTH_SPEC, refresh)
-}
-
-const authFixOpen = ref(false)
-const authFixing = ref(false)
-const authFix = ref<{ playwright: string, summary: string } | null>(null)
-const authFixError = ref<string | null>(null)
-const applyingAuthFix = ref(false)
-
-async function requestAuthFix() {
-  const failed = authRun.failedStep.value
-  if (!failed) return
-
-  authRunOpen.value = false
-  authFixOpen.value = true
-  authFixing.value = true
-  authFix.value = null
-  authFixError.value = null
-
-  try {
-    authFix.value = await $fetch<{ playwright: string, summary: string }>(`/api/projects/${slug.value}/scenario-fix`, {
-      method: 'POST',
-      body: { scenarioId: 'auth', step: failed.title, error: failed.error ?? '' }
-    })
-  } catch (error) {
-    authFixError.value = extractServerError(error, 'Não foi possível gerar uma correção agora. Tente novamente.')
-  } finally {
-    authFixing.value = false
-  }
-}
-
-async function applyAuthFix() {
-  if (!authFix.value) return
-
-  applyingAuthFix.value = true
-
-  try {
-    await $fetch(`/api/projects/${slug.value}/auth`, {
-      method: 'PUT',
-      body: { authSetup: authFix.value.playwright }
-    })
-
-    authFix.value = null
-    authFixOpen.value = false
-    runAuthSetup()
-  } catch (error) {
-    authFixError.value = extractServerError(error, 'Não foi possível salvar a correção.')
-  } finally {
-    applyingAuthFix.value = false
-  }
-}
-
-function discardAuthFix() {
-  authFixOpen.value = false
-  authFix.value = null
-  authFixError.value = null
-}
 
 async function skipAuth() {
   skippingAuth.value = true
@@ -223,37 +163,14 @@ function recordAgain() {
   recordPlain()
 }
 
-function eventsBaseUrl(events: RecorderEvent[]): string | null {
-  const first = events.find(event => event.url)
-  if (!first?.url) return null
-  try {
-    return new URL(first.url).origin
-  } catch {
-    return null
-  }
-}
-
-watch(() => webdriver.value.videoSessionId, async (sessionId) => {
+watch(() => webdriver.value.videoSessionId, (sessionId) => {
   if (!sessionId) return
-
-  if (authRecording.value) {
-    authRecording.value = false
-    const baseUrl = eventsBaseUrl(webdriver.value.events)
-    if (baseUrl) await authModal.value?.submitRecording(baseUrl, webdriver.value.events)
-    return
-  }
 
   reviewOpen.value = true
 })
 
 function stopAndReview() {
   stopRecording()
-}
-
-/** Regravar o login abre no sistema, mas sem sessão, porque é justamente o login que vamos capturar. */
-function startAuthRecording() {
-  authRecording.value = true
-  startRecording('auth', { url: projectUrl.value })
 }
 
 function onRenamed(newSlug: string) {
@@ -328,29 +245,12 @@ async function remove() {
           @activated="refresh()"
         />
         <BaseButtonIcon
-          icon="i-ic-round-code"
-          label="Abrir no VS Code"
-          color="neutral"
-          variant="soft"
-          :to="project!.vscode_url"
-          target="_blank"
-          data-testid="projeto-vscode"
-        />
-        <BaseButtonIcon
           icon="i-ic-round-key"
           label="Autenticação"
           :color="authButtonColor"
           variant="soft"
+          :to="authPage"
           data-testid="projeto-auth"
-          @click="authOpen = true"
-        />
-        <BaseButtonIcon
-          icon="i-ic-round-settings"
-          label="Configurações"
-          color="neutral"
-          variant="soft"
-          data-testid="projeto-configuracoes"
-          @click="settingsOpen = true"
         />
         <BaseButtonIcon
           icon="i-ic-round-edit"
@@ -359,6 +259,15 @@ async function remove() {
           variant="soft"
           data-testid="projeto-editar"
           @click="renameOpen = true"
+        />
+        <BaseButtonIcon
+          icon="i-ic-round-code"
+          label="Abrir no VS Code"
+          color="neutral"
+          variant="soft"
+          :to="project!.vscode_url"
+          target="_blank"
+          data-testid="projeto-vscode"
         />
         <BaseButtonIcon
           icon="i-ic-round-delete"
@@ -396,8 +305,8 @@ async function remove() {
           label="Configurar"
           size="md"
           color="warning"
+          :to="authPage"
           data-testid="projeto-auth-configurar"
-          @click="authOpen = true"
         />
       </template>
     </UAlert>
@@ -415,19 +324,11 @@ async function remove() {
     >
       <template #actions>
         <UButton
-          label="Executar de novo"
-          size="md"
-          color="neutral"
-          variant="link"
-          data-testid="projeto-auth-reexecutar"
-          @click="runAuthSetup"
-        />
-        <UButton
           label="Ver autenticação"
           size="md"
           color="error"
+          :to="authPage"
           data-testid="projeto-auth-revisar"
-          @click="authOpen = true"
         />
       </template>
     </UAlert>
@@ -548,18 +449,7 @@ async function remove() {
       v-model:open="settingsOpen"
       :slug="slug"
       :base-url="project!.base_url"
-      :required="project!.requires_url"
       @saved="refresh()"
-    />
-
-    <ProjectAuthModal
-      ref="authModal"
-      v-model:open="authOpen"
-      :slug="slug"
-      :status="project!.auth_status"
-      @written="runAuthSetup"
-      @test="runAuthSetup"
-      @record="startAuthRecording"
     />
 
     <ScenarioTestRunModal
@@ -575,17 +465,7 @@ async function remove() {
       :branch="project!.branch"
       :tested-at="authRun.testedAt.value"
       :output="authRun.output.value"
-      @fix="requestAuthFix"
-    />
-
-    <ScenarioFixModal
-      v-model:open="authFixOpen"
-      :loading="authFixing"
-      :fix="authFix"
-      :error="authFixError"
-      :applying="applyingAuthFix"
-      @apply="applyAuthFix"
-      @discard="discardAuthFix"
+      @fix="navigateTo(authPage)"
     />
 
     <BaseConfirm
