@@ -2,6 +2,8 @@
 
 namespace App\Ai\Agents\Lookup;
 
+use App\Ai\Limits;
+use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Attributes\UseCheapestModel;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\CanActAsTool;
@@ -20,6 +22,7 @@ use Laravel\Ai\Providers\Tools\WebSearch;
  * Sem saída estruturada de propósito: quem embrulha lê o texto da resposta.
  */
 #[UseCheapestModel]
+#[Timeout(Limits::TIMEOUT)]
 class WebSearcher implements Agent, CanActAsTool, HasTools
 {
     use Promptable;

@@ -15,6 +15,7 @@ use App\Support\Primitives\Playwright;
 use App\Support\Primitives\Url;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Attributes\MaxSteps;
+use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Attributes\UseSmartestModel;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
@@ -23,6 +24,7 @@ use Laravel\Ai\Promptable;
 
 #[UseSmartestModel]
 #[MaxSteps(Limits::STEPS)]
+#[Timeout(Limits::TIMEOUT)]
 class ScenarioWriter implements Agent, HasStructuredOutput, HasTools
 {
     use Promptable;
