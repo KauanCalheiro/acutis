@@ -142,11 +142,8 @@ test.describe('project creation', { tag: ['@write', '@project'] }, () => {
 
         await expect(page.getByTestId('projeto-form-nome')).toBeHidden()
 
-        await test.step('search for the new project', async () => {
-            await page.getByTestId('projeto-busca').fill('meu projeto')
-        })
-
-        await expect(page.getByTestId('projeto-card').filter({ hasText: 'Meu Projeto Novo' })).toHaveCount(1)
+        await expect(page, 'criar já entra no projeto').toHaveURL('/projects/meu-projeto-novo')
+        await expect(page.getByTestId('projeto-nome')).toContainText('Meu Projeto Novo')
     })
 
     test('hides the header close button when the modal has a cancel action', async ({ page }) => {
@@ -179,14 +176,9 @@ test.describe('project creation', { tag: ['@write', '@project'] }, () => {
 
         await expect(page.getByTestId('projeto-form-url')).toBeHidden({ timeout: 15000 })
 
-        await test.step('search for the cloned project', async () => {
-            await page.getByTestId('projeto-busca').fill('clonado')
-        })
-
-        const clonedCard = page.getByTestId('projeto-card').filter({ hasText: 'clonado-do-git' })
-        await expect(clonedCard).toHaveCount(1)
-        await expect(clonedCard.getByTestId('projeto-origem')).toHaveText('Git')
-        await expect(clonedCard).toContainText(`${tmpProjects}/clonado-do-git`)
+        await expect(page, 'clonar já entra no projeto').toHaveURL('/projects/clonado-do-git')
+        await expect(page.getByTestId('projeto-origem')).toHaveText('Git')
+        await expect(page.getByTestId('projeto-caminho')).toHaveText(`${tmpProjects}/clonado-do-git`)
     })
 
     test('rejects an empty repository url client-side', async ({ page }) => {

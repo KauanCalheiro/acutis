@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { FormSubmitEvent, TabsItem } from '@nuxt/ui'
 import { cloneProjectSchema, createProjectSchema, type CloneProject, type CreateProject, type ProjectFormTab } from '#shared/schemas/project'
+import type { Project } from '~/types/project'
 
 const open = defineModel<boolean>('open', {
   default: false
@@ -9,10 +10,6 @@ const open = defineModel<boolean>('open', {
 const tab = defineModel<ProjectFormTab>('tab', {
   default: 'template'
 })
-
-const emit = defineEmits<{
-  saved: []
-}>()
 
 const tabs: TabsItem[] = [
   {
@@ -95,11 +92,11 @@ watch([() => templateState.name, () => cloneState.url, () => cloneState.name, ta
   serverError.value = undefined
 })
 
-async function save(request: Promise<unknown>) {
+async function save(request: Promise<Project>) {
   saving.value = true
 
   try {
-    await request
+    const project = await request
     open.value = false
     templateState.name = ''
     cloneState.url = ''
@@ -108,7 +105,7 @@ async function save(request: Promise<unknown>) {
     cloneState.auth = 'public'
     cloneState.token = ''
     cloneState.ssh_key = ''
-    emit('saved')
+    await navigateTo(`/projects/${project.slug}`)
   } catch (error) {
     serverError.value = extractServerError(error, 'Não foi possível criar o projeto.')
   } finally {
@@ -117,7 +114,7 @@ async function save(request: Promise<unknown>) {
 }
 
 function onSubmitTemplate(event: FormSubmitEvent<CreateProject>) {
-  return save($fetch('/api/projects', {
+  return save($fetch<Project>('/api/projects', {
     method: 'POST',
     body: {
       name: event.data.name
@@ -126,7 +123,7 @@ function onSubmitTemplate(event: FormSubmitEvent<CreateProject>) {
 }
 
 function onSubmitClone(event: FormSubmitEvent<CloneProject>) {
-  return save($fetch('/api/projects/clone', {
+  return save($fetch<Project>('/api/projects/clone', {
     method: 'POST',
     body: {
       url: event.data.url,

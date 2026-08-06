@@ -37,7 +37,7 @@ const query = computed(() => ({
   'page[size]': PAGE_SIZE
 }))
 
-const { data, status, refresh } = await useFetch<ProjectsResponse>('/api/projects', {
+const { data, status } = await useFetch<ProjectsResponse>('/api/projects', {
   query
 })
 
@@ -142,7 +142,6 @@ onBeforeUnmount(() => {
     <ProjectFormModal
       v-model:open="createOpen"
       v-model:tab="createTab"
-      @saved="refresh()"
     />
 
     <div
