@@ -14,6 +14,7 @@ use App\Ai\Rules\Spec\LiteralValue;
 use App\Ai\Rules\Spec\Marker;
 use App\Ai\Rules\Spec\Mask;
 use App\Ai\Rules\Spec\RepeatedSegment;
+use App\Ai\Rules\Spec\Scheme;
 use App\Ai\Rules\Spec\StepAwait;
 use App\Ai\Rules\Spec\TrailingSlash;
 use App\Support\Primitives\Environments;
@@ -30,6 +31,7 @@ final class SpecRules
     /** @var list<class-string> */
     private const RULES = [
         Host::class,
+        Scheme::class,
         ExactUrl::class,
         GlobSegment::class,
         TrailingSlash::class,

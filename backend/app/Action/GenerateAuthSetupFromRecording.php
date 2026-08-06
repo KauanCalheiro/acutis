@@ -38,13 +38,13 @@ class GenerateAuthSetupFromRecording
     {
         $project = Project::make($slug);
         $recording = Recording::make($input->events);
-        $base = new Url($input->baseUrl);
         $environments = $this->environments($project, $input, $recording);
+        $base = $this->base($input, $environments);
         $run = $this->runner($input, $environments);
 
         $writer = new AuthWriter($project->path(), $base, $environments, $run, $recording->html());
 
-        $payload = AuthPrompt::from($input, $environments);
+        $payload = AuthPrompt::from($input, $base, $environments);
 
         $playwright = new Playwright(StructuredOutput::field(
             Attempt::answering(fn () => $writer->prompt($payload), 'authSetup'),
@@ -108,6 +108,12 @@ class GenerateAuthSetupFromRecording
         }
 
         return [$playwright, []];
+    }
+
+    /** A URL do sistema, que é a do ambiente ativo; a gravação pode ter parado no host do SSO. */
+    private function base(AuthRecordingData $input, Environments $environments): Url
+    {
+        return new Url($environments->get(EnvKey::URL->value)?->value ?: $input->baseUrl);
     }
 
     /**

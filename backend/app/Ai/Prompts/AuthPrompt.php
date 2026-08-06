@@ -14,12 +14,12 @@ use App\Support\Recording;
  */
 final class AuthPrompt
 {
-    public static function from(AuthRecordingData $input, Environments $environments): string
+    public static function from(AuthRecordingData $input, Url $base, Environments $environments): string
     {
         $recording = Recording::make($input->events);
 
         return Payload::encode([
-            'baseUrl' => Payload::baseUrl(new Url($input->baseUrl)),
+            'baseUrl' => Payload::baseUrl($base),
             'landing' => self::landing($recording->landingUrl()),
             'credentials' => [
                 'user' => EnvKey::USER->value,
