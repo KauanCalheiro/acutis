@@ -96,6 +96,12 @@ final class Scenario
         return preg_replace('/\.(spec|setup)\.ts$/', '.events.json', $spec);
     }
 
+    /** O DOM capturado por evento, em arquivo próprio para não inchar o de eventos. Fora do git. */
+    public static function htmlPathOf(string $spec): string
+    {
+        return preg_replace('/\.(spec|setup)\.ts$/', '.dom.json', $spec);
+    }
+
     /** @return list<array<string, mixed>> */
     public function events(): array
     {

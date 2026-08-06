@@ -113,7 +113,6 @@ it('paginates with page[size] and page[number]', function () {
 });
 
 it('does not inherit the remote of an enclosing repository', function () {
-    // projects.path dentro de um repo git pai (como fixtures versionadas)
     $parent = config('acutis.projects.path');
     File::ensureDirectoryExists($parent);
     (new Process(['git', 'init', '-q'], $parent))->mustRun();

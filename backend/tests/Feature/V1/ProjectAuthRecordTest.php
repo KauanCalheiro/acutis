@@ -1,7 +1,9 @@
 <?php
 
-use App\Ai\Agents\AuthRecordingWriter;
-use App\Ai\Agents\GherkinWriter;
+use App\Ai\Agents\Auth\AuthFixer;
+use App\Ai\Agents\Auth\AuthValidator;
+use App\Ai\Agents\Auth\AuthWriter;
+use App\Ai\Agents\Scenario\GherkinWriter;
 use App\Enums\EnvKey;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
@@ -14,6 +16,8 @@ beforeEach(function () {
     config()->set('acutis.projects.path', $this->projectsPath);
 
     GherkinWriter::fake([['gherkin' => "@write\nFuncionalidade: Entrar no sistema", 'domain' => 'login']]);
+
+    fakeCleanValidator(AuthValidator::class);
 });
 
 afterEach(function () {
@@ -40,8 +44,23 @@ function recordPayload(array $overrides = []): array
     ], $overrides);
 }
 
+/** O setup limpo que o writer devolve quando nada precisa de correção. */
+function authSetup(): string
+{
+    $url = EnvKey::URL->value;
+
+    return "import { test as setup, expect } from '@playwright/test'\n"
+        ."const base = process.env.{$url}\n"
+        ."setup('autentica', async ({ page }) => {\n"
+        ."    await page.goto(base)\n"
+        ."    await page.getByTestId('pass').fill(process.env.".EnvKey::PASSWORD->value.")\n"
+        ."    await expect(page.getByTestId('pass')).toBeHidden()\n"
+        .'    await page.context().storageState({ path: process.env.'.EnvKey::STORAGE_STATE->value." || 'storage-state.json' })\n"
+        .'})';
+}
+
 it('writes the generated auth setup from the recording into the project folder', function () {
-    AuthRecordingWriter::fake([['authSetup' => "import { test as setup } from '@playwright/test' // login gravado"]]);
+    AuthWriter::fake([['authSetup' => str_replace("setup('autentica'", "setup('login gravado'", authSetup())]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())
@@ -56,7 +75,8 @@ it('writes the generated auth setup from the recording into the project folder',
 });
 
 it('never sets the base url — that comes from the project settings only', function () {
-    AuthRecordingWriter::fake();
+    AuthWriter::fake([['authSetup' => authSetup()]]);
+    Http::fake(['*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok'])]);
     $slug = recordProject();
     $dir = $this->projectsPath."/{$slug}";
     $config = File::get($dir.'/playwright.config.ts');
@@ -69,8 +89,8 @@ it('never sets the base url — that comes from the project settings only', func
         ->and(File::get($dir.'/playwright.config.ts'))->toBe($config);
 });
 
-it('never executes anything — running the setup is the caller\'s job', function () {
-    AuthRecordingWriter::fake();
+it('never executes anything when the recording says nowhere to run it', function () {
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     Http::fake();
     $slug = recordProject();
 
@@ -79,22 +99,48 @@ it('never executes anything — running the setup is the caller\'s job', functio
     Http::assertNothingSent();
 });
 
-it('shows the recorded events to the writer, redacting the real password first', function () {
-    AuthRecordingWriter::fake();
+it('runs the setup before answering when the recording says where to run it', function () {
+    AuthWriter::fake([['authSetup' => authSetup()]]);
+    Http::fake(['*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok'])]);
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
+        'executionUrl' => 'https://homolog.sistema.test',
+    ]))->assertOk();
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/runner/spec')
+        && $request['env'][EnvKey::URL->value] === 'https://homolog.sistema.test');
+});
+
+it('shows the recorded events to the writer with the credentials marked, never the real password', function () {
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
 
-    AuthRecordingWriter::assertPrompted(
-        fn ($prompt) => str_contains($prompt->prompt, 'https://sistema.test/login')
-            && str_contains($prompt->prompt, '••••')
+    AuthWriter::assertPrompted(function ($prompt) {
+        $payload = promptPayload($prompt);
+
+        return array_column($payload['events'], 'value') === [null, '{{'.EnvKey::USER->value.'}}', '{{'.EnvKey::PASSWORD->value.'}}', null]
             && ! str_contains($prompt->prompt, 'topsecret123')
-            && str_contains($prompt->prompt, 'dataTestId')
-    );
+            && str_contains($prompt->prompt, 'dataTestId');
+    });
+});
+
+it('names the credential variables instead of leaving the writer to spot the fields', function () {
+    AuthWriter::fake([['authSetup' => authSetup()]]);
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    AuthWriter::assertPrompted(fn ($prompt) => promptPayload($prompt)['credentials'] === [
+        'user' => EnvKey::USER->value,
+        'password' => EnvKey::PASSWORD->value,
+    ]);
 });
 
 it('tells the writer which url the login landed on, so it never invents one', function () {
-    AuthRecordingWriter::fake();
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
@@ -104,25 +150,22 @@ it('tells the writer which url the login landed on, so it never invents one', fu
         ]),
     ]))->assertOk();
 
-    AuthRecordingWriter::assertPrompted(
-        fn ($prompt) => str_contains($prompt->prompt, 'URL pós-login: https://sistema.test/inicio')
+    AuthWriter::assertPrompted(
+        fn ($prompt) => promptPayload($prompt)['landing']['url'] === 'https://sistema.test/inicio'
     );
 });
 
 it('tells the writer there is no landing url when the recording never left the login', function () {
-    AuthRecordingWriter::fake();
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
 
-    AuthRecordingWriter::assertPrompted(
-        fn ($prompt) => str_contains($prompt->prompt, 'URL pós-login: nenhuma navegação após o submit foi gravada')
-            && ! str_contains($prompt->prompt, 'URL pós-login: https')
-    );
+    AuthWriter::assertPrompted(fn ($prompt) => promptPayload($prompt)['landing'] === null);
 });
 
 it('keeps the real password out of the response body', function () {
-    AuthRecordingWriter::fake();
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     $response = postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
@@ -131,7 +174,7 @@ it('keeps the real password out of the response body', function () {
 });
 
 it('writes the recorded credentials into the environment', function () {
-    AuthRecordingWriter::fake();
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
@@ -146,7 +189,7 @@ it('writes the recorded credentials into the environment', function () {
 });
 
 it('replaces the credentials the environment already had', function () {
-    AuthRecordingWriter::fake();
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
     $dir = $this->projectsPath."/{$slug}";
 
@@ -163,7 +206,7 @@ it('replaces the credentials the environment already had', function () {
 });
 
 it('leaves a config it cannot parse untouched', function () {
-    AuthRecordingWriter::fake();
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
     $dir = $this->projectsPath."/{$slug}";
     File::put($dir.'/playwright.config.ts', '// configuração escrita pelo usuário');
@@ -174,7 +217,7 @@ it('leaves a config it cannot parse untouched', function () {
 });
 
 it('teaches an old config about the auth setup, keeping what the user wrote', function () {
-    AuthRecordingWriter::fake();
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
     $dir = $this->projectsPath."/{$slug}";
     File::put($dir.'/playwright.config.ts', <<<'TS'
@@ -201,7 +244,7 @@ it('teaches an old config about the auth setup, keeping what the user wrote', fu
 });
 
 it('does not touch a config that already declares its own projects', function () {
-    AuthRecordingWriter::fake();
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
     $dir = $this->projectsPath."/{$slug}";
     $meu = "import { defineConfig } from '@playwright/test'\nexport default defineConfig({ projects: [{ name: 'meu' }] })\n";
@@ -213,7 +256,7 @@ it('does not touch a config that already declares its own projects', function ()
 });
 
 it('asks for credentials when it cannot extract them from the recording', function () {
-    AuthRecordingWriter::fake();
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
@@ -233,8 +276,8 @@ it('asks for credentials when it cannot extract them from the recording', functi
         ->and(collect($environment['vars'])->firstWhere('key', EnvKey::USER->value)['value'])->toBe('');
 });
 
-it('persists the recorded events so the fixer can read them later, with the password redacted', function () {
-    AuthRecordingWriter::fake();
+it('persists the recorded events so the fixer can read them later, with the credentials marked', function () {
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
@@ -242,12 +285,28 @@ it('persists the recorded events so the fixer can read them later, with the pass
     $events = json_decode(File::get($this->projectsPath."/{$slug}/tests/auth.events.json"), true);
 
     expect($events)->toHaveCount(4)
-        ->and($events[2]['value'])->toBe('••••')
-        ->and($events[1]['value'])->toBe('user1');
+        ->and($events[2]['value'])->toBe('{{'.EnvKey::PASSWORD->value.'}}')
+        ->and($events[1]['value'])->toBe('{{'.EnvKey::USER->value.'}}');
+});
+
+it('writes the captured html of the login to its own file, out of the events', function () {
+    AuthWriter::fake([['authSetup' => authSetup()]]);
+    $slug = recordProject();
+
+    $events = recordPayload()['events'];
+    $events[1]['html'] = '<form><input name="user"><input name="pass"></form>';
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload(['events' => $events]))->assertOk();
+
+    $dir = $this->projectsPath."/{$slug}/tests";
+
+    expect(File::get($dir.'/auth.events.json'))->not->toContain('<form')
+        ->and(json_decode(File::get($dir.'/auth.dom.json'), true))
+        ->toBe([1 => '<form><input name="user"><input name="pass"></form>']);
 });
 
 it('writes the gherkin of the login next to the setup', function () {
-    AuthRecordingWriter::fake();
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
@@ -257,7 +316,7 @@ it('writes the gherkin of the login next to the setup', function () {
 });
 
 it('keeps the auth feature in its fixed path, whatever domain the writer suggests', function () {
-    AuthRecordingWriter::fake();
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     GherkinWriter::fake([['gherkin' => 'Funcionalidade: Entrar', 'domain' => 'acesso-restrito']]);
     $slug = recordProject();
 
@@ -269,26 +328,26 @@ it('keeps the auth feature in its fixed path, whatever domain the writer suggest
         ->and(File::exists($dir.'/features/acesso-restrito/auth.feature'))->toBeFalse();
 });
 
-it('shows the gherkin writer the same redacted events, never the real password', function () {
-    AuthRecordingWriter::fake();
+it('shows the gherkin writer the same marked events, never the real password', function () {
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
 
     GherkinWriter::assertPrompted(
-        fn ($prompt) => str_contains($prompt->prompt, '••••')
+        fn ($prompt) => str_contains($prompt->prompt, '{{'.EnvKey::PASSWORD->value.'}}')
             && ! str_contains($prompt->prompt, 'topsecret123')
     );
 });
 
 it('returns 404 for a project that does not exist', function () {
-    AuthRecordingWriter::fake();
+    AuthWriter::fake([['authSetup' => authSetup()]]);
 
     postJson('/api/v1/projects/inexistente/auth/record', recordPayload())->assertNotFound();
 });
 
 it('validates the recording payload', function () {
-    AuthRecordingWriter::fake();
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", ['events' => []])
@@ -297,7 +356,7 @@ it('validates the recording payload', function () {
 });
 
 it('leaves a base url the user configured untouched', function () {
-    AuthRecordingWriter::fake();
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
     $dir = $this->projectsPath."/{$slug}";
     File::put($dir.'/.env', EnvKey::URL->value."=https://escolhida-pelo-usuario.test\n");
@@ -309,20 +368,20 @@ it('leaves a base url the user configured untouched', function () {
         ->not->toContain('sistema.test/login');
 });
 
-it('has the setup build its urls from the environment variable, not from the recorded host', function () {
-    AuthRecordingWriter::fake();
+it('names the environment key of the base url instead of leaving the writer to coin one', function () {
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
 
-    $env = 'process.env.'.EnvKey::URL->value;
-
-    expect(app(AuthRecordingWriter::class)->instructions())->toContain($env);
-    AuthRecordingWriter::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, $env));
+    AuthWriter::assertPrompted(fn ($prompt) => promptPayload($prompt)['baseUrl'] === [
+        'value' => 'https://sistema.test/login',
+        'env' => EnvKey::URL->value,
+    ]);
 });
 
 it('hands the post-login path ready-made, so the agent never remounts it from the base', function () {
-    AuthRecordingWriter::fake();
+    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
@@ -336,14 +395,55 @@ it('hands the post-login path ready-made, so the agent never remounts it from th
         ],
     ]))->assertOk();
 
-    AuthRecordingWriter::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, 'Caminho pós-login')
-        && str_contains($prompt->prompt, ': /intranet/'));
+    AuthWriter::assertPrompted(fn ($prompt) => promptPayload($prompt)['landing']['path'] === '/intranet/');
 });
 
-it('has the setup check the url by pattern, never by exact equality', function () {
-    expect(app(AuthRecordingWriter::class)->instructions())
-        ->toContain('nunca repita segmento')
-        ->toContain("waitForURL('**/")
-        ->toContain('toHaveURL(/')
-        ->not->toContain('toHaveURL(`');
+it('sends a setup that never saves the session back to the fixer', function () {
+    AuthWriter::fake([['authSetup' => "import { test as setup } from '@playwright/test'\nsetup('autentica', async () => {})"]]);
+    AuthFixer::fake([['playwright' => authSetup(), 'summary' => 'Passei a salvar o storage state.']]);
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    AuthFixer::assertPrompted(
+        fn ($prompt) => collect(promptPayload($prompt)['violations'])->contains('rule', 'storage-state-ausente')
+    );
+});
+
+it('sends a setup that checks the url by exact equality back to the fixer', function () {
+    $broken = str_replace(
+        "await expect(page.getByTestId('pass')).toBeHidden()",
+        'await expect(page).toHaveURL(`${base}/inicio`)',
+        authSetup(),
+    );
+
+    AuthWriter::fake([['authSetup' => $broken]]);
+    AuthFixer::fake([['playwright' => authSetup(), 'summary' => 'Troquei a igualdade exata por padrão.']]);
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    AuthFixer::assertPrompted(
+        fn ($prompt) => collect(promptPayload($prompt)['violations'])->contains('rule', 'url-exata')
+    );
+});
+
+it('never calls the fixer when the generated setup breaks no rule', function () {
+    AuthWriter::fake([['authSetup' => authSetup()]]);
+    AuthFixer::fake();
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+
+    AuthFixer::assertNeverPrompted();
+});
+
+it('counts the credentials this very recording carries as filled, so the setup is not flagged', function () {
+    AuthWriter::fake([['authSetup' => authSetup()]]);
+    AuthFixer::fake();
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())
+        ->assertOk()
+        ->assertJson(fn ($json) => $json->where('warnings', fn ($v) => blank($v))->etc());
 });

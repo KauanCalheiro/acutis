@@ -24,4 +24,13 @@ enum EnvKey: string
 
     /** Arquivo de sessão do ambiente ativo: o auth.setup.ts grava nele e os cenários o carregam. */
     case STORAGE_STATE = 'STORAGE_STATE';
+
+    /**
+     * A chave pertence ao acutis, que a escreve no .env do projeto. Vale mesmo sem estar
+     * declarada no ambiente, porque quem a preenche na hora de rodar não é o usuário.
+     */
+    public static function owns(string $key): bool
+    {
+        return in_array($key, array_column(self::cases(), 'value'), true);
+    }
 }

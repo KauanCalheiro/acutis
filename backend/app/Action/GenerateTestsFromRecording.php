@@ -2,15 +2,25 @@
 
 namespace App\Action;
 
-use App\Ai\Agents\GherkinWriter;
-use App\Ai\Agents\PlaywrightWriter;
+use App\Ai\Agents\Scenario\GherkinWriter;
+use App\Ai\Agents\Scenario\ScenarioFixer;
+use App\Ai\Agents\Scenario\ScenarioValidator;
+use App\Ai\Agents\Scenario\ScenarioWriter;
+use App\Ai\Attempt;
+use App\Ai\Prompts\FixPrompt;
+use App\Ai\Prompts\ScenarioPrompt;
+use App\Ai\Rules\SpecRules;
+use App\Ai\Rules\Violation;
 use App\Ai\StructuredOutput;
-use App\Ai\Tools\RunPlaywrightTest;
+use App\Ai\Tools\RunSpec;
 use App\Data\V1\Project\EnvironmentVarData;
 use App\Data\V1\Recording\GeneratedTestsData;
 use App\Data\V1\Recording\RecordingData;
 use App\Data\V1\Recording\TestRunData;
 use App\Enums\EnvKey;
+use App\Support\Primitives\Environments;
+use App\Support\Primitives\Playwright;
+use App\Support\Primitives\Url;
 use App\Support\Project;
 use App\Support\Recording;
 use App\Support\TestArtifact;
@@ -20,55 +30,208 @@ class GenerateTestsFromRecording
 {
     use AsAction;
 
-    private const NOTICEABLE_PAUSE_MS = 2000;
-
-    private const MAX_RUN_ATTEMPTS = 3;
+    /** Rede de segurança: o agente já se corrige por dentro, e o ideal é nunca chegar aqui. */
+    private const MAX_FIX_ATTEMPTS = 2;
 
     public function handle(string $slug, RecordingData $recording): GeneratedTestsData
     {
-        $variables = $this->declaredVariables($slug);
-        $baseUrl = $this->baseUrl($recording->baseUrl);
+        $project = Project::make($slug);
+        $events = Recording::make($recording->events);
+        $base = new Url($recording->baseUrl);
+        $environments = $this->environments($project, $recording);
+        $run = $this->runner($recording);
 
-        $events = json_encode(
-            Recording::make($recording->events)->redacted(),
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+        $written = app(GherkinWriter::class)->prompt(ScenarioPrompt::gherkin($recording, $environments));
+        $gherkin = StructuredOutput::field($written, 'gherkin');
+        $domain = StructuredOutput::field($written, 'domain');
+
+        $writer = new ScenarioWriter($project->path(), $base, $environments, $run, $events->html());
+        $draft = ScenarioPrompt::spec($recording, $gherkin, $environments);
+        $drafted = Attempt::answering(fn () => $writer->prompt($draft), 'playwright');
+
+        $playwright = new Playwright(StructuredOutput::field($drafted, 'playwright'));
+        $envVars = $this->envVars($drafted);
+
+        [$playwright, $warnings] = $this->settle(
+            $project,
+            $recording,
+            $events,
+            $base,
+            $this->withDeclared($environments, $events, $envVars),
+            $run,
+            $playwright,
         );
 
-        $gherkinResponse = app(GherkinWriter::class)->prompt(
-            "URL base: {$recording->baseUrl}\n\nEventos gravados:\n{$events}",
-        );
-        $gherkin = StructuredOutput::field($gherkinResponse, 'gherkin');
-        $domain = StructuredOutput::field($gherkinResponse, 'domain');
-
-        $playwrightResponse = app(PlaywrightWriter::class)->prompt(
-            "{$baseUrl}\n\nCenário Gherkin:\n{$gherkin}\n\nEventos gravados:\n{$events}"
-                .$this->noticeablePauses($recording->events)
-                .$variables,
-        );
-        $playwright = StructuredOutput::field($playwrightResponse, 'playwright');
-        $envVars = StructuredOutput::fieldArray($playwrightResponse, 'envVars');
-
-        $testRun = null;
-
-        if ($recording->executionUrl !== null) {
-            [$playwright, $testRun, $envVars] = $this->runUntilItPasses($recording, $gherkin, $events, $playwright, $envVars, $variables, $baseUrl);
-        }
+        $run?->ensure($playwright->value);
 
         $tag = $this->readWriteTag($recording->events);
         $gherkin = $this->ensureGherkinTag($gherkin, $tag);
-        $playwright = $this->ensurePlaywrightTag($playwright, $tag);
+        $spec = $this->ensurePlaywrightTag($playwright->value, $tag);
 
         if ($recording->publico) {
-            [$gherkin, $playwright] = $this->markAsPublic($gherkin, $playwright);
+            [$gherkin, $spec] = $this->markAsPublic($gherkin, $spec);
         }
 
         return new GeneratedTestsData(
             gherkin: $gherkin,
-            playwright: $playwright,
+            playwright: $spec,
             domain: $domain,
             envVars: $envVars,
-            testRun: $testRun,
+            testRun: $this->testRun($run),
+            warnings: $warnings,
         );
+    }
+
+    /**
+     * O loop de correção. As duas checagens são chamadas encapsuladas, uma linha cada: tirar a
+     * validação por IA é apagar a linha dela.
+     *
+     * @return array{Playwright, list<string>}
+     */
+    private function settle(
+        Project $project,
+        RecordingData $recording,
+        Recording $events,
+        Url $base,
+        Environments $environments,
+        ?RunSpec $run,
+        Playwright $playwright,
+    ): array {
+        $redacted = $events->redacted($environments);
+
+        for ($attempt = 0; $attempt <= self::MAX_FIX_ATTEMPTS; $attempt++) {
+            $issues = [
+                ...SpecRules::check($playwright, $base, $environments),
+                ...ScenarioValidator::check($playwright, $redacted),
+            ];
+
+            $fixable = array_values(array_filter($issues, fn (Violation $v): bool => $v->fixable));
+
+            if ($fixable === [] || $attempt === self::MAX_FIX_ATTEMPTS) {
+                return [$playwright, $this->warnings($issues)];
+            }
+
+            $fixer = new ScenarioFixer($project->path(), $base, $environments, $run, $events->html());
+
+            $correction = FixPrompt::of(
+                spec: $playwright->value,
+                violations: $fixable,
+                error: $run?->last()?->passed === false ? $run->last()->output : null,
+                html: $run?->last()?->html,
+                events: $redacted,
+            );
+
+            $playwright = new Playwright(StructuredOutput::field(
+                Attempt::answering(fn () => $fixer->prompt($correction), 'playwright'),
+                'playwright',
+            ));
+        }
+
+        return [$playwright, []];
+    }
+
+    /**
+     * A URL desta gravação conta como preenchida: é ela que o projeto passa a usar, e sem isto o
+     * primeiro rascunho de um projeto novo sairia acusado de variável vazia.
+     */
+    private function environments(Project $project, RecordingData $recording): Environments
+    {
+        return new Environments(array_map(
+            fn (EnvironmentVarData $var): EnvironmentVarData => $var->key === EnvKey::URL->value && blank($var->value)
+                ? new EnvironmentVarData($var->key, $recording->baseUrl, $var->secret)
+                : $var,
+            $project->environments()->activeVars(),
+        ));
+    }
+
+    /**
+     * As variáveis que a IA acabou de batizar para os valores sensíveis. Elas ainda não existem no
+     * ambiente — só entram quando o rascunho for salvo — mas já valem para as regras, senão toda
+     * variável nova sairia acusada de inexistente. Secretas porque o valor veio de evento sensível.
+     *
+     * @param  list<string>  $envVars
+     */
+    private function withDeclared(Environments $environments, Recording $events, array $envVars): Environments
+    {
+        if ($envVars === []) {
+            return $environments;
+        }
+
+        $names = [];
+
+        foreach (array_values($envVars) as $position => $name) {
+            $names[Recording::SENSITIVE.($position + 1)] = $name;
+        }
+
+        $declared = [];
+
+        foreach ($events->envValues($names) as $name => $value) {
+            $declared[] = new EnvironmentVarData($name, $value, secret: true);
+        }
+
+        return new Environments([...$environments->vars, ...$declared]);
+    }
+
+    /** Sem URL de execução não há onde rodar, e aí o agente nem recebe a tool. */
+    private function runner(RecordingData $recording): ?RunSpec
+    {
+        if ($recording->executionUrl === null) {
+            return null;
+        }
+
+        return new RunSpec($recording->executionUrl, [EnvKey::URL->value => $recording->executionUrl]);
+    }
+
+    private function testRun(?RunSpec $run): ?TestRunData
+    {
+        if ($run === null || $run->last() === null) {
+            return null;
+        }
+
+        return new TestRunData(
+            executed: true,
+            passed: $run->last()->passed,
+            attempts: $run->attempts(),
+            error: $run->last()->passed ? null : $run->last()->output,
+        );
+    }
+
+    /**
+     * Os nomes que a IA deu a cada marcador, na ordem do marcador. O contrato HTTP carrega uma
+     * lista, então a ordem é o que liga cada nome ao seu valor lá na frente.
+     *
+     * @return list<string>
+     */
+    private function envVars(object $response): array
+    {
+        $declared = StructuredOutput::fieldArray($response, 'envVars');
+
+        $byMarker = [];
+
+        foreach ($declared as $item) {
+            if (filled($item['marker'] ?? null) && filled($item['name'] ?? null)) {
+                $byMarker[(string) $item['marker']] = (string) $item['name'];
+            }
+        }
+
+        ksort($byMarker, SORT_NATURAL);
+
+        return array_values($byMarker);
+    }
+
+    /**
+     * O que ainda está quebrado quando o loop para: o que o Fixer nunca resolveria e o que ele
+     * tentou até o limite sem conseguir.
+     *
+     * @param  list<Violation>  $issues
+     * @return list<string>
+     */
+    private function warnings(array $issues): array
+    {
+        return array_values(array_map(
+            fn (Violation $v): string => "{$v->rule}: {$v->message}",
+            $issues,
+        ));
     }
 
     /**
@@ -87,13 +250,16 @@ class GenerateTestsFromRecording
         ];
     }
 
+    /**
+     * ponytail: heurística fill/submit = escrita; clique que muta sem formulário passa por @read,
+     * e o agente decide melhor — isto é só o fallback.
+     */
     private function readWriteTag(array $events): string
     {
         $mutates = collect($events)->contains(
             fn (array $event): bool => in_array($event['type'] ?? '', ['fill', 'submit'], true),
         );
 
-        // ponytail: heurística fill/submit = escrita; clique que muta sem formulário passa por @read, e o agente decide melhor, isto é só o fallback
         return $mutates ? '@write' : '@read';
     }
 
@@ -128,109 +294,5 @@ class GenerateTestsFromRecording
             $playwright,
             1,
         ) ?? $playwright;
-    }
-
-    private function runUntilItPasses(
-        RecordingData $recording,
-        string $gherkin,
-        string $events,
-        string $playwright,
-        array $envVars,
-        string $variables,
-        string $baseUrl,
-    ): array {
-        $attempts = 0;
-
-        while (true) {
-            $attempts++;
-
-            $result = app(RunPlaywrightTest::class)->run(
-                str_replace($recording->baseUrl, $recording->executionUrl, $playwright),
-                $recording->executionUrl,
-                [EnvKey::URL->value => $recording->executionUrl],
-            );
-
-            if ($result->passed) {
-                return [$playwright, new TestRunData(executed: true, passed: true, attempts: $attempts), $envVars];
-            }
-
-            if ($attempts >= self::MAX_RUN_ATTEMPTS) {
-                return [$playwright, new TestRunData(
-                    executed: true,
-                    passed: false,
-                    attempts: $attempts,
-                    error: $result->output,
-                ), $envVars];
-            }
-
-            $retryResponse = app(PlaywrightWriter::class)->prompt(
-                "O teste Playwright abaixo falhou ao executar. Corrija o spec mantendo a URL base.\n{$baseUrl}"
-                    ."\n\nErro da execução:\n{$result->output}"
-                    ."\n\nSpec com falha:\n{$playwright}"
-                    ."\n\nCenário Gherkin:\n{$gherkin}"
-                    ."\n\nEventos gravados:\n{$events}"
-                    .$variables,
-            );
-            $playwright = StructuredOutput::field($retryResponse, 'playwright');
-            $envVars = StructuredOutput::fieldArray($retryResponse, 'envVars');
-        }
-    }
-
-    /**
-     * A URL base vai para o prompt junto do nome da variável que a guarda. Sem esse nome o modelo
-     * cunhava um a partir do rótulo, e o spec saía apontando para process.env.BASE_URL.
-     */
-    private function baseUrl(string $baseUrl): string
-    {
-        $key = EnvKey::URL->value;
-
-        return "URL base (é a variável {$key}; no spec use process.env.{$key}, não o literal): {$baseUrl}";
-    }
-
-    /** As variáveis do ambiente ativo; a escondida entra só pelo nome, nunca com o valor. */
-    private function declaredVariables(string $slug): string
-    {
-        $vars = Project::make($slug)->environments()->activeVars();
-
-        if (blank($vars)) {
-            return '';
-        }
-
-        $lines = array_map(
-            fn (EnvironmentVarData $var): string => $var->secret
-                ? "- {$var->key} (escondida, valor não enviado)"
-                : "- {$var->key} = {$var->value}",
-            $vars,
-        );
-
-        return "\n\nVariáveis do ambiente (use process.env.CHAVE em vez do valor literal):\n".implode("\n", $lines);
-    }
-
-    private function noticeablePauses(array $events): string
-    {
-        $pauses = [];
-
-        foreach ($events as $index => $event) {
-            if ($index === 0) {
-                continue;
-            }
-
-            $gapMs = ($event['timestamp'] ?? 0) - ($events[$index - 1]['timestamp'] ?? 0);
-
-            if ($gapMs < self::NOTICEABLE_PAUSE_MS) {
-                continue;
-            }
-
-            $seconds = number_format($gapMs / 1000, 1);
-            $target = $event['label'] ?? $event['type'];
-            $pauses[] = "- {$seconds}s antes do evento {$index} ({$event['type']} em \"{$target}\")";
-        }
-
-        if ($pauses === []) {
-            return '';
-        }
-
-        return "\n\nPausas notáveis (a página provavelmente carregava ou hidratava, então espere a condição antes do passo):\n"
-            .implode("\n", $pauses);
     }
 }

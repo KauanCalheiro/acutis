@@ -182,38 +182,51 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         }
     })
 
-    test('captures interactive elements from a page snapshot', async ({ request }) => {
+    test('returns the html of the broken page when the spec fails', async ({ request }) => {
         test.setTimeout(120_000)
 
         const { createServer } = await import('node:http')
         const server = createServer((_req, res) => {
             res.writeHead(200, { 'Content-Type': 'text/html' })
-            res.end('<!doctype html><html><head><title>Login</title></head><body>'
-                + '<input id="user" name="user" data-testid="login-user" placeholder="usuário" />'
-                + '<button data-testid="login-submit">Entrar</button>'
-                + '</body></html>')
+            res.end('<!doctype html><html><body><script>var ruido = 1</script><button data-testid="salvar-pedido">Salvar</button></body></html>')
         })
         await new Promise<void>((r) => server.listen(0, r))
         const { port } = server.address() as { port: number }
 
+        const brokenSpec = `
+            import { test, expect } from '@playwright/test'
+            test('procura um elemento que nao existe', async ({ page }) => {
+                await page.goto('/')
+                await expect(page.getByTestId('nao-existe')).toBeVisible({ timeout: 2000 })
+            })
+        `
+
         try {
-            const res = await request.post(`${RUNNER_URL}/runner/snapshot`, {
-                data: { url: `http://127.0.0.1:${port}/` },
+            const res = await request.post(`${RUNNER_URL}/runner/spec`, {
+                data: { spec: brokenSpec, baseUrl: `http://127.0.0.1:${port}` },
                 timeout: 90_000,
             })
 
             expect(res.ok()).toBe(true)
             const body = await res.json()
-            expect(body.title).toBe('Login')
-            const testIds = body.elements.map((e: { testId: string | null }) => e.testId)
-            expect(testIds).toContain('login-user')
-            expect(testIds).toContain('login-submit')
-
-            const userField = body.elements.find((e: { testId: string | null }) => e.testId === 'login-user')
-            expect(userField.selector).toBe('[data-testid="login-user"]')
+            expect(body.passed).toBe(false)
+            expect(body.html).toContain('salvar-pedido')
+            expect(body.html).not.toContain('var ruido')
         } finally {
             await new Promise<void>((r) => server.close(() => r()))
         }
+    })
+
+    test('does not carry html when the spec passes, because there is nothing to look at', async ({ request }) => {
+        test.setTimeout(120_000)
+
+        const res = await request.post(`${RUNNER_URL}/runner/spec`, {
+            data: { spec: PASSING_SPEC },
+            timeout: 90_000,
+        })
+
+        expect(res.ok()).toBe(true)
+        expect((await res.json()).html).toBeUndefined()
     })
 
     test('runs a whole project, by tag, and a single spec', async ({ request }) => {
@@ -300,6 +313,10 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         expect(finished?.passed).toBe(false)
     })
 
+    /**
+     * O filtro pedido não casa arquivo de teste nenhum, que é o que acontece quando o config do
+     * projeto não conhece o spec (o auth.setup.ts sem o project "setup", por exemplo).
+     */
     test('carries the runner output when the run dies before any test reports', async ({ request }) => {
         test.setTimeout(120_000)
 
@@ -314,8 +331,6 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         await writeFile(join(dir, 'tests', 'ok.spec.ts'),
             "import { test } from '@playwright/test'\ntest('passa', () => {})\n")
 
-        // Filtro que não casa arquivo de teste nenhum. É o que acontece quando o config do projeto
-        // não conhece o spec pedido (o auth.setup.ts sem o project "setup", por exemplo).
         const res = await request.post(`${RUNNER_URL}/runner/project/stream`, {
             data: { path: dir, spec: 'tests/nao-existe.spec.ts' },
             timeout: 90_000,

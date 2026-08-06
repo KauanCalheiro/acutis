@@ -22,6 +22,16 @@ Commits devem ser semânticos e de uma única linha curta. Sem co-author do Clau
 - **Nunca** usar conjunção (`and`/`e`/`&`) na mensagem — se precisar, são dois commits separados (commit unitário por coisa feita)
 - **Sempre** em inglês — mensagem, prefixo e descrição
 
+## Teste em commit separado da implementação
+
+Toda entrega vira **dois commits**, na ordem em que o trabalho acontece: `test:` com os arquivos de teste, depois `feat:`/`refactor:`/`fix:` com a implementação. Nunca os dois no mesmo commit.
+
+**Why:** o usuário revisa diff pelo VS Code, e o VS Code **não tem** mecanismo para esconder caminhos da lista de Source Control — conferido no schema da 1.131: todas as `scm.*` são de visualização/ordenação, as `git.*` de exclude são sobre repositórios e não arquivos, e a extensão Git não referencia `files.exclude`. Separar por commit é o único jeito de o diff de implementação chegar sem teste junto. Num commit único, 40 arquivos de teste enterram 29 de implementação.
+
+**How to apply:** o commit de teste vem primeiro porque é a ordem do TDD, não uma reordenação artificial. Cada um segue as regras de mensagem acima (uma linha, inglês, sem conjunção).
+
+**Sempre que o usuário pedir para analisar/revisar, commitar os testes antes — independente da etapa em que o trabalho está**, mesmo com teste vermelho ou implementação pela metade. Dividir por commit só resolve depois de commitado: trabalho pendente aparece todo junto no painel de Source Control, e é justamente ali que ele revisa. Teste vermelho num commit `test:` é o estado esperado do ciclo, não um problema. Esta é a única autorização de commit que não precisa ser pedida a cada vez — pedir análise já a inclui.
+
 ## Branch e merge
 
 - Uma branch dedicada por funcionalidade (não misturar features não relacionadas na mesma branch).

@@ -4,10 +4,17 @@ namespace App\Ai;
 
 use ArrayAccess;
 use Laravel\Ai\Responses\TextResponse;
-use RuntimeException;
+use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
 class StructuredOutput
 {
+    /**
+     * O campo esperado da resposta estruturada.
+     *
+     * Resposta vazia tem uma causa conhecida: o agente gastou os passos do laço ainda chamando
+     * ferramentas e nunca chegou a responder. Quem está do outro lado precisa saber disso e o que
+     * fazer, então a mensagem diz — erro genérico aqui vira tela de falha sem saída.
+     */
     public static function field(TextResponse $response, string $key): string
     {
         if ($response instanceof ArrayAccess && isset($response[$key]) && is_string($response[$key])) {
@@ -20,7 +27,11 @@ class StructuredOutput
             return $decoded[$key];
         }
 
-        throw new RuntimeException("O agente de IA não retornou o campo '{$key}' esperado.");
+        throw new UnprocessableEntityHttpException(trim($response->text) === ''
+            ? 'A IA não concluiu: ela gastou as tentativas usando as ferramentas e não devolveu o '
+                .'arquivo. Tente de novo. Se repetir, o sistema testado pode estar fora do ar ou lento '
+                .'demais para o teste terminar.'
+            : "A IA respondeu num formato inesperado, sem o campo '{$key}'. Tente de novo.");
     }
 
     /** @return list<string> */

@@ -2,7 +2,9 @@
 
 namespace App\Action;
 
-use App\Ai\Agents\SelectorSuggestionWriter;
+use App\Ai\Agents\Selector\SelectorWriter;
+use App\Ai\Prompts\SelectorPrompt;
+use App\Ai\Rules\SelectorRules;
 use App\Ai\StructuredOutput;
 use App\Data\V1\Project\SelectorSuggestionData;
 use App\Support\Project;
@@ -24,25 +26,62 @@ class SuggestScenarioSelectors
         $eventsFile = Str::replaceLast('.spec.ts', '.events.json', "{$path}/{$scenario->spec}");
         $events = File::exists($eventsFile) ? (json_decode(File::get($eventsFile), true) ?? []) : [];
 
-        $targets = collect($events)
-            ->filter(fn (array $event): bool => ! empty($event['selectors']) && empty($event['selectors']['dataTestId']))
-            ->values();
+        $targets = json_decode(SelectorPrompt::from($events), true);
 
-        if ($targets->isEmpty()) {
+        if ($targets === []) {
             return [];
         }
 
-        $response = app(SelectorSuggestionWriter::class)->prompt(
-            json_encode($targets, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-        );
+        $response = app(SelectorWriter::class)->prompt(SelectorPrompt::from($events));
 
-        return collect(StructuredOutput::fieldArray($response, 'suggestions'))
-            ->map(fn (array $s): SelectorSuggestionData => new SelectorSuggestionData(
-                event: $s['event'] ?? '',
-                currentSelector: $s['currentSelector'] ?? '',
-                suggestedTestId: $s['suggestedTestId'] ?? '',
-                reason: $s['reason'] ?? '',
-            ))
-            ->all();
+        $suggestions = $this->merge($targets, StructuredOutput::fieldArray($response, 'suggestions'));
+
+        return $this->clean($suggestions);
+    }
+
+    /**
+     * O modelo devolve só o índice, o testid e o motivo; o evento e o seletor atual vêm do PHP,
+     * que já os tinha. Assim não há eco a errar, e sugestão de índice inexistente cai fora.
+     *
+     * @param  list<array<string, mixed>>  $targets
+     * @param  list<array<string, mixed>>  $suggestions
+     * @return list<SelectorSuggestionData>
+     */
+    private function merge(array $targets, array $suggestions): array
+    {
+        $byIndex = array_column($targets, null, 'index');
+        $merged = [];
+
+        foreach ($suggestions as $suggestion) {
+            $target = $byIndex[$suggestion['index'] ?? -1] ?? null;
+
+            if ($target === null) {
+                continue;
+            }
+
+            $merged[] = new SelectorSuggestionData(
+                event: (string) ($target['label'] ?: $target['type']),
+                currentSelector: (string) $target['selector'],
+                suggestedTestId: (string) ($suggestion['suggestedTestId'] ?? ''),
+                reason: (string) ($suggestion['reason'] ?? ''),
+            );
+        }
+
+        return $merged;
+    }
+
+    /**
+     * Sugestão fora do padrão é descartada, não corrigida: o testid vai ser colado à mão no código
+     * do sistema testado, e um nome torto ali fica para sempre.
+     *
+     * @param  list<SelectorSuggestionData>  $suggestions
+     * @return list<SelectorSuggestionData>
+     */
+    private function clean(array $suggestions): array
+    {
+        return array_values(array_filter(
+            $suggestions,
+            fn (SelectorSuggestionData $suggestion): bool => SelectorRules::check([$suggestion]) === [],
+        ));
     }
 }

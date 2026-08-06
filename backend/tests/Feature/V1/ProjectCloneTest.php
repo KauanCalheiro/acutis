@@ -10,7 +10,6 @@ beforeEach(function () {
     $this->projectsPath = sys_get_temp_dir().'/acutis-test-'.uniqid();
     config()->set('acutis.projects.path', $this->projectsPath);
 
-    // repo git local que serve de "remote" para o clone (sem rede)
     $this->sourceRepo = sys_get_temp_dir().'/acutis-source-'.uniqid();
     File::ensureDirectoryExists($this->sourceRepo);
     (new Process(['git', 'init', '-q'], $this->sourceRepo))->mustRun();

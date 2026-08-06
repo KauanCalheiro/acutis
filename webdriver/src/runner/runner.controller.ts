@@ -5,13 +5,11 @@ import type { ServerResponse } from 'node:http'
 import { watchableVideo } from './run-video.js'
 import { RunnerService, type RunResult } from './runner.service.js'
 import type { RunEvent } from '../types/run.js'
-import { SnapshotService, type Snapshot } from './snapshot.service.js'
 
 @Controller('runner')
 export class RunnerController {
     constructor(
         private readonly runnerService: RunnerService,
-        private readonly snapshotService: SnapshotService,
     ) { }
 
     private ensureTestMode(): void {
@@ -29,13 +27,6 @@ export class RunnerController {
         this.ensureTestMode()
 
         return this.runnerService.run(spec, { baseUrl, env })
-    }
-
-    @Post('snapshot')
-    async snapshot(@Body('url') url: string): Promise<Snapshot> {
-        this.ensureTestMode()
-
-        return this.snapshotService.capture(url)
     }
 
     @Post('project')

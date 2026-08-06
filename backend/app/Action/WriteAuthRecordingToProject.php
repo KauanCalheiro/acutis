@@ -2,7 +2,8 @@
 
 namespace App\Action;
 
-use App\Ai\Agents\GherkinWriter;
+use App\Ai\Agents\Scenario\GherkinWriter;
+use App\Ai\Prompts\AuthPrompt;
 use App\Ai\StructuredOutput;
 use App\Data\V1\Auth\AuthRecordingData;
 use App\Data\V1\Auth\GeneratedAuthSetupData;
@@ -28,29 +29,36 @@ class WriteAuthRecordingToProject
         $path = $project->path();
         $auth = $project->auth();
 
-        $authSetup = GenerateAuthSetupFromRecording::run($data);
+        $generated = GenerateAuthSetupFromRecording::run($slug, $data);
         $recording = Recording::make($data->events);
         $credentials = $recording->credentials();
 
         $auth->ensureConfig();
-        File::put("{$path}/".Scenario::AUTH_SPEC, $authSetup."\n");
+        File::put("{$path}/".Scenario::AUTH_SPEC, $generated->authSetup."\n");
         File::put(
             "{$path}/".Scenario::eventsPathOf(Scenario::AUTH_SPEC),
             json_encode($recording->withoutPasswords(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         );
+
+        if ($html = $recording->html()) {
+            File::put(
+                "{$path}/".Scenario::htmlPathOf(Scenario::AUTH_SPEC),
+                json_encode($html, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            );
+        }
 
         $this->writeFeature($path, $data, $recording);
 
         $environments = $project->environments()->ensure();
 
         if (! $credentials) {
-            return new GeneratedAuthSetupData(authSetup: $authSetup, credentialsNeeded: true);
+            return $generated;
         }
 
         $environments->set(EnvKey::USER, $credentials->username);
         $environments->set(EnvKey::PASSWORD, $credentials->password, secret: true);
 
-        return new GeneratedAuthSetupData(authSetup: $authSetup, credentialsNeeded: false);
+        return $generated;
     }
 
     /**
@@ -59,13 +67,8 @@ class WriteAuthRecordingToProject
      */
     private function writeFeature(string $path, AuthRecordingData $data, Recording $recording): void
     {
-        $events = json_encode(
-            $recording->withoutPasswords(),
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
-        );
-
         $gherkin = StructuredOutput::field(
-            app(GherkinWriter::class)->prompt("URL base: {$data->baseUrl}\n\nEventos gravados:\n{$events}"),
+            app(GherkinWriter::class)->prompt(AuthPrompt::gherkin($data, $recording)),
             'gherkin',
         );
 

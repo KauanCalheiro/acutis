@@ -41,7 +41,6 @@ class CloneProjectFromGit
                 throw new RuntimeException('Falha ao clonar o repositório: '.trim($clone->getErrorOutput() ?: $clone->getOutput()));
             }
 
-            // Remove o token da URL persistida em .git/config
             if ($cleanUrl !== null) {
                 (new Process(['git', '-C', $path, 'remote', 'set-url', 'origin', $cleanUrl]))->run();
             }
@@ -82,11 +81,13 @@ class CloneProjectFromGit
     }
 
     /**
+     * ponytail: arquivo de chave temporário; o caminho não tem espaço, então não precisa de aspas
+     * no GIT_SSH_COMMAND.
+     *
      * @return array{0: string, 1: ?string, 2: array<string, string>, 3: callable}
      */
     private function sshAuth(CloneProjectData $data): array
     {
-        // ponytail: temp key file; path has no spaces so no quoting needed in GIT_SSH_COMMAND
         $keyFile = tempnam(sys_get_temp_dir(), 'acutis-ssh-');
         File::put($keyFile, rtrim((string) $data->ssh_key)."\n");
         chmod($keyFile, 0600);

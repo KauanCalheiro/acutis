@@ -34,5 +34,7 @@ export interface RecordingEvent {
     tagName: string | null
     innerText: string | null
     inputType: string | null
+    /** O DOM ao redor do elemento no instante da ação. Sai dos eventos ao persistir, para não inchá-los. */
+    html: string | null
     assert?: AssertPayload
 }

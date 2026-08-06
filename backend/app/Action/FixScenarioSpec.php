@@ -2,66 +2,137 @@
 
 namespace App\Action;
 
-use App\Ai\Agents\SpecFixer;
+use App\Ai\Agents\Auth\AuthFixer;
+use App\Ai\Agents\Auth\AuthValidator;
+use App\Ai\Agents\Scenario\ScenarioFixer;
+use App\Ai\Agents\Scenario\ScenarioValidator;
+use App\Ai\Attempt;
+use App\Ai\Prompts\FixPrompt;
+use App\Ai\Rules\AuthRules;
+use App\Ai\Rules\SpecRules;
+use App\Ai\Rules\Violation;
 use App\Ai\StructuredOutput;
-use App\Ai\Tools\CaptureSnapshot;
+use App\Ai\Tools\RunSpec;
 use App\Data\V1\Project\FixedSpecData;
 use App\Data\V1\Project\ScenarioFixData;
+use App\Enums\EnvKey;
+use App\Support\Primitives\Environments;
+use App\Support\Primitives\Playwright;
+use App\Support\Primitives\Url;
 use App\Support\Project;
+use App\Support\Scenario;
+use Illuminate\Support\Facades\File;
 use Lorisleiva\Actions\Concerns\AsAction;
 
 class FixScenarioSpec
 {
     use AsAction;
 
+    /** Rede de segurança: o agente já se corrige por dentro, e o ideal é nunca chegar aqui. */
+    private const MAX_FIX_ATTEMPTS = 2;
+
+    /**
+     * Projeto sem URL configurada não tem host nem caminho a comparar, e as regras que dependem
+     * disso precisam de algo. `.invalid` é reservado pela RFC 2606 justamente para isto: nunca
+     * resolve, então nunca casa por engano com o que o spec traz.
+     */
+    private const NO_URL = 'https://acutis.invalid';
+
+    /**
+     * O spec é executado uma vez antes de chamar o Fixer, para ver a página como ela está agora:
+     * é de dentro da execução, já autenticada, que sai o HTML onde aparece o elemento que mudou.
+     */
     public function handle(string $slug, string $scenarioId, ScenarioFixData $input): FixedSpecData
     {
-        $scenario = Project::make($slug)->scenario($scenarioId);
+        $project = Project::make($slug);
+        $scenario = $project->scenario($scenarioId);
+        $environments = new Environments($project->environments()->activeVars());
+        $base = $this->baseUrl($environments);
 
-        $playwright = $scenario->source();
+        $source = $scenario->source();
         $events = $scenario->events();
+        $isAuth = $scenario->isAuth();
 
-        $response = app(SpecFixer::class)->prompt($this->promptFor($playwright, $events, $input));
+        $run = $base === null ? null : new RunSpec($base->value, [EnvKey::URL->value => $base->value]);
+        $result = $run?->ensure($source);
 
-        return new FixedSpecData(
-            playwright: StructuredOutput::field($response, 'playwright'),
-            summary: StructuredOutput::field($response, 'summary'),
+        $rulesBase = $base ?? new Url(self::NO_URL);
+        $html = $this->html($project, $scenario);
+
+        $fixer = $isAuth
+            ? new AuthFixer($project->path(), $rulesBase, $environments, $run, $html)
+            : new ScenarioFixer($project->path(), $rulesBase, $environments, $run, $html);
+
+        $payload = FixPrompt::of(
+            spec: $source,
+            step: $input->step,
+            error: $input->error,
+            html: $result?->passed === false ? $result->html : null,
+            events: $events,
         );
+
+        for ($attempt = 0; ; $attempt++) {
+            $response = Attempt::answering(fn () => $fixer->prompt($payload), 'playwright');
+
+            $playwright = new Playwright(StructuredOutput::field($response, 'playwright'));
+            $summary = StructuredOutput::field($response, 'summary');
+
+            $issues = $this->issues($isAuth, $playwright, $rulesBase, $environments, $events);
+            $fixable = array_values(array_filter($issues, fn (Violation $v): bool => $v->fixable));
+
+            if ($fixable === [] || $attempt === self::MAX_FIX_ATTEMPTS) {
+                return new FixedSpecData(playwright: $playwright->value, summary: $summary);
+            }
+
+            $payload = FixPrompt::of(spec: $playwright->value, violations: $fixable, events: $events);
+        }
     }
 
-    /** @param  list<array<string, mixed>>  $events */
-    private function promptFor(string $playwright, array $events, ScenarioFixData $input): string
-    {
-        $snapshot = $this->snapshot($events);
-        $json = fn (array $value): string => json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-        return <<<PROMPT
-        Passo que falhou:
-        {$input->step}
-
-        Erro da execução:
-        {$input->error}
-
-        Spec atual:
-        {$playwright}
-
-        Snapshot da página real:
-        {$snapshot}
-
-        Eventos originais da gravação:
-        {$json($events)}
-        PROMPT;
+    /**
+     * As duas checagens, uma linha cada: tirar a validação por IA é apagar a linha dela.
+     *
+     * @param  list<array<string, mixed>>  $events
+     * @return list<Violation>
+     */
+    private function issues(
+        bool $isAuth,
+        Playwright $playwright,
+        Url $base,
+        Environments $environments,
+        array $events,
+    ): array {
+        return [
+            ...$isAuth
+                ? AuthRules::check($playwright, $base, $environments)
+                : SpecRules::check($playwright, $base, $environments),
+            ...$isAuth
+                ? AuthValidator::check($playwright, $events)
+                : ScenarioValidator::check($playwright, $events),
+        ];
     }
 
-    /** @param  list<array<string, mixed>>  $events */
-    private function snapshot(array $events): string
+    /** Sem URL configurada não há onde rodar, e aí o Fixer trabalha só com o erro e os eventos. */
+    private function baseUrl(Environments $environments): ?Url
     {
-        $url = collect($events)->pluck('url')->filter()->first();
+        $url = $environments->get(EnvKey::URL->value)?->value;
 
-        if (! is_string($url)) {
-            return 'indisponível';
+        return filled($url) ? new Url($url) : null;
+    }
+
+    /**
+     * O DOM que a gravação capturou, do arquivo ao lado do spec. Vazio quando a gravação é
+     * anterior à captura, e aí a tool nem é oferecida.
+     *
+     * @return array<int, string>
+     */
+    private function html(Project $project, Scenario $scenario): array
+    {
+        $file = $project->path().'/'.Scenario::htmlPathOf($scenario->spec());
+
+        if (! File::exists($file)) {
+            return [];
         }
 
-        return app(CaptureSnapshot::class)->capture($url);
+        return json_decode(File::get($file), true) ?? [];
     }
 }

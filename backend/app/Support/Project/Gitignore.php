@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\File;
  * O .gitignore do projeto. Segredo escrito sem estar ignorado é segredo versionado, então toda
  * escrita que possa criar .env ou storage-state.json garante isto por dentro, e nenhuma delas
  * depende de alguém lembrar de chamar depois.
+ *
+ * O *.dom.json entra pelo mesmo raciocínio invertido: não é segredo, é peso. Só serve à máquina
+ * que gravou, porque o Fixer de outra pessoa lê a página que quebrou, não a que funcionava.
  */
 final class Gitignore
 {
@@ -21,6 +24,7 @@ final class Gitignore
         'results',
         'playwright-report',
         'test-results',
+        '*.dom.json',
     ];
 
     public function __construct(private readonly Project $project) {}

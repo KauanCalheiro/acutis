@@ -1,4 +1,5 @@
 import type { RecordingEvent, RecordingEventType } from '@/types/recording'
+import { captureContext } from './htmlContext'
 import { usePillState } from './usePillState'
 import { useSelectorCapture } from './useSelectorCapture'
 import { reportEvent } from '../transport'
@@ -109,6 +110,7 @@ export function useRecorderEvents() {
             tagName: el.tagName.toLowerCase(),
             innerText: (el as HTMLElement).innerText?.trim().slice(0, 200) || null,
             inputType: el instanceof HTMLInputElement ? el.type : null,
+            html: captureContext(el),
         }
     }
 
@@ -123,7 +125,8 @@ export function useRecorderEvents() {
             sensitive: false,
             tagName: null,
             innerText: null,
-            inputType: null
+            inputType: null,
+            html: null,
         }
     }
 

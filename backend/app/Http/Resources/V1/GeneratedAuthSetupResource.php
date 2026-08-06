@@ -12,6 +12,7 @@ class GeneratedAuthSetupResource extends JsonResource
         return [
             'authSetup' => $this->authSetup,
             'credentialsNeeded' => $this->credentialsNeeded,
+            'warnings' => $this->warnings,
         ];
     }
 }
