@@ -248,6 +248,13 @@ test.describe('project settings', { tag: ['@write', '@project'] }, () => {
         await expect(page.getByTestId('ambientes-variaveis-chave-0')).toHaveValue('URL')
         await expect(page.getByTestId('ambientes-variaveis-valor-0')).toHaveValue('https://sistema.exemplo.com/app')
     })
+
+    test('opens the environments already loaded when the url asks for them', async ({ page }) => {
+        await page.goto('/projects/alpha-store?ambiente')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await expect(page.getByTestId('ambientes-variaveis-chave-0')).toHaveValue('URL', { timeout: 10_000 })
+    })
 })
 
 test.describe('project management', { tag: ['@write', '@project'] }, () => {

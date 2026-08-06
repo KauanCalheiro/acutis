@@ -228,6 +228,38 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
         await expect(page.getByTestId('cenario-card')).toHaveCount(2)
     })
 
+    test('shows the generation warnings with the draft, pointing at the environment', async ({ page }) => {
+        await page.route('**/api/projects/alpha-store/tests/draft', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    title: 'Fluxo gravado',
+                    tags: ['@read'],
+                    domain: 'navegacao',
+                    path: 'fluxo-gravado',
+                    gherkin: '@read\nFuncionalidade: Fluxo gravado',
+                    playwright: "import { test } from '@playwright/test' // spec",
+                    warnings: ['env-sem-valor: A variável TOKEN está declarada sem valor; preencha o ambiente ou o teste falha.'],
+                }),
+            })
+        })
+
+        await page.getByTestId('revisao-gerar').click()
+
+        const ressalvas = page.getByTestId('geracao-ressalvas')
+
+        await test.step('the warning shows the reason without the rule slug', async () => {
+            await expect(ressalvas).toBeVisible({ timeout: 10_000 })
+            await expect(ressalvas).toContainText('A variável TOKEN está declarada sem valor')
+            await expect(ressalvas).not.toContainText('env-sem-valor')
+        })
+
+        await test.step('an empty variable offers the environment screen, which is where it is filled', async () => {
+            await expect(page.getByTestId('ressalvas-ambiente')).toHaveAttribute('href', '/projects/alpha-store?ambiente')
+        })
+    })
+
     test('drafts the scenario, lets the user edit the contexts, then posts the edited draft', async ({ page }) => {
         let drafted: { baseUrl?: string, events?: Array<{ type?: string }> } | null = null
         await page.route('**/api/projects/alpha-store/tests/draft', async (route) => {
@@ -440,6 +472,43 @@ test.describe('recording authentication from the auth scenario page', { tag: ['@
 
         await expect(page.getByTestId('execucao-status')).toBeVisible({ timeout: 15_000 })
         expect(saved).toMatchObject({ username: '482910', password: 'senha-real' })
+    })
+
+    test('shows the generation warnings on the auth scenario page', async ({ page }) => {
+        await page.route('**/api/projects/alpha-store/auth/record', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    authSetup: "import { test as setup } from '@playwright/test' // login gravado",
+                    credentialsNeeded: true,
+                    warnings: ['env-sem-valor: A variável TOKEN está declarada sem valor; preencha o ambiente ou o teste falha.'],
+                }),
+            })
+        })
+
+        await test.step('open the auth scenario page and wait for the webdriver connection', async () => {
+            await page.goto('/projects/alpha-store/scenarios/auth')
+            await page.locator('[data-hydrated="true"]').waitFor()
+            await expect(page.getByTestId('auth-gravar-vazio')).toBeEnabled({ timeout: 10_000 })
+        })
+
+        await test.step('record a login and stop', async () => {
+            await page.getByTestId('auth-gravar-vazio').click()
+            await expect(page.getByTestId('cenario-parar')).toBeVisible({ timeout: 10_000 })
+
+            const goto = await page.request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: authBaseUrl } })
+            expect(goto.ok()).toBe(true)
+            const click = await page.request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#btn' } })
+            expect(click.ok()).toBe(true)
+
+            await page.getByTestId('cenario-parar').click()
+        })
+
+        await test.step('the warning survives next to the credentials the generation could not extract', async () => {
+            await expect(page.getByTestId('auth-credenciais')).toBeVisible({ timeout: 15_000 })
+            await expect(page.getByTestId('geracao-ressalvas')).toContainText('A variável TOKEN está declarada sem valor')
+        })
     })
 
     test('keeps the real reason in the console when the backend fails to write the setup', async ({ page }) => {

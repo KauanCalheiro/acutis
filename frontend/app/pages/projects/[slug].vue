@@ -51,6 +51,11 @@ onMounted(() => {
 
 const environmentsOpen = ref(false)
 
+/** `?ambiente` abre o modal, que é para onde a ressalva de variável sem valor aponta. */
+onMounted(() => {
+  if (useRoute().query.ambiente !== undefined) environmentsOpen.value = true
+})
+
 async function onEnvironmentsSaved() {
   await refreshNuxtData(`environments-${slug.value}`)
   await refresh()

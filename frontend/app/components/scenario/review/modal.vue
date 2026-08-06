@@ -127,10 +127,15 @@ function rerecord() {
     <template #body>
       <ScenarioReviewLoading v-if="step === 'loading'" />
 
-      <ScenarioReviewContexts
-        v-else-if="step === 'edit'"
-        v-model:draft="draft"
-      />
+      <template v-else-if="step === 'edit'">
+        <ScenarioWarnings
+          :warnings="draft.warnings"
+          :slug="slug"
+          class="mb-4"
+        />
+
+        <ScenarioReviewContexts v-model:draft="draft" />
+      </template>
 
       <ScenarioReviewTimeline
         v-else

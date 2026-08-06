@@ -197,6 +197,7 @@ const { state: webdriver, startRecording, stopRecording } = useWebdriver()
 const credentialsOpen = ref(false)
 const writingAuth = ref(false)
 const authError = ref<string | null>(null)
+const authWarnings = ref<string[]>([])
 
 const AUTH_PHRASES = [
   'Analisando os eventos gravados',
@@ -207,6 +208,7 @@ const AUTH_PHRASES = [
 /** Gravar o login abre no sistema sem sessão, porque é justamente o login que vamos capturar. */
 function recordLogin() {
   authError.value = null
+  authWarnings.value = []
   startRecording('auth', { url: project.value!.base_url ?? undefined })
 }
 
@@ -223,7 +225,7 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
   writingAuth.value = true
 
   try {
-    const response = await $fetch<{ authSetup: string, credentialsNeeded: boolean }>(`/api/projects/${slug.value}/auth/record`, {
+    const response = await $fetch<{ authSetup: string, credentialsNeeded: boolean, warnings?: string[] }>(`/api/projects/${slug.value}/auth/record`, {
       method: 'POST',
       body: {
         baseUrl,
@@ -238,6 +240,8 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
         }))
       }
     })
+
+    authWarnings.value = response.warnings ?? []
 
     await refreshScenario()
 
@@ -369,6 +373,12 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
     >
       Última modificação: {{ updatedAt }}
     </p>
+
+    <ScenarioWarnings
+      :warnings="authWarnings"
+      :slug="slug"
+      class="mt-6"
+    />
 
     <div
       v-if="authError || webdriver.error"

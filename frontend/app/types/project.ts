@@ -98,4 +98,5 @@ export interface TestDraft {
   playwright: string
   events?: RecorderEvent[]
   envVars?: string[]
+  warnings?: string[]
 }
