@@ -247,7 +247,8 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
     }
 
     runTest()
-  } catch {
+  } catch (error) {
+    console.error('Falha ao gravar a autenticação:', error)
     authError.value = 'Não foi possível gerar a autenticação a partir da gravação. Tente novamente.'
   } finally {
     writingAuth.value = false

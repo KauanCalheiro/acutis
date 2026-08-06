@@ -18,6 +18,7 @@ function authPayload(array $events = [], array $extra = []): array
 {
     return json_decode(AuthPrompt::from(
         new AuthRecordingData(baseUrl: SPEC_BASE_URL, events: loginEvents($events)),
+        specUrl(),
         specEnvironments($extra),
     ), true);
 }
@@ -62,6 +63,7 @@ it('sends the events with the credentials already marked', function () {
 it('never lets the typed password reach the payload', function () {
     expect(AuthPrompt::from(
         new AuthRecordingData(baseUrl: SPEC_BASE_URL, events: loginEvents()),
+        specUrl(),
         specEnvironments(),
     ))->not->toContain('topsecret123');
 });

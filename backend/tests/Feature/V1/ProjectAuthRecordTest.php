@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 use function Pest\Laravel\postJson;
+use function Pest\Laravel\putJson;
 
 beforeEach(function () {
     $this->projectsPath = sys_get_temp_dir().'/acutis-test-'.uniqid();
@@ -87,6 +88,21 @@ it('never sets the base url — that comes from the project settings only', func
 
     expect(File::get($dir.'/.env'))->not->toContain('URL')
         ->and(File::get($dir.'/playwright.config.ts'))->toBe($config);
+});
+
+it('bases the setup on the project url, not on the host the recording was redirected to', function () {
+    AuthWriter::fake([['authSetup' => authSetup()]]);
+    $slug = recordProject();
+
+    putJson("/api/v1/projects/{$slug}/settings", ['baseUrl' => 'https://sistema.test/intranet'])->assertOk();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
+        'baseUrl' => 'https://sso.sistema.test',
+    ]))->assertOk();
+
+    AuthWriter::assertPrompted(
+        fn ($prompt) => promptPayload($prompt)['baseUrl']['value'] === 'https://sistema.test/intranet'
+    );
 });
 
 it('never executes anything when the recording says nowhere to run it', function () {

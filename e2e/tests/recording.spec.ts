@@ -441,6 +441,48 @@ test.describe('recording authentication from the auth scenario page', { tag: ['@
         await expect(page.getByTestId('execucao-status')).toBeVisible({ timeout: 15_000 })
         expect(saved).toMatchObject({ username: '482910', password: 'senha-real' })
     })
+
+    test('keeps the real reason in the console when the backend fails to write the setup', async ({ page }) => {
+        const consoleErrors: string[] = []
+
+        page.on('console', (message) => {
+            if (message.type() === 'error') consoleErrors.push(message.text())
+        })
+
+        await page.route('**/api/projects/alpha-store/auth/record', async (route) => {
+            await route.fulfill({
+                status: 500,
+                contentType: 'application/json',
+                body: JSON.stringify({ message: 'Maximum execution time of 30 seconds exceeded' }),
+            })
+        })
+
+        await test.step('open the auth scenario page and wait for the webdriver connection', async () => {
+            await page.goto('/projects/alpha-store/scenarios/auth')
+            await page.locator('[data-hydrated="true"]').waitFor()
+            await expect(page.getByTestId('auth-gravar-vazio')).toBeEnabled({ timeout: 10_000 })
+        })
+
+        await test.step('record a login and stop', async () => {
+            await page.getByTestId('auth-gravar-vazio').click()
+            await expect(page.getByTestId('cenario-parar')).toBeVisible({ timeout: 10_000 })
+
+            const goto = await page.request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: authBaseUrl } })
+            expect(goto.ok()).toBe(true)
+            const click = await page.request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#btn' } })
+            expect(click.ok()).toBe(true)
+
+            await page.getByTestId('cenario-parar').click()
+        })
+
+        await test.step('the page warns the user and the console carries the failed request', async () => {
+            await expect(page.getByTestId('webdriver-erro')).toBeVisible({ timeout: 15_000 })
+            await expect.poll(
+                () => consoleErrors.find((text) => text.includes('Falha ao gravar a autenticação')) ?? '',
+                { timeout: 10_000 },
+            ).toContain('500')
+        })
+    })
 })
 
 test.describe('recording over cdp against a host chrome', { tag: ['@write', '@recording'] }, () => {
