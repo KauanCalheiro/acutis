@@ -5,6 +5,7 @@ namespace App\Action;
 use App\Ai\Agents\Auth\AuthFixer;
 use App\Ai\Agents\Auth\AuthValidator;
 use App\Ai\Agents\Auth\AuthWriter;
+use App\Ai\Attempt;
 use App\Ai\Prompts\AuthPrompt;
 use App\Ai\Prompts\FixPrompt;
 use App\Ai\Rules\AuthRules;
@@ -39,12 +40,14 @@ class GenerateAuthSetupFromRecording
         $recording = Recording::make($input->events);
         $base = new Url($input->baseUrl);
         $environments = $this->environments($project, $input, $recording);
-        $run = $this->runner($input);
+        $run = $this->runner($input, $environments);
 
         $writer = new AuthWriter($project->path(), $base, $environments, $run, $recording->html());
 
+        $payload = AuthPrompt::from($input, $environments);
+
         $playwright = new Playwright(StructuredOutput::field(
-            $writer->prompt(AuthPrompt::from($input, $environments)),
+            Attempt::answering(fn () => $writer->prompt($payload), 'authSetup'),
             'authSetup',
         ));
 
@@ -90,14 +93,16 @@ class GenerateAuthSetupFromRecording
 
             $fixer = new AuthFixer($project->path(), $base, $environments, $run, $recording->html());
 
+            $correction = FixPrompt::of(
+                spec: $playwright->value,
+                violations: $fixable,
+                error: $run?->last()?->passed === false ? $run->last()->output : null,
+                html: $run?->last()?->html,
+                events: $events,
+            );
+
             $playwright = new Playwright(StructuredOutput::field(
-                $fixer->prompt(FixPrompt::of(
-                    spec: $playwright->value,
-                    violations: $fixable,
-                    error: $run?->last()?->passed === false ? $run->last()->output : null,
-                    html: $run?->last()?->html,
-                    events: $events,
-                )),
+                Attempt::answering(fn () => $fixer->prompt($correction), 'playwright'),
                 'playwright',
             ));
         }
@@ -127,14 +132,29 @@ class GenerateAuthSetupFromRecording
         ));
     }
 
-    /** Sem URL de execução não há onde rodar, e aí o agente nem recebe a tool. */
-    private function runner(AuthRecordingData $input): ?RunSpec
+    /**
+     * Sem URL de execução não há onde rodar, e aí o agente nem recebe a tool.
+     *
+     * As credenciais vão junto porque o setup de login as lê: sem elas a execução falha por falta
+     * de dado, o agente lê isso como problema do arquivo e tenta contornar escrevendo desvio.
+     */
+    private function runner(AuthRecordingData $input, Environments $environments): ?RunSpec
     {
         if ($input->executionUrl === null) {
             return null;
         }
 
-        return new RunSpec($input->executionUrl, [EnvKey::URL->value => $input->executionUrl]);
+        $env = [EnvKey::URL->value => $input->executionUrl];
+
+        foreach ([EnvKey::USER, EnvKey::PASSWORD] as $key) {
+            $value = $environments->get($key->value)?->value;
+
+            if (filled($value)) {
+                $env[$key->value] = $value;
+            }
+        }
+
+        return new RunSpec($input->executionUrl, $env);
     }
 
     /**

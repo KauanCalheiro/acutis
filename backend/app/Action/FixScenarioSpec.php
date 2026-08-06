@@ -6,6 +6,7 @@ use App\Ai\Agents\Auth\AuthFixer;
 use App\Ai\Agents\Auth\AuthValidator;
 use App\Ai\Agents\Scenario\ScenarioFixer;
 use App\Ai\Agents\Scenario\ScenarioValidator;
+use App\Ai\Attempt;
 use App\Ai\Prompts\FixPrompt;
 use App\Ai\Rules\AuthRules;
 use App\Ai\Rules\SpecRules;
@@ -71,7 +72,7 @@ class FixScenarioSpec
         );
 
         for ($attempt = 0; ; $attempt++) {
-            $response = $fixer->prompt($payload);
+            $response = Attempt::answering(fn () => $fixer->prompt($payload), 'playwright');
 
             $playwright = new Playwright(StructuredOutput::field($response, 'playwright'));
             $summary = StructuredOutput::field($response, 'summary');

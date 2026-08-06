@@ -2,6 +2,8 @@
 
 namespace App\Ai\Agents\Scenario;
 
+use App\Ai\Agents\Lookup\WebSearcher;
+use App\Ai\Limits;
 use App\Ai\Rules\SpecRules;
 use App\Ai\Tools\CheckRules;
 use App\Ai\Tools\ListProjectFiles;
@@ -18,10 +20,9 @@ use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Promptable;
-use Laravel\Ai\Providers\Tools\WebSearch;
 
 #[UseSmartestModel]
-#[MaxSteps(8)]
+#[MaxSteps(Limits::STEPS)]
 class ScenarioFixer implements Agent, HasStructuredOutput, HasTools
 {
     use Promptable;
@@ -47,7 +48,7 @@ class ScenarioFixer implements Agent, HasStructuredOutput, HasTools
             )),
             new ReadProjectFile($this->project),
             new ListProjectFiles($this->project),
-            new WebSearch(maxSearches: 2),
+            new WebSearcher,
         ]));
     }
 

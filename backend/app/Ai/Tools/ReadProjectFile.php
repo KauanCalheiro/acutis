@@ -42,6 +42,11 @@ final class ReadProjectFile implements Tool
             return "Caminho fora do projeto: {$path}";
         }
 
+        if ($this->holdsSecret($this->project, $target)) {
+            return "O arquivo {$path} guarda segredo do projeto e não pode ser lido. "
+                .'Os valores dele chegam pelo ambiente do prompt, sempre como nome de variável.';
+        }
+
         return (string) file_get_contents($target);
     }
 }

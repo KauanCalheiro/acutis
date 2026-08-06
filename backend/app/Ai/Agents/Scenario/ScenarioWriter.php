@@ -2,6 +2,8 @@
 
 namespace App\Ai\Agents\Scenario;
 
+use App\Ai\Agents\Lookup\WebSearcher;
+use App\Ai\Limits;
 use App\Ai\Rules\SpecRules;
 use App\Ai\Tools\CheckRules;
 use App\Ai\Tools\ListProjectFiles;
@@ -18,10 +20,9 @@ use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Promptable;
-use Laravel\Ai\Providers\Tools\WebSearch;
 
 #[UseSmartestModel]
-#[MaxSteps(8)]
+#[MaxSteps(Limits::STEPS)]
 class ScenarioWriter implements Agent, HasStructuredOutput, HasTools
 {
     use Promptable;
@@ -48,7 +49,7 @@ class ScenarioWriter implements Agent, HasStructuredOutput, HasTools
             )),
             new ReadProjectFile($this->project),
             new ListProjectFiles($this->project),
-            new WebSearch(maxSearches: 2),
+            new WebSearcher,
         ]));
     }
 
@@ -60,6 +61,7 @@ class ScenarioWriter implements Agent, HasStructuredOutput, HasTools
         O prompt é um JSON com: baseUrl (o valor e o nome da variável que o guarda), gherkin (o cenário a implementar), environment (as variáveis do ambiente), events (a gravação) e pauses (onde o usuário esperou a página).
 
         - Implemente exatamente o cenário do Gherkin; os eventos são a fonte de seletores e valores.
+        - Com publico false, o teste roda com a sessão que o setup de autenticação já deixou salva: não escreva passos de login nem desvio que verifique se está logado. Com publico true ele roda sem sessão, e aí a própria tela de login pode ser o assunto do cenário.
         - Prioridade de seletor: getByTestId, depois id, depois finder por texto.
         - Estruture com test.describe e await test.step espelhando os passos do Gherkin.
         - Todo valor escrito como {{CHAVE}} nos eventos é process.env.CHAVE no arquivo, nunca o literal.
@@ -69,7 +71,7 @@ class ScenarioWriter implements Agent, HasStructuredOutput, HasTools
 
         Quando o seletor de um evento não bastar, como em elementos iguais na mesma tela, peça o DOM daquele evento com RecordedHtml pelo índice dele.
 
-        Antes de responder: rode com RunSpec, se a tool estiver disponível, e passe por CheckRules. Só responda com o arquivo que sobreviveu às duas.
+        Antes de responder: rode com RunSpec, se a tool estiver disponível, e passe por CheckRules. No máximo três execuções: não passou até lá, responda com o melhor arquivo que você tem — quem recebe sabe lidar com isso, e insistir sem limite não devolve nada.
         INSTRUCTIONS;
     }
 

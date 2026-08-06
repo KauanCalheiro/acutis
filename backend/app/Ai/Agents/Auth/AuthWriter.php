@@ -2,6 +2,8 @@
 
 namespace App\Ai\Agents\Auth;
 
+use App\Ai\Agents\Lookup\WebSearcher;
+use App\Ai\Limits;
 use App\Ai\Rules\AuthRules;
 use App\Ai\Tools\CheckRules;
 use App\Ai\Tools\ListProjectFiles;
@@ -18,10 +20,9 @@ use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Promptable;
-use Laravel\Ai\Providers\Tools\WebSearch;
 
 #[UseSmartestModel]
-#[MaxSteps(8)]
+#[MaxSteps(Limits::STEPS)]
 class AuthWriter implements Agent, HasStructuredOutput, HasTools
 {
     use Promptable;
@@ -48,7 +49,7 @@ class AuthWriter implements Agent, HasStructuredOutput, HasTools
             )),
             new ReadProjectFile($this->project),
             new ListProjectFiles($this->project),
-            new WebSearch(maxSearches: 2),
+            new WebSearcher,
         ]));
     }
 
@@ -65,10 +66,11 @@ class AuthWriter implements Agent, HasStructuredOutput, HasTools
         - Todo valor escrito como {{CHAVE}} nos eventos é process.env.CHAVE no arquivo, nunca o literal.
         - Com landing preenchido, confirme o login esperando o caminho dele. Com landing null nenhuma navegação foi gravada: confirme pelo sumiço do campo de senha, ou por um elemento que só existe depois de autenticar.
         - Termine salvando a sessão em storageState, e só depois de confirmar o login.
+        - O setup executa o login inteiro, sempre: nada de `return` nem de desvio quando uma variável parece faltar. Sessão salva sem login deixa todo cenário autenticado rodando deslogado, e a execução fica verde escondendo isso.
 
         Quando o seletor de um evento não bastar, como em elementos iguais na mesma tela, peça o DOM daquele evento com RecordedHtml pelo índice dele.
 
-        Antes de responder: rode com RunSpec, se a tool estiver disponível, e passe por CheckRules. Só responda com o arquivo que sobreviveu às duas.
+        Antes de responder: rode com RunSpec, se a tool estiver disponível, e passe por CheckRules. No máximo três execuções: não passou até lá, responda com o melhor arquivo que você tem — quem recebe sabe lidar com isso, e insistir sem limite não devolve nada.
         INSTRUCTIONS;
     }
 

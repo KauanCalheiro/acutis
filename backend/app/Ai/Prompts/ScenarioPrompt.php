@@ -27,6 +27,7 @@ final class ScenarioPrompt
         return Payload::encode([
             'baseUrl' => Payload::baseUrl(new Url($recording->baseUrl)),
             'gherkin' => $gherkin,
+            'publico' => $recording->publico,
             'environment' => Payload::environment($environments),
             'events' => Recording::make($recording->events)->redacted($environments),
             'pauses' => self::pauses($recording->events),

@@ -4,10 +4,11 @@ namespace App\Ai\Tools;
 
 use App\Ai\Tools\Concerns\WithinProject;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Illuminate\Support\Facades\File;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
 use SplFileInfo;
+use Symfony\Component\Finder\Finder;
+use Throwable;
 
 /** O mapa do projeto testado, para o agente saber o que pedir ao ReadProjectFile. */
 final class ListProjectFiles implements Tool
@@ -50,7 +51,17 @@ final class ListProjectFiles implements Tool
 
         $root = (string) realpath($this->project);
 
-        $files = collect(File::allFiles($target))
+        try {
+            $found = iterator_to_array(
+                Finder::create()->files()->ignoreDotFiles(true)->ignoreUnreadableDirs()->in($target),
+                false,
+            );
+        } catch (Throwable) {
+            return "Não foi possível listar {$directory}.";
+        }
+
+        $files = collect($found)
+            ->reject(fn (SplFileInfo $file): bool => $this->holdsSecret($this->project, $file->getPathname()))
             ->map(fn (SplFileInfo $file): string => ltrim(str_replace($root, '', $file->getPathname()), '/'))
             ->reject(fn (string $path): bool => str_contains($path, self::IGNORED))
             ->take(self::LIMIT)

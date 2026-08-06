@@ -2,6 +2,7 @@
 
 namespace App\Ai\Rules;
 
+use App\Ai\Rules\Auth\EarlyReturn;
 use App\Ai\Rules\Auth\SetupImport;
 use App\Ai\Rules\Auth\StorageState;
 use App\Support\Primitives\Environments;
@@ -15,6 +16,7 @@ final class AuthRules
     private const RULES = [
         StorageState::class,
         SetupImport::class,
+        EarlyReturn::class,
     ];
 
     /** @return list<Violation> */

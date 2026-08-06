@@ -6,6 +6,7 @@ use App\Ai\Agents\Scenario\GherkinWriter;
 use App\Ai\Agents\Scenario\ScenarioFixer;
 use App\Ai\Agents\Scenario\ScenarioValidator;
 use App\Ai\Agents\Scenario\ScenarioWriter;
+use App\Ai\Attempt;
 use App\Ai\Prompts\FixPrompt;
 use App\Ai\Prompts\ScenarioPrompt;
 use App\Ai\Rules\SpecRules;
@@ -45,7 +46,8 @@ class GenerateTestsFromRecording
         $domain = StructuredOutput::field($written, 'domain');
 
         $writer = new ScenarioWriter($project->path(), $base, $environments, $run, $events->html());
-        $drafted = $writer->prompt(ScenarioPrompt::spec($recording, $gherkin, $environments));
+        $draft = ScenarioPrompt::spec($recording, $gherkin, $environments);
+        $drafted = Attempt::answering(fn () => $writer->prompt($draft), 'playwright');
 
         $playwright = new Playwright(StructuredOutput::field($drafted, 'playwright'));
         $envVars = $this->envVars($drafted);
@@ -111,14 +113,16 @@ class GenerateTestsFromRecording
 
             $fixer = new ScenarioFixer($project->path(), $base, $environments, $run, $events->html());
 
+            $correction = FixPrompt::of(
+                spec: $playwright->value,
+                violations: $fixable,
+                error: $run?->last()?->passed === false ? $run->last()->output : null,
+                html: $run?->last()?->html,
+                events: $redacted,
+            );
+
             $playwright = new Playwright(StructuredOutput::field(
-                $fixer->prompt(FixPrompt::of(
-                    spec: $playwright->value,
-                    violations: $fixable,
-                    error: $run?->last()?->passed === false ? $run->last()->output : null,
-                    html: $run?->last()?->html,
-                    events: $redacted,
-                )),
+                Attempt::answering(fn () => $fixer->prompt($correction), 'playwright'),
                 'playwright',
             ));
         }
