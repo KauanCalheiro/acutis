@@ -4,7 +4,7 @@
 - [x] Persistir as execuções de cenário e sincronizá-las pelo git
 - [ ] Colocar config global ou de projeto para usar a IA, escolher seu provedor e chave de API, e modelo, vamos comecar consi
 - [ ] Aposentar as modais de auth e reaproveitar a tela de cenário, vamos comecar considerando um modelo automatico mas vamos reescrever depois, podemos injetact via config o middleware
-- [ ] Busca e paginação nas execuções do cenário
+- [x] Busca e paginação nas execuções do cenário
 - [ ] Levantar o teto do salto Nuxt para Laravel, hoje no default do undici
 - [x] Fluxo de fix deve rodar algumas vezes com a intencao de passar... (`MAX_FIX_ATTEMPTS = 2`, ou seja até três passagens, nas três Actions que geram)
 - [x] Estamos passando muita coisa direta para o modelo... precisamos passar de uma forma mais estruturada
@@ -29,7 +29,6 @@ Formato decidido com o usuário: a memória `frontend-feedback` manda retorno de
 
 ## Buracos menores da refatoração dos agentes
 
-- **`html` não declarado no `RecorderEvent`** (`frontend/app/composables/webdriver.ts`). O pill passou a capturar o DOM ao redor de cada elemento e o campo viaja pelo WS, pela memória do browser e pelo POST sem estar no tipo. Não quebra o typecheck porque os campos são opcionais, mas é contrato implícito, e cada evento carrega até 8KB.
 - **Comentários inline pendentes**: 15 linhas `//` no `webdriver/src` (fora dos `.spec.ts`) e 16 no `frontend/app`. São explicações de "por quê" ancoradas em linha; empurrar quatro delas para o docblock de um mesmo método vira depósito, então pedem um passe pensado.
 
 ## Aposentar as modais de auth e reaproveitar a tela de cenário
@@ -71,10 +70,13 @@ Os tetos de uma chamada de IA foram levantados: 500s no cliente HTTP do `laravel
 
 ## Busca e paginação nas execuções
 
-A seção Testes da tela de cenário mostra as execuções que a API devolve (`Runs::SHOWN = 6`) numa lista solta, sem filtro nem navegação — o arquivo já guarda 20 (`Runs::KEPT`), então metade do histórico não tem como ser vista pela interface.
+A seção Testes mostrava as execuções cortadas em `Runs::SHOWN = 6` numa lista solta, sem filtro nem navegação. O arquivo guarda `KEPT = 20`, então dois terços do histórico não tinham como ser vistos.
 
-### Pontos a resolver
+### Como ficou
 
-- **Onde pagina.** No backend, com a API aceitando página/tamanho como os outros recursos, ou no frontend sobre o que já vem — o arquivo é pequeno e cabe inteiro numa resposta.
-- **O que a busca filtra.** Data, status, branch, autor, ou o texto do step que falhou. Filtrar por status e por step falho é o que serve pra caçar regressão.
-- **Relação com o limite.** Paginar além de 20 exige guardar mais, então esta decisão e o `Runs::KEPT` andam juntas.
+- **Onde pagina.** No browser. `ListScenarioRuns` devolve o histórico inteiro, e a constante `SHOWN` saiu por virar código morto. São 20 itens vindos de um arquivo já lido inteiro, então página e filtro como query param não se pagariam.
+- **O que a busca filtra.** Um campo de texto varrendo data, branch, autor e o título do step que falhou, mais um seletor de status.
+- **Paginação.** 6 por página, a densidade que a seção já tinha.
+- **Duração.** Entrou na linha da data, em texto apagado (`13/06/2026, 06:15 em 3,8s`). O dado vinha na resposta e nenhuma tela mostrava.
+- **Filtro sem resultado.** Estado próprio, com texto diferente do "nenhum teste executado ainda", senão parece que o histórico sumiu.
+- **Preview.** `/dev/scenario-runs`.
