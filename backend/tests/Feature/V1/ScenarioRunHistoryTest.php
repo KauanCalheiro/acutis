@@ -237,14 +237,14 @@ it('lists the runs in the scenario, newest first', function () {
         ->assertJsonPath('runs.1.steps.0.error', 'locator resolveu como hidden');
 });
 
-it('lists at most the six newest runs', function () {
+it('lists the whole kept history, which is what the interface searches and paginates', function () {
     seedRuns($this->history, 8);
 
     getJson('/api/v1/projects/minha-loja/scenarios/login/entrar')
         ->assertOk()
-        ->assertJsonCount(6, 'runs')
+        ->assertJsonCount(8, 'runs')
         ->assertJsonPath('runs.0.started_at', '2026-06-13T09:08:00+00:00')
-        ->assertJsonPath('runs.5.started_at', '2026-06-13T09:03:00+00:00');
+        ->assertJsonPath('runs.7.started_at', '2026-06-13T09:01:00+00:00');
 });
 
 it('points the video at the newest run that recorded one', function () {

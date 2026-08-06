@@ -73,14 +73,60 @@ test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
         await expect(page.getByTestId('cenario-playwright')).toHaveValue(/./)
     })
 
-    test('lists the persisted runs, newest first', async ({ page }) => {
+    test('lists the persisted runs, newest first, one page at a time', async ({ page }) => {
         const runs = page.getByTestId('cenario-execucao')
 
-        await expect(runs).toHaveCount(2)
+        await expect(runs).toHaveCount(6)
         await expect(runs.nth(0)).toHaveAttribute('data-status', 'success')
         await expect(runs.nth(0)).toContainText('13/06/2026')
         await expect(runs.nth(1)).toHaveAttribute('data-status', 'failed')
         await expect(runs.nth(1)).toContainText('12/06/2026')
+    })
+
+    test('shows how long each run took, which is what tells a slow run from a fast one', async ({ page }) => {
+        await expect(page.getByTestId('cenario-execucao').nth(0)).toContainText('3,8s')
+    })
+
+    test('pages through the runs that do not fit the first page', async ({ page }) => {
+        await page.getByTestId('execucoes-paginacao').getByRole('button', { name: '2' }).click()
+
+        const runs = page.getByTestId('cenario-execucao')
+
+        await expect(runs).toHaveCount(4)
+        await expect(runs.nth(3)).toContainText('10/06/2026')
+    })
+
+    test('searches the runs by branch, by author and by the step that failed', async ({ page }) => {
+        const busca = page.getByTestId('execucoes-busca')
+        const runs = page.getByTestId('cenario-execucao')
+
+        await test.step('a branch narrows the list to the runs made on it', async () => {
+            await busca.fill('feat/checkout')
+            await expect(runs).toHaveCount(3)
+        })
+
+        await test.step('the title of the failed step finds the run that broke', async () => {
+            await busca.fill('Confirmar o pedido')
+            await expect(runs).toHaveCount(1)
+            await expect(runs.nth(0)).toHaveAttribute('data-status', 'failed')
+        })
+
+        await test.step('a search that matches nothing says so instead of showing an empty grid', async () => {
+            await busca.fill('feat/inexistente')
+            await expect(runs).toHaveCount(0)
+            await expect(page.getByTestId('cenario-execucoes-sem-resultado')).toBeVisible()
+        })
+    })
+
+    test('filters the runs by status, which is how a regression gets found', async ({ page }) => {
+        await page.getByTestId('execucoes-status').click()
+        await page.getByRole('option', { name: 'Falha' }).click()
+
+        const runs = page.getByTestId('cenario-execucao')
+
+        await expect(runs).toHaveCount(3)
+        await expect(runs.nth(0)).toHaveAttribute('data-status', 'failed')
+        await expect(runs.nth(2)).toHaveAttribute('data-status', 'failed')
     })
 
     test('opens a persisted run with its timeline and the code that ran', async ({ page }) => {
