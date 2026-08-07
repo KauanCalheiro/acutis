@@ -55,6 +55,8 @@ const items = [
     testid: 'navbar-projetos'
   }
 ]
+
+const settingsOpen = ref(false)
 </script>
 
 <template>
@@ -112,8 +114,35 @@ const items = [
             :data-testid="item.testid"
           />
         </UTooltip>
+
+        <UTooltip
+          text="Configurações"
+          :disabled="expanded"
+          :delay-duration="0"
+          arrow
+          :content="{
+            side: 'right'
+          }"
+        >
+          <UButton
+            icon="i-ic-round-settings"
+            :label="expanded ? 'Configurações' : undefined"
+            variant="ghost"
+            color="neutral"
+            block
+            :square="!expanded"
+            :class="{
+              'justify-center': !expanded,
+              'justify-start': expanded
+            }"
+            data-testid="navbar-configuracoes"
+            @click="settingsOpen = true"
+          />
+        </UTooltip>
       </nav>
     </div>
+
+    <SettingsModal v-model:open="settingsOpen" />
 
     <div class="flex flex-col gap-2">
       <UPopover

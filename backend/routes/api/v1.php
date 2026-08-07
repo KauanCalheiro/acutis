@@ -1,7 +1,11 @@
 <?php
 
 use App\Http\Controllers\V1\ProjectController;
+use App\Http\Controllers\V1\SettingsController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('settings/ai', [SettingsController::class, 'showAi']);
+Route::put('settings/ai', [SettingsController::class, 'updateAi']);
 
 Route::get('projects', [ProjectController::class, 'index']);
 Route::post('projects/create/template', [ProjectController::class, 'store']);
