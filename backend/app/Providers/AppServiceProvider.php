@@ -17,7 +17,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        set_time_limit(600);
+        // Teto de 600s por requisição, acima dos 30s que a cli-server herda do php.ini. Fora do
+        // console porque `artisan serve` boota a app e vive horas.
+        if (! $this->app->runningInConsole()) {
+            set_time_limit(600);
+        }
 
         JsonResource::withoutWrapping();
     }
