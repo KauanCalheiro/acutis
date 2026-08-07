@@ -190,6 +190,20 @@ test.describe('auth scenario page', { tag: ['@read', '@scenario'] }, () => {
         await expect(page.getByTestId('cenario-testar')).toBeHidden()
         await expect(page.getByTestId('cenario-editar')).toBeHidden()
     })
+
+    test('says the login is configured without anyone going back to the project page', async ({ page }) => {
+        await page.goto('/projects/beta-blog/scenarios/auth')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await expect(page.getByTestId('cenario-auth-status')).toHaveText('Configurada')
+    })
+
+    test('says nothing about a login that was never configured, since the empty state already does', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/auth')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await expect(page.getByTestId('cenario-auth-status')).toBeHidden()
+    })
 })
 
 test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
@@ -557,5 +571,23 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         await expect(page.getByTestId('cenario-titulo')).toHaveText('Entrar no blog')
         await expect(page.getByTestId('cenario-caminho')).toHaveText('tests/auth.setup.ts')
         expect(existsSync(join(tmpProjects, 'beta-blog', 'features', 'auth.feature'))).toBe(true)
+    })
+
+    test('dismisses the login from the auth page itself, without going back to the project', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/auth')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('auth-dispensar').click()
+
+        await test.step('the page says the login was dismissed, in place', async () => {
+            await expect(page.getByTestId('cenario-auth-status')).toHaveText('Dispensada', { timeout: 10_000 })
+        })
+
+        await test.step('the project page stops asking for a login', async () => {
+            await page.goto('/projects/alpha-store')
+            await page.locator('[data-hydrated="true"]').waitFor()
+
+            await expect(page.getByTestId('projeto-auth-aviso')).toBeHidden()
+        })
     })
 })

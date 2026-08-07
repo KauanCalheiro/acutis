@@ -198,6 +198,20 @@ const credentialsOpen = ref(false)
 const writingAuth = ref(false)
 const authError = ref<string | null>(null)
 const authWarnings = ref<string[]>([])
+const dismissingAuth = ref(false)
+
+async function dismissAuth() {
+  dismissingAuth.value = true
+
+  try {
+    await $fetch(`/api/projects/${slug.value}/auth/skip`, {
+      method: 'POST'
+    })
+    await refreshProject()
+  } finally {
+    dismissingAuth.value = false
+  }
+}
 
 const AUTH_PHRASES = [
   'Analisando os eventos gravados',
@@ -281,6 +295,10 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
             :icon="origin.icon"
             :label="origin.label"
             data-testid="cenario-origem"
+          />
+          <ScenarioAuthStatus
+            v-if="isAuth"
+            :status="project!.auth_status"
           />
         </div>
         <h1
@@ -421,6 +439,15 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
         :disabled="!webdriver.connected"
         data-testid="auth-gravar-vazio"
         @click="recordLogin"
+      />
+      <UButton
+        v-if="project!.auth_status === 'unset'"
+        label="Não precisa de login"
+        color="neutral"
+        variant="link"
+        :loading="dismissingAuth"
+        data-testid="auth-dispensar"
+        @click="dismissAuth"
       />
     </div>
 
