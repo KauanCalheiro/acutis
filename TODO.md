@@ -3,7 +3,7 @@
 - [x] Docker para desenvolvimento local com hot-reload dos arquivos (backend, frontend, webdriver) — `docker compose -f docker-compose.dev.yml up`
 - [x] Persistir as execuções de cenário e sincronizá-las pelo git
 - [ ] Colocar config global ou de projeto para usar a IA, escolher seu provedor e chave de API, e modelo, vamos comecar consi
-- [ ] Aposentar as modais de auth e reaproveitar a tela de cenário, vamos comecar considerando um modelo automatico mas vamos reescrever depois, podemos injetact via config o middleware
+- [x] Aposentar as modais de auth e reaproveitar a tela de cenário, vamos comecar considerando um modelo automatico mas vamos reescrever depois, podemos injetact via config o middleware
 - [x] Busca e paginação nas execuções do cenário
 - [ ] Levantar o teto do salto Nuxt para Laravel, hoje no default do undici
 - [x] Fluxo de fix deve rodar algumas vezes com a intencao de passar... (`MAX_FIX_ATTEMPTS = 2`, ou seja até três passagens, nas três Actions que geram)
@@ -35,17 +35,16 @@ Formato decidido com o usuário: a memória `frontend-feedback` manda retorno de
 
 O setup de autenticação já é um cenário (`Scenario::AUTH_ID`, com execução, histórico e vídeo iguais aos demais) e tinha uma interface paralela só dele em `project/auth/modal.vue`: ver, editar, regravar e pedir credenciais, tudo em modal. A tela de cenário (`projects/[projectSlug]/scenarios/[...scenario].vue`) assumiu quase tudo.
 
-### O que já saiu
+### Como ficou
 
 - **`project/auth/modal.vue` não existe mais**, e nada no código referencia a modal antiga.
 - **Botão de regravação** na tela de cenário, `auth-gravar` ("Gravar novamente").
-- **Pedido de credenciais** sobreviveu como `project/auth/credentials.vue`, aberto pela tela de cenário. É formulário, não interface paralela, então pode ficar.
+- **Pedido de credenciais** sobreviveu como `project/auth/credentials.vue`, aberto pela tela de cenário. É formulário, não interface paralela, então ficou.
+- **Estado da autenticação** em badge no cabeçalho, ao lado do de origem, por `components/scenario/auth-status.vue`: verde em `configured`, vermelho em `failing`, cinza em `skipped`. `unset` não rende badge, porque o convite a gravar logo abaixo já conta isso.
+- **Dispensar o login** pelo "Não precisa de login", no estado vazio. Chama o mesmo `POST /auth/skip` da tela do projeto, então o badge vira "Dispensada" na hora. Desfazer não precisou de rota: `ShowProject::authStatus()` só olha `auth_skipped` quando não existe `auth.setup.ts`, então gravar um login desfaz sozinho.
+- **Preview** em `/dev/auth-status`, com os quatro estados lado a lado.
 
 A tab Gherkin fica: o login também vira `auth.feature`, escrito por `WriteAuthRecordingToProject`, então as três tabs valem para o cenário de autenticação como para qualquer outro.
-
-### O que falta
-
-- **Estado `skipped`/`failing`** e os atalhos que saíam da modal ainda não têm destino definido na tela. Hoje `auth_status` e o botão de pular vivem na tela do projeto (`[slug].vue`), e a tela de cenário não os oferece.
 
 ## Guardar as execuções num arquivo só
 
