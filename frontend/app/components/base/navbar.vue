@@ -1,20 +1,6 @@
 <script setup lang="ts">
-const pinned = useCookie<boolean>('navbar-expanded', {
-  default: () => false
-})
-const hovering = ref(false)
 const colorPickerOpen = ref(false)
-const pickerKeepsExpanded = ref(false)
-
-watch(colorPickerOpen, (open) => {
-  if (open) pickerKeepsExpanded.value = pinned.value || hovering.value
-})
-
-const expanded = computed(() =>
-  pinned.value
-  || hovering.value
-  || (colorPickerOpen.value && pickerKeepsExpanded.value)
-)
+const settingsOpen = ref(false)
 
 const colors = {
   red: 'bg-red-500',
@@ -55,92 +41,77 @@ const items = [
     testid: 'navbar-projetos'
   }
 ]
-
-const settingsOpen = ref(false)
 </script>
 
 <template>
   <aside
-    class="sticky top-6 my-6 lg:top-10 lg:my-10 mr-3 flex h-[calc(100vh-3rem)] lg:h-[calc(100vh-5rem)] shrink-0 flex-col justify-between overflow-hidden rounded-r-xl bg-accented/50 p-3 shadow-[0_0_14px_-2px_rgb(0_0_0/0.28)] dark:shadow-[0_0_14px_-2px_rgb(0_0_0/0.8)] transition-[width] duration-300"
-    :class="expanded ? 'w-56' : 'w-18'"
-    @mouseleave="hovering = false"
+    class="fixed left-0 top-1/2 z-10 flex w-18 -translate-y-1/2 flex-col gap-6 rounded-r-xl bg-accented/50 p-3 shadow-[0_0_14px_-2px_rgb(0_0_0/0.28)] dark:shadow-[0_0_14px_-2px_rgb(0_0_0/0.8)]"
   >
-    <div
-      class="flex grow flex-col gap-6"
-      @mouseover="hovering = true"
+    <UTooltip
+      text="Acutis"
+      :delay-duration="0"
+      arrow
+      :content="{
+        side: 'right'
+      }"
     >
       <NuxtLink
         to="/"
-        class="flex items-center justify-center gap-3 overflow-hidden"
+        aria-label="Acutis"
+        class="flex items-center justify-center"
         data-testid="navbar-logo"
       >
         <span class="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary text-inverted">
           <BaseLogo class="size-7" />
         </span>
-        <span
-          v-if="expanded"
-          class="font-bold"
-        >
-          Acutis
-        </span>
       </NuxtLink>
+    </UTooltip>
 
-      <nav class="flex flex-col gap-2">
-        <UTooltip
-          v-for="item in items"
-          :key="item.to"
-          :text="item.label"
-          :disabled="expanded"
-          :delay-duration="0"
-          arrow
-          :content="{
-            side: 'right'
-          }"
-        >
-          <UButton
-            :to="item.to"
-            :icon="item.icon"
-            :label="expanded ? item.label : undefined"
-            variant="ghost"
-            color="neutral"
-            active-variant="soft"
-            active-color="primary"
-            block
-            :square="!expanded"
-            :class="{
-              'justify-center': !expanded,
-              'justify-start': expanded
-            }"
-            :data-testid="item.testid"
-          />
-        </UTooltip>
+    <nav class="flex flex-col gap-2">
+      <UTooltip
+        v-for="item in items"
+        :key="item.to"
+        :text="item.label"
+        :delay-duration="0"
+        arrow
+        :content="{
+          side: 'right'
+        }"
+      >
+        <UButton
+          :to="item.to"
+          :icon="item.icon"
+          :aria-label="item.label"
+          variant="ghost"
+          color="neutral"
+          active-variant="soft"
+          active-color="primary"
+          block
+          square
+          :data-testid="item.testid"
+        />
+      </UTooltip>
 
-        <UTooltip
-          text="Configurações"
-          :disabled="expanded"
-          :delay-duration="0"
-          arrow
-          :content="{
-            side: 'right'
-          }"
-        >
-          <UButton
-            icon="i-ic-round-settings"
-            :label="expanded ? 'Configurações' : undefined"
-            variant="ghost"
-            color="neutral"
-            block
-            :square="!expanded"
-            :class="{
-              'justify-center': !expanded,
-              'justify-start': expanded
-            }"
-            data-testid="navbar-configuracoes"
-            @click="settingsOpen = true"
-          />
-        </UTooltip>
-      </nav>
-    </div>
+      <UTooltip
+        text="Configurações"
+        :delay-duration="0"
+        arrow
+        :content="{
+          side: 'right'
+        }"
+      >
+        <UButton
+          icon="i-ic-round-settings"
+          aria-label="Configurações"
+          variant="ghost"
+          color="neutral"
+          block
+          square
+          data-testid="navbar-configuracoes"
+          @click="settingsOpen = true"
+        />
+      </UTooltip>
+    </nav>
 
     <SettingsModal v-model:open="settingsOpen" />
 
@@ -178,6 +149,7 @@ const settingsOpen = ref(false)
           </div>
         </template>
       </UPopover>
+
       <UTooltip
         text="Tema"
         :delay-duration="0"
@@ -191,16 +163,6 @@ const settingsOpen = ref(false)
           data-testid="navbar-tema"
         />
       </UTooltip>
-      <BaseButtonIcon
-        :icon="pinned ? 'i-ic-round-chevron-left' : 'i-ic-round-chevron-right'"
-        :label="pinned ? 'Recolher menu' : 'Manter aberto'"
-        side="right"
-        variant="ghost"
-        color="neutral"
-        block
-        data-testid="navbar-alternar"
-        @click="pinned = !pinned"
-      />
     </div>
   </aside>
 </template>

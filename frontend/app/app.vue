@@ -50,7 +50,8 @@ watch(
   <UApp :toaster="{ position: 'top-center' }">
     <div class="flex min-h-screen">
       <BaseNavbar />
-      <main class="min-w-0 flex-1">
+      <!-- A navbar é fixa, então saiu do fluxo: o padding aqui é o lugar que ela ocupa. -->
+      <main class="min-w-0 flex-1 pl-[5.25rem]">
         <NuxtPage />
       </main>
     </div>

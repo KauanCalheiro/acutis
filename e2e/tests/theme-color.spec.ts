@@ -42,25 +42,12 @@ test.describe('theme primary color', { tag: ['@write', '@theme'] }, () => {
         await expect.poll(() => primaryColor(page)).not.toBe(before)
     })
 
-    test('opening the picker from the collapsed navbar keeps it collapsed', async ({ page }) => {
+    test('keeps the picker open when the mouse leaves the navbar', async ({ page }) => {
         await page.getByTestId('navbar-cor').click()
         await page.getByTestId('cor-green').waitFor()
 
-        await expect(page.getByTestId('navbar-projetos')).not.toContainText('Projetos')
-    })
+        await page.mouse.move(640, 400)
 
-    test('keeps the expanded navbar expanded while the picker is open', async ({ page }) => {
-        await test.step('expand by hovering the top and open the picker', async () => {
-            await page.getByTestId('navbar-logo').hover()
-            await page.getByTestId('navbar-cor').click()
-            await page.getByTestId('cor-green').waitFor()
-        })
-
-        await test.step('move the mouse away from the navbar', async () => {
-            await page.mouse.move(640, 400)
-        })
-
-        await expect(page.getByTestId('navbar-projetos')).toContainText('Projetos')
         await expect(page.getByTestId('cor-green')).toBeVisible()
     })
 
