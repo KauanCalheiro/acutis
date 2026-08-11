@@ -4,7 +4,6 @@ use App\Ai\Agents\Scenario\GherkinWriter;
 use App\Ai\Agents\Scenario\ScenarioFixer;
 use App\Ai\Agents\Scenario\ScenarioValidator;
 use App\Ai\Agents\Scenario\ScenarioWriter;
-use App\Ai\Tools\RunSpec;
 use App\Enums\EnvKey;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
@@ -58,11 +57,24 @@ function draftSpec(): string
         .'})';
 }
 
-function fakeDraft(?string $playwright = null, array $overrides = []): void
+/**
+ * O caminho felizardo: cada execução passa, a não ser que o teste empurre resultados em $runs para
+ * as primeiras voltas do loop.
+ *
+ * @param  list<array<string, mixed>>  $runs
+ */
+function fakeDraft(?string $playwright = null, array $overrides = [], array $runs = []): void
 {
     GherkinWriter::fake([['gherkin' => "Funcionalidade: Login do Usuário\n  Cenário: entra", 'domain' => 'login', ...$overrides]]);
     ScenarioWriter::fake([['playwright' => $playwright ?? draftSpec()]]);
-    Http::fake(['*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok'])]);
+
+    $sequence = Http::sequence();
+
+    foreach ($runs as $run) {
+        $sequence->push($run);
+    }
+
+    Http::fake(['*/runner/spec' => $sequence->whenEmpty(Http::response(['passed' => true, 'output' => 'ok']))]);
 }
 
 it('returns an editable draft with title, tags, domain and path without writing files', function () {
@@ -287,26 +299,62 @@ it('runs the generated spec with the execution url in the variable the spec read
         && $request['env'][EnvKey::URL->value] === 'https://homolog.sistema.test');
 });
 
-it('hands the writer a run tool already pointed at the execution url', function () {
-    fakeDraft();
+it('sends a spec that failed the execution back to the fixer, with the error and the broken page', function () {
+    fakeDraft(runs: [[
+        'passed' => false,
+        'output' => "locator('#go') resolved to hidden",
+        'html' => '<button data-testid="ir">Ir</button>',
+    ]]);
+    ScenarioFixer::fake([['playwright' => draftSpec(), 'summary' => 'Troquei o id pelo data-testid.']]);
     $slug = draftProject();
 
     postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload([
         'executionUrl' => 'https://homolog.sistema.test',
     ]))->assertOk();
 
-    ScenarioWriter::assertPrompted(fn ($prompt) => collect($prompt->agent->tools())
-        ->contains(fn ($tool) => $tool instanceof RunSpec));
+    ScenarioFixer::assertPrompted(function ($prompt) {
+        $payload = promptPayload($prompt);
+
+        return str_contains($payload['run']['error'], "locator('#go') resolved to hidden")
+            && str_contains($payload['html'], 'data-testid="ir"');
+    });
 });
 
-it('gives the writer no run tool when there is nowhere to run the spec', function () {
+it('never runs anything when the recording says nowhere to run the spec', function () {
     fakeDraft();
+    ScenarioFixer::fake();
     $slug = draftProject();
 
     postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())->assertOk();
 
-    ScenarioWriter::assertPrompted(fn ($prompt) => ! collect($prompt->agent->tools())
-        ->contains(fn ($tool) => $tool instanceof RunSpec));
+    Http::assertNothingSent();
+});
+
+it('stops re-running at the limit when the execution never goes green', function () {
+    $calls = 0;
+
+    fakeDraft(runs: [
+        ['passed' => false, 'output' => 'erro'],
+        ['passed' => false, 'output' => 'erro'],
+        ['passed' => false, 'output' => 'erro ainda'],
+        ['passed' => false, 'output' => 'nunca deveria rodar uma quarta vez'],
+    ]);
+    ScenarioFixer::fake(function () use (&$calls): array {
+        $calls++;
+
+        return [
+            'playwright' => str_replace("test('abre'", "test('abre na tentativa {$calls}'", draftSpec()),
+            'summary' => 'não resolvi',
+        ];
+    });
+    $slug = draftProject();
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload([
+        'executionUrl' => 'https://homolog.sistema.test',
+    ]))->assertOk();
+
+    Http::assertSentCount(3);
+    expect($calls)->toBe(2);
 });
 
 it('parses structured output even when the model wraps it in code fences', function () {

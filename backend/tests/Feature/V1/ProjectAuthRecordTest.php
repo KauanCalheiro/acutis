@@ -128,6 +128,26 @@ it('runs the setup before answering when the recording says where to run it', fu
         && $request['env'][EnvKey::URL->value] === 'https://homolog.sistema.test');
 });
 
+it('sends a setup that failed the execution back to the fixer, with the error and the broken page', function () {
+    AuthWriter::fake([['authSetup' => authSetup()]]);
+    AuthFixer::fake([['playwright' => authSetup(), 'summary' => 'Troquei o seletor do campo de senha.']]);
+    Http::fake(['*/runner/spec' => Http::sequence()
+        ->push(['passed' => false, 'output' => "locator('#pass') resolved to hidden", 'html' => '<input data-testid="senha">'])
+        ->whenEmpty(Http::response(['passed' => true, 'output' => 'ok']))]);
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
+        'executionUrl' => 'https://homolog.sistema.test',
+    ]))->assertOk();
+
+    AuthFixer::assertPrompted(function ($prompt) {
+        $payload = promptPayload($prompt);
+
+        return str_contains($payload['run']['error'], "locator('#pass') resolved to hidden")
+            && str_contains($payload['html'], 'data-testid="senha"');
+    });
+});
+
 it('shows the recorded events to the writer with the credentials marked, never the real password', function () {
     AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
