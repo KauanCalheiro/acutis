@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import { test, expect } from '@playwright/test'
 import { spawn } from 'node:child_process'
 import { cpSync, mkdtempSync, rmSync } from 'node:fs'
@@ -6,6 +7,11 @@ import { join, resolve } from 'node:path'
 import { startBackend } from '../support/backend'
 
 const FIXTURES_DIR = resolve(import.meta.dirname, '../fixtures/projects')
+
+/** Quanto o documento passa da altura visível: a Home pede só os cards que couberem. */
+const overflowOf = (page: Page) => () => page.evaluate(
+    () => document.documentElement.scrollHeight - window.innerHeight
+)
 
 test.describe('projects home', { tag: ['@read', '@project'] }, () => {
     let stopBackend: () => Promise<void>
@@ -25,9 +31,21 @@ test.describe('projects home', { tag: ['@read', '@project'] }, () => {
         })
     })
 
-    test('lists the first page of projects', async ({ page }) => {
-        await expect(page.getByTestId('projeto-card')).toHaveCount(9)
+    test('lists the projects that fit the screen without scrolling the page', async ({ page }) => {
         await expect(page.getByTestId('projeto-card').first()).toContainText('Alpha Store')
+
+        await expect.poll(overflowOf(page)).toBeLessThan(2)
+    })
+
+    test('fits more cards on a taller screen', async ({ page }) => {
+        await expect.poll(overflowOf(page)).toBeLessThan(2)
+        const short = await page.getByTestId('projeto-card').count()
+
+        await test.step('grow the viewport', async () => {
+            await page.setViewportSize({ width: 1280, height: 1400 })
+        })
+
+        await expect.poll(() => page.getByTestId('projeto-card').count()).toBeGreaterThan(short)
     })
 
     test('local projects show the local origin badge', async ({ page }) => {
@@ -69,12 +87,27 @@ test.describe('projects home', { tag: ['@read', '@project'] }, () => {
     })
 
     test('pagination navigates to the second page', async ({ page }) => {
+        await expect.poll(overflowOf(page)).toBeLessThan(2)
+
         await test.step('go to page 2', async () => {
             await page.getByTestId('projeto-paginacao').getByRole('button', { name: 'Page 2' }).click()
         })
 
-        await expect(page.getByTestId('projeto-card')).toHaveCount(1)
-        await expect(page.getByTestId('projeto-card').first()).toContainText('Zumbi Tracker')
+        await expect(page.getByTestId('projeto-card').last()).toContainText('Zumbi Tracker')
+    })
+
+    test('centers the content vertically when it does not fill a tall screen', async ({ page }) => {
+        const height = 1400
+
+        await test.step('grow the viewport and leave a single project on screen', async () => {
+            await page.setViewportSize({ width: 1280, height })
+            await page.getByTestId('projeto-busca').fill('zumbi')
+            await expect(page.getByTestId('projeto-card')).toHaveCount(1)
+        })
+
+        const box = await page.locator('[data-hydrated="true"]').boundingBox()
+
+        expect(Math.abs((box!.y + box!.height / 2) - height / 2)).toBeLessThan(4)
     })
 
     test('search without matches shows the empty state', async ({ page }) => {
