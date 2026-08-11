@@ -11,8 +11,8 @@ use App\Ai\Prompts\FixPrompt;
 use App\Ai\Prompts\ScenarioPrompt;
 use App\Ai\Rules\SpecRules;
 use App\Ai\Rules\Violation;
+use App\Ai\SpecRunner;
 use App\Ai\StructuredOutput;
-use App\Ai\Tools\RunSpec;
 use App\Data\V1\Project\EnvironmentVarData;
 use App\Data\V1\Recording\GeneratedTestsData;
 use App\Data\V1\Recording\RecordingData;
@@ -30,7 +30,7 @@ class GenerateTestsFromRecording
 {
     use AsAction;
 
-    /** Rede de segurança: o agente já se corrige por dentro, e o ideal é nunca chegar aqui. */
+    /** Quantas voltas de correção o arquivo ganha antes de voltar como está, com os avisos. */
     private const MAX_FIX_ATTEMPTS = 2;
 
     public function handle(string $slug, RecordingData $recording): GeneratedTestsData
@@ -45,16 +45,13 @@ class GenerateTestsFromRecording
         $gherkin = StructuredOutput::field($written, 'gherkin');
         $domain = StructuredOutput::field($written, 'domain');
 
-        $writer = new ScenarioWriter($project->path(), $base, $environments, $run, $events->html());
         $draft = ScenarioPrompt::spec($recording, $gherkin, $environments);
-        $drafted = Attempt::answering(fn () => $writer->prompt($draft), 'playwright');
+        $drafted = Attempt::answering(fn () => app(ScenarioWriter::class)->prompt($draft), 'playwright');
 
         $playwright = new Playwright(StructuredOutput::field($drafted, 'playwright'));
         $envVars = $this->envVars($drafted);
 
         [$playwright, $warnings] = $this->settle(
-            $project,
-            $recording,
             $events,
             $base,
             $this->withDeclared($environments, $events, $envVars),
@@ -83,18 +80,20 @@ class GenerateTestsFromRecording
     }
 
     /**
-     * O loop de correção. As duas checagens são chamadas encapsuladas, uma linha cada: tirar a
-     * validação por IA é apagar a linha dela.
+     * O loop de correção, e ele mora aqui e não dentro do agente: cada volta confere as regras,
+     * executa o arquivo e devolve o resultado ao Fixer numa chamada única. O teto é código, então
+     * não existe volta infinita nem passo gasto em conversa.
+     *
+     * Executar só o arquivo que já passou pelas regras: rodar navegador para descobrir o que uma
+     * regra aponta de graça é o gasto mais caro do fluxo.
      *
      * @return array{Playwright, list<string>}
      */
     private function settle(
-        Project $project,
-        RecordingData $recording,
         Recording $events,
         Url $base,
         Environments $environments,
-        ?RunSpec $run,
+        ?SpecRunner $run,
         Playwright $playwright,
     ): array {
         $redacted = $events->redacted($environments);
@@ -106,23 +105,22 @@ class GenerateTestsFromRecording
             ];
 
             $fixable = array_values(array_filter($issues, fn (Violation $v): bool => $v->fixable));
+            $result = $fixable === [] ? $run?->ensure($playwright->value) : null;
 
-            if ($fixable === [] || $attempt === self::MAX_FIX_ATTEMPTS) {
+            if (($fixable === [] && $result?->passed !== false) || $attempt === self::MAX_FIX_ATTEMPTS) {
                 return [$playwright, $this->warnings($issues)];
             }
-
-            $fixer = new ScenarioFixer($project->path(), $base, $environments, $run, $events->html());
 
             $correction = FixPrompt::of(
                 spec: $playwright->value,
                 violations: $fixable,
-                error: $run?->last()?->passed === false ? $run->last()->output : null,
-                html: $run?->last()?->html,
+                error: $result?->output,
+                html: $result?->html,
                 events: $redacted,
             );
 
             $playwright = new Playwright(StructuredOutput::field(
-                Attempt::answering(fn () => $fixer->prompt($correction), 'playwright'),
+                Attempt::answering(fn () => app(ScenarioFixer::class)->prompt($correction), 'playwright'),
                 'playwright',
             ));
         }
@@ -172,17 +170,17 @@ class GenerateTestsFromRecording
         return new Environments([...$environments->vars, ...$declared]);
     }
 
-    /** Sem URL de execução não há onde rodar, e aí o agente nem recebe a tool. */
-    private function runner(RecordingData $recording): ?RunSpec
+    /** Sem URL de execução não há onde rodar, e aí o loop se guia só pelas regras. */
+    private function runner(RecordingData $recording): ?SpecRunner
     {
         if ($recording->executionUrl === null) {
             return null;
         }
 
-        return new RunSpec($recording->executionUrl, [EnvKey::URL->value => $recording->executionUrl]);
+        return new SpecRunner($recording->executionUrl, [EnvKey::URL->value => $recording->executionUrl]);
     }
 
-    private function testRun(?RunSpec $run): ?TestRunData
+    private function testRun(?SpecRunner $run): ?TestRunData
     {
         if ($run === null || $run->last() === null) {
             return null;

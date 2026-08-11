@@ -9,10 +9,10 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 /**
  * Pede de novo quando a resposta não veio utilizável.
  *
- * As duas causas conhecidas se resolvem do mesmo jeito. O agente gastar os passos do laço ainda
- * chamando ferramentas devolve texto vazio, e a tentativa seguinte começa com o orçamento cheio.
- * Vir num formato sem o campo esperado é variação do modelo, e ele não repete o mesmo desvio duas
- * vezes seguidas com frequência. Em ambos, insistir uma vez custa menos que devolver erro.
+ * As duas causas conhecidas se resolvem do mesmo jeito. Resposta vazia é geração cortada no meio, e
+ * a tentativa seguinte começa de novo. Vir num formato sem o campo esperado é variação do modelo, e
+ * ele não repete o mesmo desvio duas vezes seguidas com frequência. Em ambos, insistir uma vez
+ * custa menos que devolver erro.
  */
 final class Attempt
 {

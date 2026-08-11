@@ -10,8 +10,8 @@ use App\Ai\Prompts\AuthPrompt;
 use App\Ai\Prompts\FixPrompt;
 use App\Ai\Rules\AuthRules;
 use App\Ai\Rules\Violation;
+use App\Ai\SpecRunner;
 use App\Ai\StructuredOutput;
-use App\Ai\Tools\RunSpec;
 use App\Data\V1\Auth\AuthRecordingData;
 use App\Data\V1\Auth\GeneratedAuthSetupData;
 use App\Data\V1\Project\EnvironmentVarData;
@@ -27,13 +27,10 @@ class GenerateAuthSetupFromRecording
 {
     use AsAction;
 
-    /** Rede de segurança: o agente já se corrige por dentro, e o ideal é nunca chegar aqui. */
+    /** Quantas voltas de correção o arquivo ganha antes de voltar como está, com os avisos. */
     private const MAX_FIX_ATTEMPTS = 2;
 
-    /**
-     * O arquivo é executado antes de voltar ao usuário. Se o agente já rodou este mesmo conteúdo
-     * pela tool, o resultado guardado é reaproveitado em vez de uma segunda execução.
-     */
+    /** O arquivo é executado antes de voltar ao usuário, dentro do loop de correção. */
     public function handle(string $slug, AuthRecordingData $input): GeneratedAuthSetupData
     {
         $project = Project::make($slug);
@@ -42,16 +39,14 @@ class GenerateAuthSetupFromRecording
         $base = $this->base($input, $environments);
         $run = $this->runner($input, $environments);
 
-        $writer = new AuthWriter($project->path(), $base, $environments, $run, $recording->html());
-
         $payload = AuthPrompt::from($input, $base, $environments);
 
         $playwright = new Playwright(StructuredOutput::field(
-            Attempt::answering(fn () => $writer->prompt($payload), 'authSetup'),
+            Attempt::answering(fn () => app(AuthWriter::class)->prompt($payload), 'authSetup'),
             'authSetup',
         ));
 
-        [$playwright, $warnings] = $this->settle($project, $input, $recording, $base, $environments, $run, $playwright);
+        [$playwright, $warnings] = $this->settle($recording, $base, $environments, $run, $playwright);
 
         $run?->ensure($playwright->value);
 
@@ -63,18 +58,20 @@ class GenerateAuthSetupFromRecording
     }
 
     /**
-     * O loop de correção. As duas checagens são chamadas encapsuladas, uma linha cada: tirar a
-     * validação por IA é apagar a linha dela.
+     * O loop de correção, e ele mora aqui e não dentro do agente: cada volta confere as regras,
+     * executa o login e devolve o resultado ao Fixer numa chamada única. O teto é código, então não
+     * existe volta infinita nem passo gasto em conversa.
+     *
+     * Executar só o arquivo que já passou pelas regras: rodar navegador para descobrir o que uma
+     * regra aponta de graça é o gasto mais caro do fluxo.
      *
      * @return array{Playwright, list<string>}
      */
     private function settle(
-        Project $project,
-        AuthRecordingData $input,
         Recording $recording,
         Url $base,
         Environments $environments,
-        ?RunSpec $run,
+        ?SpecRunner $run,
         Playwright $playwright,
     ): array {
         $events = $recording->withoutPasswords();
@@ -86,23 +83,22 @@ class GenerateAuthSetupFromRecording
             ];
 
             $fixable = array_values(array_filter($issues, fn (Violation $v): bool => $v->fixable));
+            $result = $fixable === [] ? $run?->ensure($playwright->value) : null;
 
-            if ($fixable === [] || $attempt === self::MAX_FIX_ATTEMPTS) {
+            if (($fixable === [] && $result?->passed !== false) || $attempt === self::MAX_FIX_ATTEMPTS) {
                 return [$playwright, $this->warnings($issues)];
             }
-
-            $fixer = new AuthFixer($project->path(), $base, $environments, $run, $recording->html());
 
             $correction = FixPrompt::of(
                 spec: $playwright->value,
                 violations: $fixable,
-                error: $run?->last()?->passed === false ? $run->last()->output : null,
-                html: $run?->last()?->html,
+                error: $result?->output,
+                html: $result?->html,
                 events: $events,
             );
 
             $playwright = new Playwright(StructuredOutput::field(
-                Attempt::answering(fn () => $fixer->prompt($correction), 'playwright'),
+                Attempt::answering(fn () => app(AuthFixer::class)->prompt($correction), 'playwright'),
                 'playwright',
             ));
         }
@@ -139,12 +135,12 @@ class GenerateAuthSetupFromRecording
     }
 
     /**
-     * Sem URL de execução não há onde rodar, e aí o agente nem recebe a tool.
+     * Sem URL de execução não há onde rodar, e aí o loop se guia só pelas regras.
      *
      * As credenciais vão junto porque o setup de login as lê: sem elas a execução falha por falta
      * de dado, o agente lê isso como problema do arquivo e tenta contornar escrevendo desvio.
      */
-    private function runner(AuthRecordingData $input, Environments $environments): ?RunSpec
+    private function runner(AuthRecordingData $input, Environments $environments): ?SpecRunner
     {
         if ($input->executionUrl === null) {
             return null;
@@ -160,7 +156,7 @@ class GenerateAuthSetupFromRecording
             }
         }
 
-        return new RunSpec($input->executionUrl, $env);
+        return new SpecRunner($input->executionUrl, $env);
     }
 
     /**

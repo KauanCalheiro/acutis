@@ -2,58 +2,19 @@
 
 namespace App\Ai\Agents\Scenario;
 
-use App\Ai\Agents\Lookup\WebSearcher;
 use App\Ai\Limits;
-use App\Ai\Rules\SpecRules;
-use App\Ai\Tools\CheckRules;
-use App\Ai\Tools\ListProjectFiles;
-use App\Ai\Tools\ReadProjectFile;
-use App\Ai\Tools\RecordedHtml;
-use App\Ai\Tools\RunSpec;
-use App\Support\Primitives\Environments;
-use App\Support\Primitives\Playwright;
-use App\Support\Primitives\Url;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Attributes\UseSmartestModel;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Promptable;
 
 #[UseSmartestModel]
-#[MaxSteps(Limits::STEPS)]
 #[Timeout(Limits::TIMEOUT)]
-class ScenarioWriter implements Agent, HasStructuredOutput, HasTools
+class ScenarioWriter implements Agent, HasStructuredOutput
 {
     use Promptable;
-
-    public function __construct(
-        private readonly string $project,
-        private readonly Url $base,
-        private readonly Environments $environments,
-        private readonly ?RunSpec $run = null,
-        /** @var array<int, string> índice do evento → DOM ao redor do elemento */
-        private readonly array $html = [],
-    ) {}
-
-    /** Sem URL de execução não há onde rodar, e aí a tool de execução nem é oferecida. */
-    public function tools(): iterable
-    {
-        return array_values(array_filter([
-            $this->run,
-            $this->html === [] ? null : new RecordedHtml($this->html),
-            new CheckRules(fn (string $spec): array => SpecRules::check(
-                new Playwright($spec),
-                $this->base,
-                $this->environments,
-            )),
-            new ReadProjectFile($this->project),
-            new ListProjectFiles($this->project),
-            new WebSearcher,
-        ]));
-    }
 
     public function instructions(): string
     {
@@ -70,10 +31,9 @@ class ScenarioWriter implements Agent, HasStructuredOutput, HasTools
         - Para cada marcador {{SENSIVEL_n}} que aparecer, escolha um nome de variável em MAIÚSCULAS que descreva o valor e reporte o par em envVars. Só esses marcadores entram lá.
         - Em pauses, a página carregava ou hidratava naquele ponto: antes da ação correspondente, espere o elemento alvo com await expect(locator).toBeVisible().
         - No resto, confie no auto-wait do Playwright e não adicione espera redundante.
+        - O valor de playwright é conteúdo de arquivo em disco: uma instrução por linha, quebras reais, indentação de 4 espaços. Nunca junte tudo numa linha só.
 
-        Quando o seletor de um evento não bastar, como em elementos iguais na mesma tela, peça o DOM daquele evento com RecordedHtml pelo índice dele.
-
-        Antes de responder: rode com RunSpec, se a tool estiver disponível, e passe por CheckRules. No máximo três execuções: não passou até lá, responda com o melhor arquivo que você tem — quem recebe sabe lidar com isso, e insistir sem limite não devolve nada.
+        Responda de uma vez, com o melhor arquivo que você tem. Quem recebe executa o arquivo e confere as regras; se algo quebrar, você recebe o erro de volta num pedido novo.
         INSTRUCTIONS;
     }
 
