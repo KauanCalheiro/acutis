@@ -6,7 +6,7 @@ use App\Support\Primitives\Environments;
 use App\Support\Primitives\Url;
 use Tests\TestCase;
 
-pest()->extend(TestCase::class)->in('Feature', 'Unit/Ai/Tools');
+pest()->extend(TestCase::class)->in('Feature', 'Unit/Ai');
 
 /** A URL base usada nas fixtures de spec, com caminho para pegar segmento repetido. */
 const SPEC_BASE_URL = 'https://sistema.test/intranet';
@@ -53,7 +53,7 @@ function specUrl(): Url
 }
 
 /**
- * O ambiente das fixtures no tipo que percorre regras, tools e payloads.
+ * O ambiente das fixtures no tipo que percorre regras e payloads.
  *
  * @param  list<EnvironmentVarData>  $extra
  */

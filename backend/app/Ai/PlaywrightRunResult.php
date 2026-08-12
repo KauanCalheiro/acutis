@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Ai\Tools;
+namespace App\Ai;
 
 final class PlaywrightRunResult
 {

@@ -11,8 +11,8 @@ use App\Ai\Prompts\FixPrompt;
 use App\Ai\Rules\AuthRules;
 use App\Ai\Rules\SpecRules;
 use App\Ai\Rules\Violation;
+use App\Ai\SpecRunner;
 use App\Ai\StructuredOutput;
-use App\Ai\Tools\RunSpec;
 use App\Data\V1\Project\FixedSpecData;
 use App\Data\V1\Project\ScenarioFixData;
 use App\Enums\EnvKey;
@@ -20,8 +20,6 @@ use App\Support\Primitives\Environments;
 use App\Support\Primitives\Playwright;
 use App\Support\Primitives\Url;
 use App\Support\Project;
-use App\Support\Scenario;
-use Illuminate\Support\Facades\File;
 use Lorisleiva\Actions\Concerns\AsAction;
 
 class FixScenarioSpec
@@ -53,15 +51,12 @@ class FixScenarioSpec
         $events = $scenario->events();
         $isAuth = $scenario->isAuth();
 
-        $run = $base === null ? null : new RunSpec($base->value, [EnvKey::URL->value => $base->value]);
+        $run = $base === null ? null : new SpecRunner($base->value, [EnvKey::URL->value => $base->value]);
         $result = $run?->ensure($source);
 
         $rulesBase = $base ?? new Url(self::NO_URL);
-        $html = $this->html($project, $scenario);
 
-        $fixer = $isAuth
-            ? new AuthFixer($project->path(), $rulesBase, $environments, $run, $html)
-            : new ScenarioFixer($project->path(), $rulesBase, $environments, $run, $html);
+        $fixer = $isAuth ? app(AuthFixer::class) : app(ScenarioFixer::class);
 
         $payload = FixPrompt::of(
             spec: $source,
@@ -117,22 +112,5 @@ class FixScenarioSpec
         $url = $environments->get(EnvKey::URL->value)?->value;
 
         return filled($url) ? new Url($url) : null;
-    }
-
-    /**
-     * O DOM que a gravação capturou, do arquivo ao lado do spec. Vazio quando a gravação é
-     * anterior à captura, e aí a tool nem é oferecida.
-     *
-     * @return array<int, string>
-     */
-    private function html(Project $project, Scenario $scenario): array
-    {
-        $file = $project->path().'/'.Scenario::htmlPathOf($scenario->spec());
-
-        if (! File::exists($file)) {
-            return [];
-        }
-
-        return json_decode(File::get($file), true) ?? [];
     }
 }

@@ -11,9 +11,8 @@ class StructuredOutput
     /**
      * O campo esperado da resposta estruturada.
      *
-     * Resposta vazia tem uma causa conhecida: o agente gastou os passos do laço ainda chamando
-     * ferramentas e nunca chegou a responder. Quem está do outro lado precisa saber disso e o que
-     * fazer, então a mensagem diz — erro genérico aqui vira tela de falha sem saída.
+     * Resposta vazia acontece quando o modelo corta a geração no meio, e quem está do outro lado
+     * precisa saber o que fazer: a mensagem diz. Erro genérico aqui vira tela de falha sem saída.
      */
     public static function field(TextResponse $response, string $key): string
     {
@@ -28,9 +27,8 @@ class StructuredOutput
         }
 
         throw new UnprocessableEntityHttpException(trim($response->text) === ''
-            ? 'A IA não concluiu: ela gastou as tentativas usando as ferramentas e não devolveu o '
-                .'arquivo. Tente de novo. Se repetir, o sistema testado pode estar fora do ar ou lento '
-                .'demais para o teste terminar.'
+            ? 'A IA não devolveu o arquivo: a resposta veio vazia. Tente de novo. Se repetir, o '
+                .'provedor de IA pode estar fora do ar ou recusando o pedido.'
             : "A IA respondeu num formato inesperado, sem o campo '{$key}'. Tente de novo.");
     }
 
