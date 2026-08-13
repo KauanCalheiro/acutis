@@ -10,6 +10,18 @@ let hostElement: HTMLDivElement | null = null
 let keepAliveObserver: MutationObserver | null = null
 
 /**
+ * O script é injetado em todo frame da página, e os iframes de pixel, tag manager e reCAPTCHA
+ * navegam sozinhos o tempo todo. Só a página onde o usuário está é gravação.
+ */
+export function isTopFrame(): boolean {
+    try {
+        return window.top === window
+    } catch {
+        return false
+    }
+}
+
+/**
  * Por padrão a senha é sempre mascarada antes de sair do navegador, e só o modo 'auth'
  * (gravação específica pra configurar autenticação) desativa isso, pra extrair credenciais
  * reais no backend. Gravação de cenário normal nunca vê esse valor.
@@ -51,6 +63,10 @@ function ensureAttached(): void {
 }
 
 export function mountRecorder(onClick?: () => void): void {
+    if (!isTopFrame()) {
+        return
+    }
+
     if (hostElement) {
         ensureAttached()
         return
