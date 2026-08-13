@@ -179,6 +179,7 @@ export class RecorderService {
             timestamp: Date.now(),
             url,
             html: null,
+            checked: null,
             selectors: null,
             label: null,
             value: null,

@@ -110,6 +110,7 @@ export function useRecorderEvents() {
             tagName: el.tagName.toLowerCase(),
             innerText: (el as HTMLElement).innerText?.trim().slice(0, 200) || null,
             inputType: el instanceof HTMLInputElement ? el.type : null,
+            checked: el instanceof HTMLInputElement && ['checkbox', 'radio'].includes(el.type) ? el.checked : null,
             html: captureContext(el),
         }
     }
@@ -126,6 +127,7 @@ export function useRecorderEvents() {
             tagName: null,
             innerText: null,
             inputType: null,
+            checked: null,
             html: null,
         }
     }
