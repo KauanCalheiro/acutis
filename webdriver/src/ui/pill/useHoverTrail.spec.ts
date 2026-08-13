@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { hoverTriggerFor } from './useHoverTrail'
 
-function menu(): { rotulo: Element, submenu: Element, opcao: Element } {
+function menu(): { rotulo: Element, submenu: Element, opcao: Element, imagem: Element, banner: Element } {
     document.body.innerHTML = `
         <nav>
             <li id="ensino">
@@ -9,13 +9,15 @@ function menu(): { rotulo: Element, submenu: Element, opcao: Element } {
                 <ul id="submenu"><li><a id="opcao">Graduação Presencial</a></li></ul>
             </li>
         </nav>
-        <aside id="fora">banner</aside>
+        <aside id="fora"><a id="promo"><img id="imagem" /></a></aside>
     `
 
     return {
         rotulo: document.querySelector('#rotulo')!,
         submenu: document.querySelector('#submenu')!,
-        opcao: document.querySelector('#opcao')!
+        opcao: document.querySelector('#opcao')!,
+        imagem: document.querySelector('#imagem')!,
+        banner: document.querySelector('#fora')!
     }
 }
 
@@ -59,5 +61,28 @@ describe('hoverTriggerFor', () => {
         const { opcao } = menu()
 
         expect(hoverTriggerFor(opcao, [])).toBeNull()
+    })
+
+    /**
+     * O mouse cruza o carrossel a caminho do botão do banner de cookies. Aquele repouso não abriu
+     * nada perto do que foi clicado, e virava passo de teste do mesmo jeito.
+     */
+    it('ignores a resting element from another corner of the page', () => {
+        const { imagem, opcao } = menu()
+
+        expect(hoverTriggerFor(opcao, [imagem])).toBeNull()
+    })
+
+    it('still finds the menu label when the mouse crossed something unrelated afterwards', () => {
+        const { rotulo, imagem, opcao } = menu()
+
+        expect(hoverTriggerFor(opcao, [rotulo, imagem])).toBe(rotulo)
+    })
+
+    /** Repouso solto no topo da página: o body contém tudo, e vizinhança de tudo não é vizinhança. */
+    it('ignores a resting element whose only kinship with the target is the page', () => {
+        const { banner, opcao } = menu()
+
+        expect(hoverTriggerFor(opcao, [banner])).toBeNull()
     })
 })
