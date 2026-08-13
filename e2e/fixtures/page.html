@@ -1,7 +1,16 @@
 <!doctype html>
 <html>
 <head><title>acutis-e2e-recorded-site</title></head>
+<style>
+  #submenu { opacity: 0; pointer-events: none; }
+  #ensino:hover #submenu { opacity: 1; pointer-events: auto; }
+</style>
 <body>
+<nav>
+  <li id="ensino">Ensino
+    <ul id="submenu"><li><a id="graduacao" href="#graduacao">Graduação Presencial</a></li></ul>
+  </li>
+</nav>
 <button id="btn">Click me</button>
 <input id="name" placeholder="Name" />
 <input id="password" type="password" placeholder="Password" />
