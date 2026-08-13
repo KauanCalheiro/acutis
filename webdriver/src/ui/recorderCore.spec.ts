@@ -1,5 +1,25 @@
 import { describe, expect, it } from 'vitest'
-import { shouldMaskPasswords, watchNavigation } from './recorderCore'
+import { isTopFrame, shouldMaskPasswords, watchNavigation } from './recorderCore'
+
+describe('isTopFrame', () => {
+    it('records the page the user is on', () => {
+        expect(isTopFrame()).toBe(true)
+    })
+
+    /**
+     * Pixel de rede social, service worker de tag manager e reCAPTCHA são iframes que navegam
+     * sozinhos. Gravar a URL deles enche a gravação de telas que o usuário nunca viu.
+     */
+    it('stays out of an iframe, where only third party scripts live', () => {
+        Object.defineProperty(window, 'top', { value: {}, configurable: true })
+
+        try {
+            expect(isTopFrame()).toBe(false)
+        } finally {
+            Object.defineProperty(window, 'top', { value: window, configurable: true })
+        }
+    })
+})
 
 type RecorderWindow = { __acutisRecorderMode?: string }
 
