@@ -26,6 +26,7 @@ class GherkinWriter implements Agent, HasStructuredOutput
 
         - Descreva a intenção de negócio do usuário, não os cliques literais.
         - Use Funcionalidade, Cenário, Dado, Quando, Então, E.
+        - O conteúdo é arquivo em disco: uma cláusula por linha, com quebras reais. Nunca junte a feature inteira numa linha só.
         - Agrupe em cenários coesos; prefira um cenário por objetivo do usuário.
         - Nomeie campos e botões pelos labels dos eventos, como o usuário os vê.
         - Valor escrito como {{CHAVE}} é um segredo mascarado: descreva o campo, nunca invente o valor.

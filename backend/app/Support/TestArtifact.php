@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 /**
  * Lê e re-carimba título/tags nos artefatos gerados (.feature Gherkin e .spec Playwright).
@@ -11,13 +12,44 @@ use Illuminate\Support\Facades\File;
  */
 final class TestArtifact
 {
+    /**
+     * Teto do título e do caminho. O título vira nome de arquivo pelo slug, e o caminho ainda
+     * ganha `tests/`, `.spec.ts` e o diretório do projeto: o sistema de arquivos recusa o
+     * componente acima de 255 bytes, e um acento ocupa dois.
+     */
+    public const TITLE_LIMIT = 120;
+
+    public const PATH_LIMIT = 80;
+
+    /**
+     * A palavra que abre a próxima cláusula. Feature devolvida numa linha só é comum, e sem cortar
+     * ali o título vira o documento inteiro.
+     */
+    private const NEXT_CLAUSE = '/\s+(?:Como|Eu quero|Para|Contexto:|Cen[áa]rio|Esquema do Cen[áa]rio|Dado|Quando|Ent[ãa]o|E)\b/u';
+
     public static function title(string $gherkin, string $fallback = 'teste'): string
     {
         if (preg_match('/Funcionalidade:\s*(.+)/u', $gherkin, $m)) {
-            return trim($m[1]);
+            return self::firstClause($m[1]);
         }
 
         return $fallback;
+    }
+
+    public static function scenario(string $gherkin, string $fallback = 'executa o fluxo gravado'): string
+    {
+        if (preg_match('/Cen[áa]rio:\s*(.+)/u', $gherkin, $m)) {
+            return self::firstClause($m[1]);
+        }
+
+        return $fallback;
+    }
+
+    private static function firstClause(string $line): string
+    {
+        $clause = trim(preg_split(self::NEXT_CLAUSE, trim($line))[0] ?? '');
+
+        return Str::limit($clause, self::TITLE_LIMIT, '');
     }
 
     /** @return list<string> */
@@ -54,12 +86,18 @@ final class TestArtifact
         return preg_replace('/Funcionalidade:\s*.+/u', "Funcionalidade: {$title}", $gherkin, 1) ?? $gherkin;
     }
 
+    /**
+     * Só a linha que não carrega nada além de tags é substituída. A feature devolvida numa linha
+     * só começa com as tags e traz o documento inteiro atrás delas: descartá-la apagaria o cenário.
+     */
     public static function stampGherkinTags(string $gherkin, array $tags): string
     {
         $lines = explode("\n", $gherkin);
 
-        if (isset($lines[0]) && str_starts_with(trim($lines[0]), '@')) {
+        if (isset($lines[0]) && preg_match('/^\s*(@[\w-]+\s*)+$/u', $lines[0]) === 1) {
             array_shift($lines);
+        } elseif (isset($lines[0]) && str_starts_with(trim($lines[0]), '@')) {
+            $lines[0] = trim(preg_replace('/^\s*(@[\w-]+\s*)+/u', '', $lines[0]) ?? $lines[0]);
         }
 
         $body = implode("\n", $lines);
