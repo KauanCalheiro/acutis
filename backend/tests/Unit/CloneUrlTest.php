@@ -1,6 +1,6 @@
 <?php
 
-use App\Action\CloneProjectFromGit;
+use App\Action\Project\CloneProjectFromGit;
 
 it('embeds the token in an https url', function () {
     expect(CloneProjectFromGit::tokenUrl('https://github.com/acme/app.git', 'abc123'))

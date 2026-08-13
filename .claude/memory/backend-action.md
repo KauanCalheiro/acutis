@@ -11,6 +11,8 @@ Ver [backend](backend.md).
 
 Toda lógica de negócio vive numa Action em `app/Action/`, via `lorisleiva/laravel-actions` (trait `AsAction`). Controller **não** implementa regra — só orquestra.
 
+**Uma pasta por domínio**, como o resto do backend (`app/Ai/Agents/`, `app/Data/V1/`): `Auth/`, `Environment/`, `Project/`, `Recording/`, `Scenario/`, `Settings/`. Action nova entra na pasta do domínio dela; nome da classe **não** encolhe por causa da pasta (`Project\DeleteProject`, não `Project\Delete`) — encurtar estraga o grep pelo nome.
+
 ```php
 use Lorisleiva\Actions\Concerns\AsAction;
 
