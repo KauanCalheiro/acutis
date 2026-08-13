@@ -3,10 +3,7 @@
 namespace App\Action;
 
 use App\Ai\Agents\Auth\AuthFixer;
-use App\Ai\Agents\Auth\AuthValidator;
-use App\Ai\Agents\Auth\AuthWriter;
 use App\Ai\Attempt;
-use App\Ai\Prompts\AuthPrompt;
 use App\Ai\Prompts\FixPrompt;
 use App\Ai\Rules\AuthRules;
 use App\Ai\Rules\Violation;
@@ -21,6 +18,7 @@ use App\Support\Primitives\Playwright;
 use App\Support\Primitives\Url;
 use App\Support\Project;
 use App\Support\Recording;
+use App\Support\Recording\SpecEmitter;
 use Lorisleiva\Actions\Concerns\AsAction;
 
 class GenerateAuthSetupFromRecording
@@ -29,6 +27,9 @@ class GenerateAuthSetupFromRecording
 
     /** Quantas voltas de correção o arquivo ganha antes de voltar como está, com os avisos. */
     private const MAX_FIX_ATTEMPTS = 2;
+
+    /** O arquivo de sessão que o webdriver lê de volta ao rodar o setup avulso. */
+    private const SESSION_FILE = 'storage-state.json';
 
     /** O arquivo é executado antes de voltar ao usuário, dentro do loop de correção. */
     public function handle(string $slug, AuthRecordingData $input): GeneratedAuthSetupData
@@ -39,12 +40,7 @@ class GenerateAuthSetupFromRecording
         $base = $this->base($input, $environments);
         $run = $this->runner($input, $environments);
 
-        $payload = AuthPrompt::from($input, $base, $environments);
-
-        $playwright = new Playwright(StructuredOutput::field(
-            Attempt::answering(fn () => app(AuthWriter::class)->prompt($payload), 'authSetup'),
-            'authSetup',
-        ));
+        $playwright = (new SpecEmitter($recording, $base, $environments))->authSetup();
 
         [$playwright, $warnings] = $this->settle($recording, $base, $environments, $run, $playwright);
 
@@ -53,7 +49,7 @@ class GenerateAuthSetupFromRecording
         return new GeneratedAuthSetupData(
             authSetup: $playwright->value,
             credentialsNeeded: $recording->credentials() === null,
-            warnings: $warnings,
+            warnings: [...$warnings, ...$this->sessionWarning($run)],
         );
     }
 
@@ -77,10 +73,7 @@ class GenerateAuthSetupFromRecording
         $events = $recording->withoutPasswords();
 
         for ($attempt = 0; $attempt <= self::MAX_FIX_ATTEMPTS; $attempt++) {
-            $issues = [
-                ...AuthRules::check($playwright, $base, $environments),
-                ...AuthValidator::check($playwright, $events),
-            ];
+            $issues = AuthRules::check($playwright, $base, $environments);
 
             $fixable = array_values(array_filter($issues, fn (Violation $v): bool => $v->fixable));
             $result = $fixable === [] ? $run?->ensure($playwright->value) : null;
@@ -115,23 +108,36 @@ class GenerateAuthSetupFromRecording
     /**
      * O que esta gravação carrega conta como preenchido: a URL base e as credenciais são escritas
      * no ambiente logo depois, e sem isto todo primeiro login sairia acusado de variável vazia.
+     *
+     * A chave que o ambiente ainda não declara entra aqui também: no primeiro login do projeto
+     * nenhuma das três existe, e o setup executaria sem credencial nenhuma.
      */
     private function environments(Project $project, AuthRecordingData $input, Recording $recording): Environments
     {
         $credentials = $recording->credentials();
 
-        $filled = [
+        $filled = array_filter([
             EnvKey::URL->value => $input->baseUrl,
             EnvKey::USER->value => $credentials?->username,
             EnvKey::PASSWORD->value => $credentials?->password,
-        ];
+        ], 'filled');
 
-        return new Environments(array_map(
+        $vars = array_map(
             fn (EnvironmentVarData $var): EnvironmentVarData => blank($var->value) && filled($filled[$var->key] ?? null)
                 ? new EnvironmentVarData($var->key, $filled[$var->key], $var->secret)
                 : $var,
             $project->environments()->activeVars(),
-        ));
+        );
+
+        $declared = array_column($vars, 'key');
+
+        foreach ($filled as $key => $value) {
+            if (! in_array($key, $declared, true)) {
+                $vars[] = new EnvironmentVarData($key, $value, secret: $key === EnvKey::PASSWORD->value);
+            }
+        }
+
+        return new Environments($vars);
     }
 
     /**
@@ -146,7 +152,10 @@ class GenerateAuthSetupFromRecording
             return null;
         }
 
-        $env = [EnvKey::URL->value => $input->executionUrl];
+        $env = [
+            EnvKey::URL->value => $input->executionUrl,
+            EnvKey::STORAGE_STATE->value => self::SESSION_FILE,
+        ];
 
         foreach ([EnvKey::USER, EnvKey::PASSWORD] as $key) {
             $value = $environments->get($key->value)?->value;
@@ -157,6 +166,24 @@ class GenerateAuthSetupFromRecording
         }
 
         return new SpecRunner($input->executionUrl, $env);
+    }
+
+    /**
+     * A execução ficou verde mas não deixou sessão nenhuma: o login não se formou, e todo cenário
+     * autenticado rodaria deslogado sem nada ter falhado.
+     *
+     * @return list<string>
+     */
+    private function sessionWarning(?SpecRunner $run): array
+    {
+        $result = $run?->last();
+
+        if ($result === null || ! $result->passed || $result->storageState !== null) {
+            return [];
+        }
+
+        return ['sessao-nao-salva: A execução do login terminou sem gravar a sessão, '
+            .'e sem ela todo cenário autenticado roda deslogado.'];
     }
 
     /**
