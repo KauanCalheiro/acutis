@@ -5,7 +5,6 @@ import { usePillState } from './pill/usePillState'
 import { useOverlay } from './pill/useOverlay'
 import { useRecorderEvents } from './pill/useRecorderEvents'
 import { useAssertMode } from './pill/useAssertMode'
-import { useHoverTrail } from './pill/useHoverTrail'
 
 let hostElement: HTMLDivElement | null = null
 let keepAliveObserver: MutationObserver | null = null
@@ -82,7 +81,6 @@ export function mountRecorder(onClick?: () => void): void {
     const { setHostElement, activate, deactivate } = useOverlay()
     const { dispatch, buildBaseEvent, buildNavigateEvent } = useRecorderEvents()
     const { handleElementClick } = useAssertMode()
-    const { watch: watchHover, triggerFor, forget: forgetHover } = useHoverTrail()
 
     hostElement = document.createElement('div')
     hostElement.id = '__acutis_host'
@@ -145,19 +143,7 @@ export function mountRecorder(onClick?: () => void): void {
         if (isPaused.value) return
         if (!isInteractive(e.target)) return
 
-        const gatilho = triggerFor(e.target)
-
-        if (gatilho) {
-            dispatch({ ...buildBaseEvent('hover', gatilho), value: null })
-        }
-
         dispatch(buildBaseEvent('click', e.target))
-        forgetHover()
-    }, true)
-
-    document.addEventListener('mouseover', (e) => {
-        if (!(e.target instanceof Element) || isHostEvent(e) || isPaused.value) return
-        watchHover(e.target)
     }, true)
 
     document.addEventListener('change', (e) => {
