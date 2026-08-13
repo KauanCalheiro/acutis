@@ -24,11 +24,27 @@ export function hoverTriggerFor(target: Element, resting: Element[]): Element | 
 
         if (candidate === target || target.contains(candidate)) continue
         if (candidate === document.body || candidate === document.documentElement) continue
+        if (!reveals(candidate, target)) continue
 
         return candidate
     }
 
     return null
+}
+
+/**
+ * O repouso só abriu o que foi clicado se o clicado nasceu ao lado dele — dentro do mesmo pai. O
+ * mouse cruza meia página até chegar no alvo, e sem esta vizinhança todo carrossel e todo banner
+ * que ficou no caminho virava passo de teste.
+ */
+function reveals(candidate: Element, target: Element): boolean {
+    const parent = candidate.parentElement
+
+    if (parent === null || parent === document.body || parent === document.documentElement) {
+        return false
+    }
+
+    return parent.contains(target)
 }
 
 export function useHoverTrail() {
