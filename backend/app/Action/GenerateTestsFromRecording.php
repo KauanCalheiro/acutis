@@ -4,8 +4,6 @@ namespace App\Action;
 
 use App\Ai\Agents\Scenario\GherkinWriter;
 use App\Ai\Agents\Scenario\ScenarioFixer;
-use App\Ai\Agents\Scenario\ScenarioValidator;
-use App\Ai\Agents\Scenario\ScenarioWriter;
 use App\Ai\Attempt;
 use App\Ai\Prompts\FixPrompt;
 use App\Ai\Prompts\ScenarioPrompt;
@@ -23,6 +21,7 @@ use App\Support\Primitives\Playwright;
 use App\Support\Primitives\Url;
 use App\Support\Project;
 use App\Support\Recording;
+use App\Support\Recording\SpecEmitter;
 use App\Support\TestArtifact;
 use Lorisleiva\Actions\Concerns\AsAction;
 
@@ -45,11 +44,9 @@ class GenerateTestsFromRecording
         $gherkin = StructuredOutput::field($written, 'gherkin');
         $domain = StructuredOutput::field($written, 'domain');
 
-        $draft = ScenarioPrompt::spec($recording, $gherkin, $environments);
-        $drafted = Attempt::answering(fn () => app(ScenarioWriter::class)->prompt($draft), 'playwright');
-
-        $playwright = new Playwright(StructuredOutput::field($drafted, 'playwright'));
-        $envVars = $this->envVars($drafted);
+        $emitter = new SpecEmitter($events, $base, $environments);
+        $playwright = $emitter->spec(TestArtifact::title($gherkin), TestArtifact::scenario($gherkin));
+        $envVars = $emitter->envVars();
 
         [$playwright, $warnings] = $this->settle(
             $events,
@@ -99,10 +96,7 @@ class GenerateTestsFromRecording
         $redacted = $events->redacted($environments);
 
         for ($attempt = 0; $attempt <= self::MAX_FIX_ATTEMPTS; $attempt++) {
-            $issues = [
-                ...SpecRules::check($playwright, $base, $environments),
-                ...ScenarioValidator::check($playwright, $redacted),
-            ];
+            $issues = SpecRules::check($playwright, $base, $environments);
 
             $fixable = array_values(array_filter($issues, fn (Violation $v): bool => $v->fixable));
             $result = $fixable === [] ? $run?->ensure($playwright->value) : null;
@@ -192,29 +186,6 @@ class GenerateTestsFromRecording
             attempts: $run->attempts(),
             error: $run->last()->passed ? null : $run->last()->output,
         );
-    }
-
-    /**
-     * Os nomes que a IA deu a cada marcador, na ordem do marcador. O contrato HTTP carrega uma
-     * lista, então a ordem é o que liga cada nome ao seu valor lá na frente.
-     *
-     * @return list<string>
-     */
-    private function envVars(object $response): array
-    {
-        $declared = StructuredOutput::fieldArray($response, 'envVars');
-
-        $byMarker = [];
-
-        foreach ($declared as $item) {
-            if (filled($item['marker'] ?? null) && filled($item['name'] ?? null)) {
-                $byMarker[(string) $item['marker']] = (string) $item['name'];
-            }
-        }
-
-        ksort($byMarker, SORT_NATURAL);
-
-        return array_values($byMarker);
     }
 
     /**
