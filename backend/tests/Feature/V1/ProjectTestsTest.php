@@ -235,3 +235,20 @@ it('validates the write payload', function () {
         ->assertStatus(422)
         ->assertJsonValidationErrors(['title', 'path', 'domain', 'gherkin', 'playwright']);
 });
+
+/** Título que vira nome de arquivo: sem teto, o modelo devolve a feature inteira e o sistema de arquivos recusa. */
+it('refuses a title longer than a file name can hold', function () {
+    $slug = project();
+
+    postJson("/api/v1/projects/{$slug}/tests", writePayload(['title' => str_repeat('cenário ', 40)]))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('title');
+});
+
+it('refuses a path longer than a file name can hold', function () {
+    $slug = project();
+
+    postJson("/api/v1/projects/{$slug}/tests", writePayload(['path' => str_repeat('caminho-', 20)]))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('path');
+});

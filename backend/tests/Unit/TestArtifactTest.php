@@ -14,6 +14,13 @@ it('stops the title at the next gherkin keyword when the feature came in a singl
     expect(TestArtifact::title(GHERKIN_NUMA_LINHA))->toBe('Consulta de cursos');
 });
 
+it('cuts a title that would not fit a file name', function () {
+    $titulo = TestArtifact::title('Funcionalidade: '.str_repeat('palavra ', 40));
+
+    expect(mb_strlen($titulo))->toBeLessThanOrEqual(TestArtifact::TITLE_LIMIT)
+        ->and($titulo)->toEndWith('palavra');
+});
+
 it('reads the scenario name and stops it at the next keyword too', function () {
     expect(TestArtifact::scenario(GHERKIN_NUMA_LINHA))->toBe('Navegar para a lista');
 });

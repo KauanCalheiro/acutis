@@ -53,4 +53,14 @@ describe('ScenarioReviewContexts', () => {
     expect(last.tags).toEqual(['@write', '@checkout'])
     expect(last.playwright).toContain('tag: [\'@write\', \'@checkout\']')
   })
+
+  it('caps the fields that become a file name', async () => {
+    const wrapper = await mountSuspended(ScenarioReviewContexts, {
+      props: { draft: draft() }
+    })
+
+    expect(wrapper.get('[data-testid="contexto-titulo"]').attributes('maxlength')).toBe('120')
+    expect(wrapper.get('[data-testid="contexto-path"]').attributes('maxlength')).toBe('80')
+    expect(wrapper.get('[data-testid="contexto-dominio"]').attributes('maxlength')).toBe('80')
+  })
 })
