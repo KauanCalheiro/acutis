@@ -2,6 +2,7 @@
 
 namespace App\Data\V1\Project;
 
+use App\Support\TestArtifact;
 use Spatie\LaravelData\Data;
 
 class UpdateScenarioData extends Data
@@ -19,9 +20,9 @@ class UpdateScenarioData extends Data
     public static function rules(): array
     {
         return [
-            'title' => ['required', 'string'],
-            'path' => ['required', 'string'],
-            'domain' => ['nullable', 'string'],
+            'title' => ['required', 'string', 'max:'.TestArtifact::TITLE_LIMIT],
+            'path' => ['required', 'string', 'max:'.TestArtifact::PATH_LIMIT],
+            'domain' => ['nullable', 'string', 'max:'.TestArtifact::PATH_LIMIT],
             'gherkin' => ['required', 'string'],
             'playwright' => ['required', 'string'],
             'tags' => ['nullable', 'array'],

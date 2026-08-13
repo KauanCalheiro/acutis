@@ -19,77 +19,34 @@ function scenarioRecording(): RecordingData
     return new RecordingData(baseUrl: SPEC_BASE_URL, events: scenarioEvents());
 }
 
-function specPayload(array $extra = []): array
+function gherkinPayload(array $extra = []): array
 {
-    return json_decode(ScenarioPrompt::spec(
-        scenarioRecording(),
-        "@read\nFuncionalidade: Consulta de produtos",
-        specEnvironments($extra),
-    ), true);
+    return json_decode(ScenarioPrompt::gherkin(scenarioRecording(), specEnvironments($extra)), true);
 }
 
 it('gives the gherkin writer the base url and the events, and nothing else to weigh', function () {
-    $payload = json_decode(ScenarioPrompt::gherkin(scenarioRecording()), true);
-
-    expect(array_keys($payload))->toBe(['baseUrl', 'events']);
+    expect(array_keys(gherkinPayload()))->toBe(['baseUrl', 'events']);
 });
 
 it('carries the base url next to the name of the variable that holds it', function () {
-    expect(specPayload()['baseUrl'])->toBe(['value' => SPEC_BASE_URL, 'env' => 'URL']);
-});
-
-it('says whether the scenario runs with the project session or without it', function () {
-    expect(specPayload()['publico'])->toBeFalse();
-});
-
-it('marks the scenario as public when it was recorded without a session', function () {
-    $publico = new RecordingData(baseUrl: SPEC_BASE_URL, events: scenarioEvents(), publico: true);
-
-    $payload = json_decode(ScenarioPrompt::spec($publico, 'Funcionalidade: x', specEnvironments()), true);
-
-    expect($payload['publico'])->toBeTrue();
-});
-
-it('carries the gherkin the spec has to implement', function () {
-    expect(specPayload()['gherkin'])->toContain('Funcionalidade: Consulta de produtos');
+    expect(gherkinPayload()['baseUrl'])->toBe(['value' => SPEC_BASE_URL, 'env' => 'URL']);
 });
 
 it('marks a sensitive value with the key that already holds it in the environment', function () {
-    $payload = specPayload([new EnvironmentVarData('API_TOKEN', 'abc123token')]);
+    $payload = gherkinPayload([new EnvironmentVarData('API_TOKEN', 'abc123token')]);
 
     expect(array_column($payload['events'], 'value'))->toContain('{{API_TOKEN}}');
 });
 
 it('numbers a sensitive value that no environment key holds yet', function () {
-    expect(array_column(specPayload()['events'], 'value'))->toContain('{{SENSIVEL_1}}');
+    expect(array_column(gherkinPayload()['events'], 'value'))->toContain('{{SENSIVEL_1}}');
 });
 
 it('never lets a sensitive value reach the payload', function () {
-    expect(ScenarioPrompt::spec(scenarioRecording(), 'Funcionalidade: x', specEnvironments()))
+    expect(ScenarioPrompt::gherkin(scenarioRecording(), specEnvironments()))
         ->not->toContain('abc123token');
 });
 
 it('leaves an ordinary recorded value untouched', function () {
-    expect(array_column(specPayload()['events'], 'value'))->toContain('cadeira');
-});
-
-it('reports the pause before the event the user waited on', function () {
-    expect(specPayload()['pauses'])->toBe([
-        ['beforeEvent' => 3, 'seconds' => 3.2, 'type' => 'click', 'target' => 'Buscar'],
-    ]);
-});
-
-it('reports no pause when every event followed the previous one right away', function () {
-    $quick = new RecordingData(baseUrl: SPEC_BASE_URL, events: array_slice(scenarioEvents(), 0, 3));
-
-    $payload = json_decode(ScenarioPrompt::spec($quick, 'Funcionalidade: x', specEnvironments()), true);
-
-    expect($payload['pauses'])->toBe([]);
-});
-
-it('sends the environment keys, with the value only for the ones that are not secret', function () {
-    $vars = collect(specPayload()['environment'])->keyBy('key');
-
-    expect($vars['AUTH_USER'])->toBe(['key' => 'AUTH_USER', 'value' => 'usuario-de-teste'])
-        ->and($vars['AUTH_PASSWORD'])->toBe(['key' => 'AUTH_PASSWORD', 'secret' => true]);
+    expect(array_column(gherkinPayload()['events'], 'value'))->toContain('cadeira');
 });

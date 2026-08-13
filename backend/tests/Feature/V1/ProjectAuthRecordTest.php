@@ -1,8 +1,6 @@
 <?php
 
 use App\Ai\Agents\Auth\AuthFixer;
-use App\Ai\Agents\Auth\AuthValidator;
-use App\Ai\Agents\Auth\AuthWriter;
 use App\Ai\Agents\Scenario\GherkinWriter;
 use App\Enums\EnvKey;
 use Illuminate\Support\Facades\File;
@@ -17,8 +15,6 @@ beforeEach(function () {
     config()->set('acutis.projects.path', $this->projectsPath);
 
     GherkinWriter::fake([['gherkin' => "@write\nFuncionalidade: Entrar no sistema", 'domain' => 'login']]);
-
-    fakeCleanValidator(AuthValidator::class);
 });
 
 afterEach(function () {
@@ -61,23 +57,21 @@ function authSetup(): string
 }
 
 it('writes the generated auth setup from the recording into the project folder', function () {
-    AuthWriter::fake([['authSetup' => str_replace("setup('autentica'", "setup('login gravado'", authSetup())]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())
         ->assertOk()
-        ->assertJsonPath('authSetup', fn ($v) => str_contains($v, 'login gravado'))
+        ->assertJsonPath('authSetup', fn ($v) => str_contains($v, "setup('autenticação'"))
         ->assertJsonPath('credentialsNeeded', false);
 
     $dir = $this->projectsPath."/{$slug}";
 
-    expect(File::get($dir.'/tests/auth.setup.ts'))->toContain('login gravado')
+    expect(File::get($dir.'/tests/auth.setup.ts'))->toContain("import { test as setup, expect } from '@playwright/test'")
         ->and(File::exists($dir.'/.gitignore'))->toBeTrue();
 });
 
 it('never sets the base url — that comes from the project settings only', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
-    Http::fake(['*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok'])]);
+    Http::fake(['*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok', 'storageState' => ['cookies' => []]])]);
     $slug = recordProject();
     $dir = $this->projectsPath."/{$slug}";
     $config = File::get($dir.'/playwright.config.ts');
@@ -91,22 +85,19 @@ it('never sets the base url — that comes from the project settings only', func
 });
 
 it('bases the setup on the project url, not on the host the recording was redirected to', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     putJson("/api/v1/projects/{$slug}/settings", ['baseUrl' => 'https://sistema.test/intranet'])->assertOk();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
         'baseUrl' => 'https://sso.sistema.test',
-    ]))->assertOk();
-
-    AuthWriter::assertPrompted(
-        fn ($prompt) => promptPayload($prompt)['baseUrl']['value'] === 'https://sistema.test/intranet'
-    );
+    ]))
+        ->assertOk()
+        ->assertJsonPath('authSetup', fn ($v) => str_contains($v, 'await page.goto(`${base}')
+            && ! str_contains($v, 'sso.sistema.test'));
 });
 
 it('never executes anything when the recording says nowhere to run it', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     Http::fake();
     $slug = recordProject();
 
@@ -116,8 +107,7 @@ it('never executes anything when the recording says nowhere to run it', function
 });
 
 it('runs the setup before answering when the recording says where to run it', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
-    Http::fake(['*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok'])]);
+    Http::fake(['*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok', 'storageState' => ['cookies' => []]])]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
@@ -128,8 +118,45 @@ it('runs the setup before answering when the recording says where to run it', fu
         && $request['env'][EnvKey::URL->value] === 'https://homolog.sistema.test');
 });
 
+it('names the session file for the execution, so the run gives the saved session back', function () {
+    Http::fake(['*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok', 'storageState' => ['cookies' => []]])]);
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
+        'executionUrl' => 'https://homolog.sistema.test',
+    ]))->assertOk();
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/runner/spec')
+        && $request['env'][EnvKey::STORAGE_STATE->value] === 'storage-state.json');
+});
+
+it('runs the setup with the credentials of this very recording, before they reach the environment', function () {
+    Http::fake(['*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok', 'storageState' => ['cookies' => []]])]);
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
+        'executionUrl' => 'https://homolog.sistema.test',
+    ]))->assertOk();
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/runner/spec')
+        && $request['env'][EnvKey::USER->value] === 'user1'
+        && $request['env'][EnvKey::PASSWORD->value] === 'topsecret123');
+});
+
+it('warns when the execution went green without leaving a session behind', function () {
+    Http::fake(['*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok'])]);
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
+        'executionUrl' => 'https://homolog.sistema.test',
+    ]))
+        ->assertOk()
+        ->assertJson(fn ($json) => $json->where('warnings', fn ($v) => collect($v)->contains(
+            fn (string $w) => str_contains($w, 'sessao-nao-salva'),
+        ))->etc());
+});
+
 it('sends a setup that failed the execution back to the fixer, with the error and the broken page', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     AuthFixer::fake([['playwright' => authSetup(), 'summary' => 'Troquei o seletor do campo de senha.']]);
     Http::fake(['*/runner/spec' => Http::sequence()
         ->push(['passed' => false, 'output' => "locator('#pass') resolved to hidden", 'html' => '<input data-testid="senha">'])
@@ -148,35 +175,17 @@ it('sends a setup that failed the execution back to the fixer, with the error an
     });
 });
 
-it('shows the recorded events to the writer with the credentials marked, never the real password', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
+it('reads the credentials from the environment keys, never writing the recorded password down', function () {
     $slug = recordProject();
 
-    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
-
-    AuthWriter::assertPrompted(function ($prompt) {
-        $payload = promptPayload($prompt);
-
-        return array_column($payload['events'], 'value') === [null, '{{'.EnvKey::USER->value.'}}', '{{'.EnvKey::PASSWORD->value.'}}', null]
-            && ! str_contains($prompt->prompt, 'topsecret123')
-            && str_contains($prompt->prompt, 'dataTestId');
-    });
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())
+        ->assertOk()
+        ->assertJsonPath('authSetup', fn ($v) => str_contains($v, 'fill(process.env.'.EnvKey::USER->value.')')
+            && str_contains($v, 'fill(process.env.'.EnvKey::PASSWORD->value.')')
+            && ! str_contains($v, 'topsecret123'));
 });
 
-it('names the credential variables instead of leaving the writer to spot the fields', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
-    $slug = recordProject();
-
-    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
-
-    AuthWriter::assertPrompted(fn ($prompt) => promptPayload($prompt)['credentials'] === [
-        'user' => EnvKey::USER->value,
-        'password' => EnvKey::PASSWORD->value,
-    ]);
-});
-
-it('tells the writer which url the login landed on, so it never invents one', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
+it('confirms the login by the url the recording landed on', function () {
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
@@ -184,24 +193,20 @@ it('tells the writer which url the login landed on, so it never invents one', fu
             ['type' => 'navigate', 'timestamp' => 5, 'url' => 'https://sistema.test/inicio', 'selectors' => null, 'label' => null, 'value' => null, 'inputType' => null],
             ['type' => 'navigate', 'timestamp' => 6, 'url' => 'https://sistema.test/inicio/pedidos', 'selectors' => null, 'label' => null, 'value' => null, 'inputType' => null],
         ]),
-    ]))->assertOk();
-
-    AuthWriter::assertPrompted(
-        fn ($prompt) => promptPayload($prompt)['landing']['url'] === 'https://sistema.test/inicio'
-    );
+    ]))
+        ->assertOk()
+        ->assertJsonPath('authSetup', fn ($v) => str_contains($v, 'toHaveURL(/inicio/,'));
 });
 
-it('tells the writer there is no landing url when the recording never left the login', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
+it('confirms the login by the password field going away when the recording never left the login', function () {
     $slug = recordProject();
 
-    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
-
-    AuthWriter::assertPrompted(fn ($prompt) => promptPayload($prompt)['landing'] === null);
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())
+        ->assertOk()
+        ->assertJsonPath('authSetup', fn ($v) => str_contains($v, "await expect(page.getByTestId('pass')).toBeHidden("));
 });
 
 it('keeps the real password out of the response body', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     $response = postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
@@ -210,7 +215,6 @@ it('keeps the real password out of the response body', function () {
 });
 
 it('writes the recorded credentials into the environment', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
@@ -225,7 +229,6 @@ it('writes the recorded credentials into the environment', function () {
 });
 
 it('replaces the credentials the environment already had', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
     $dir = $this->projectsPath."/{$slug}";
 
@@ -242,7 +245,6 @@ it('replaces the credentials the environment already had', function () {
 });
 
 it('leaves a config it cannot parse untouched', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
     $dir = $this->projectsPath."/{$slug}";
     File::put($dir.'/playwright.config.ts', '// configuração escrita pelo usuário');
@@ -253,7 +255,6 @@ it('leaves a config it cannot parse untouched', function () {
 });
 
 it('teaches an old config about the auth setup, keeping what the user wrote', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
     $dir = $this->projectsPath."/{$slug}";
     File::put($dir.'/playwright.config.ts', <<<'TS'
@@ -280,7 +281,6 @@ it('teaches an old config about the auth setup, keeping what the user wrote', fu
 });
 
 it('does not touch a config that already declares its own projects', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
     $dir = $this->projectsPath."/{$slug}";
     $meu = "import { defineConfig } from '@playwright/test'\nexport default defineConfig({ projects: [{ name: 'meu' }] })\n";
@@ -292,7 +292,6 @@ it('does not touch a config that already declares its own projects', function ()
 });
 
 it('asks for credentials when it cannot extract them from the recording', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
@@ -313,7 +312,6 @@ it('asks for credentials when it cannot extract them from the recording', functi
 });
 
 it('persists the recorded events so the fixer can read them later, with the credentials marked', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
@@ -326,7 +324,6 @@ it('persists the recorded events so the fixer can read them later, with the cred
 });
 
 it('writes the captured html of the login to its own file, out of the events', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     $events = recordPayload()['events'];
@@ -342,7 +339,6 @@ it('writes the captured html of the login to its own file, out of the events', f
 });
 
 it('writes the gherkin of the login next to the setup', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
@@ -352,7 +348,6 @@ it('writes the gherkin of the login next to the setup', function () {
 });
 
 it('keeps the auth feature in its fixed path, whatever domain the writer suggests', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     GherkinWriter::fake([['gherkin' => 'Funcionalidade: Entrar', 'domain' => 'acesso-restrito']]);
     $slug = recordProject();
 
@@ -365,7 +360,6 @@ it('keeps the auth feature in its fixed path, whatever domain the writer suggest
 });
 
 it('shows the gherkin writer the same marked events, never the real password', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
@@ -377,13 +371,11 @@ it('shows the gherkin writer the same marked events, never the real password', f
 });
 
 it('returns 404 for a project that does not exist', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
 
     postJson('/api/v1/projects/inexistente/auth/record', recordPayload())->assertNotFound();
 });
 
 it('validates the recording payload', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", ['events' => []])
@@ -392,7 +384,6 @@ it('validates the recording payload', function () {
 });
 
 it('leaves a base url the user configured untouched', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     $slug = recordProject();
     $dir = $this->projectsPath."/{$slug}";
     File::put($dir.'/.env', EnvKey::URL->value."=https://escolhida-pelo-usuario.test\n");
@@ -404,20 +395,16 @@ it('leaves a base url the user configured untouched', function () {
         ->not->toContain('sistema.test/login');
 });
 
-it('names the environment key of the base url instead of leaving the writer to coin one', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
+it('builds every url from the environment key of the base url', function () {
     $slug = recordProject();
 
-    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
-
-    AuthWriter::assertPrompted(fn ($prompt) => promptPayload($prompt)['baseUrl'] === [
-        'value' => 'https://sistema.test/login',
-        'env' => EnvKey::URL->value,
-    ]);
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())
+        ->assertOk()
+        ->assertJsonPath('authSetup', fn ($v) => str_contains($v, 'const base = process.env.'.EnvKey::URL->value)
+            && ! str_contains($v, 'https://sistema.test'));
 });
 
-it('hands the post-login path ready-made, so the agent never remounts it from the base', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
+it('never repeats the path the base url already carries', function () {
     $slug = recordProject();
 
     postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
@@ -429,43 +416,39 @@ it('hands the post-login path ready-made, so the agent never remounts it from th
             ['type' => 'submit', 'timestamp' => 4, 'url' => 'https://sistema.test/intranet/login', 'selectors' => ['dataTestId' => 'entrar'], 'label' => 'Entrar', 'value' => null, 'inputType' => null],
             ['type' => 'navigate', 'timestamp' => 5, 'url' => 'https://sistema.test/intranet/', 'selectors' => null, 'label' => null, 'value' => null, 'inputType' => null],
         ],
-    ]))->assertOk();
-
-    AuthWriter::assertPrompted(fn ($prompt) => promptPayload($prompt)['landing']['path'] === '/intranet/');
+    ]))
+        ->assertOk()
+        ->assertJsonPath('authSetup', fn ($v) => ! str_contains($v, '${base}/intranet'));
 });
 
-it('sends a setup that never saves the session back to the fixer', function () {
-    AuthWriter::fake([['authSetup' => "import { test as setup } from '@playwright/test'\nsetup('autentica', async () => {})"]]);
-    AuthFixer::fake([['playwright' => authSetup(), 'summary' => 'Passei a salvar o storage state.']]);
+it('always closes the setup by saving the session, without a round through the fixer', function () {
+    AuthFixer::fake();
     $slug = recordProject();
 
-    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())
+        ->assertOk()
+        ->assertJsonPath('authSetup', fn ($v) => str_contains(
+            $v,
+            'await page.context().storageState({ path: process.env.'.EnvKey::STORAGE_STATE->value." || 'storage-state.json' })",
+        ));
 
-    AuthFixer::assertPrompted(
-        fn ($prompt) => collect(promptPayload($prompt)['violations'])->contains('rule', 'storage-state-ausente')
-    );
+    AuthFixer::assertNeverPrompted();
 });
 
-it('sends a setup that checks the url by exact equality back to the fixer', function () {
-    $broken = str_replace(
-        "await expect(page.getByTestId('pass')).toBeHidden()",
-        'await expect(page).toHaveURL(`${base}/inicio`)',
-        authSetup(),
-    );
-
-    AuthWriter::fake([['authSetup' => $broken]]);
-    AuthFixer::fake([['playwright' => authSetup(), 'summary' => 'Troquei a igualdade exata por padrão.']]);
+it('checks the url by pattern, never by exact equality', function () {
     $slug = recordProject();
 
-    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())->assertOk();
-
-    AuthFixer::assertPrompted(
-        fn ($prompt) => collect(promptPayload($prompt)['violations'])->contains('rule', 'url-exata')
-    );
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload([
+        'events' => array_merge(recordPayload()['events'], [
+            ['type' => 'navigate', 'timestamp' => 5, 'url' => 'https://sistema.test/inicio', 'selectors' => null, 'label' => null, 'value' => null, 'inputType' => null],
+        ]),
+    ]))
+        ->assertOk()
+        ->assertJsonPath('authSetup', fn ($v) => str_contains($v, 'toHaveURL(/inicio/,')
+            && ! str_contains($v, 'toHaveURL(`'));
 });
 
 it('never calls the fixer when the generated setup breaks no rule', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     AuthFixer::fake();
     $slug = recordProject();
 
@@ -475,7 +458,6 @@ it('never calls the fixer when the generated setup breaks no rule', function () 
 });
 
 it('counts the credentials this very recording carries as filled, so the setup is not flagged', function () {
-    AuthWriter::fake([['authSetup' => authSetup()]]);
     AuthFixer::fake();
     $slug = recordProject();
 

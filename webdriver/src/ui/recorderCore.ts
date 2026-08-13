@@ -5,9 +5,22 @@ import { usePillState } from './pill/usePillState'
 import { useOverlay } from './pill/useOverlay'
 import { useRecorderEvents } from './pill/useRecorderEvents'
 import { useAssertMode } from './pill/useAssertMode'
+import { useHoverTrail } from './pill/useHoverTrail'
 
 let hostElement: HTMLDivElement | null = null
 let keepAliveObserver: MutationObserver | null = null
+
+/**
+ * O script é injetado em todo frame da página, e os iframes de pixel, tag manager e reCAPTCHA
+ * navegam sozinhos o tempo todo. Só a página onde o usuário está é gravação.
+ */
+export function isTopFrame(): boolean {
+    try {
+        return window.top === window
+    } catch {
+        return false
+    }
+}
 
 /**
  * Por padrão a senha é sempre mascarada antes de sair do navegador, e só o modo 'auth'
@@ -51,6 +64,10 @@ function ensureAttached(): void {
 }
 
 export function mountRecorder(onClick?: () => void): void {
+    if (!isTopFrame()) {
+        return
+    }
+
     if (hostElement) {
         ensureAttached()
         return
@@ -65,6 +82,7 @@ export function mountRecorder(onClick?: () => void): void {
     const { setHostElement, activate, deactivate } = useOverlay()
     const { dispatch, buildBaseEvent, buildNavigateEvent } = useRecorderEvents()
     const { handleElementClick } = useAssertMode()
+    const { watch: watchHover, triggerFor, forget: forgetHover } = useHoverTrail()
 
     hostElement = document.createElement('div')
     hostElement.id = '__acutis_host'
@@ -126,7 +144,20 @@ export function mountRecorder(onClick?: () => void): void {
         }
         if (isPaused.value) return
         if (!isInteractive(e.target)) return
+
+        const gatilho = triggerFor(e.target)
+
+        if (gatilho) {
+            dispatch({ ...buildBaseEvent('hover', gatilho), value: null })
+        }
+
         dispatch(buildBaseEvent('click', e.target))
+        forgetHover()
+    }, true)
+
+    document.addEventListener('mouseover', (e) => {
+        if (!(e.target instanceof Element) || isHostEvent(e) || isPaused.value) return
+        watchHover(e.target)
     }, true)
 
     document.addEventListener('change', (e) => {
@@ -148,11 +179,4 @@ export function mountRecorder(onClick?: () => void): void {
     watchNavigation(() => {
         if (!isPaused.value) dispatch(buildNavigateEvent())
     })
-}
-
-export function unmountRecorder(): void {
-    keepAliveObserver?.disconnect()
-    keepAliveObserver = null
-    hostElement?.remove()
-    hostElement = null
 }

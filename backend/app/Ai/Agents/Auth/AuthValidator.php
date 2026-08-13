@@ -60,8 +60,8 @@ class AuthValidator implements Agent, HasStructuredOutput
     public function schema(JsonSchema $schema): array
     {
         return [
-            'fiel' => $schema->boolean()->description('O arquivo reproduz o login gravado'),
-            'issues' => $schema->array()->items($schema->string())
+            'fiel' => $schema->boolean()->required()->description('O arquivo reproduz o login gravado'),
+            'issues' => $schema->array()->items($schema->string())->required()
                 ->description('Um problema por frase, em português. Vazio quando não há nenhum.'),
         ];
     }

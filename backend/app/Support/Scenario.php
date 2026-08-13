@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-use App\Action\ListProjectScenarios;
+use App\Action\Scenario\ListProjectScenarios;
 use App\Data\V1\Project\ScenarioData;
 use App\Support\Scenario\Runs;
 use Illuminate\Support\Facades\File;

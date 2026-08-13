@@ -2,6 +2,7 @@
 
 use App\Ai\Prompts\AuthPrompt;
 use App\Data\V1\Auth\AuthRecordingData;
+use App\Support\Recording;
 
 function loginEvents(array $overrides = []): array
 {
@@ -14,68 +15,28 @@ function loginEvents(array $overrides = []): array
     ];
 }
 
-function authPayload(array $events = [], array $extra = []): array
+function authGherkinPayload(array $events = []): array
 {
-    return json_decode(AuthPrompt::from(
-        new AuthRecordingData(baseUrl: SPEC_BASE_URL, events: loginEvents($events)),
-        specUrl(),
-        specEnvironments($extra),
-    ), true);
+    $input = new AuthRecordingData(baseUrl: SPEC_BASE_URL, events: loginEvents($events));
+
+    return json_decode(AuthPrompt::gherkin($input, Recording::make($input->events)), true);
 }
 
-it('builds a payload that is valid json', function () {
-    expect(authPayload())->toBeArray();
+it('gives the gherkin writer the base url and the events, and nothing else to weigh', function () {
+    expect(array_keys(authGherkinPayload()))->toBe(['baseUrl', 'events']);
 });
 
 it('carries the base url next to the name of the variable that holds it', function () {
-    expect(authPayload()['baseUrl'])->toBe(['value' => SPEC_BASE_URL, 'env' => 'URL']);
-});
-
-it('carries the landing url already split into the path to wait for', function () {
-    expect(authPayload()['landing'])->toBe([
-        'url' => 'https://sistema.test/intranet/',
-        'path' => '/intranet/',
-    ]);
-});
-
-it('leaves the landing null when no navigation followed the submit', function () {
-    $events = array_slice(loginEvents(), 0, 4);
-
-    expect(authPayload($events)['landing'])->toBeNull();
-});
-
-it('names the credential variables instead of describing which field is which', function () {
-    expect(authPayload()['credentials'])->toBe([
-        'user' => 'AUTH_USER',
-        'password' => 'AUTH_PASSWORD',
-    ]);
-});
-
-it('names the variable that holds the session file', function () {
-    expect(authPayload()['storageState'])->toBe('STORAGE_STATE');
+    expect(authGherkinPayload()['baseUrl'])->toBe(['value' => SPEC_BASE_URL, 'env' => 'URL']);
 });
 
 it('sends the events with the credentials already marked', function () {
-    expect(array_column(authPayload()['events'], 'value'))
+    expect(array_column(authGherkinPayload()['events'], 'value'))
         ->toBe([null, '{{AUTH_USER}}', '{{AUTH_PASSWORD}}', null, null]);
 });
 
 it('never lets the typed password reach the payload', function () {
-    expect(AuthPrompt::from(
-        new AuthRecordingData(baseUrl: SPEC_BASE_URL, events: loginEvents()),
-        specUrl(),
-        specEnvironments(),
-    ))->not->toContain('topsecret123');
-});
+    $input = new AuthRecordingData(baseUrl: SPEC_BASE_URL, events: loginEvents());
 
-it('sends the value of an environment variable that is not secret', function () {
-    $vars = collect(authPayload()['environment'])->keyBy('key');
-
-    expect($vars['AUTH_USER'])->toBe(['key' => 'AUTH_USER', 'value' => 'usuario-de-teste']);
-});
-
-it('sends only the key of a secret environment variable', function () {
-    $vars = collect(authPayload()['environment'])->keyBy('key');
-
-    expect($vars['AUTH_PASSWORD'])->toBe(['key' => 'AUTH_PASSWORD', 'secret' => true]);
+    expect(AuthPrompt::gherkin($input, Recording::make($input->events)))->not->toContain('topsecret123');
 });

@@ -179,6 +179,7 @@ export class RecorderService {
             timestamp: Date.now(),
             url,
             html: null,
+            checked: null,
             selectors: null,
             label: null,
             value: null,
@@ -243,6 +244,13 @@ export class RecorderService {
     async debugClick(selector: string): Promise<void> {
         const page = await this.waitForPage()
         await page.click(selector)
+    }
+
+    /** O repouso do mouse é o que a gravação reconhece como intenção de abrir um menu. */
+    async debugHover(selector: string): Promise<void> {
+        const page = await this.waitForPage()
+        await page.hover(selector)
+        await page.waitForTimeout(300)
     }
 
     async debugFill(selector: string, value: string): Promise<void> {

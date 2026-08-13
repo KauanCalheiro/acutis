@@ -34,6 +34,8 @@ export interface RecordingEvent {
     tagName: string | null
     innerText: string | null
     inputType: string | null
+    /** Estado do campo que alterna; null quando o elemento não tem esse estado. */
+    checked: boolean | null
     /** O DOM ao redor do elemento no instante da ação. Sai dos eventos ao persistir, para não inchá-los. */
     html: string | null
     assert?: AssertPayload

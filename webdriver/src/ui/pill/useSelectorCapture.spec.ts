@@ -46,6 +46,42 @@ describe('useSelectorCapture', () => {
         expect(selectors.xpath).toBe('/html[1]/body[1]/div[1]/span[2]')
     })
 
+    it('captures the text when it identifies a single element on the page', () => {
+        setBody('<div><p>/caminho/intranet</p></div><div><p>/caminho/outro</p></div>')
+        const el = document.querySelectorAll('p')[0]
+        expect(extractSelectors(el).text).toBe('/caminho/intranet')
+    })
+
+    it('ignores the text when another element on the page carries the same one', () => {
+        setBody('<p>Salvar</p><button>Salvar</button>')
+        const el = document.querySelector('button')!
+        expect(extractSelectors(el).text).toBeNull()
+    })
+
+    it('keeps the text of the innermost element when its parent holds nothing else', () => {
+        setBody('<div><p>Produto criado</p></div>')
+        const el = document.querySelector('p')!
+        expect(extractSelectors(el).text).toBe('Produto criado')
+    })
+
+    it('normalizes the whitespace of the captured text', () => {
+        setBody('<button>  Enviar\n  agora </button>')
+        const el = document.querySelector('button')!
+        expect(extractSelectors(el).text).toBe('Enviar agora')
+    })
+
+    it('ignores an element with no text of its own', () => {
+        setBody('<button>   </button>')
+        const el = document.querySelector('button')!
+        expect(extractSelectors(el).text).toBeNull()
+    })
+
+    it('ignores a text too long to hold as a selector', () => {
+        setBody(`<p>${'palavra '.repeat(20)}</p>`)
+        const el = document.querySelector('p')!
+        expect(extractSelectors(el).text).toBeNull()
+    })
+
     it('returns null for attributes that are absent', () => {
         setBody('<div>plain</div>')
         const el = document.querySelector('div')!

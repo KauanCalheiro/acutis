@@ -14,6 +14,7 @@ let lastClickAt = 0
 
 const pendingQueue: RecordingEvent[] = []
 let drainTimer: number | null = null
+let draining = false
 
 function scheduleDrain(delay: number): void {
     if (drainTimer !== null) {
@@ -26,16 +27,31 @@ function scheduleDrain(delay: number): void {
     }, delay)
 }
 
+/**
+ * Um escoamento por vez: o evento fica na fila até o envio voltar, então um segundo laço rodando
+ * junto leria a mesma cabeça e mandaria o evento de novo. Um clique enfileira hover e clique na
+ * mesma volta, e era assim que o hover chegava duplicado no arquivo gerado.
+ */
 async function drainQueue(): Promise<void> {
-    while (pendingQueue.length > 0) {
-        const event = pendingQueue[0]
-        try {
-            await reportEvent(event)
-            pendingQueue.shift()
-        } catch {
-            scheduleDrain(500)
-            return
+    if (draining) {
+        return
+    }
+
+    draining = true
+
+    try {
+        while (pendingQueue.length > 0) {
+            const event = pendingQueue[0]
+            try {
+                await reportEvent(event)
+                pendingQueue.shift()
+            } catch {
+                scheduleDrain(500)
+                return
+            }
         }
+    } finally {
+        draining = false
     }
 }
 
@@ -110,6 +126,7 @@ export function useRecorderEvents() {
             tagName: el.tagName.toLowerCase(),
             innerText: (el as HTMLElement).innerText?.trim().slice(0, 200) || null,
             inputType: el instanceof HTMLInputElement ? el.type : null,
+            checked: el instanceof HTMLInputElement && ['checkbox', 'radio'].includes(el.type) ? el.checked : null,
             html: captureContext(el),
         }
     }
@@ -126,6 +143,7 @@ export function useRecorderEvents() {
             tagName: null,
             innerText: null,
             inputType: null,
+            checked: null,
             html: null,
         }
     }

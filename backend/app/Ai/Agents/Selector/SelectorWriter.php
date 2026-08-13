@@ -39,11 +39,11 @@ class SelectorWriter implements Agent, HasStructuredOutput
         return [
             'suggestions' => $schema->array()->items(
                 $schema->object([
-                    'index' => $schema->integer()->description('O index do alvo, exatamente como veio no prompt'),
-                    'suggestedTestId' => $schema->string()->description('Valor sugerido, no padrão <recurso>-<acao> em kebab-case'),
-                    'reason' => $schema->string()->description('Por que o seletor atual é frágil, em português'),
+                    'index' => $schema->integer()->required()->description('O index do alvo, exatamente como veio no prompt'),
+                    'suggestedTestId' => $schema->string()->required()->description('Valor sugerido, no padrão <recurso>-<acao> em kebab-case'),
+                    'reason' => $schema->string()->required()->description('Por que o seletor atual é frágil, em português'),
                 ])
-            )->description('Uma sugestão por alvo recebido'),
+            )->required()->description('Uma sugestão por alvo recebido'),
         ];
     }
 }

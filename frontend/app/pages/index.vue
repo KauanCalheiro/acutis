@@ -63,6 +63,12 @@ function fitPageSize() {
   const gap = Number.parseFloat(style.rowGap) || 0
   const columns = style.gridTemplateColumns.split(' ').length
   const cardHeight = card.getBoundingClientRect().height
+
+  // Card sem altura é card que ainda não pintou: dividir por ele daria uma página infinita.
+  if (cardHeight <= 0) {
+    return
+  }
+
   const outside = block.getBoundingClientRect().height - gridEl.getBoundingClientRect().height
   const free = window.innerHeight - outside
 

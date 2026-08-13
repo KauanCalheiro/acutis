@@ -2,6 +2,7 @@
 
 namespace App\Data\V1\Recording;
 
+use App\Support\TestArtifact;
 use Spatie\LaravelData\Data;
 
 class WriteTestData extends Data
@@ -21,9 +22,9 @@ class WriteTestData extends Data
     public static function rules(): array
     {
         return [
-            'title' => ['required', 'string'],
-            'path' => ['required', 'string'],
-            'domain' => ['required', 'string'],
+            'title' => ['required', 'string', 'max:'.TestArtifact::TITLE_LIMIT],
+            'path' => ['required', 'string', 'max:'.TestArtifact::PATH_LIMIT],
+            'domain' => ['required', 'string', 'max:'.TestArtifact::PATH_LIMIT],
             'gherkin' => ['required', 'string'],
             'playwright' => ['required', 'string'],
             'tags' => ['nullable', 'array'],

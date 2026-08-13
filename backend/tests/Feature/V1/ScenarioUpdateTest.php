@@ -71,6 +71,18 @@ it('renames the scenario files and moves the persisted events', function () {
     expect(File::get($this->dir.'/tests/auth/entrar.events.json'))->toBe('[{"type":"click"}]');
 });
 
+it('refuses a title or a path longer than a file name can hold', function () {
+    File::ensureDirectoryExists($this->dir.'/tests');
+    File::put($this->dir.'/tests/login.spec.ts', "test.describe('Login', () => {})");
+
+    patchJson('/api/v1/projects/minha-loja/scenarios/login', updatePayload([
+        'title' => str_repeat('cenário ', 40),
+        'path' => str_repeat('caminho-', 20),
+    ]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['title', 'path']);
+});
+
 it('rejects renaming onto a scenario that already exists', function () {
     File::ensureDirectoryExists($this->dir.'/tests');
     File::put($this->dir.'/tests/login.spec.ts', "test.describe('Login', () => {})");

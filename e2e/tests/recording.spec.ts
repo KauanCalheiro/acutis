@@ -77,6 +77,41 @@ test.describe('recording gateway events', { tag: ['@write', '@recording'] }, () 
         await new Promise<void>((r) => fixtureServer.close(() => r()))
     })
 
+    /**
+     * Menu que abre ao passar o mouse não gera evento nenhum, e sem o hover gravado o teste
+     * clica num item que ainda está com pointer-events: none.
+     */
+    test('reports the hover that opened the menu before the click on the option', async ({ request }) => {
+        const gateway = await connectGateway()
+
+        try {
+            gateway.send('START_RECORDING')
+
+            const goto = await request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: fixtureBaseUrl } })
+            expect(goto.ok()).toBe(true)
+
+            const hover = await request.post(`${WEBDRIVER_URL}/debug/hover`, { data: { selector: '#ensino' } })
+            expect(hover.ok()).toBe(true)
+
+            const click = await request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#graduacao' } })
+            expect(click.ok()).toBe(true)
+
+            const hovered = await gateway.waitForMessage((m) => m.event === 'recorder:hover')
+            expect(hovered.selectors).toMatchObject({ id: 'ensino' })
+
+            const clicked = await gateway.waitForMessage((m) => m.event === 'recorder:click')
+            expect(clicked.selectors).toMatchObject({ id: 'graduacao' })
+
+            const ordem = gateway.received().filter((m) => ['recorder:hover', 'recorder:click'].includes(m.event))
+            expect(ordem[0].event).toBe('recorder:hover')
+
+            gateway.send('STOP_RECORDING')
+            await gateway.waitForMessage((m) => m.event === 'recorder:stop')
+        } finally {
+            gateway.close()
+        }
+    })
+
     test('reports a fill event when the recorded page is filled via the debug endpoint', async ({ request }) => {
         const gateway = await connectGateway()
 
