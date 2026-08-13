@@ -23,6 +23,32 @@ function uniqueOrNull(selector: string | null): string | null {
     return isUnique(selector) ? selector : null
 }
 
+const TEXT_SELECTOR_MAX = 80
+
+function normalizeText(value: string | null | undefined): string {
+    return (value ?? '').replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * O texto só serve de seletor quando um único elemento da página o carrega. O elemento cujo filho
+ * repete o texto inteiro fica de fora, que é o mesmo elemento que o getByText do Playwright casa.
+ */
+function uniqueText(el: Element): string | null {
+    const text = normalizeText(el.textContent)
+
+    if (!text || text.length > TEXT_SELECTOR_MAX) {
+        return null
+    }
+
+    const carriers = Array.from(document.querySelectorAll('*')).filter((candidate) => {
+        if (normalizeText(candidate.textContent) !== text) return false
+
+        return !Array.from(candidate.children).some((child) => normalizeText(child.textContent) === text)
+    })
+
+    return carriers.length === 1 ? text : null
+}
+
 function buildFinderSelector(el: Element): string | null {
     try {
         const sel = finder(el)
@@ -86,7 +112,7 @@ export function useSelectorCapture() {
             placeholder: placeholderSel && isUnique(placeholderSel) ? placeholder : null,
             cssStable: buildCssStableSelector(el),
             xpath: buildXPath(el),
-            text: el.textContent?.trim().slice(0, 200) || null,
+            text: uniqueText(el),
             finder: buildFinderSelector(el),
         }
     }
