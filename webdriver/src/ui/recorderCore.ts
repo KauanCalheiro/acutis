@@ -180,10 +180,3 @@ export function mountRecorder(onClick?: () => void): void {
         if (!isPaused.value) dispatch(buildNavigateEvent())
     })
 }
-
-export function unmountRecorder(): void {
-    keepAliveObserver?.disconnect()
-    keepAliveObserver = null
-    hostElement?.remove()
-    hostElement = null
-}

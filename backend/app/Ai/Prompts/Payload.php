@@ -2,9 +2,7 @@
 
 namespace App\Ai\Prompts;
 
-use App\Data\V1\Project\EnvironmentVarData;
 use App\Enums\EnvKey;
-use App\Support\Primitives\Environments;
 use App\Support\Primitives\Url;
 
 /**
@@ -29,21 +27,5 @@ final class Payload
     public static function baseUrl(Url $base): array
     {
         return ['value' => $base->value, 'env' => EnvKey::URL->value];
-    }
-
-    /**
-     * Chave e valor do que não é segredo, só a chave do que é. O valor vai para o modelo decidir
-     * qual variável usar; escrevê-lo literal no spec é violação, então mandá-lo é seguro.
-     *
-     * @return list<array<string, mixed>>
-     */
-    public static function environment(Environments $environments): array
-    {
-        return array_map(
-            fn (EnvironmentVarData $var): array => $var->secret
-                ? ['key' => $var->key, 'secret' => true]
-                : ['key' => $var->key, 'value' => (string) $var->value],
-            $environments->vars,
-        );
     }
 }
