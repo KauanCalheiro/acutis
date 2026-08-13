@@ -40,8 +40,8 @@ class AuthFixer implements Agent, HasStructuredOutput
     public function schema(JsonSchema $schema): array
     {
         return [
-            'playwright' => $schema->string()->description('Conteúdo completo do arquivo corrigido, com quebras de linha reais'),
-            'summary' => $schema->string()->description('Uma frase em português sobre o que mudou e por quê'),
+            'playwright' => $schema->string()->required()->description('Conteúdo completo do arquivo corrigido, com quebras de linha reais'),
+            'summary' => $schema->string()->required()->description('Uma frase em português sobre o que mudou e por quê'),
         ];
     }
 }

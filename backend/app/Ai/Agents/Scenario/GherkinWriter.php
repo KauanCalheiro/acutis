@@ -40,8 +40,8 @@ class GherkinWriter implements Agent, HasStructuredOutput
     public function schema(JsonSchema $schema): array
     {
         return [
-            'gherkin' => $schema->string()->description('Conteúdo completo do arquivo .feature em português brasileiro'),
-            'domain' => $schema->string()->description('Domínio curto do fluxo, em português minúsculo (ex.: login, checkout)'),
+            'gherkin' => $schema->string()->required()->description('Conteúdo completo do arquivo .feature em português brasileiro'),
+            'domain' => $schema->string()->required()->description('Domínio curto do fluxo, em português minúsculo (ex.: login, checkout)'),
         ];
     }
 }
