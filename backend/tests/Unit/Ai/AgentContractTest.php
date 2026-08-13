@@ -1,6 +1,6 @@
 <?php
 
-use App\Ai\Agents\Auth\AuthWriter;
+use App\Ai\Agents\Auth\AuthFixer;
 use App\Ai\Limits;
 use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Contracts\HasTools;
@@ -21,7 +21,7 @@ function agentClasses(): array
 }
 
 it('finds the agents on disk', function () {
-    expect(agentClasses())->toContain(AuthWriter::class);
+    expect(agentClasses())->toContain(AuthFixer::class);
 });
 
 it('gives every agent the same timeout, since 60s does not cover a real generation', function (string $agent) {
