@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, statSync } from 'node:fs'
 import { promisify } from 'node:util'
 
 const exec = promisify(execFile)
@@ -25,10 +25,23 @@ async function inspect(video: string): Promise<{ blankIntroEnd: number, duration
     }
 }
 
+/**
+ * Toda execução de um cenário sobrescreve o mesmo last.webm, então o recorte da execução anterior
+ * fica ao lado do vídeo novo. Servi-lo mostraria ao usuário a execução errada, e é por isso que a
+ * data manda: recorte mais velho que a gravação é lixo, não cache.
+ */
+function isFresh(watchable: string, video: string): boolean {
+    try {
+        return statSync(watchable).mtimeMs >= statSync(video).mtimeMs
+    } catch {
+        return false
+    }
+}
+
 export async function watchableVideo(video: string): Promise<string> {
     const watchable = video.replace(/\.webm$/, '.watchable.webm')
 
-    if (existsSync(watchable)) {
+    if (existsSync(watchable) && isFresh(watchable, video)) {
         return watchable
     }
 
