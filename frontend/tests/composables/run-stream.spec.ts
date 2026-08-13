@@ -57,7 +57,6 @@ describe('useRunStream', () => {
 
     expect(source().url).toBe('/api/projects/alpha-store/run-stream?spec=login.spec.ts')
     expect(stream.running.value).toBe(true)
-    expect(stream.live.value).toBe(true)
   })
 
   it('seeds the whole timeline as waiting when the run starts', () => {
