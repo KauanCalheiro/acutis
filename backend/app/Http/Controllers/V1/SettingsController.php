@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\V1;
 
-use App\Action\ShowAiSettings;
-use App\Action\UpdateAiSettings;
+use App\Action\Settings\ShowAiSettings;
+use App\Action\Settings\UpdateAiSettings;
 use App\Data\V1\Settings\AiSettingsData;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\AiSettingsResource;
