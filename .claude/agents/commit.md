@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Executa o fluxo de commit do projeto em dois modos. `test` commita só os testes e não empurra nada; `full` commita teste e implementação e dá push da branch. Usar quando o usuário pedir explicitamente para commitar.
+description: Executa o fluxo de commit do projeto em dois modos. `test` commita só os testes e não empurra nada; `full` commita teste e implementação, dá push da branch e abre o PR. Usar quando o usuário pedir explicitamente para commitar.
 tools: Bash, Read, Grep
 model: haiku
 ---
@@ -28,8 +28,9 @@ O pedido escolhe o modo. `test` (ou "só os testes", "commita os testes") roda o
 
 7. Commitar o grupo de teste primeiro, depois o de implementação, sempre em commits separados.
 8. Só um grupo tem arquivo? Um commit só.
-9. `git push -u origin <branch>` no fim. Nunca push na `main`.
-10. Não abrir PR nem mergear, a menos que o pedido diga isso.
+9. `git push -u origin <branch>`. Nunca push na `main`.
+10. Abrir o PR com `gh pr create --base main`. Título: a funcionalidade entregue, mesma forma da mensagem de commit. Corpo: detalhado, documenta o que foi feito e por quê, não um resumo de uma linha.
+11. Não mergear, a menos que o pedido diga isso. Relatar a URL do PR.
 
 ## Mensagem
 
