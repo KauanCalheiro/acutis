@@ -1,0 +1,117 @@
+name: Instaladores desktop
+
+# Só por tag ou a pedido: cada job baixa runtimes e um Chromium, e leva dezenas de minutos.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      # Um alvo quebrado não invalida os outros: quem depende do .msi não fica sem release porque o
+      # AppImage falhou.
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            alvo: macOS (Apple Silicon)
+            bundles: app,dmg
+          - os: windows-latest
+            alvo: Windows x64
+            bundles: msi
+          - os: ubuntu-22.04
+            alvo: Linux x64
+            bundles: appimage,deb
+
+    name: ${{ matrix.alvo }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # O WebKitGTK é a webview do Tauri no Linux, e o libappindicator entra no AppImage.
+      - name: dependências de sistema (Linux)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # O composer roda com o php estático do bundle, mas o binário do composer em si vem daqui.
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: montar os recursos
+        shell: bash
+        run: ./desktop/scripts/bundle-resources.sh
+
+      # Prova que o bundle funciona antes de virar instalador. No Windows não roda: o script sobe os
+      # serviços com sintaxe de shell POSIX, e lá o alvo é o instalador em si.
+      - name: smoke do bundle
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        run: ./desktop/scripts/bundle-smoke.sh
+
+      - name: testes do app
+        working-directory: desktop/src-tauri
+        run: cargo test
+
+      - name: empacotar
+        working-directory: desktop
+        run: pnpm dlx @tauri-apps/cli@latest build --bundles ${{ matrix.bundles }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acutis-${{ matrix.os }}
+          path: |
+            desktop/src-tauri/target/release/bundle/dmg/*.dmg
+            desktop/src-tauri/target/release/bundle/msi/*.msi
+            desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+            desktop/src-tauri/target/release/bundle/deb/*.deb
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: instaladores
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: instaladores/**/*
+          # Sem assinatura, os dois sistemas reclamam na primeira execução. Enquanto não houver
+          # certificado, o jeito de abrir vai escrito na própria release.
+          body: |
+            Baixe o instalador do seu sistema.
+
+            **macOS:** o app não está assinado (exige conta paga da Apple). Na primeira vez, clique
+            com o botão direito sobre o acutis e escolha *Abrir* — depois disso abre normal.
+
+            **Windows:** o instalador não está assinado (exige certificado EV). O SmartScreen mostra
+            um aviso: clique em *Mais informações* → *Executar assim mesmo*.
+
+            **Linux:** o `.AppImage` precisa de permissão de execução (`chmod +x`).
+
+            O primeiro boot extrai os arquivos do app em `~/.acutis/runtime` e leva alguns minutos.
