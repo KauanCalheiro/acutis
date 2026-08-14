@@ -79,15 +79,19 @@ test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
         await page.locator('[data-hydrated="true"]').waitFor()
 
         await expect(page.getByTestId('cenario-eventos-vazio')).toContainText('Nenhum evento gravado')
-        await expect(page.getByTestId('cenario-execucoes-vazio')).toContainText('Nenhum teste executado ainda')
 
         await expect(page.getByTestId('cenario-tab-gherkin')).toBeHidden()
 
         await page.getByTestId('cenario-tab-playwright').click()
         await expect(page.getByTestId('cenario-playwright')).toHaveValue(/./)
+
+        await page.getByTestId('cenario-tab-execucoes').click()
+        await expect(page.getByTestId('cenario-execucoes-vazio')).toContainText('Nenhum teste executado ainda')
     })
 
     test('lists the persisted runs, newest first, one page at a time', async ({ page }) => {
+        await page.getByTestId('cenario-tab-execucoes').click()
+
         const runs = page.getByTestId('cenario-execucao')
 
         await expect(runs).toHaveCount(6)
@@ -98,10 +102,13 @@ test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
     })
 
     test('shows how long each run took, which is what tells a slow run from a fast one', async ({ page }) => {
+        await page.getByTestId('cenario-tab-execucoes').click()
+
         await expect(page.getByTestId('cenario-execucao').nth(0)).toContainText('3,8s')
     })
 
     test('pages through the runs that do not fit the first page', async ({ page }) => {
+        await page.getByTestId('cenario-tab-execucoes').click()
         await page.getByTestId('execucoes-paginacao').getByRole('button', { name: '2' }).click()
 
         const runs = page.getByTestId('cenario-execucao')
@@ -111,6 +118,8 @@ test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
     })
 
     test('searches the runs by branch, by author and by the step that failed', async ({ page }) => {
+        await page.getByTestId('cenario-tab-execucoes').click()
+
         const busca = page.getByTestId('execucoes-busca')
         const runs = page.getByTestId('cenario-execucao')
 
@@ -133,6 +142,7 @@ test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
     })
 
     test('filters the runs by status, which is how a regression gets found', async ({ page }) => {
+        await page.getByTestId('cenario-tab-execucoes').click()
         await page.getByTestId('execucoes-status').click()
         await page.getByRole('option', { name: 'Falha' }).click()
 
@@ -144,6 +154,7 @@ test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
     })
 
     test('opens a persisted run with its timeline and the code that ran', async ({ page }) => {
+        await page.getByTestId('cenario-tab-execucoes').click()
         await page.getByTestId('cenario-execucao').nth(1).click()
 
         await expect(page.getByTestId('execucao-status')).toContainText('Falha')
@@ -254,6 +265,7 @@ test.describe('scenario page with no ai configured', { tag: ['@read', '@scenario
         await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
         await page.locator('[data-hydrated="true"]').waitFor()
 
+        await page.getByTestId('cenario-tab-execucoes').click()
         await page.getByTestId('cenario-execucao').nth(1).click()
 
         await expect(page.getByTestId('execucao-status')).toContainText('Falha')
