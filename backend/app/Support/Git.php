@@ -16,6 +16,19 @@ final class Git
         return new self($path);
     }
 
+    /**
+     * Se existe git nesta máquina. Sem ele o acutis continua servindo projeto criado de template —
+     * `isRepository()` já torna commit e push inócuos —, mas clonar é impossível, e a interface
+     * consulta isto para desabilitar a importação em vez de deixar o clone estourar.
+     */
+    public static function available(): bool
+    {
+        $process = new Process([acutis()->gitBin, '--version'], null, null, null, 5);
+        $process->run();
+
+        return $process->isSuccessful();
+    }
+
     /** URL do remote `origin`, ou null se o diretório em si não for um repositório git / sem remote. */
     public function remoteUrl(): ?string
     {
@@ -89,6 +102,6 @@ final class Git
     /** @param  list<string>  $args */
     private function git(array $args, float $timeout = 60): Process
     {
-        return new Process(['git', '-C', $this->path, ...$args], null, null, null, $timeout);
+        return new Process([acutis()->gitBin, '-C', $this->path, ...$args], null, null, null, $timeout);
     }
 }

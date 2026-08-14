@@ -14,4 +14,10 @@ return [
     'webdriver' => [
         'url' => env('WEBDRIVER_URL', 'http://localhost:4000'),
     ],
+
+    'git' => [
+        // O app empacotado leva o próprio git onde o sistema não costuma ter (Windows) e aponta
+        // aqui. Fora dele, é o git do PATH.
+        'bin' => env('ACUTIS_GIT_BIN', 'git'),
+    ],
 ];

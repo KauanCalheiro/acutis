@@ -8,6 +8,7 @@ final class AcutisConfig
         public readonly string $projectsPath,
         public readonly string $projectsHostPath,
         public readonly string $webdriverUrl,
+        public readonly string $gitBin,
     ) {}
 
     /** Constrói a partir da config atual (lê a cada chamada, respeitando overrides em runtime/testes). */
@@ -19,6 +20,7 @@ final class AcutisConfig
             projectsPath: $projectsPath,
             projectsHostPath: (string) (config('acutis.projects.host_path') ?: $projectsPath),
             webdriverUrl: (string) config('acutis.webdriver.url'),
+            gitBin: (string) config('acutis.git.bin'),
         );
     }
 

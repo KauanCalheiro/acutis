@@ -26,7 +26,7 @@ class CloneProjectFromGit
         [$cloneUrl, $cleanUrl, $env, $cleanup] = $this->resolveAuth($data);
 
         try {
-            $args = ['git', 'clone'];
+            $args = [acutis()->gitBin, 'clone'];
             if ($data->branch) {
                 $args[] = '--branch';
                 $args[] = $data->branch;
@@ -42,7 +42,7 @@ class CloneProjectFromGit
             }
 
             if ($cleanUrl !== null) {
-                (new Process(['git', '-C', $path, 'remote', 'set-url', 'origin', $cleanUrl]))->run();
+                (new Process([acutis()->gitBin, '-C', $path, 'remote', 'set-url', 'origin', $cleanUrl]))->run();
             }
         } finally {
             $cleanup();
