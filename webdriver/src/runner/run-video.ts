@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process'
 import { existsSync, statSync } from 'node:fs'
 import { promisify } from 'node:util'
+import { ffmpegBin } from './host.js'
 
 const exec = promisify(execFile)
 const FFMPEG_MAX_OUTPUT = 10 * 1024 * 1024
@@ -10,7 +11,7 @@ const MOSTLY_BLANK = 0.9
 
 async function inspect(video: string): Promise<{ blankIntroEnd: number, duration: number }> {
     const { stderr } = await exec(
-        'ffmpeg',
+        ffmpegBin(),
         ['-hide_banner', '-i', video, '-vf', 'negate,blackdetect=d=0.05:pix_th=0.10', '-map', '0:v', '-f', 'null', '-'],
         { maxBuffer: FFMPEG_MAX_OUTPUT },
     )
@@ -53,7 +54,7 @@ export async function watchableVideo(video: string): Promise<string> {
         }
 
         await exec(
-            'ffmpeg',
+            ffmpegBin(),
             [
                 '-hide_banner', '-y',
                 '-ss', String(blankIntroEnd),

@@ -2,3 +2,6 @@ allowBuilds:
   '@nestjs/core': true
   '@swc/core': true
   esbuild: true
+  # Baixa o binário do ffmpeg da plataforma. É de onde o app empacotado tira o ffmpeg, então o
+  # script de instalação precisa rodar.
+  ffmpeg-static: true

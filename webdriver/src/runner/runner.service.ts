@@ -6,6 +6,7 @@ import { access, mkdir, readdir, readFile, rm, symlink, writeFile } from 'node:f
 import { join, relative, resolve } from 'node:path'
 import { RUNNER_DIR, STREAM_REPORTER_PATH } from '../config/paths.js'
 import type { RunEvent } from '../types/run.js'
+import { linkType, playwrightCommand } from './host.js'
 import { pruneHtml } from './html.js'
 
 export interface RunResult {
@@ -157,8 +158,10 @@ export class RunnerService {
         if (options.spec) args.push(options.spec)
         if (options.grep) args.push('--grep', options.grep)
 
+        const [command, argv] = playwrightCommand(['test', ...args])
+
         return new Promise((resolvePromise) => {
-            const child = spawn('npx', ['playwright', 'test', ...args], {
+            const child = spawn(command, argv, {
                 cwd: dir,
                 env: { ...process.env, ...env, PLAYWRIGHT_HTML_OPEN: 'never', [RUN_TAIL_ENV]: String(RUN_TAIL_MS), NODE_PATH: join(WEBDRIVER_ROOT, 'node_modules') },
             })
@@ -220,7 +223,7 @@ export class RunnerService {
         try {
             await access(link)
         } catch {
-            await symlink(join(WEBDRIVER_ROOT, 'node_modules'), link, 'dir')
+            await symlink(join(WEBDRIVER_ROOT, 'node_modules'), link, linkType())
         }
     }
 
@@ -302,8 +305,10 @@ export class RunnerService {
     }
 
     private execPlaywright(dir: string, args: string[] = [], env?: Record<string, string>): Promise<RunResult> {
+        const [command, argv] = playwrightCommand(['test', ...args])
+
         return new Promise((resolvePromise) => {
-            const child = spawn('npx', ['playwright', 'test', ...args], {
+            const child = spawn(command, argv, {
                 cwd: dir,
                 env: {
                     ...process.env,
