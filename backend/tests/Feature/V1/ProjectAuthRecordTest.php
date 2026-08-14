@@ -347,6 +347,21 @@ it('writes the gherkin of the login next to the setup', function () {
         ->toContain('Funcionalidade: Entrar no sistema');
 });
 
+/** Sem provedor ativo o login continua sendo gravado: o que some é a descrição, que é o que a IA escrevia. */
+it('writes the login setup with no feature when no ai provider is active', function () {
+    config()->set('ai.default', '');
+    $slug = recordProject();
+
+    postJson("/api/v1/projects/{$slug}/auth/record", recordPayload())
+        ->assertOk()
+        ->assertJsonPath('authSetup', fn ($v) => str_contains($v, "setup('autenticação'"));
+
+    $dir = $this->projectsPath."/{$slug}";
+
+    expect(File::exists($dir.'/tests/auth.setup.ts'))->toBeTrue()
+        ->and(File::exists($dir.'/features/auth.feature'))->toBeFalse();
+});
+
 it('keeps the auth feature in its fixed path, whatever domain the writer suggests', function () {
     GherkinWriter::fake([['gherkin' => 'Funcionalidade: Entrar', 'domain' => 'acesso-restrito']]);
     $slug = recordProject();

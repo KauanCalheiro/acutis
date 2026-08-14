@@ -46,8 +46,22 @@ test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
         await expect(page).toHaveURL('/projects/alpha-store')
     })
 
+    /** A timeline de eventos fala como a da execução: verbo e alvo, não o nome cru do evento. */
+    test('describes each recorded event in the same words the run timeline uses', async ({ page }) => {
+        const eventos = page.getByTestId('cenario-eventos')
+
+        await expect(eventos, 'a tela é dita pelo caminho, que é o que a distingue das outras').toContainText('Navega para "/login"')
+        await expect(eventos).toContainText('Clica em "Entrar com usuário/código"')
+        await expect(eventos).toContainText('Preenche "Usuário ou código" com "ana.lasta"')
+    })
+
+    /** Fora da revisão não há vídeo, e sem vídeo o instante de cada evento seria sempre 0.0s. */
+    test('drops the timestamps of the events when there is no video to seek', async ({ page }) => {
+        await expect(page.getByTestId('cenario-eventos')).not.toContainText('0.0s')
+    })
+
     test('switches between the eventos, gherkin and playwright tabs', async ({ page }) => {
-        await expect(page.getByTestId('cenario-eventos')).toContainText('Abrir página de login')
+        await expect(page.getByTestId('cenario-eventos')).toContainText('Navega para "/login"')
 
         await page.getByTestId('cenario-tab-gherkin').click()
         await expect(page.getByTestId('cenario-gherkin')).toHaveValue(/Funcionalidade: Login do cliente/)
@@ -59,15 +73,15 @@ test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
         await expect(page.getByTestId('cenario-eventos')).toBeVisible()
     })
 
-    test('shows an empty state for a scenario without events, gherkin or runs', async ({ page }) => {
+    /** O Gherkin é opcional: sem arquivo .feature a aba não existe, em vez de existir dizendo "vazio". */
+    test('shows an empty state for a scenario without events or runs, and no gherkin tab at all', async ({ page }) => {
         await page.goto('/projects/alpha-store/scenarios/cadastro-de-produto')
         await page.locator('[data-hydrated="true"]').waitFor()
 
         await expect(page.getByTestId('cenario-eventos-vazio')).toContainText('Nenhum evento gravado')
         await expect(page.getByTestId('cenario-execucoes-vazio')).toContainText('Nenhum teste executado ainda')
 
-        await page.getByTestId('cenario-tab-gherkin').click()
-        await expect(page.getByTestId('cenario-gherkin-vazio')).toContainText('Sem descrição em Gherkin')
+        await expect(page.getByTestId('cenario-tab-gherkin')).toBeHidden()
 
         await page.getByTestId('cenario-tab-playwright').click()
         await expect(page.getByTestId('cenario-playwright')).toHaveValue(/./)
@@ -206,6 +220,48 @@ test.describe('auth scenario page', { tag: ['@read', '@scenario'] }, () => {
     })
 })
 
+/** Sem provedor de IA os botões que chamariam um modelo desabilitam — nunca somem. */
+test.describe('scenario page with no ai configured', { tag: ['@read', '@scenario'] }, () => {
+    let stopBackend: () => Promise<void>
+    let tmpProjects: string
+
+    test.beforeAll(async () => {
+        tmpProjects = projectsCopy()
+
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects, AI_PROVIDER: '' })
+    })
+
+    test.afterAll(async () => {
+        await stopBackend()
+        rmSync(tmpProjects, { recursive: true, force: true })
+    })
+
+    test('disables the suggestions button instead of hiding it, and says why on hover', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await expect(page.getByTestId('cenario-sugestoes')).toBeVisible()
+        await expect(page.getByTestId('cenario-sugestoes')).toBeDisabled()
+
+        await page.mouse.move(640, 500)
+        await expect(async () => {
+            await page.getByTestId('cenario-sugestoes').hover({ force: true })
+            await expect(page.getByText('Configure um provedor de IA para usar isto').first()).toBeVisible({ timeout: 1000 })
+        }).toPass({ timeout: 10_000 })
+    })
+
+    test('disables the fix button of a failed run for the same reason', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('cenario-execucao').nth(1).click()
+
+        await expect(page.getByTestId('execucao-status')).toContainText('Falha')
+        await expect(page.getByTestId('execucao-corrigir')).toBeVisible()
+        await expect(page.getByTestId('execucao-corrigir')).toBeDisabled()
+    })
+})
+
 test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
     let stopBackend: () => Promise<void>
     let tmpProjects: string
@@ -258,6 +314,23 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
 
         await expect(page).toHaveURL('/projects/alpha-store/scenarios/login-do-cliente')
         await expect(page.getByTestId('cenario-titulo')).toHaveText('Login do cliente atualizado')
+    })
+
+    /** O cenário sem .feature guarda o título no describe do spec: editá-lo tem de sobreviver ao reload. */
+    test('saves the title of a scenario that has no gherkin at all', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/cadastro-de-produto')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('cenario-editar').click()
+        await page.getByTestId('contexto-titulo').fill('Cadastro de produto revisado')
+        await page.getByTestId('cenario-editar-salvar').click()
+
+        await expect(page.getByTestId('cenario-titulo')).toHaveText('Cadastro de produto revisado')
+
+        await page.reload()
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await expect(page.getByTestId('cenario-titulo')).toHaveText('Cadastro de produto revisado')
     })
 
     test('renames the scenario and navigates to the new url', async ({ page }) => {

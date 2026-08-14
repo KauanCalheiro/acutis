@@ -300,13 +300,13 @@ it('names the step after the placeholder when the field carries no label', funct
         'inputType' => 'text',
     ])]);
 
-    expect($spec)->toContain("await test.step('Preencher Buscar projeto...'");
+    expect($spec)->toContain('await test.step(\'Preenche "Buscar projeto..."\'');
 });
 
 it('names the step without a dangling article when the element describes nothing', function () {
     $spec = emit([emitEvent('click', ['selectors' => selectors(['cssStable' => '#voltar'])])]);
 
-    expect($spec)->toContain("await test.step('Clicar no elemento'");
+    expect($spec)->toContain("await test.step('Clica no elemento'");
 });
 
 it('hovers the element that was recorded in hover mode', function () {

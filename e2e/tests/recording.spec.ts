@@ -369,8 +369,9 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
             await expect(page.getByTestId('contexto-dominio')).toHaveValue('navegacao')
         })
 
-        await test.step('the user edits the title before sending', async () => {
+        await test.step('the user edits the title before sending, and the file name follows it', async () => {
             await page.getByTestId('contexto-titulo').fill('Fluxo revisado')
+            await expect(page.getByTestId('contexto-path')).toHaveValue('fluxo-revisado')
             await page.getByTestId('contexto-enviar').click()
         })
 
@@ -384,8 +385,113 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
             expect(clicked!.html).toContain('id="btn"')
         })
         expect(posted!.title).toBe('Fluxo revisado')
-        expect(posted!.path).toBe('fluxo-gravado')
+        expect(posted!.path).toBe('fluxo-revisado')
         expect(posted!.domain).toBe('navegacao')
+    })
+
+    /** Sem provedor de IA o rascunho chega sem Gherkin, e uma tag não pode inventar um. */
+    test('keeps the gherkin empty when a tag is typed into a draft that has none', async ({ page }) => {
+        let posted: { gherkin?: string, tags?: string[] } | null = null
+
+        await page.route('**/api/projects/alpha-store/tests/draft', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    title: 'teste',
+                    tags: [],
+                    domain: '',
+                    path: 'teste',
+                    gherkin: '',
+                    playwright: "import { test } from '@playwright/test'\ntest.describe('teste', { tag: ['@read'] }, () => {})",
+                }),
+            })
+        })
+
+        await page.route('**/api/projects/alpha-store/tests', async (route) => {
+            posted = route.request().postDataJSON()
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ spec: 'tests/x.spec.ts', feature: null, gherkin: null, playwright: '', testRun: null }),
+            })
+        })
+
+        await page.getByTestId('revisao-gerar').click()
+        await expect(page.getByTestId('contexto-titulo')).toHaveValue('teste', { timeout: 10_000 })
+
+        await test.step('the tag lands on the spec, never on the empty gherkin', async () => {
+            await page.getByTestId('contexto-tags').fill('@read @cadastro')
+            await page.getByTestId('contexto-dominio').fill('cadastro')
+
+            await expect(page.getByTestId('contexto-cenario')).toHaveValue('')
+            await expect(page.getByTestId('contexto-teste')).toHaveValue(/@cadastro/)
+        })
+
+        await page.getByTestId('contexto-enviar').click()
+        await expect(page.getByTestId('revisao-video')).toBeHidden({ timeout: 10_000 })
+
+        expect(posted!.gherkin).toBe('')
+        expect(posted!.tags).toEqual(['@read', '@cadastro'])
+    })
+
+    /** Texto sem linha de tag não declara lista vazia: escrever o cenário não pode zerar as tags. */
+    test('keeps the chosen tags while the gherkin is written by hand', async ({ page }) => {
+        await page.route('**/api/projects/alpha-store/tests/draft', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    title: 'teste',
+                    tags: [],
+                    domain: '',
+                    path: 'teste',
+                    gherkin: '',
+                    playwright: "import { test } from '@playwright/test'\ntest.describe('teste', { tag: ['@read'] }, () => {})",
+                }),
+            })
+        })
+
+        await page.getByTestId('revisao-gerar').click()
+        await expect(page.getByTestId('contexto-titulo')).toHaveValue('teste', { timeout: 10_000 })
+
+        await page.getByTestId('contexto-tags').fill('@read @cadastro')
+        await page.getByTestId('contexto-cenario').fill('Funcionalidade: Cadastro de produto')
+
+        await expect(page.getByTestId('contexto-tags')).toHaveValue('@read @cadastro')
+        await expect(page.getByTestId('contexto-teste')).toHaveValue(/@cadastro/)
+    })
+
+    test('mirrors the title into the file name until someone names the file themselves', async ({ page }) => {
+        await page.route('**/api/projects/alpha-store/tests/draft', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    title: 'Fluxo gravado',
+                    tags: ['@read'],
+                    domain: 'navegacao',
+                    path: 'fluxo-gravado',
+                    gherkin: '@read\nFuncionalidade: Fluxo gravado\n  Cenário: clica',
+                    playwright: "import { test } from '@playwright/test' // spec",
+                }),
+            })
+        })
+
+        await page.getByTestId('revisao-gerar').click()
+        await expect(page.getByTestId('contexto-titulo')).toHaveValue('Fluxo gravado', { timeout: 10_000 })
+
+        await test.step('the file name follows the title, accents and casing dropped', async () => {
+            await page.getByTestId('contexto-titulo').fill('Inscrição de Aluno')
+            await expect(page.getByTestId('contexto-path')).toHaveValue('inscricao-de-aluno')
+        })
+
+        await test.step('a file named by hand survives the next title', async () => {
+            await page.getByTestId('contexto-path').fill('inscricao')
+            await page.getByTestId('contexto-titulo').fill('Inscrição de Aluno Novo')
+
+            await expect(page.getByTestId('contexto-path')).toHaveValue('inscricao')
+        })
     })
 })
 

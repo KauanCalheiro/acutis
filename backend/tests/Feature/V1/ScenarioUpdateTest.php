@@ -131,6 +131,36 @@ it('writes the auth feature on the first edit of a setup without one', function 
     expect(File::get($this->dir.'/features/auth.feature'))->toContain('Funcionalidade: Entrar');
 });
 
+/** Sem .feature o título é lido do describe do spec, então é lá que a edição precisa gravá-lo. */
+it('renames the title inside the spec of a scenario that has no feature', function () {
+    File::ensureDirectoryExists($this->dir.'/tests');
+    File::put($this->dir.'/tests/login.spec.ts', "test.describe('Login', { tag: ['@read'] }, () => {})");
+
+    patchJson('/api/v1/projects/minha-loja/scenarios/login', updatePayload([
+        'gherkin' => '',
+        'title' => 'Entrar no sistema',
+    ]))
+        ->assertOk()
+        ->assertJsonPath('title', 'Entrar no sistema');
+
+    expect(File::get($this->dir.'/tests/login.spec.ts'))->toContain("test.describe('Entrar no sistema'");
+});
+
+/** Apagar o campo na tela é ordem de apagar o arquivo: senão a aba voltaria com o texto antigo. */
+it('deletes the feature file when the gherkin field comes back empty', function () {
+    File::ensureDirectoryExists($this->dir.'/tests');
+    File::ensureDirectoryExists($this->dir.'/features');
+    File::put($this->dir.'/tests/login.spec.ts', "test.describe('Login', () => {})");
+    File::put($this->dir.'/features/login.feature', 'Funcionalidade: Login');
+
+    patchJson('/api/v1/projects/minha-loja/scenarios/login', updatePayload(['gherkin' => '']))
+        ->assertOk()
+        ->assertJsonPath('gherkin', null)
+        ->assertJsonPath('feature', null);
+
+    expect(File::exists($this->dir.'/features/login.feature'))->toBeFalse();
+});
+
 it('returns 404 for an unknown scenario', function () {
     File::ensureDirectoryExists($this->dir.'/tests');
 
