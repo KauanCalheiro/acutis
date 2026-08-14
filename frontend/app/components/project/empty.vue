@@ -4,6 +4,8 @@ import type { ProjectFormTab } from '#shared/schemas/project'
 const emit = defineEmits<{
   select: [tab: ProjectFormTab]
 }>()
+
+const { available: gitAvailable } = useGit()
 </script>
 
 <template>
@@ -42,8 +44,10 @@ const emit = defineEmits<{
 
       <UCard
         data-testid="projeto-vazio-git"
-        class="cursor-pointer transition-colors hover:bg-accented/75"
-        @click="emit('select', 'git')"
+        :class="gitAvailable
+          ? 'cursor-pointer transition-colors hover:bg-accented/75'
+          : 'cursor-not-allowed opacity-60'"
+        @click="gitAvailable && emit('select', 'git')"
       >
         <div class="flex flex-col gap-2">
           <div class="flex size-15 items-center justify-center rounded-lg bg-primary/10 mx-auto">
@@ -57,6 +61,13 @@ const emit = defineEmits<{
           </p>
           <p class="text-sm text-muted">
             Clona um repositório existente (público, com token ou SSH) e já traz o histórico.
+          </p>
+          <p
+            v-if="!gitAvailable"
+            data-testid="projeto-vazio-git-indisponivel"
+            class="text-sm text-warning"
+          >
+            {{ GIT_OFF_HINT }}
           </p>
         </div>
       </UCard>

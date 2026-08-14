@@ -11,16 +11,19 @@ const tab = defineModel<ProjectFormTab>('tab', {
   default: 'template'
 })
 
-const tabs: TabsItem[] = [
+const { available: gitAvailable } = useGit()
+
+const tabs = computed<TabsItem[]>(() => [
   {
     label: 'Template',
     value: 'template'
   },
   {
     label: 'Git',
-    value: 'git'
+    value: 'git',
+    disabled: !gitAvailable.value
   }
-]
+])
 
 const templateState = reactive({
   name: ''
