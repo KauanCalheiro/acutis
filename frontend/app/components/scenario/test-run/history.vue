@@ -69,11 +69,8 @@ watch([search, status], () => {
 </script>
 
 <template>
-  <section class="mt-10">
-    <p class="mb-3 text-lg font-semibold">
-      Testes
-    </p>
-
+  <!-- Sem título próprio: quem nomeia a seção é a aba "Execuções" que a abre. -->
+  <section>
     <BaseEmpty
       v-if="runs.length === 0"
       icon="i-ic-round-play-circle-outline"

@@ -185,11 +185,15 @@ function runTest() {
 
 const tab = ref('eventos')
 
-/** O Gherkin é opcional: sem arquivo .feature não há aba, e não uma aba que só diz "vazio". */
+/**
+ * O rótulo é o que a aba mostra ao usuário; o valor nomeia o artefato e é o que os testes usam.
+ * O Gherkin é opcional: sem arquivo .feature não há aba, e não uma aba que só diz "vazio".
+ */
 const tabs = computed<TabsItem[]>(() => [
   { label: 'Eventos', value: 'eventos' },
-  ...(scenario.value!.gherkin ? [{ label: 'Gherkin', value: 'gherkin' }] : []),
-  { label: 'Playwright', value: 'playwright' }
+  ...(scenario.value!.gherkin ? [{ label: 'Cenário', value: 'gherkin' }] : []),
+  { label: 'Script', value: 'playwright' },
+  { label: 'Execuções', value: 'execucoes' }
 ])
 
 /** Apagar o Gherkin na edição leva a aba embora, e ela não pode continuar sendo a aberta. */
@@ -512,7 +516,7 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
         />
       </template>
 
-      <template v-else>
+      <template v-else-if="tab === 'playwright'">
         <BaseEmpty
           v-if="!scenario!.playwright.trim()"
           icon="i-ic-round-code-off"
@@ -528,13 +532,14 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
           testid="cenario-playwright"
         />
       </template>
-    </div>
 
-    <ScenarioTestRunHistory
-      v-if="written"
-      :runs="scenario!.runs"
-      @open="openRun"
-    />
+      <template v-else>
+        <ScenarioTestRunHistory
+          :runs="scenario!.runs"
+          @open="openRun"
+        />
+      </template>
+    </div>
 
     <BaseConfirm
       v-model:open="removeOpen"
