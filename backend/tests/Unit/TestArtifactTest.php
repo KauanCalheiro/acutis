@@ -37,3 +37,25 @@ it('replaces the tag line that carries nothing but tags', function () {
 
     expect($stamped)->toBe("@read\nFuncionalidade: Login");
 });
+
+/** Sem .feature o título mora no describe: é de lá que o cenário é lido e é lá que ele é regravado. */
+it('replaces the title inside the describe of the spec', function () {
+    $stamped = TestArtifact::stampPlaywrightTitle(
+        "test.describe('Login', { tag: ['@read'] }, () => {})",
+        'Entrar no sistema',
+    );
+
+    expect($stamped)->toBe("test.describe('Entrar no sistema', { tag: ['@read'] }, () => {})");
+});
+
+it('escapes the quote of a title that carries one, so the file stays valid', function () {
+    $stamped = TestArtifact::stampPlaywrightTitle("test.describe('Login', () => {})", "Entrar n'algum lugar");
+
+    expect($stamped)->toBe("test.describe('Entrar n\\'algum lugar', () => {})");
+});
+
+it('leaves a spec without a describe exactly as it came', function () {
+    $spec = "setup('autenticação', async () => {})";
+
+    expect(TestArtifact::stampPlaywrightTitle($spec, 'Outro'))->toBe($spec);
+});

@@ -112,7 +112,7 @@ final class SpecEmitter
 
         if ($segment !== null) {
             return [
-                'title' => "Conferir que o login levou para {$segment}",
+                'title' => 'Confere que o login levou para '.$this->quoted($segment),
                 'lines' => ['await expect(page).toHaveURL(/'.str_replace('.', '\.', $segment)."/, {$deadline})"],
             ];
         }
@@ -120,7 +120,7 @@ final class SpecEmitter
         foreach ($events as $event) {
             if (($event['inputType'] ?? null) === 'password' && ($locator = $this->locator($event)) !== null) {
                 return [
-                    'title' => 'Conferir que o campo de senha saiu da tela',
+                    'title' => 'Confere que o campo de senha saiu da tela',
                     'lines' => ["await expect({$locator}).toBeHidden({$deadline})"],
                 ];
             }
@@ -135,7 +135,7 @@ final class SpecEmitter
         $key = EnvKey::STORAGE_STATE->value;
 
         return [
-            'title' => 'Salvar a sessão autenticada',
+            'title' => 'Salva a sessão autenticada',
             'lines' => [
                 "await page.waitForLoadState('load')",
                 "await page.context().storageState({ path: process.env.{$key} || 'storage-state.json' })",
@@ -216,7 +216,7 @@ final class SpecEmitter
             $path = $this->relativePath($url) ?? '';
 
             return [
-                'title' => 'Abrir '.($path === '' ? 'a página inicial' : $path),
+                'title' => 'Navega para '.($path === '' ? 'a página inicial' : $this->quoted($path)),
                 'lines' => ['await page.goto(`${base}'.$path.'`)'],
             ];
         }
@@ -228,7 +228,7 @@ final class SpecEmitter
         }
 
         return [
-            'title' => "Aguardar a tela {$segment}",
+            'title' => 'Aguarda a tela '.$this->quoted($segment),
             'lines' => ["await page.waitForURL('**{$segment}**')"],
         ];
     }
@@ -246,11 +246,11 @@ final class SpecEmitter
         }
 
         $verb = $type === 'hover' ? 'hover' : 'click';
-        $prefix = $type === 'hover' ? 'Passar o mouse' : 'Clicar';
+        $prefix = $type === 'hover' ? 'Passa o mouse' : 'Clica';
         $what = $this->describe($event);
 
         return [
-            'title' => $what === null ? "{$prefix} no elemento" : "{$prefix} em {$what}",
+            'title' => $what === null ? "{$prefix} no elemento" : "{$prefix} em ".$this->quoted($what),
             'lines' => [
                 "const alvo = {$locator}",
                 'await expect(alvo).toBeVisible('.$this->timeout($slow).')',
@@ -286,8 +286,10 @@ final class SpecEmitter
             default => 'fill('.$this->value($value).')',
         };
 
+        $what = $this->describe($event);
+
         return [
-            'title' => 'Preencher '.($this->describe($event) ?? 'o campo'),
+            'title' => 'Preenche '.($what === null ? 'o campo' : $this->quoted($what)),
             'lines' => [
                 "const campo = {$locator}",
                 'await expect(campo).toBeVisible('.$this->timeout($slow).')',
@@ -309,7 +311,7 @@ final class SpecEmitter
         }
 
         return [
-            'title' => 'Enviar o formulário',
+            'title' => 'Envia o formulário',
             'lines' => ["await {$lastField}.press('Enter')"],
         ];
     }
@@ -328,7 +330,7 @@ final class SpecEmitter
             $segment = $this->segment((string) ($expected ?? $event['url'] ?? ''));
 
             return $segment === null ? null : [
-                'title' => "Conferir que a tela é {$segment}",
+                'title' => 'Confere que a tela é '.$this->quoted($segment),
                 'lines' => ['await expect(page).toHaveURL(/'.str_replace('.', '\.', $segment).'/)'],
             ];
         }
@@ -349,8 +351,10 @@ final class SpecEmitter
             default => 'toBeVisible('.$this->timeout($slow).')',
         };
 
+        $what = $this->describe($event);
+
         return [
-            'title' => 'Conferir '.($this->describe($event) ?? 'o elemento'),
+            'title' => 'Confere '.($what === null ? 'o elemento' : $this->quoted($what)),
             'lines' => [
                 "const alvo = {$locator}",
                 "await expect(alvo).{$matcher}",
@@ -531,5 +535,15 @@ final class SpecEmitter
     private function literal(string $value): string
     {
         return "'".str_replace(['\\', "'"], ['\\\\', "\\'"], $value)."'";
+    }
+
+    /**
+     * O alvo entre aspas no título do passo: separa o que veio da tela do verbo que o descreve, e
+     * assim "Clica em" e o nome do botão não se misturam numa frase só. Substantivo genérico
+     * ("o campo", "o elemento") fica sem aspas de propósito — não é nome de nada.
+     */
+    private function quoted(string $what): string
+    {
+        return '"'.$what.'"';
     }
 }

@@ -4,6 +4,7 @@ namespace App\Action\Auth;
 
 use App\Ai\Agents\Scenario\GherkinWriter;
 use App\Ai\Prompts\AuthPrompt;
+use App\Ai\Provider;
 use App\Ai\StructuredOutput;
 use App\Data\V1\Auth\AuthRecordingData;
 use App\Data\V1\Auth\GeneratedAuthSetupData;
@@ -64,9 +65,15 @@ class WriteAuthRecordingToProject
     /**
      * O login também é um cenário, então ganha o Gherkin dos outros — no caminho fixo do auth,
      * porque é o título dele que a tela mostra e o domínio sugerido não move o arquivo.
+     *
+     * Sem provedor de IA não há descrição a escrever, e o setup vale sozinho.
      */
     private function writeFeature(string $path, AuthRecordingData $data, Recording $recording): void
     {
+        if (! Provider::configured()) {
+            return;
+        }
+
         $gherkin = StructuredOutput::field(
             app(GherkinWriter::class)->prompt(AuthPrompt::gherkin($data, $recording)),
             'gherkin',

@@ -25,18 +25,25 @@ class WriteDraftToProject
 
         $name = TestArtifact::uniquePath("{$path}/tests/{$domain}", Str::slug($data->path) ?: 'teste');
         $spec = "tests/{$domain}/{$name}.spec.ts";
-        $feature = "features/{$domain}/{$name}.feature";
 
-        $gherkin = TestArtifact::stampGherkinTags(
+        // O Gherkin é opcional: sem provedor de IA o rascunho chega sem ele, e aí não há .feature.
+        $gherkin = blank($data->gherkin) ? null : TestArtifact::stampGherkinTags(
             TestArtifact::stampTitle($data->gherkin, $data->title),
             $data->tags,
         );
-        $playwright = TestArtifact::stampPlaywrightTags($data->playwright, $data->tags);
+        $feature = $gherkin === null ? null : "features/{$domain}/{$name}.feature";
+        $playwright = TestArtifact::stampPlaywrightTags(
+            TestArtifact::stampPlaywrightTitle($data->playwright, $data->title),
+            $data->tags,
+        );
 
         File::ensureDirectoryExists("{$path}/tests/{$domain}");
-        File::ensureDirectoryExists("{$path}/features/{$domain}");
         File::put("{$path}/{$spec}", $playwright."\n");
-        File::put("{$path}/{$feature}", $gherkin."\n");
+
+        if ($feature !== null) {
+            File::ensureDirectoryExists("{$path}/features/{$domain}");
+            File::put("{$path}/{$feature}", $gherkin."\n");
+        }
 
         if ($data->events !== null) {
             $recording = Recording::make($data->events);

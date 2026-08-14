@@ -85,12 +85,13 @@ function seekTo(event: RecorderEvent) {
               :class="i === currentIndex ? 'font-semibold text-primary' : 'text-default'"
             >
               {{ describeRecorderEvent(event) }}
-              <template v-if="event.value">
-                = {{ event.sensitive ? '••••' : event.value }}
-              </template>
             </p>
-            <p class="text-xs text-dimmed">
-              {{ event.type }} · {{ offsetSeconds(event).toFixed(1) }}s
+            <!-- O instante só existe junto do vídeo: fora da revisão todo evento marcaria 0.0s. -->
+            <p
+              v-if="recordingStartedAt"
+              class="text-xs text-dimmed"
+            >
+              {{ offsetSeconds(event).toFixed(1) }}s
             </p>
           </div>
         </li>

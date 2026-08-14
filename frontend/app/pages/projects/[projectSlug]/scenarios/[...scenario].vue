@@ -44,6 +44,8 @@ const updatedAt = computed(() => new Date(scenario.value!.updated_at).toLocaleSt
   timeStyle: 'short'
 }))
 
+const { configured: aiConfigured } = useAi()
+
 const editOpen = ref(false)
 const suggestionsOpen = ref(false)
 const suggestionsLoading = ref(false)
@@ -182,11 +184,18 @@ function runTest() {
 }
 
 const tab = ref('eventos')
-const tabs: TabsItem[] = [
+
+/** O Gherkin é opcional: sem arquivo .feature não há aba, e não uma aba que só diz "vazio". */
+const tabs = computed<TabsItem[]>(() => [
   { label: 'Eventos', value: 'eventos' },
-  { label: 'Gherkin', value: 'gherkin' },
+  ...(scenario.value!.gherkin ? [{ label: 'Gherkin', value: 'gherkin' }] : []),
   { label: 'Playwright', value: 'playwright' }
-]
+])
+
+/** Apagar o Gherkin na edição leva a aba embora, e ela não pode continuar sendo a aberta. */
+watch(() => scenario.value!.gherkin, (gherkin) => {
+  if (!gherkin && tab.value === 'gherkin') tab.value = 'eventos'
+})
 
 const isAuth = computed(() => scenario.value!.is_auth)
 
@@ -334,15 +343,27 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
           data-testid="cenario-editar"
           @click="editOpen = true"
         />
-        <UButton
+        <UTooltip
           v-if="!isAuth"
-          label="Ver sugestões"
-          trailing-icon="i-ic-round-auto-awesome"
-          color="neutral"
-          variant="soft"
-          data-testid="cenario-sugestoes"
-          @click="suggestionsOpen = true"
-        />
+          :text="AI_OFF_HINT"
+          :disabled="aiConfigured"
+          :delay-duration="0"
+          arrow
+        >
+          <!-- O botão desabilitado não dispara evento de mouse: quem recebe o hover é o span. -->
+          <span>
+            <UButton
+              label="Ver sugestões"
+              trailing-icon="i-ic-round-auto-awesome"
+              color="neutral"
+              variant="soft"
+              :disabled="!aiConfigured"
+              :class="aiConfigured ? '' : 'pointer-events-none'"
+              data-testid="cenario-sugestoes"
+              @click="suggestionsOpen = true"
+            />
+          </span>
+        </UTooltip>
         <UButton
           v-if="isAuth && webdriver.recording"
           label="Parar gravação"
@@ -483,16 +504,8 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
       </template>
 
       <template v-else-if="tab === 'gherkin'">
-        <BaseEmpty
-          v-if="!scenario!.gherkin"
-          icon="i-ic-round-description"
-          title="Sem descrição em Gherkin"
-          description="Este cenário não tem arquivo .feature, só o código Playwright da aba ao lado."
-          testid="cenario-gherkin-vazio"
-        />
         <BaseCodefield
-          v-else
-          :model-value="scenario!.gherkin"
+          :model-value="scenario!.gherkin!"
           language="gherkin"
           readonly
           testid="cenario-gherkin"

@@ -233,7 +233,35 @@ it('validates the write payload', function () {
 
     postJson("/api/v1/projects/{$slug}/tests", ['tags' => 'nope'])
         ->assertStatus(422)
-        ->assertJsonValidationErrors(['title', 'path', 'domain', 'gherkin', 'playwright']);
+        ->assertJsonValidationErrors(['title', 'path', 'domain', 'playwright']);
+});
+
+/** Sem .feature o título é lido do describe do spec, então é lá que ele precisa ser carimbado. */
+it('stamps the edited title into the describe of the spec', function () {
+    $slug = project();
+
+    postJson("/api/v1/projects/{$slug}/tests", writePayload([
+        'gherkin' => '',
+        'title' => 'Cadastro de produto',
+    ]))->assertOk();
+
+    expect(File::get($this->projectsPath."/{$slug}/tests/login/login-do-cliente.spec.ts"))
+        ->toContain("test.describe('Cadastro de produto'");
+});
+
+/** O Gherkin é opcional: sem provedor de IA o rascunho chega sem ele, e o cenário existe do mesmo jeito. */
+it('writes no feature file when the draft comes without gherkin', function () {
+    $slug = project();
+
+    postJson("/api/v1/projects/{$slug}/tests", writePayload(['gherkin' => '']))
+        ->assertOk()
+        ->assertJsonPath('spec', 'tests/login/login-do-cliente.spec.ts')
+        ->assertJsonPath('feature', null);
+
+    $dir = $this->projectsPath."/{$slug}";
+
+    expect(File::exists($dir.'/tests/login/login-do-cliente.spec.ts'))->toBeTrue()
+        ->and(File::exists($dir.'/features/login/login-do-cliente.feature'))->toBeFalse();
 });
 
 /** Título que vira nome de arquivo: sem teto, o modelo devolve a feature inteira e o sistema de arquivos recusa. */

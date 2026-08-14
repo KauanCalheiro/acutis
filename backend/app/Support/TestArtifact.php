@@ -87,6 +87,24 @@ final class TestArtifact
     }
 
     /**
+     * O título no `test.describe` do spec. Sem .feature é dele que o cenário é lido, então é ele
+     * que precisa ser regravado — carimbar só o Gherkin perderia a edição num cenário sem descrição.
+     *
+     * ponytail: troca só o primeiro describe; sem describe, deixa como está.
+     */
+    public static function stampPlaywrightTitle(string $playwright, string $title): string
+    {
+        $literal = "'".str_replace(['\\', "'"], ['\\\\', "\\'"], $title)."'";
+
+        return preg_replace_callback(
+            '/test\.describe\(\s*(["\']).+?\1/u',
+            fn (): string => "test.describe({$literal}",
+            $playwright,
+            1,
+        ) ?? $playwright;
+    }
+
+    /**
      * Só a linha que não carrega nada além de tags é substituída. A feature devolvida numa linha
      * só começa com as tags e traz o documento inteiro atrás delas: descartá-la apagaria o cenário.
      */

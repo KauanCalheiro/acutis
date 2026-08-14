@@ -168,3 +168,44 @@ it('lets a provider that already has a key become the active one again', functio
         ->assertJsonPath('provider', 'openai')
         ->assertJsonPath('credentials.openai.key', 'sk-secreta');
 });
+
+it('reports the ai as configured while a provider is active', function () {
+    putJson('/api/v1/settings/ai', ['provider' => 'ollama'])->assertOk();
+
+    getJson('/api/v1/settings/ai')
+        ->assertOk()
+        ->assertJsonPath('configured', true);
+});
+
+/** "Sem IA" na tela: é este campo que desabilita, no frontend, todo botão que chamaria um agente. */
+it('turns the ai off when the form comes back with no provider', function () {
+    putJson('/api/v1/settings/ai', ['provider' => 'ollama'])->assertOk();
+
+    putJson('/api/v1/settings/ai', ['provider' => ''])
+        ->assertOk()
+        ->assertJsonPath('provider', '')
+        ->assertJsonPath('configured', false);
+
+    expect(Setting::get(SettingKey::AI_PROVIDER))->toBe('');
+});
+
+/** Desligar não apaga cadastro: religar o provedor não pode pedir a chave de novo. */
+it('keeps every credential after the ai is turned off', function () {
+    putJson('/api/v1/settings/ai', ['provider' => 'openai', 'key' => 'sk-secreta'])->assertOk();
+
+    putJson('/api/v1/settings/ai', ['provider' => ''])->assertOk();
+
+    getJson('/api/v1/settings/ai')
+        ->assertOk()
+        ->assertJsonPath('credentials.openai.key', 'sk-secreta');
+});
+
+/** Instalação nova, antes de alguém abrir a tela: sem AI_PROVIDER no ambiente, a IA nasce desligada. */
+it('reports the ai as off when the environment names no provider either', function () {
+    config()->set('ai.default', '');
+
+    getJson('/api/v1/settings/ai')
+        ->assertOk()
+        ->assertJsonPath('provider', '')
+        ->assertJsonPath('configured', false);
+});

@@ -5,6 +5,7 @@ namespace App\Action\Auth;
 use App\Ai\Agents\Auth\AuthFixer;
 use App\Ai\Attempt;
 use App\Ai\Prompts\FixPrompt;
+use App\Ai\Provider;
 use App\Ai\Rules\AuthRules;
 use App\Ai\Rules\Violation;
 use App\Ai\SpecRunner;
@@ -70,6 +71,12 @@ class GenerateAuthSetupFromRecording
         ?SpecRunner $run,
         Playwright $playwright,
     ): array {
+        // Sem provedor não há Fixer: o que as regras apontam volta como aviso, para o usuário
+        // resolver na tela em vez de a gravação do login morrer.
+        if (! Provider::configured()) {
+            return [$playwright, $this->warnings(AuthRules::check($playwright, $base, $environments))];
+        }
+
         $events = $recording->withoutPasswords();
 
         for ($attempt = 0; $attempt <= self::MAX_FIX_ATTEMPTS; $attempt++) {

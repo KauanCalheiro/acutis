@@ -8,6 +8,17 @@ export const LIMITE_TITULO = 120
 
 export const LIMITE_CAMINHO = 80
 
+/** O nome de arquivo que um título vira. Acompanha o `Str::slug` que o backend aplica ao gravar. */
+export function slugify(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .slice(0, LIMITE_CAMINHO)
+    .replace(/^-+|-+$/g, '')
+}
+
 export function draftFromScenario(scenario: ScenarioDetail): TestDraft {
   const id = scenario.spec.replace(/^tests\//, '').replace(/\.spec\.ts$/, '')
   const parts = id.split('/')

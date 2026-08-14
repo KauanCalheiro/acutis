@@ -12,7 +12,7 @@ class UpdateScenarioData extends Data
         public string $title,
         public string $path,
         public ?string $domain,
-        public string $gherkin,
+        public ?string $gherkin,
         public string $playwright,
         public array $tags = [],
     ) {}
@@ -23,7 +23,7 @@ class UpdateScenarioData extends Data
             'title' => ['required', 'string', 'max:'.TestArtifact::TITLE_LIMIT],
             'path' => ['required', 'string', 'max:'.TestArtifact::PATH_LIMIT],
             'domain' => ['nullable', 'string', 'max:'.TestArtifact::PATH_LIMIT],
-            'gherkin' => ['required', 'string'],
+            'gherkin' => ['nullable', 'string'],
             'playwright' => ['required', 'string'],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string'],
@@ -35,7 +35,6 @@ class UpdateScenarioData extends Data
         return [
             'title.required' => 'O título do cenário é obrigatório.',
             'path.required' => 'O caminho do arquivo é obrigatório.',
-            'gherkin.required' => 'O cenário Gherkin é obrigatório.',
             'playwright.required' => 'O teste Playwright é obrigatório.',
         ];
     }

@@ -443,3 +443,36 @@ it('leaves the scenario authenticated by default, without the public tag', funct
             ->where('gherkin', fn ($v) => ! str_contains($v, '@publico'))
             ->etc());
 });
+
+/**
+ * Sem provedor ativo o spec continua saindo da gravação, que é quem o escreve desde o emissor.
+ * Gherkin e domínio ficam em branco para o usuário preencher na revisão, se quiser.
+ */
+it('drafts the spec with no gherkin when no ai provider is active', function () {
+    config()->set('ai.default', '');
+    Http::fake(['*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok'])]);
+    $slug = draftProject();
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload())
+        ->assertOk()
+        ->assertJsonPath('gherkin', '')
+        ->assertJsonPath('domain', '')
+        ->assertJsonPath('tags', [])
+        ->assertJson(fn ($json) => $json
+            ->where('playwright', fn ($v) => str_contains($v, 'test.describe'))
+            ->etc());
+});
+
+/** Sem provedor, a tag @publico só tem onde ser carimbada no spec: não há feature para receber. */
+it('marks the public scenario on the spec alone when there is no ai', function () {
+    config()->set('ai.default', '');
+    Http::fake(['*/runner/spec' => Http::response(['passed' => true, 'output' => 'ok'])]);
+    $slug = draftProject();
+
+    postJson("/api/v1/projects/{$slug}/tests/draft", draftPayload(['publico' => true]))
+        ->assertOk()
+        ->assertJsonPath('gherkin', '')
+        ->assertJson(fn ($json) => $json
+            ->where('playwright', fn ($v) => str_contains($v, '@publico'))
+            ->etc());
+});

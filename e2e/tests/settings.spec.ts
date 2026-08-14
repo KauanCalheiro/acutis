@@ -143,4 +143,34 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
 
         await expect(page.getByText('A chave de API do provedor escolhido é obrigatória.')).toBeVisible()
     })
+
+    /** Deixa a IA desligada para o resto do describe: mantenha este teste por último. */
+    test('turns the ai off from the select, without asking for a key and without losing the saved ones', async ({ page }) => {
+        await page.goto('/')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await test.step('choose no provider at all', async () => {
+            await page.getByTestId('navbar-configuracoes').click()
+            await page.getByTestId('config-ia-provedor').click()
+            await page.getByRole('option', { name: 'Sem IA', exact: true }).click()
+        })
+
+        await test.step('there is no credential left to fill in', async () => {
+            await expect(page.getByTestId('config-ia-desligada')).toBeVisible()
+            await expect(page.getByTestId('config-ia-chave')).toBeHidden()
+            await expect(page.getByTestId('config-ia-url')).toBeHidden()
+        })
+
+        await page.getByTestId('config-ia-salvar').click()
+        await expect(page.getByText('Configuração salva', { exact: true })).toBeVisible()
+
+        await test.step('reopening comes back on "Sem IA", with the old keys still there', async () => {
+            await page.getByTestId('navbar-configuracoes').click()
+            await expect(page.getByTestId('config-ia-desligada')).toBeVisible()
+
+            await page.getByTestId('config-ia-provedor').click()
+            await page.getByRole('option', { name: 'openai', exact: true }).click()
+            await expect(page.getByTestId('config-ia-chave')).toHaveValue('sk-secreta-do-teste')
+        })
+    })
 })

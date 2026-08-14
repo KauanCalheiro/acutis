@@ -16,11 +16,21 @@ class UpdateAiSettings
      * Grava o cadastro no provedor escolhido e o torna o ativo. Campo em branco é gravado em
      * branco: a tela devolve o que está guardado, então apagar na tela é ordem de apagar.
      *
+     * Sem provedor é a escolha "sem IA": nenhum cadastro é tocado, para religar não pedir a chave
+     * de novo, e a partir daí `config('ai.default')` fica vazio e os agentes não são chamados.
+     *
      * @return array<string, mixed>
      */
     public function handle(AiSettingsData $data): array
     {
-        Setting::set(SettingKey::AI_PROVIDER, $data->provider);
+        Setting::set(SettingKey::AI_PROVIDER, (string) $data->provider);
+
+        // O middleware já passou com o provedor anterior: sem isto a resposta anunciaria o antigo.
+        config()->set('ai.default', (string) $data->provider);
+
+        if (blank($data->provider)) {
+            return ShowAiSettings::run();
+        }
 
         AiSetting::updateOrCreate(['provider' => $data->provider], [
             'key' => $data->key,
