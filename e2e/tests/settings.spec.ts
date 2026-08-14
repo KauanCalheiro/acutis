@@ -119,17 +119,29 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
         await expect(page.getByTestId('config-ia-url')).toHaveAttribute('placeholder', 'https://api.anthropic.com/v1')
     })
 
-    /** O endereço salvo entra no lugar do padrão dentro do config, e o placeholder não pode segui-lo. */
+    /**
+     * O endereço salvo entra no lugar do padrão dentro do config, e o placeholder não pode segui-lo.
+     * O provedor local não serve de exemplo aqui: o padrão dele sai de OLLAMA_URL, que muda por máquina.
+     */
     test('keeps announcing the default address of a provider pointed somewhere else', async ({ page }) => {
         await page.goto('/')
         await page.locator('[data-hydrated="true"]').waitFor()
 
-        await page.getByTestId('navbar-configuracoes').click()
-        await page.getByTestId('config-ia-provedor').click()
-        await page.getByRole('option', { name: 'ollama', exact: true }).click()
+        await test.step('point a configured provider at an internal address', async () => {
+            await page.getByTestId('navbar-configuracoes').click()
+            await page.getByTestId('config-ia-provedor').click()
+            await page.getByRole('option', { name: 'anthropic', exact: true }).click()
+            await page.getByTestId('config-ia-url').fill('http://interno.acme:9000')
+            await page.getByTestId('config-ia-salvar').click()
+            await expect(page.getByText('Configuração salva', { exact: true })).toBeVisible()
+        })
 
-        await expect(page.getByTestId('config-ia-url')).toHaveValue('http://192.168.0.124:11434')
-        await expect(page.getByTestId('config-ia-url')).toHaveAttribute('placeholder', 'http://localhost:11434')
+        await test.step('reopening keeps the saved address, and the placeholder still announces the default', async () => {
+            await page.getByTestId('navbar-configuracoes').click()
+
+            await expect(page.getByTestId('config-ia-url')).toHaveValue('http://interno.acme:9000')
+            await expect(page.getByTestId('config-ia-url')).toHaveAttribute('placeholder', 'https://api.anthropic.com/v1')
+        })
     })
 
     test('asks for the key of the provider being switched to', async ({ page }) => {

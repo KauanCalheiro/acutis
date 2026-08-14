@@ -98,7 +98,8 @@ it('writes no url and no model when the fields were left empty', function () {
     getJson('/api/v1/settings/ai')->assertOk();
 
     expect(config('ai.providers.ollama.url'))->toBe('http://localhost:11434')
-        ->and(config('ai.providers.ollama.models'))->toBeNull();
+        ->and(config('ai.providers.ollama.models.text.cheapest'))->toBe('llama3.1:8b')
+        ->and(config('ai.providers.ollama.models.text.smartest'))->toBe('llama3.1:8b');
 });
 
 it('leaves the config alone when nothing was saved, so the env keeps working', function () {
