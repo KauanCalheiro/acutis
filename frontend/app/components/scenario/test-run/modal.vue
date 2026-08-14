@@ -43,6 +43,8 @@ const open = defineModel<boolean>('open', {
   default: false
 })
 
+const { configured: aiConfigured } = useAi()
+
 const isAuth = computed(() => kind === 'autenticacao')
 const label = computed(() => isAuth.value ? 'Autenticação' : 'Cenário')
 const runningTitle = computed(() => isAuth.value ? 'Testando autenticação...' : 'Testando cenário...')
@@ -101,14 +103,25 @@ const stepColors: Record<TestStep['status'], string> = {
           </template>
         </div>
 
-        <UButton
+        <UTooltip
           v-if="!running && !passed && failedStep !== -1"
-          label="Corrigir"
-          trailing-icon="i-ic-round-auto-awesome"
-          class="mt-6 shrink-0"
-          data-testid="execucao-corrigir"
-          @click="emit('fix')"
-        />
+          :text="AI_OFF_HINT"
+          :disabled="aiConfigured"
+          :delay-duration="0"
+          arrow
+        >
+          <!-- O botão desabilitado não dispara evento de mouse: quem recebe o hover é o span. -->
+          <span class="mt-6 shrink-0">
+            <UButton
+              label="Corrigir"
+              trailing-icon="i-ic-round-auto-awesome"
+              :disabled="!aiConfigured"
+              :class="aiConfigured ? '' : 'pointer-events-none'"
+              data-testid="execucao-corrigir"
+              @click="emit('fix')"
+            />
+          </span>
+        </UTooltip>
       </div>
     </template>
 

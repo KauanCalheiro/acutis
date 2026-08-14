@@ -47,16 +47,26 @@ class UpdateProjectScenario
             ]);
         }
 
-        $gherkin = TestArtifact::stampGherkinTags(
+        // Campo em branco é ordem de apagar: a tela devolve o Gherkin guardado, e mantê-lo faria a
+        // aba voltar com o texto que o usuário acabou de limpar.
+        $gherkin = blank($data->gherkin) ? null : TestArtifact::stampGherkinTags(
             TestArtifact::stampTitle($data->gherkin, $data->title),
             $data->tags,
         );
-        $playwright = TestArtifact::stampPlaywrightTags($data->playwright, $data->tags);
+        $playwright = TestArtifact::stampPlaywrightTags(
+            TestArtifact::stampPlaywrightTitle($data->playwright, $data->title),
+            $data->tags,
+        );
 
         File::ensureDirectoryExists(dirname("{$path}/{$newSpecRelative}"));
-        File::ensureDirectoryExists(dirname("{$path}/{$newFeatureRelative}"));
         File::put("{$path}/{$newSpecRelative}", $playwright."\n");
-        File::put("{$path}/{$newFeatureRelative}", $gherkin."\n");
+
+        if ($gherkin === null) {
+            File::delete("{$path}/{$newFeatureRelative}");
+        } else {
+            File::ensureDirectoryExists(dirname("{$path}/{$newFeatureRelative}"));
+            File::put("{$path}/{$newFeatureRelative}", $gherkin."\n");
+        }
 
         if ($newSpecRelative !== $scenario->spec) {
             File::delete("{$path}/{$scenario->spec}");

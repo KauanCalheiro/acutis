@@ -2,9 +2,8 @@
 
 namespace App\Action\Settings;
 
-use App\Enums\SettingKey;
+use App\Ai\Provider;
 use App\Models\AiSetting;
-use App\Models\Setting;
 use Lorisleiva\Actions\Concerns\AsAction;
 
 class ShowAiSettings
@@ -15,7 +14,8 @@ class ShowAiSettings
     public function handle(): array
     {
         return [
-            'provider' => Setting::get(SettingKey::AI_PROVIDER) ?? config('ai.default'),
+            'provider' => Provider::active(),
+            'configured' => Provider::configured(),
             'credentials' => $this->credentials(),
             'providers' => array_keys(config('ai.providers')),
             'provider_urls' => $this->defaultUrls(),

@@ -135,7 +135,10 @@ function rerecord() {
           class="mb-4"
         />
 
-        <ScenarioReviewContexts v-model:draft="draft" />
+        <ScenarioReviewContexts
+          v-model:draft="draft"
+          novo
+        />
       </template>
 
       <ScenarioReviewTimeline

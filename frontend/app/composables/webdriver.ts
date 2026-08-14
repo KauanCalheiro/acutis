@@ -5,9 +5,16 @@ export interface RecorderEvent {
   /** O DOM ao redor do elemento no instante da ação, podado em 8KB pelo pill. */
   html?: string | null
   label?: string | null
+  /** O texto do elemento no instante da ação. Só existe na gravação ao vivo; não é persistido. */
+  innerText?: string | null
   value?: string | null
   sensitive?: boolean
-  selectors?: { dataTestId?: string | null, text?: string | null, cssStable?: string | null } | null
+  selectors?: {
+    dataTestId?: string | null
+    text?: string | null
+    placeholder?: string | null
+    cssStable?: string | null
+  } | null
   sessionId?: string | null
   timestamp?: number
   recordingStartedAt?: number

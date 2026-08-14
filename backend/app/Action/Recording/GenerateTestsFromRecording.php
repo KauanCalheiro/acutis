@@ -7,6 +7,7 @@ use App\Ai\Agents\Scenario\ScenarioFixer;
 use App\Ai\Attempt;
 use App\Ai\Prompts\FixPrompt;
 use App\Ai\Prompts\ScenarioPrompt;
+use App\Ai\Provider;
 use App\Ai\Rules\SpecRules;
 use App\Ai\Rules\Violation;
 use App\Ai\SpecRunner;
@@ -40,9 +41,14 @@ class GenerateTestsFromRecording
         $environments = $this->environments($project, $recording);
         $run = $this->runner($recording);
 
-        $written = app(GherkinWriter::class)->prompt(ScenarioPrompt::gherkin($recording, $environments));
-        $gherkin = StructuredOutput::field($written, 'gherkin');
-        $domain = StructuredOutput::field($written, 'domain');
+        // Sem provedor de IA o cenário sai só da gravação: título, domínio e descrição ficam em
+        // branco para o usuário preencher na revisão, e o spec continua vindo do emissor.
+        $written = Provider::configured()
+            ? app(GherkinWriter::class)->prompt(ScenarioPrompt::gherkin($recording, $environments))
+            : null;
+
+        $gherkin = $written ? StructuredOutput::field($written, 'gherkin') : '';
+        $domain = $written ? StructuredOutput::field($written, 'domain') : '';
 
         $emitter = new SpecEmitter($events, $base, $environments);
         $playwright = $emitter->spec(TestArtifact::title($gherkin), TestArtifact::scenario($gherkin));
@@ -59,7 +65,7 @@ class GenerateTestsFromRecording
         $run?->ensure($playwright->value);
 
         $tag = $this->readWriteTag($recording->events);
-        $gherkin = $this->ensureGherkinTag($gherkin, $tag);
+        $gherkin = blank($gherkin) ? '' : $this->ensureGherkinTag($gherkin, $tag);
         $spec = $this->ensurePlaywrightTag($playwright->value, $tag);
 
         if ($recording->publico) {
@@ -93,6 +99,12 @@ class GenerateTestsFromRecording
         ?SpecRunner $run,
         Playwright $playwright,
     ): array {
+        // Sem provedor não há Fixer: o que as regras apontam volta como aviso, para o usuário
+        // resolver na revisão em vez de a geração morrer.
+        if (! Provider::configured()) {
+            return [$playwright, $this->warnings(SpecRules::check($playwright, $base, $environments))];
+        }
+
         $redacted = $events->redacted($environments);
 
         for ($attempt = 0; $attempt <= self::MAX_FIX_ATTEMPTS; $attempt++) {
@@ -211,6 +223,12 @@ class GenerateTestsFromRecording
      */
     private function markAsPublic(string $gherkin, string $playwright): array
     {
+        // Sem Gherkin, a lista de tags que vale é a que já está no spec: recarimbá-la a partir de
+        // um arquivo vazio apagaria o @read/@write que acabou de entrar ali.
+        if (blank($gherkin)) {
+            return ['', $this->addPlaywrightTag($playwright, '@publico')];
+        }
+
         $tags = [...TestArtifact::tags($gherkin), '@publico'];
 
         return [
@@ -254,7 +272,7 @@ class GenerateTestsFromRecording
                 return $playwright;
             }
 
-            return preg_replace('/tag:\s*\[/', "tag: ['{$tag}', ", $playwright, 1);
+            return $this->addPlaywrightTag($playwright, $tag);
         }
 
         return preg_replace(
@@ -263,5 +281,11 @@ class GenerateTestsFromRecording
             $playwright,
             1,
         ) ?? $playwright;
+    }
+
+    /** Entra na frente da lista existente, preservando o que já estava lá. */
+    private function addPlaywrightTag(string $playwright, string $tag): string
+    {
+        return preg_replace('/tag:\s*\[/', "tag: ['{$tag}', ", $playwright, 1) ?? $playwright;
     }
 }

@@ -13,6 +13,12 @@ interface AiSettings {
   provider_urls: Record<string, string>
 }
 
+/**
+ * O select não aceita item de valor vazio, então "sem IA" viaja com este nome na tela e volta a
+ * ser vazio ao salvar. É o que desabilita, no resto do app, todo botão que chamaria um modelo.
+ */
+const SEM_IA = 'sem-ia'
+
 const open = defineModel<boolean>('open', {
   default: false
 })
@@ -29,10 +35,18 @@ const loading = ref(false)
 const saving = ref(false)
 const revealed = ref(false)
 
-const providerItems = computed(() => (settings.value?.providers ?? []).map(name => ({
-  label: name,
-  value: name
-})))
+const providerItems = computed(() => [
+  {
+    label: 'Sem IA',
+    value: SEM_IA
+  },
+  ...(settings.value?.providers ?? []).map(name => ({
+    label: name,
+    value: name
+  }))
+])
+
+const semIa = computed(() => provider.value === SEM_IA)
 
 /** O endereço que vale com o campo vazio, para o placeholder dizer o que vai acontecer. */
 const defaultUrl = computed(() => settings.value?.provider_urls[provider.value] ?? 'o endereço do provedor')
@@ -57,7 +71,7 @@ async function load() {
 
     const active = settings.value.credentials[settings.value.provider]
 
-    provider.value = settings.value.provider
+    provider.value = settings.value.provider || SEM_IA
     key.value = active?.key ?? ''
     url.value = active?.url ?? ''
     modelCheapest.value = active?.model_cheapest ?? ''
@@ -85,13 +99,16 @@ async function save() {
     await $fetch('/api/settings/ai', {
       method: 'PUT',
       body: {
-        provider: provider.value,
+        provider: semIa.value ? null : provider.value,
         key: key.value || null,
         url: url.value || null,
         modelCheapest: modelCheapest.value || null,
         modelSmartest: modelSmartest.value || null
       }
     })
+
+    // Quem habilita os botões de IA do app inteiro é esta resposta, e ela acabou de mudar.
+    await refreshNuxtData(AI_SETTINGS_KEY)
 
     // Fecha na hora: quem confirma o salvamento é o toast, e reabrir recarrega o que foi gravado.
     open.value = false
@@ -133,7 +150,18 @@ async function save() {
         />
       </UFormField>
 
+      <p
+        v-if="semIa"
+        class="text-sm text-muted"
+        data-testid="config-ia-desligada"
+      >
+        Sem provedor, o acutis grava e roda os testes normalmente. O que fica desabilitado é o que
+        depende de modelo: a descrição em Gherkin, as sugestões de data-testid e a correção do teste
+        que falhou.
+      </p>
+
       <UFormField
+        v-if="!semIa"
         label="Chave de API"
         hint="opcional"
         description="Provedor que roda na sua máquina, como o Ollama, não pede chave."
@@ -166,6 +194,7 @@ async function save() {
       </UFormField>
 
       <UFormField
+        v-if="!semIa"
         label="Endereço do provedor"
         hint="opcional"
         description="Onde o provedor responde. Preencha para apontar para uma máquina sua."
@@ -183,6 +212,7 @@ async function save() {
       </UFormField>
 
       <UFormField
+        v-if="!semIa"
         label="Modelo de alto custo"
         hint="opcional"
         description="Usado onde a resposta precisa ser a melhor: correção do teste que falhou."
@@ -200,6 +230,7 @@ async function save() {
       </UFormField>
 
       <UFormField
+        v-if="!semIa"
         label="Modelo de baixo custo"
         hint="opcional"
         description="Usado no resto: escrita do cenário, validação e sugestão de data-testid."

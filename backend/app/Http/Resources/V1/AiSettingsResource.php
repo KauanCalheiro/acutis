@@ -16,6 +16,7 @@ class AiSettingsResource extends JsonResource
     {
         return [
             'provider' => $this->resource['provider'],
+            'configured' => $this->resource['configured'],
             'credentials' => $this->resource['credentials'],
             'providers' => $this->resource['providers'],
             'provider_urls' => $this->resource['provider_urls'],
