@@ -1,0 +1,24 @@
+[package]
+name = "acutis-desktop"
+version = "0.1.0"
+description = "acutis"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "acutis_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+# Para extrair o payload preservando symlinks e permissões — ver Resources::install.
+tar = "0.4"
+flate2 = "1"
+# Só para esperar os serviços responderem; nada aqui fala HTTP de verdade.
+ureq = "2"
+base64 = "0.22"
+getrandom = "0.2"
+urlencoding = "2"

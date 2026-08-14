@@ -1,0 +1,10 @@
+# Tudo aqui é produzido pelo scripts/bundle-resources.sh e pelo build: runtimes baixados, os três
+# serviços construídos e o instalador. São centenas de MB, reproduzíveis a qualquer momento, e o
+# payload sozinho passa do limite de 100 MB por arquivo do GitHub.
+resources/*
+!resources/.gitkeep
+payload/
+src-tauri/target/
+
+# Gerado pelo tauri a cada build, a partir do tauri.conf.json.
+src-tauri/gen/schemas/
