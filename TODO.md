@@ -15,10 +15,27 @@
 
 ## Empacotar a stack (webdriver + frontend + PHP + Git) num instalável
 
-- [ ] Decidir abordagem: Electron empacotando os serviços, binário único (ex.: via `pkg`/Bun compile) ou instalador batch que baixa/configura as dependências.
-- [ ] Levantar todas as dependências externas hoje assumidas no host (PHP, Composer, Node, Git, Playwright browsers) e o que falta vendorizar/embutir.
-- [ ] Prototipar um build mínimo (um serviço só) pra validar a abordagem escolhida antes de estender pros três.
-- [ ] Definir como o instalador provê/atualiza os binários do Playwright sem exigir `npx playwright install` manual do usuário final.
+**Implementado em 14/08/2026.** Tauri 2 subindo os três serviços como processos filhos, com os
+runtimes vendorizados. Como funciona e como construir: [docs/DESKTOP.md](docs/DESKTOP.md); o desenho
+e o que mudou nele: [a spec](docs/superpowers/specs/2026-08-14-empacotamento-desktop-design.md).
+Fecha o [#56](https://github.com/KauanCalheiro/acutis/issues/56) — nativo, o gravador abre o próprio
+Chromium e o Chrome com `:9222` some.
+
+Verificado no macOS (Apple Silicon): `.dmg` de 373 MB, os três serviços de pé, um teste Playwright
+executado pelo runner do app com o node e o Chromium do bundle.
+
+Falta:
+
+- [ ] Rodar o workflow e validar os instaladores de **Windows** e **Linux** — foram escritos mas nunca executados; só o macOS foi construído e testado de verdade.
+- [ ] Assinar (conta paga da Apple para notarizar; certificado EV para o SmartScreen). Sem isso o updater do Tauri também não entra: atualizar é baixar a versão nova.
+- [ ] Janela de progresso na extração do payload: o primeiro boot fica alguns minutos em silêncio.
+- [ ] `kill -9` no app ainda deixa os três filhos vivos até o boot seguinte, que os limpa pelo arquivo `pids`. Fechar a janela derruba tudo normalmente.
+
+Alternativas levantadas e não descartadas, caso o Tauri incomode:
+
+- **Electron + `electron-builder`** — mesmo resultado, tudo em Node, zero Rust no CI; mais gordo e mais RAM. É o plano B natural.
+- **Launcher puro + navegador padrão** — um binário sobe os processos e abre `localhost` no Chrome do usuário. Menos maquinaria, mas `.dmg`/`.msi`/`.AppImage` e assinatura na mão, e binário solto tromba no Gatekeeper do macOS.
+- **Binário único por serviço** (FrankenPHP `embed`, SEA/`bun compile`) — descartado: FrankenPHP no Windows é imaturo e o requisito é um download, não um arquivo.
 
 ## Testar modelo de IA 100% local
 
