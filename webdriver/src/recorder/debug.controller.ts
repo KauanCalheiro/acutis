@@ -27,13 +27,6 @@ export class DebugController {
         return { ok: true }
     }
 
-    @Post('hover')
-    async hover(@Body('selector') selector: string): Promise<{ ok: true }> {
-        this.ensureTestMode()
-        await this.recorderService.debugHover(selector)
-        return { ok: true }
-    }
-
     @Post('fill')
     async fill(@Body('selector') selector: string, @Body('value') value: string): Promise<{ ok: true }> {
         this.ensureTestMode()
