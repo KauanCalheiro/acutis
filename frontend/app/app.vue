@@ -44,14 +44,12 @@ watch([() => appConfig.ui.colors.primary, () => colorMode.value], () =>
 </script>
 
 <template>
-  <ClientOnly>
-    <UApp :toaster="{ position: 'top-center' }">
-      <div class="flex min-h-screen">
-        <BaseNavbar />
-        <main class="min-w-0 flex-1 pl-21">
-          <NuxtPage />
-        </main>
-      </div>
-    </UApp>
-  </ClientOnly>
+  <UApp :toaster="{ position: 'top-center' }">
+    <div class="flex min-h-screen">
+      <BaseNavbar />
+      <main class="min-w-0 flex-1 pl-21">
+        <NuxtPage />
+      </main>
+    </div>
+  </UApp>
 </template>

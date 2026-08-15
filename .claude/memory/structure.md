@@ -11,7 +11,7 @@ Monorepo com quatro subprojetos independentes. Comandos rodam num dos dois modos
 acutis/
 ├── CLAUDE.md
 ├── README.md
-├── backend/                # NestJS + Playwright — grava tela/eventos, injeta a pill, e src/api
+├── backend/                # NestJS + Playwright — a API em src/modules, o gravador em src/webdriver
 ├── backend-laravel/        # Laravel 13 / PHP 8.5 — serve /api/v1 até a migração terminar
 ├── frontend/               # Nuxt 4 + Nuxt UI 4 / TypeScript / pnpm
 └── e2e/                    # Playwright cross-tool (frontend + backend reais)
@@ -23,5 +23,5 @@ acutis/
 |---------|---------|
 | [structure-backend](structure-backend.md) | Pastas de `app/Http`, `database`, `routes`, `tests`; comandos artisan/pint |
 | [structure-frontend](structure-frontend.md) | Pastas de `app/`, `server/`; comandos pnpm |
-| [structure-webdriver](structure-webdriver.md) | Pastas de `src/ws`, `recorder`, `video`, `ui`; comandos pnpm |
+| [structure-webdriver](structure-webdriver.md) | Pastas de `src/common`, `src/modules`, `src/webdriver`; comandos pnpm |
 | [structure-e2e](structure-e2e.md) | Playwright cross-tool, comando pnpm |

@@ -12,5 +12,5 @@
     "skipLibCheck": true
   },
   "include": ["src/**/*"],
-  "exclude": ["src/ui"]
+  "exclude": ["src/webdriver/pill", "src/**/__tests__"]
 }

@@ -23,6 +23,10 @@ Permite filtrar (`playwright test --grep @write`) sem depender de convenção de
 
 Teste que precisa de interação humana real (algo que nenhuma API/flag simula) marca `@manual` **no teste**, além das tags do `describe`. A suíte padrão exclui `@manual` (`grepInvert: /@manual/` no config) — roda isolado via `pnpm test:e2e:manual`.
 
+### `@ia`
+
+Teste que só funciona com um modelo de verdade atrás do backend marca `@ia` **no teste**, além das tags do `describe`, e cadastra o provedor antes de exercitar a tela. Sem `OLLAMA_URL` no ambiente a suíte o pula (`grepInvert` no config): numa máquina sem IA ele falharia por falta de provedor, não por regressão.
+
 ## Steps
 
 `test.step(...)` em **inglês, imperativo direto** — sem cerimônia Gherkin (nada de "Given/When/Then"): `test.step('start recording', ...)`, `test.step('stop and upload video', ...)`.

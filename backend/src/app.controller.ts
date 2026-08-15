@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common'
-import { RecorderService } from './recorder/recorder.service.js'
+import { RecorderService } from './webdriver/recorder/recorder.service.js'
 
 @Controller()
 export class AppController {

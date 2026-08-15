@@ -39,17 +39,17 @@ pnpm vitest                                # watch mode
 
 ## Backend (Vitest)
 
-Gravador, runner e a API `/api/v1` (`src/api`) — os três no mesmo processo desde a migração para Node.
+Gravador, runner e a API `/api/v1` (`src/modules`) — os três no mesmo processo desde a migração para Node.
 
 ```sh
 cd backend
-pnpm test                                        # suíte inteira
-pnpm vitest run --config vite.ui.config.ts src/ui  # um diretório
+pnpm test                                  # suíte inteira
+pnpm vitest run src/modules/project        # um módulo
 ```
 
 ### Peculiaridades
 
-- **O `--config vite.ui.config.ts` não é opcional.** O `pnpm test` já o passa; chamando `vitest` na mão sem ele, os testes da pill (`src/ui/**`) não encontram o ambiente de DOM e falham por motivo errado.
+- **Os testes ficam em `__tests__/` dentro de cada pacote** (`src/modules/project/__tests__/`, `src/webdriver/pill/__tests__/`); o harness e os fixtures ficam em `test/`. Quem governa a suíte é `vitest.config.ts` — `vite.ui.config.ts` só faz o bundle da pill.
 - Cobre a lógica isolada do recorder: máquina de estados da pill, captura de seletor, e o reporter de streaming. O comportamento do serviço NestJS de ponta a ponta é coberto pelo E2E, não aqui.
 - **Nada aqui valida o bundle injetado.** Quem faz isso é `e2e/tests/webdriver-bundle.spec.ts`, e só depois do `build:ui`.
 

@@ -5,7 +5,7 @@ metadata:
   type: feedback
 ---
 
-Índice do webdriver (NestJS, Playwright real controlando o navegador; UI/pill em `src/ui/` via Vite+Vue). Ler a sub-memória do assunto antes de mexer. Estrutura de pastas em [structure-webdriver](structure-webdriver.md).
+Índice do webdriver (NestJS, Playwright real controlando o navegador; UI/pill em `src/webdriver/pill/` via Vite+Vue). Ler a sub-memória do assunto antes de mexer. Estrutura de pastas em [structure-webdriver](structure-webdriver.md).
 
 ## Sub-memórias
 

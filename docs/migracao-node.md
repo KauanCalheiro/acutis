@@ -223,7 +223,7 @@ O que sobrou do Laravel no repositório é comentário de proveniência nos `*.s
 `backend-laravel/tests/...`"), de propósito: é o rastro de onde cada teste veio.
 
 **Uma perda assumida:** o Telescope não tem equivalente no Nest. No lugar dele entrou o diário de
-requisições (`backend/src/api/kernel/request-log.ts`), que grava uma linha JSON por requisição com
+requisições (`backend/src/common/interceptors/request-log.interceptor.ts`), que grava uma linha JSON por requisição com
 payload, tempos e as chamadas HTTP disparadas para fora — sem UI, e sem dependência nova.
 
 ## Fase 6 — O CLI

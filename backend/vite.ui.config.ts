@@ -18,22 +18,10 @@ export default defineConfig({
         outDir: 'dist-ui',
         emptyOutDir: true,
         lib: {
-            entry: resolve(__dirname, 'src/ui/driverEntry.ts'),
+            entry: resolve(__dirname, 'src/webdriver/pill/driverEntry.ts'),
             name: 'AcutisDriverEntry',
             formats: ['iife'],
             fileName: () => 'driver-entry.js',
         },
-    },
-    test: {
-        environment: 'jsdom',
-        setupFiles: ['./src/ui/test-setup.ts'],
-        // A API migrada do Laravel vive em src/api. Cada arquivo lá declara
-        // `// @vitest-environment node` no topo: são testes de servidor, não de componente.
-        include: [
-            'src/ui/**/*.spec.ts',
-            'reporters/**/*.spec.ts',
-            'src/runner/**/*.spec.ts',
-            'src/api/**/*.spec.ts',
-        ],
     },
 })
