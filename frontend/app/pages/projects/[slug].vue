@@ -40,11 +40,7 @@ const scenarios = computed(() => {
 const renameOpen = ref(false)
 const settingsOpen = ref(false)
 
-/**
- * A URL base é a variável `URL` do ambiente ativo, e quem a edita é o modal de ambientes. Este
- * modal só aparece sozinho no projeto que ainda não tem URL nenhuma, para a primeira gravação já
- * abrir no sistema; por isso não há botão que o chame.
- */
+/** O modal de configurações abre sozinho no projeto que ainda não tem URL base. */
 onMounted(() => {
   if (project.value?.requires_url) settingsOpen.value = true
 })
@@ -93,11 +89,7 @@ async function skipAuth() {
 const { state: webdriver, startRecording, stopRecording } = useWebdriver()
 const reviewOpen = ref(false)
 
-/**
- * `publico` marca o cenário com @publico e o faz rodar fora da sessão, e a tela de login é o caso
- * óbvio. `simples` é o projeto sem autenticação: não carimba nada, porque se auth for configurada
- * depois esses cenários vão precisar da sessão.
- */
+/** `public` marca o cenário com @publico e o faz rodar fora da sessão; `plain` não carimba nada. */
 type RecordingMode = 'plain' | 'public' | 'authenticated'
 
 const recordingMode = ref<RecordingMode>('plain')
@@ -135,10 +127,7 @@ function recordPublic() {
   startRecording('scenario', { url: projectUrl.value })
 }
 
-/**
- * Roda o auth.setup.ts antes de abrir o navegador: a sessão injetada sempre nasce válida, sem
- * heurística de expiração. Falhou o login, nem abre, e o resultado aparece no mesmo modal de sempre.
- */
+/** Roda o auth.setup.ts antes de abrir o navegador; falhou o login, não abre. */
 function recordAuthenticated() {
   recordingMode.value = 'authenticated'
   authRunOpen.value = true

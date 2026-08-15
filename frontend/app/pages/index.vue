@@ -46,10 +46,7 @@ const { data, status } = await useFetch<ProjectsResponse>('/api/projects', {
 const projects = computed(() => data.value?.data ?? [])
 const total = computed(() => data.value?.meta.total ?? 0)
 
-/**
- * Quantos cards cabem na tela. A grade fica com a altura que sobra do resto do conteúdo, e tudo é
- * medido do DOM: mudar o card, o gap ou as colunas do breakpoint não pede número novo aqui.
- */
+/** Quantos cards cabem na altura que sobra da tela, medindo o card e a grade do DOM. */
 function fitPageSize() {
   const gridEl = grid.value
   const block = viewport.value?.firstElementChild
@@ -64,7 +61,7 @@ function fitPageSize() {
   const columns = style.gridTemplateColumns.split(' ').length
   const cardHeight = card.getBoundingClientRect().height
 
-  // Card sem altura é card que ainda não pintou: dividir por ele daria uma página infinita.
+  // Card sem altura é card que ainda não pintou.
   if (cardHeight <= 0) {
     return
   }
@@ -83,7 +80,6 @@ function fitPageSize() {
   pageSize.value = fits
 }
 
-// A grade só existe depois da primeira resposta, e é dela que sai a medida do card.
 watch(projects, () => nextTick(fitPageSize))
 
 const createOpen = ref(false)

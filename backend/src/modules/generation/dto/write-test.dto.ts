@@ -1,13 +1,9 @@
-/** Portado de `App\Data\V1\Recording\WriteTestData`. */
 import { IsArray, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator'
 import type { RecordedEvent } from '../../recording/events.js'
 import { PATH_LIMIT, TITLE_LIMIT } from '../../scenario/providers/test-artifact.js'
 
 export class WriteTestDto {
-    /**
-     * O título vira nome de arquivo e cabeçalho da feature. O teto existe porque o modelo às vezes
-     * devolvia a feature inteira aqui, e aí o sistema de arquivos é quem recusava.
-     */
+    /** O título vira nome de arquivo e cabeçalho da feature. */
     @IsString({ message: 'O título do cenário é obrigatório.' })
     @IsNotEmpty({ message: 'O título do cenário é obrigatório.' })
     @MaxLength(TITLE_LIMIT, { message: 'O título do cenário é muito longo.' })

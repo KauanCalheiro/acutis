@@ -1,7 +1,4 @@
-/**
- * Os endpoints de projeto, no mesmo caminho `/api/v1/*` que o Laravel serve hoje — é o que permite o
- * frontend trocar de backend sem alterar uma chamada.
- */
+/** Os endpoints de projeto. */
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common'
 import { GitService } from '../git/git.service.js'
 import { CloneProjectDto } from './dto/clone-project.dto.js'

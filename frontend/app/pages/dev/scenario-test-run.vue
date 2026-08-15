@@ -28,8 +28,7 @@ const failedSteps = [
 
 const passedSteps = failedSteps.map(step => ({ ...step, status: 'success' as const, error: null }))
 
-// Cenário que depende de login: a autenticação entra como UM passo, no topo, e os passos internos
-// dela ficam escondidos, senão eles apareceriam intercalados com os do cenário.
+// Cenário que depende de login: a autenticação entra como um passo só, no topo.
 const authenticatingSteps = [
   { title: 'Autenticação', status: 'running' as const },
   { title: 'Dado que eu navego para a página da Plataforma Univates', status: 'waiting' as const },
@@ -46,8 +45,7 @@ const authFailedSteps = [
 
 const SAMPLE_VIDEO_URL = '/dev/sample-run.webm'
 
-// A execução morre antes do reporter emitir qualquer coisa: sem passo, sem vídeo, e o motivo
-// só existe na saída do processo. Era esse o estado que aparecia como modal vazio.
+// A execução morre antes do reporter emitir qualquer coisa: sem passo, sem vídeo.
 const NO_TESTS_OUTPUT = `Error: No tests found.
 Make sure that arguments are regular expressions matching test files.
 You may need to escape symbols like "$" or "*" and quote the arguments.`

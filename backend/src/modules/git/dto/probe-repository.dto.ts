@@ -1,4 +1,3 @@
-/** Portado de `App\Data\V1\Project\ProbeRepositoryData`. */
 import { IsNotEmpty, IsString } from 'class-validator'
 
 export class ProbeRepositoryDto {

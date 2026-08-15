@@ -1,6 +1,5 @@
 /**
- * O formulário da tela de configurações de IA. A obrigatoriedade da chave é cobrada no
- * `SettingsService.ensureHasKey`, que enxerga o que já está gravado.
+ * O formulário da tela de configurações de IA.
  */
 import { Transform } from 'class-transformer'
 import { IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, ValidateIf } from 'class-validator'

@@ -12,7 +12,7 @@ export const PATH_LIMIT = 80
 /** Corta o texto na próxima cláusula do Gherkin, para o caso da feature vir toda numa linha. */
 const NEXT_CLAUSE = /\s+(?:Como|Eu quero|Para|Contexto:|Cen[áa]rio|Esquema do Cen[áa]rio|Dado|Quando|Ent[ãa]o|E)\b/u
 
-/** O `Str::limit` do Laravel corta no limite e apara o espaço que sobra na ponta. */
+/** Corta no limite e apara o espaço que sobra na ponta. */
 function limit(value: string, max: number): string {
     return value.length <= max ? value : value.slice(0, max).trimEnd()
 }

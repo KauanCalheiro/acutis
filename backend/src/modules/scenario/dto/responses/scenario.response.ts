@@ -1,7 +1,4 @@
-/**
- * O que a API responde sobre um cenário e sobre cada execução dele — o lugar das
- * `ScenarioResource`/`ScenarioRunResource` do Laravel.
- */
+/** O que a API responde sobre um cenário e sobre cada execução dele. */
 
 /** Um passo da execução como a tela o desenha: a linha do tempo, não o evento cru do reporter. */
 export interface RunStep {

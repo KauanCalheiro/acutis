@@ -31,7 +31,7 @@ function normalizeText(value: string | null | undefined): string {
 
 /**
  * O texto só serve de seletor quando um único elemento da página o carrega. O elemento cujo filho
- * repete o texto inteiro fica de fora, que é o mesmo elemento que o getByText do Playwright casa.
+ * repete o texto inteiro fica de fora.
  */
 function uniqueText(el: Element): string | null {
     const text = normalizeText(el.textContent)

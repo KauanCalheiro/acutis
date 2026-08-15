@@ -58,8 +58,7 @@ export class RunnerController {
 
         res.setHeader('Content-Type', 'application/x-ndjson')
 
-        // O `run:finished` é segurado e reemitido com a saída do processo, que é onde está o motivo
-        // de uma falha anterior ao primeiro teste.
+        // O `run:finished` é segurado e reemitido com a saída do processo.
         let finished: RunEvent | null = null
 
         const result = await this.runnerService.streamProject(

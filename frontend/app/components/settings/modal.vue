@@ -18,10 +18,7 @@ interface AiSettings {
   provider_urls: Record<string, string>
 }
 
-/**
- * O select não aceita item de valor vazio, então "sem IA" viaja com este nome na tela e volta a
- * ser vazio ao salvar. É o que desabilita, no resto do app, todo botão que chamaria um modelo.
- */
+/** "Sem IA" viaja com este nome na tela e volta a ser vazio ao salvar. */
 const SEM_IA = 'sem-ia'
 
 const open = defineModel<boolean>('open', {
@@ -58,13 +55,7 @@ const semIa = computed(() => provider.value === SEM_IA)
 /** O endereço que vale com o campo vazio, para o placeholder dizer o que vai acontecer. */
 const defaultUrl = computed(() => settings.value?.provider_urls[provider.value] ?? 'o endereço do provedor')
 
-/**
- * A lista de modelos, perguntada ao provedor com o que está digitado agora.
- *
- * Vale o formulário e não o que está salvo porque a pergunta vem antes de salvar: o usuário cola a
- * chave, busca e só então escolhe. Falhar aqui não é erro de tela — o campo continua digitável, e a
- * mensagem diz o que corrigir, se foi a chave ou o endereço.
- */
+/** A lista de modelos, perguntada ao provedor com o que está digitado agora. */
 async function loadModels() {
   if (semIa.value) return
 
@@ -88,8 +79,7 @@ async function loadModels() {
   }
 }
 
-// Cada provedor guarda o seu cadastro: trocar no select mostra o dele, não o do anterior. Levar um
-// para o outro apontaria a Anthropic para o endereço do Ollama.
+// Cada provedor guarda o seu cadastro: trocar no select mostra o dele, não o do anterior.
 watch(provider, (chosen) => {
   const saved = settings.value?.credentials[chosen]
 
@@ -98,7 +88,6 @@ watch(provider, (chosen) => {
   model.value = saved?.model ?? ''
   revealed.value = false
 
-  // O modelo salvo já é uma opção: sem isso o campo abriria vazio até a busca responder.
   models.value = model.value ? [{ id: model.value, label: model.value }] : []
   modelsError.value = ''
 
@@ -113,7 +102,6 @@ async function load() {
 
     const active = settings.value.credentials[settings.value.provider]
 
-    // Reabrir no mesmo provedor não dispara o watch, e é ele quem busca os modelos.
     const sameProvider = provider.value === (settings.value.provider || SEM_IA)
 
     provider.value = settings.value.provider || SEM_IA
@@ -154,10 +142,8 @@ async function save() {
       }
     })
 
-    // Quem habilita os botões de IA do app inteiro é esta resposta, e ela acabou de mudar.
     await refreshNuxtData(AI_SETTINGS_KEY)
 
-    // Fecha na hora: quem confirma o salvamento é o toast, e reabrir recarrega o que foi gravado.
     open.value = false
 
     toast.add({

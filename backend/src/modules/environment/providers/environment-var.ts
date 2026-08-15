@@ -1,4 +1,4 @@
-/** Uma variável do ambiente do projeto. Portado de `App\Data\V1\Project\EnvironmentVarData`. */
+/** Uma variável do ambiente do projeto. */
 export interface EnvironmentVar {
     key: string
     value: string | null

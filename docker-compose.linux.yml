@@ -2,8 +2,7 @@ name: acutis
 
 services:
   # No Linux o backend roda na rede do host, então o nome de serviço deixa de resolvê-lo: quem
-  # falava com ele pelo nome passa a falar pelo gateway. Antes era o Laravel; agora é o frontend,
-  # que herdou a chamada à API.
+  # falava com ele pelo nome passa a falar pelo gateway.
   frontend:
     extra_hosts:
       - "host.docker.internal:host-gateway"

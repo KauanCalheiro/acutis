@@ -1,4 +1,3 @@
-/** Portado de `App\Data\V1\Recording\RecordingData`. */
 import {
     ArrayMinSize,
     IsArray,

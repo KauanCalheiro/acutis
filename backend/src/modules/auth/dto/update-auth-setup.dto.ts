@@ -1,4 +1,3 @@
-/** Portado de `App\Data\V1\Auth\UpdateAuthSetupData`. */
 import { IsNotEmpty, IsString } from 'class-validator'
 
 export class UpdateAuthSetupDto {

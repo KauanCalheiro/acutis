@@ -37,10 +37,7 @@ export class ScenarioService {
         return this.show(path, scenario)
     }
 
-    /**
-     * O `written` diz se o arquivo existe em disco: o cenário de autenticação existe antes dele,
-     * porque é a tela do cenário que oferece a gravação que vai criá-lo.
-     */
+    /** O `written` diz se o arquivo existe em disco. */
     private show(path: string, scenario: Scenario): ScenarioResponse {
         const data = scenario.data()
         const spec = join(path, data.spec)

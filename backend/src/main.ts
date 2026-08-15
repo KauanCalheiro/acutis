@@ -12,7 +12,6 @@ async function bootstrap(): Promise<void> {
 
     app.useWebSocketAdapter(new AcutisWsAdapter(app))
 
-    // Os mesmos que o harness de teste monta.
     app.useGlobalPipes(validationPipe())
     app.useGlobalFilters(new HttpErrorFilter())
 
