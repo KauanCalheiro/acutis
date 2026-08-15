@@ -94,8 +94,8 @@ export class GenerationService {
         const environments = this.environments(path, recording)
         const base = new Url(environments.get(EnvKey.URL)?.value || recording.baseUrl)
 
-        const written = this.settings.canUseAi()
-            ? await writeGherkin(this.settings.resolved(), {
+        const written = await this.settings.canUseAi()
+            ? await writeGherkin(await this.settings.resolved(), {
                 baseUrl: recording.baseUrl,
                 events: events.redacted(environments)
             })
@@ -110,8 +110,8 @@ export class GenerationService {
 
         const issues = checkSpec(playwright, base, this.withDeclared(environments, events, envVars))
 
-        const named = gherkin !== '' && this.settings.canUseAi()
-            ? await writeMetadata(this.settings.resolved(), { gherkin, domain })
+        const named = gherkin !== '' && await this.settings.canUseAi()
+            ? await writeMetadata(await this.settings.resolved(), { gherkin, domain })
             : null
 
         const tags = tagList(readWriteTag(recording.events), named?.tags ?? [], recording.publico === true)

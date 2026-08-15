@@ -27,7 +27,7 @@ export class ScenarioAiService {
     async fix(slug: string, scenarioId: string): Promise<FixedSpec> {
         const scenario = this.scenarioOf(slug, scenarioId)
 
-        if (!this.settings.canUseAi()) return fixedSpec()
+        if (!await this.settings.canUseAi()) return fixedSpec()
 
         const environments = this.projects.environmentsOf(slug)
         const spec = readFileSync(scenario.file(), 'utf8')
@@ -37,7 +37,7 @@ export class ScenarioAiService {
             ? checkSpec(new Playwright(spec), new Url(baseUrl), new ActiveVars(environments.activeVars()))
             : []
 
-        const fixed = await fixSpec(this.settings.resolved(), {
+        const fixed = await fixSpec(await this.settings.resolved(), {
             spec,
             violations: violations.map(({ rule, message }) => ({ rule, message })),
             events: scenario.events()
@@ -50,14 +50,14 @@ export class ScenarioAiService {
     async suggestions(slug: string, scenarioId: string): Promise<SelectorSuggestion[]> {
         const scenario = this.scenarioOf(slug, scenarioId)
 
-        if (!this.settings.canUseAi()) return fixedSuggestions()
+        if (!await this.settings.canUseAi()) return fixedSuggestions()
 
         const events = scenario.events() as Record<string, unknown>[]
         const targets = fragileTargets(events)
 
         if (targets.length === 0) return []
 
-        const { suggestions } = await suggestSelectors(this.settings.resolved(), targets)
+        const { suggestions } = await suggestSelectors(await this.settings.resolved(), targets)
 
         // A sugestão volta ao elemento pelo `index` que o modelo recebeu, nunca pela ordem.
         return suggestions.flatMap((suggestion) => {

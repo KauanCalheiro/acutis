@@ -14,6 +14,8 @@ export interface Harness {
     root: string
     /** O cliente HTTP contra o app de pé. */
     http: ReturnType<typeof supertest>
+    /** Um provider do app de pé, para o teste falar com o banco pelo mesmo caminho que a API. */
+    get: <T>(token: unknown) => T
     /** Caminho de um projeto dentro da raiz. */
     projectPath: (slug: string) => string
     close: () => Promise<void>
@@ -27,13 +29,15 @@ export interface Override {
 
 /**
  * Os módulos extras existem para o teste de um bloco ainda não integrado ao `ApiModule` poder subir
- * a API com ele dentro, sem antecipar a integração.
+ * a API com ele dentro, sem antecipar a integração. A raiz pronta serve ao teste que precisa de um
+ * diretório com estado anterior ao boot.
  */
 export async function startApi(
     extra: NonNullable<ModuleMetadata['imports']> = [],
-    overrides: Override[] = []
+    overrides: Override[] = [],
+    existingRoot?: string
 ): Promise<Harness> {
-    const root = mkdtempSync(join(tmpdir(), 'acutis-test-'))
+    const root = existingRoot ?? mkdtempSync(join(tmpdir(), 'acutis-test-'))
     const previousRoot = process.env.ACUTIS_PROJECTS_PATH
 
     process.env.ACUTIS_PROJECTS_PATH = root
@@ -54,6 +58,7 @@ export async function startApi(
     return {
         root,
         http: supertest(app.getHttpServer()),
+        get: (token: unknown) => app.get(token as never),
         projectPath: (slug: string) => join(root, slug),
         close: async () => {
             await app.close()
