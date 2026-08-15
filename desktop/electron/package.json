@@ -1,0 +1,43 @@
+{
+  "name": "acutis-desktop",
+  "productName": "acutis",
+  "version": "0.1.0",
+  "description": "O acutis grava a navegação de um usuário e transforma o que foi gravado em teste Playwright executável.",
+  "license": "MIT",
+  "main": "src/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test src/*.test.js",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "br.univates.acutis",
+    "productName": "acutis",
+    "files": ["src/**/*", "package.json"],
+    "extraResources": [
+      {
+        "from": "../payload/acutis-payload.tar.gz",
+        "to": "acutis-payload.tar.gz"
+      }
+    ],
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.developer-tools",
+      "icon": "../src-tauri/icons/icon.png"
+    },
+    "win": {
+      "target": ["msi"],
+      "icon": "../src-tauri/icons/icon.png"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Development",
+      "icon": "../src-tauri/icons/icon.png"
+    }
+  }
+}

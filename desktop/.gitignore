@@ -8,3 +8,7 @@ src-tauri/target/
 
 # Gerado pelo tauri a cada build, a partir do tauri.conf.json.
 src-tauri/gen/schemas/
+
+# Saída do electron-builder e as dependências do shell alternativo.
+electron/dist/
+electron/node_modules/

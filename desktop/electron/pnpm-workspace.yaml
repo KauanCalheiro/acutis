@@ -1,0 +1,3 @@
+allowBuilds:
+  # Baixa o binário do Electron da plataforma; sem rodar o script, não há app para executar.
+  electron: true
