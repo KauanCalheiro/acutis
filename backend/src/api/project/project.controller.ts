@@ -4,7 +4,9 @@
  */
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common'
 import { CreateProjectDto } from './dto/create-project.dto.js'
+import { ProjectSettingsDto } from './dto/project-settings.dto.js'
 import { UpdateProjectDto } from './dto/update-project.dto.js'
+import { AuthCredentialsDto } from './auth/dto/auth-credentials.dto.js'
 import { Project } from './entities/project.entity.js'
 import { ProjectService, type Paginated } from './project.service.js'
 
@@ -53,5 +55,25 @@ export class ProjectController {
     @HttpCode(204)
     destroy(@Param('project') slug: string): void {
         this.projects.remove(slug)
+    }
+
+    @Put(':project/settings')
+    updateSettings(
+        @Param('project') slug: string,
+        @Body() dto: ProjectSettingsDto
+    ): { base_url: string } {
+        return { base_url: this.projects.setBaseUrl(slug, dto.baseUrl) }
+    }
+
+    @Post(':project/settings/skip')
+    @HttpCode(204)
+    skipUrl(@Param('project') slug: string): void {
+        this.projects.skipUrl(slug)
+    }
+
+    @Post(':project/auth/credentials')
+    @HttpCode(204)
+    authCredentials(@Param('project') slug: string, @Body() dto: AuthCredentialsDto): void {
+        this.projects.saveCredentials(slug, dto.username, dto.password)
     }
 }

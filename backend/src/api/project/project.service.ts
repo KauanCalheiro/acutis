@@ -228,6 +228,28 @@ export class ProjectService {
         rmSync(this.pathOf(slug), { recursive: true, force: true })
     }
 
+    /** A URL base do sistema sob teste, que é o que faz o projeto poder rodar qualquer coisa. */
+    setBaseUrl(slug: string, baseUrl: string): string {
+        new Environments(this.pathOf(slug)).set(EnvKey.URL, baseUrl)
+
+        return baseUrl
+    }
+
+    /** O usuário disse que não quer informar a URL; a tela para de pedir. */
+    skipUrl(slug: string): void {
+        const path = this.pathOf(slug)
+        const manifest = { ...readManifest(path), url_skipped: true }
+
+        writeFileSync(join(path, 'acutis.json'), `${JSON.stringify(manifest, null, 4)}\n`)
+    }
+
+    saveCredentials(slug: string, username: string, password: string): void {
+        const environments = new Environments(this.pathOf(slug)).ensure()
+
+        environments.set(EnvKey.USER, username)
+        environments.set(EnvKey.PASSWORD, password, true)
+    }
+
     create(name: string, template: string = DEFAULT_TEMPLATE): Project {
         const source = templatePath(template)
 
