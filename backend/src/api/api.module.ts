@@ -9,8 +9,9 @@ import { GitModule } from './git/git.module.js'
 import { EnvironmentModule } from './project/environment/environment.module.js'
 import { ProjectModule } from './project/project.module.js'
 import { GenerationModule } from './project/scenario/generation/generation.module.js'
+import { ScenarioModule } from './project/scenario/scenario.module.js'
 
 @Module({
-    imports: [EnvironmentModule, GenerationModule, GitModule, ProjectModule]
+    imports: [EnvironmentModule, GenerationModule, GitModule, ProjectModule, ScenarioModule]
 })
 export class ApiModule {}
