@@ -10,8 +10,14 @@ if [ "$(id -u)" = "0" ]; then
     export HOME=/home/dev
     mkdir -p "$HOME"
     chown "$HOST_UID:$HOST_GID" "$HOME"
-    exec gosu "$HOST_UID:$HOST_GID" "$@"
+    if [ -d /app/node_modules ] && [ "$(stat -c '%u' /app/node_modules)" != "$HOST_UID" ]; then
+      chown -R "$HOST_UID:$HOST_GID" /app/node_modules
+    fi
+    exec gosu "$HOST_UID:$HOST_GID" "$0" "$@"
   fi
 fi
 
-exec "$@"
+pnpm install
+pnpm build:ui
+pnpm exec vite build --watch --config vite.ui.config.ts &
+exec xvfb-run --auto-servernum node --watch --import @swc-node/register/esm-register src/main.ts
