@@ -1,12 +1,5 @@
 // @vitest-environment node
-/**
- * O pedido de correção de um cenário que falhou. Portado de
- * `backend-laravel/tests/Feature/V1/ScenarioFixTest.php`.
- *
- * No Laravel cada caso afirmava o que o agente recebia e devolvia. A IA está fora do escopo desta
- * versão, então os mesmos casos afirmam o objeto fixo do `stub.ts` — e, principalmente, que nada
- * mais do caminho mudou: 404, 422 e o spec intocado em disco continuam sendo o contrato.
- */
+/** O pedido de correção de um cenário que falhou. */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, expect, it } from 'vitest'
@@ -31,7 +24,6 @@ function write(relative: string, contents: string): void {
 }
 
 beforeEach(async () => {
-    // O `ApiModule` ainda não importa o módulo de IA; a integração é de quem coordena.
     api = await startApi([AiModule])
     dir = api.projectPath(SLUG)
 
@@ -69,7 +61,6 @@ it('não consulta modelo nenhum: passo e erro não mudam a resposta', async () =
 })
 
 it('não executa o spec para montar a resposta', async () => {
-    // Sem ambiente não há URL onde rodar, e no Laravel era isto que decidia se o spec era executado.
     write('environments/ambiente.json', JSON.stringify({ name: 'Ambiente', vars: [] }))
 
     const response = await fix()

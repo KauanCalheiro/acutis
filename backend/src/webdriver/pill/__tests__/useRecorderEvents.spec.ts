@@ -30,11 +30,6 @@ describe('useRecorderEvents', () => {
         expect(buildBaseEvent('fill', el).checked).toBeNull()
     })
 
-    /**
-     * O clique dispara o hover do gatilho e o próprio clique na mesma volta do laço, e a fila
-     * escoava duas vezes ao mesmo tempo: o segundo escoamento reenviava o evento que o primeiro
-     * ainda não tinha tirado da fila.
-     */
     it('sends each event once when two are queued in the same tick', async () => {
         setBody('<a id="ensino">Ensino</a><a id="curso">Curso</a>')
         const enviados: RecordingEvent[] = []

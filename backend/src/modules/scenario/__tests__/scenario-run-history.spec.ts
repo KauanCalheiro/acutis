@@ -1,11 +1,5 @@
 // @vitest-environment node
-/**
- * O que cada execução deixa para trás: a linha do tempo dos passos, o vídeo e o commit.
- * Portado de `backend-laravel/tests/Feature/V1/ScenarioRunHistoryTest.php`.
- *
- * O runner entra trocado por um dublê, como o `Http::fake` fazia no Pest: o que está sob teste é o
- * que a API faz com os eventos, não o Playwright que os produz.
- */
+/** O que cada execução deixa para trás: a linha do tempo dos passos, o vídeo e o commit. */
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'

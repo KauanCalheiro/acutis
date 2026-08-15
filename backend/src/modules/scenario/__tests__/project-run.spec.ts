@@ -1,11 +1,5 @@
 // @vitest-environment node
-/**
- * Executar o projeto: de uma vez, e em fluxo. Portado de
- * `backend-laravel/tests/Feature/V1/ProjectRunTest.php`.
- *
- * No Laravel o runner era outro serviço, e os testes o dublavam com `Http::fake`. Agora ele vive no
- * mesmo processo e é injetado, então o dublê entra por `overrideProvider` — nenhum navegador sobe.
- */
+/** Executar o projeto: de uma vez, e em fluxo. */
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'

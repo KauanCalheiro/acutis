@@ -173,7 +173,6 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
 
         tmpProjects = projectsCopy(scenarioBaseUrl)
 
-        // Um processo só: desde a migração, a API e o gravador vivem juntos.
         stopScenarioWebdriver = await startWebdriver({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
 
@@ -474,7 +473,6 @@ test.describe('recording authentication from the auth scenario page', { tag: ['@
 
         tmpProjects = projectsCopy(authBaseUrl)
 
-        // Um processo só: desde a migração, a API e o gravador vivem juntos.
         stopAuthWebdriver = await startWebdriver({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
 
@@ -794,8 +792,7 @@ test.describe('recording error when the host chrome is unreachable', { tag: ['@w
     test.beforeAll(async () => {
         tmpProjects = projectsCopy()
 
-        // Um processo só, com o CDP apontado para uma porta morta: é o que faz o gravador falhar
-        // como falharia sem Chrome no host.
+        // O CDP aponta para uma porta morta: é o que faz o gravador falhar como sem Chrome no host.
         stopBadWebdriver = await startWebdriver({
             RECORDER_CDP_URL: 'http://127.0.0.1:9997',
             ACUTIS_PROJECTS_PATH: tmpProjects

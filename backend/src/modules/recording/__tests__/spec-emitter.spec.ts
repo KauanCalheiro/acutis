@@ -1,9 +1,5 @@
 // @vitest-environment node
-/**
- * A especificação do que o gerador de spec faz. Portado de
- * `backend-laravel/tests/Unit/SpecEmitterTest.php`, caso a caso: os casos de borda aqui foram
- * descobertos um a um, e este arquivo é a única descrição fiel deles.
- */
+/** A especificação do que o gerador de spec faz. */
 import { describe, expect, it } from 'vitest'
 import { Playwright } from '../../../common/playwright/playwright.js'
 import { checkAuth } from '../../rules/auth-rules.js'

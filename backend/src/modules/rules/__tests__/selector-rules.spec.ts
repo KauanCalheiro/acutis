@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * A convenção de `data-testid` do projeto, cobrada como regra. Portado de
- * `backend-laravel/tests/Unit/Ai/Rules/SelectorRulesTest.php`.
- */
+/** A convenção de `data-testid` do projeto, cobrada como regra. */
 import { expect, it } from 'vitest'
 import { checkSelectors, type SelectorSuggestion } from '../selector-rules.js'
 import { violated } from '../violation.js'

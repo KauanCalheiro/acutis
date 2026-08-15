@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * Renomear e apagar projeto. Portado de `backend-laravel/tests/Feature/V1/ProjectUpdateTest.php` e
- * `ProjectDeleteTest.php`.
- */
+/** Renomear e apagar projeto. */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'

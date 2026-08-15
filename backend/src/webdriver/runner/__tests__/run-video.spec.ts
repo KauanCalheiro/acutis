@@ -27,10 +27,6 @@ describe('watchableVideo', () => {
         expect(await watchableVideo(video)).toBe(watchable)
     })
 
-    /**
-     * O acutis copia toda execução para o mesmo last.webm, então o recorte da execução anterior
-     * fica ao lado do vídeo novo. Servi-lo mostra ao usuário a execução errada.
-     */
     it('descarta o recorte que sobrou de uma execução anterior', async () => {
         const { video, watchable } = videoPair(-3600)
 

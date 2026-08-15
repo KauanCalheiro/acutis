@@ -6,10 +6,6 @@ describe('isTopFrame', () => {
         expect(isTopFrame()).toBe(true)
     })
 
-    /**
-     * Pixel de rede social, service worker de tag manager e reCAPTCHA são iframes que navegam
-     * sozinhos. Gravar a URL deles enche a gravação de telas que o usuário nunca viu.
-     */
     it('stays out of an iframe, where only third party scripts live', () => {
         Object.defineProperty(window, 'top', { value: {}, configurable: true })
 

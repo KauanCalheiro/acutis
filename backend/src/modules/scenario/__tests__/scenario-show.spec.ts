@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * A tela de um cenário: o par spec/feature, a gravação que o originou e o histórico.
- * Portado de `backend-laravel/tests/Feature/V1/ScenarioShowTest.php`.
- */
+/** A tela de um cenário: o par spec/feature, a gravação que o originou e o histórico. */
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it } from 'vitest'

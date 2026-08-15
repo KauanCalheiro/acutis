@@ -1,9 +1,6 @@
 // @vitest-environment node
 /**
- * A tela de configurações de IA: qual provedor está ativo e o cadastro de cada um. Portado de
- * `backend-laravel/tests/Feature/V1/SettingsAiTest.php`.
- *
- * A IA em si está fora do escopo desta versão, mas o cadastro não: é ele que a reativa depois.
+ * A tela de configurações de IA: qual provedor está ativo e o cadastro de cada um.
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -21,7 +18,6 @@ beforeEach(async () => {
     previousProvider = process.env.AI_PROVIDER
     delete process.env.AI_PROVIDER
 
-    // O `ApiModule` ainda não importa o módulo de configurações; a integração é de quem coordena.
     api = await startApi([SettingsModule])
 })
 
@@ -154,10 +150,6 @@ it('não grava url quando o campo ficou vazio', async () => {
     })
 })
 
-/**
- * Não há mais modelo barato e modelo esperto: quem pluga um provedor escolhe o modelo dele. Sem
- * essa escolha o cadastro só falharia na primeira geração, com um 404 do provedor.
- */
 it('recusa cadastrar um provedor sem escolher o modelo', async () => {
     const response = await api.http.put('/api/v1/settings/ai').send({ provider: 'ollama' })
 
@@ -192,10 +184,6 @@ it('informa ao formulário a url padrão de cada provedor que tem uma', async ()
     expect(response.body.provider_urls.anthropic).toBe('https://api.anthropic.com/v1')
 })
 
-/**
- * O endereço salvo entra no lugar do padrão para quem for chamar o modelo, e o padrão precisa
- * sobreviver a isso: senão a tela anuncia como padrão justamente o endereço que o usuário gravou.
- */
 it('ainda informa a url padrão depois de a salva passar a valer', async () => {
     await api.http
         .put('/api/v1/settings/ai')
@@ -290,13 +278,7 @@ it('reporta a ia desligada quando o ambiente também não nomeia provedor', asyn
     expect(response.body.configured).toBe(false)
 })
 
-/**
- * O arquivo de chave sobrevive à instalação, e nem toda chave que está lá é uma chave desta versão:
- * a instalação que veio do Laravel tem a `APP_KEY` dele, em base64, onde o acutis espera 64 dígitos
- * hexadecimais. Sem tratar isso, salvar qualquer cadastro morre com "Invalid key length" — 500 na
- * tela, e nada explicando o que fazer.
- */
-it('salva mesmo com a chave de cifra herdada do Laravel no lugar', async () => {
+it('salva mesmo com uma chave de cifra em base64 herdada de uma instalação antiga', async () => {
     mkdirSync(join(api.root, 'runtime'), { recursive: true })
     writeFileSync(join(api.root, 'runtime/app-key'), 'base64:ng601MGsTEfzZzdFGJY9Az7BQVngrMH/zV4BnHs40nM=')
 
@@ -316,10 +298,6 @@ function respondWith(body: unknown, ok = true): void {
     )
 }
 
-/**
- * A lista é o que substitui o campo de texto livre: o nome do modelo muda com o tempo, varia por
- * conta e um erro de digitação só apareceria na primeira geração.
- */
 it('lista os modelos que o provedor oferece', async () => {
     respondWith({ models: [{ name: 'qwen3-coder:30b', size: 30_000_000_000 }, { name: 'llama3.1:8b' }] })
 

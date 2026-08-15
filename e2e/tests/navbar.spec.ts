@@ -18,8 +18,7 @@ test.describe('app navbar', { tag: ['@read', '@navbar'] }, () => {
     })
 
     test('stays put while the page scrolls', async ({ page }) => {
-        // A fixture tem poucos projetos e a página caberia inteira: sem apertar a janela não há
-        // rolagem nenhuma, e o teste passaria sem exercitar nada.
+        // Janela baixa para a página ter rolagem.
         await page.setViewportSize({ width: 1280, height: 300 })
 
         const before = await page.locator('aside').boundingBox()
@@ -37,10 +36,6 @@ test.describe('app navbar', { tag: ['@read', '@navbar'] }, () => {
         expect(navbar!.height).toBeLessThan(viewport.height / 2)
     })
 
-    /**
-     * Nenhum item mostra texto, então o nome é a única coisa que os distingue para quem usa leitor
-     * de tela, e é o que o tooltip repete visualmente para quem usa o mouse.
-     */
     test('names every item, since none of them shows a label', async ({ page }) => {
         await expect(page.getByTestId('navbar-logo')).toHaveAccessibleName('Acutis')
         await expect(page.getByTestId('navbar-projetos')).toHaveAccessibleName('Projetos')

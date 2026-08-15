@@ -4,11 +4,7 @@ import { join, resolve } from 'node:path'
 
 export const FIXTURES_DIR = resolve(import.meta.dirname, '../fixtures/projects')
 
-/**
- * Cópia temporária dos projetos de fixture. Todo projeto precisa de URL: sem ela a página abre o
- * modal de configurações travado. O .env é escrito aqui e não vem do fixture porque o repositório
- * ignora .env em qualquer nível — e escrever no fixture sujaria a pasta versionada.
- */
+/** Cópia temporária dos projetos de fixture, com o `.env` da URL base escrito em cada um. */
 export function projectsCopy(url?: string): string {
     const dir = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
     cpSync(FIXTURES_DIR, dir, { recursive: true })

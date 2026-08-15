@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * O que sai de uma gravação, e sobretudo o que não sai. Portado de
- * `backend-laravel/tests/Unit/RecordingTest.php`.
- */
+/** O que sai de uma gravação, e sobretudo o que não sai. */
 import { expect, it } from 'vitest'
 import { environmentVar } from '../../environment/providers/environment-var.js'
 import { specActiveVars } from '../../../../test/support/fixtures.js'

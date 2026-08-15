@@ -1,12 +1,5 @@
 // @vitest-environment node
-/**
- * O rascunho revisado virando arquivo no projeto. Portado de
- * `backend-laravel/tests/Feature/V1/ProjectTestsTest.php`.
- *
- * Os casos que falavam da IA continuam valendo sem ela: `envVars` é o que o rascunho declarou para
- * os valores sensíveis, venha de modelo ou do objeto fixo, e o aviso de descasamento entre nomes e
- * marcadores é do mesmo jeito responsabilidade de quem escreve.
- */
+/** O rascunho revisado virando arquivo no projeto. */
 import { Logger } from '@nestjs/common'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -94,7 +87,6 @@ it('carimba o título e as tags editados para os artefatos refletirem o formulá
 
     expect(feature).toContain('Funcionalidade: Login do cliente')
     expect(feature).not.toContain('Rascunho antigo')
-    // As tags moram só no spec: no .feature elas eram uma segunda fonte para a mesma informação.
     expect(feature).not.toContain('@')
     expect(spec).toContain("tag: ['@read', '@login']")
 })

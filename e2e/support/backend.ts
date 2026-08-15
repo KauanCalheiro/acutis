@@ -1,12 +1,4 @@
-/**
- * O backend do E2E.
- *
- * Depois da migração do Laravel para Node, a API vive dentro do mesmo processo que o gravador e o
- * runner — então subir "o backend" é subir o mesmo binário que `support/webdriver.ts` sobe, na mesma
- * porta. Este módulo continua existindo com o nome antigo porque é como os specs o chamam, e porque
- * a distinção ainda faz sentido para quem lê o teste: um spec fala com a API, o outro dirige o
- * gravador.
- */
+/** O backend do E2E: a API vive no mesmo processo que o gravador e o runner. */
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -16,13 +8,7 @@ import { startWebdriver } from './webdriver'
 /** O mesmo endereço do gravador: um processo só serve os dois. */
 export const BACKEND_URL = WEBDRIVER_URL
 
-/**
- * Um diretório de projetos só desta execução.
- *
- * Substitui a cópia do banco que o Laravel exigia: no Node o SQLite das configurações fica em
- * `<raiz>/runtime/database.sqlite`, derivado da raiz de projetos — isolar o diretório isola o banco
- * junto, sem variável separada.
- */
+/** Um diretório de projetos só desta execução; o SQLite das configurações vem junto dele. */
 export function isolatedProjects(): string {
     return mkdtempSync(join(tmpdir(), 'acutis-e2e-'))
 }

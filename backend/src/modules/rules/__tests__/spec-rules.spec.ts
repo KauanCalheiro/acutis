@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * As regras a que todo arquivo Playwright gerado é submetido. Portado de
- * `backend-laravel/tests/Unit/Ai/Rules/SpecRulesTest.php`.
- */
+/** As regras a que todo arquivo Playwright gerado é submetido. */
 import { describe, expect, it } from 'vitest'
 import { environmentVar, type EnvironmentVar } from '../../environment/providers/environment-var.js'
 import { Playwright } from '../../../common/playwright/playwright.js'

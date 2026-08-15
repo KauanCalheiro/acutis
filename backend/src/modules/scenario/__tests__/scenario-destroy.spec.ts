@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * Remover um cenário leva junto tudo o que é dele: spec, feature e a gravação guardada.
- * Portado de `backend-laravel/tests/Feature/V1/ScenarioDestroyTest.php`.
- */
+/** Remover um cenário leva junto tudo o que é dele: spec, feature e a gravação guardada. */
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it } from 'vitest'

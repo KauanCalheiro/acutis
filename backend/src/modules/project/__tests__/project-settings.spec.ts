@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * A URL base do projeto: sem ela nada roda, e é a primeira coisa que a tela pede. Portado de
- * `backend-laravel/tests/Feature/V1/ProjectSettingsTest.php`.
- */
+/** A URL base do projeto. */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it } from 'vitest'

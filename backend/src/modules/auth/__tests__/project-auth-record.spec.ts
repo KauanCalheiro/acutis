@@ -1,15 +1,5 @@
 // @vitest-environment node
-/**
- * O login gravado virando `tests/auth.setup.ts`. Portado de
- * `backend-laravel/tests/Feature/V1/ProjectAuthRecordTest.php`.
- *
- * Duas trocas em relação ao Pest, e nenhuma delas muda o que cada caso afirma:
- *
- * 1. O `Http::fake('*\/runner/spec')` virou espião sobre o `RunnerService`, porque no Nest o runner
- *    é chamada de função local e não atravessa mais a rede.
- * 2. Os agentes (`GherkinWriter`, `AuthFixer`) viraram o objeto fixo de `api/ai/stub.ts`, então o
- *    que os casos afirmavam sobre a geração passam a afirmar sobre esse objeto.
- */
+/** O login gravado virando `tests/auth.setup.ts`. */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it, vi, type MockInstance } from 'vitest'

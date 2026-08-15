@@ -2,14 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 import { rmSync } from 'node:fs'
 import { isolatedProjects, startBackend } from '../support/backend'
 
-/**
- * Escolhe o modelo digitando o nome.
- *
- * Clica na primeira opção filtrada, e não na de criar: quando existe um provedor de verdade
- * respondendo (o Ollama da máquina de quem roda a suíte), o nome digitado casa com um item da lista
- * e a opção de criar nem aparece. Sem provedor alcançável, a de criar é a única — e é ela que
- * garante que provedor fora do ar não impede o cadastro.
- */
+/** Escolhe o modelo digitando o nome e clicando na primeira opção filtrada. */
 async function escolherModelo(page: Page, nome: string) {
     await page.getByTestId('config-ia-modelo').click()
     await page.keyboard.type(nome)
@@ -120,10 +113,6 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
         })
     })
 
-    /**
-     * Não existe mais modelo padrão do provedor: quem pluga escolhe o modelo, e sem essa escolha o
-     * cadastro só falharia na primeira geração, com um 404 do provedor.
-     */
     test('asks for the model of the provider being configured', async ({ page }) => {
         await page.goto('/')
         await page.locator('[data-hydrated="true"]').waitFor()
@@ -149,10 +138,6 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
         await expect(page.getByTestId('config-ia-url')).toHaveAttribute('placeholder', 'https://api.anthropic.com/v1')
     })
 
-    /**
-     * O endereço salvo entra no lugar do padrão dentro do config, e o placeholder não pode segui-lo.
-     * O provedor local não serve de exemplo aqui: o padrão dele sai de OLLAMA_URL, que muda por máquina.
-     */
     test('keeps announcing the default address of a provider pointed somewhere else', async ({ page }) => {
         await page.goto('/')
         await page.locator('[data-hydrated="true"]').waitFor()

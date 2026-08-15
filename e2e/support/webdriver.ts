@@ -43,8 +43,7 @@ export async function startWebdriver(env: Record<string, string> = {}): Promise<
             WEBDRIVER_TEST_MODE: '1',
             PORT: String(PORTS.webdriver),
             CORS_ORIGIN: FRONTEND_URL,
-            // Sem janela por padrão: a suíte roda enquanto alguém trabalha na máquina, e o
-            // recorder abrindo Chromium a cada gravação rouba o foco. RECORDER_HEADLESS=0 pra ver.
+            // Sem janela por padrão; RECORDER_HEADLESS=0 para ver o navegador.
             RECORDER_HEADLESS: process.env.RECORDER_HEADLESS ?? '1',
             ...env,
         },

@@ -1,10 +1,4 @@
 // @vitest-environment node
-/**
- * Portado de `backend-laravel/tests/Feature/ProjectsPathTest.php`.
- *
- * O caminho relativo era resolvido contra o `base_path()` do Laravel; aqui é contra o diretório de
- * onde o processo subiu, que é o equivalente sem framework.
- */
 import { afterEach, expect, it } from 'vitest'
 import { acutis } from '../acutis.js'
 
