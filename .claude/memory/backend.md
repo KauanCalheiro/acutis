@@ -42,7 +42,7 @@ HTTP Response
 TDD obriga o teste primeiro. Dependências técnicas ditam o resto:
 
 1. **Teste** — cobre o contrato HTTP de ponta a ponta (red) → [backend-tdd](backend-tdd.md)
-2. **Provider** — a leitura/escrita do que está em disco → [backend-persistence](backend-persistence.md)
+2. **Provider** (ou **migration**, quando a mudança tocar o banco) — a leitura/escrita do estado → [backend-persistence](backend-persistence.md)
 3. **DTO / Response** — contrato de entrada e saída → [backend-contracts](backend-contracts.md)
 4. **Service + Controller + Module** — orquestra entrada → provider → saída → [backend-module](backend-module.md)
 5. **`pnpm typecheck` + commits** — [backend-conventions](backend-conventions.md) + [commit](commit.md)

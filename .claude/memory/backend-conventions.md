@@ -34,9 +34,11 @@ Erro de domínio é uma classe de `common/exceptions/errors.ts` — `NotFound`, 
 ## Estrutura de pastas
 
 ```
-src/config/            ← env e caminhos
+src/config/            ← env, caminhos e as opções do banco
 src/common/            ← filters, pipes, interceptors, exceptions, utils, playwright, types
+src/migrations/        ← as migrations do TypeORM → [backend-persistence](backend-persistence.md)
 src/modules/{dominio}/ ← a API, um módulo por domínio → [backend-module](backend-module.md)
+src/scripts/           ← comandos de desenvolvimento (`pnpm db:fresh`)
 src/webdriver/         ← gravador, runner, vídeo e pill → [webdriver](webdriver.md)
 test/support/          ← harness e fixtures dos testes
 ```

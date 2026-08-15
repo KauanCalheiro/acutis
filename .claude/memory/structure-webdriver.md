@@ -11,8 +11,10 @@ NestJS, Playwright controlando o navegador de verdade (`recordVideo`/`page.scree
 backend/
 ├── src/
 │   ├── main.ts / app.module.ts
-│   ├── config/                    # env, paths (VIDEOS_DIR, RECORDER_BUNDLE_PATH)
+│   ├── config/                    # env, paths (VIDEOS_DIR, RECORDER_BUNDLE_PATH), opções do banco
 │   ├── common/                    # filters, pipes, interceptors, exceptions, utils, playwright, types
+│   ├── migrations/                # o esquema do SQLite de configurações, uma migration por tabela
+│   ├── scripts/                   # comandos de desenvolvimento (db-fresh)
 │   ├── modules/                   # a API /api/v1 — um módulo Nest por domínio
 │   └── webdriver/
 │       ├── gateway/               # RecorderGateway (@WebSocketGateway) + adapter customizado por `type`
@@ -26,4 +28,4 @@ backend/
 └── tsconfig.ui.json               # pill (@/* → src/*)
 ```
 
-**Comandos:** `pnpm dev` (server, porta 4000) · `pnpm build && pnpm start` (prod) · `pnpm build:ui` (bundle da pill) · `pnpm test` (Vitest da UI) · `pnpm typecheck` / `pnpm typecheck:ui`
+**Comandos:** `pnpm dev` (server, porta 4000) · `pnpm build && pnpm start` (prod) · `pnpm build:ui` (bundle da pill) · `pnpm test` (Vitest da UI) · `pnpm db:fresh` (refaz o banco pelas migrations) · `pnpm typecheck` / `pnpm typecheck:ui`
