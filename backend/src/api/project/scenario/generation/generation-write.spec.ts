@@ -94,7 +94,8 @@ it('carimba o título e as tags editados para os artefatos refletirem o formulá
 
     expect(feature).toContain('Funcionalidade: Login do cliente')
     expect(feature).not.toContain('Rascunho antigo')
-    expect(feature).toContain('@read @login')
+    // As tags moram só no spec: no .feature elas eram uma segunda fonte para a mesma informação.
+    expect(feature).not.toContain('@')
     expect(spec).toContain("tag: ['@read', '@login']")
 })
 

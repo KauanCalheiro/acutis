@@ -235,7 +235,7 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
                     tags: ['@read'],
                     domain: 'navegacao',
                     path: 'fluxo-gravado',
-                    gherkin: '@read\nFuncionalidade: Fluxo gravado',
+                    gherkin: 'Funcionalidade: Fluxo gravado',
                     playwright: "import { test } from '@playwright/test' // spec",
                 }),
             })
@@ -270,7 +270,7 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
                     tags: ['@read'],
                     domain: 'navegacao',
                     path: 'fluxo-gravado',
-                    gherkin: '@read\nFuncionalidade: Fluxo gravado',
+                    gherkin: 'Funcionalidade: Fluxo gravado',
                     playwright: "import { test } from '@playwright/test' // spec",
                     warnings: ['env-sem-valor: A variável TOKEN está declarada sem valor; preencha o ambiente ou o teste falha.'],
                 }),
@@ -304,7 +304,7 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
                     tags: ['@read'],
                     domain: 'navegacao',
                     path: 'fluxo-gravado',
-                    gherkin: '@read\nFuncionalidade: Fluxo gravado\n  Cenário: clica',
+                    gherkin: 'Funcionalidade: Fluxo gravado\n  Cenário: clica',
                     playwright: "import { test } from '@playwright/test' // spec",
                 }),
             })
@@ -434,7 +434,7 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
                     tags: ['@read'],
                     domain: 'navegacao',
                     path: 'fluxo-gravado',
-                    gherkin: '@read\nFuncionalidade: Fluxo gravado\n  Cenário: clica',
+                    gherkin: 'Funcionalidade: Fluxo gravado\n  Cenário: clica',
                     playwright: "import { test } from '@playwright/test' // spec",
                 }),
             })

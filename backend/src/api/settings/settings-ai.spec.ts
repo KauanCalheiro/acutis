@@ -5,7 +5,9 @@
  *
  * A IA em si está fora do escopo desta versão, mas o cadastro não: é ele que a reativa depois.
  */
-import { afterEach, beforeEach, expect, it } from 'vitest'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { PROVIDER_NAMES } from './ai-providers.js'
 import { db } from './database.js'
 import { SettingsService } from './settings.service.js'
@@ -25,6 +27,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
     await api.close()
+    vi.unstubAllGlobals()
 
     if (previousProvider === undefined) {
         delete process.env.AI_PROVIDER
@@ -62,15 +65,14 @@ it('nasce com uma linha por provedor, todas vazias', async () => {
 })
 
 it('devolve todas as credenciais, para trocar de provedor preencher o formulário com o que ele tem', async () => {
-    await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', key: 'sk-secreta' }).expect(200)
+    await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', key: 'sk-secreta', model: 'gpt-4o' }).expect(200)
 
     await api.http
         .put('/api/v1/settings/ai')
         .send({
             provider: 'ollama',
             url: 'http://192.168.0.124:11434',
-            modelCheapest: 'qwen3-coder:30b',
-            modelSmartest: 'gemma4:31b'
+            model: 'qwen3-coder:30b'
         })
         .expect(200)
 
@@ -81,14 +83,19 @@ it('devolve todas as credenciais, para trocar de provedor preencher o formulári
     expect(response.body.credentials.openai.key).toBe('sk-secreta')
     expect(response.body.credentials.ollama.key).toBeNull()
     expect(response.body.credentials.ollama.url).toBe('http://192.168.0.124:11434')
-    expect(response.body.credentials.ollama.model_cheapest).toBe('qwen3-coder:30b')
-    expect(response.body.credentials.ollama.model_smartest).toBe('gemma4:31b')
+    expect(response.body.credentials.ollama.model).toBe('qwen3-coder:30b')
 })
 
 /** Trocar de provedor e voltar não pode perder a chave do primeiro. */
 it('mantém a credencial de um provedor que deixou de ser o ativo', async () => {
-    await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', key: 'sk-da-openai' }).expect(200)
-    await api.http.put('/api/v1/settings/ai').send({ provider: 'anthropic', key: 'sk-da-anthropic' }).expect(200)
+    await api.http
+        .put('/api/v1/settings/ai')
+        .send({ provider: 'openai', key: 'sk-da-openai', model: 'gpt-4o' })
+        .expect(200)
+    await api.http
+        .put('/api/v1/settings/ai')
+        .send({ provider: 'anthropic', key: 'sk-da-anthropic', model: 'claude-sonnet-4-5' })
+        .expect(200)
 
     const response = await api.http.get('/api/v1/settings/ai')
 
@@ -98,7 +105,7 @@ it('mantém a credencial de um provedor que deixou de ser o ativo', async () => 
 })
 
 it('guarda a chave cifrada em disco, para ler a linha não bastar', async () => {
-    await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', key: 'sk-secreta' }).expect(200)
+    await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', key: 'sk-secreta', model: 'gpt-4o' }).expect(200)
 
     const raw = db().prepare('SELECT key FROM ai_settings WHERE provider = ?').get('openai') as { key: string }
 
@@ -111,9 +118,9 @@ it('guarda a chave cifrada em disco, para ler a linha não bastar', async () => 
 
 /** A chave volta para a tela, então o campo vazio é uma ordem de apagar, não de manter. */
 it('apaga a chave quando o campo volta vazio', async () => {
-    await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', key: 'sk-secreta' }).expect(200)
+    await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', key: 'sk-secreta', model: 'gpt-4o' }).expect(200)
 
-    await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', key: null }).expect(200)
+    await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', key: null, model: 'gpt-4o' }).expect(200)
 
     const response = await api.http.get('/api/v1/settings/ai')
 
@@ -126,28 +133,36 @@ it('aplica a credencial do provedor ativo sobre os padrões', async () => {
         .send({
             provider: 'ollama',
             url: 'http://192.168.0.124:11434',
-            modelCheapest: 'qwen3-coder:30b',
-            modelSmartest: 'gemma4:31b'
+            model: 'qwen3-coder:30b'
         })
         .expect(200)
 
     expect(settings().resolved()).toMatchObject({
         provider: 'ollama',
         url: 'http://192.168.0.124:11434',
-        modelCheapest: 'qwen3-coder:30b',
-        modelSmartest: 'gemma4:31b'
+        model: 'qwen3-coder:30b'
     })
 })
 
-/** Campo em branco não escreve nada, e é assim que o padrão do provedor continua valendo. */
-it('não grava url nem modelo quando os campos ficaram vazios', async () => {
-    await api.http.put('/api/v1/settings/ai').send({ provider: 'ollama' }).expect(200)
+/** A url em branco não escreve nada, e é assim que o padrão do provedor continua valendo. */
+it('não grava url quando o campo ficou vazio', async () => {
+    await api.http.put('/api/v1/settings/ai').send({ provider: 'ollama', model: 'llama3.1:8b' }).expect(200)
 
     expect(settings().resolved()).toMatchObject({
         url: 'http://localhost:11434',
-        modelCheapest: 'llama3.1:8b',
-        modelSmartest: 'llama3.1:8b'
+        model: 'llama3.1:8b'
     })
+})
+
+/**
+ * Não há mais modelo barato e modelo esperto: quem pluga um provedor escolhe o modelo dele. Sem
+ * essa escolha o cadastro só falharia na primeira geração, com um 404 do provedor.
+ */
+it('recusa cadastrar um provedor sem escolher o modelo', async () => {
+    const response = await api.http.put('/api/v1/settings/ai').send({ provider: 'ollama' })
+
+    expect(response.status).toBe(422)
+    expect(response.body.errors.model).toBeDefined()
 })
 
 it('deixa a configuração em paz quando nada foi salvo, para o ambiente continuar valendo', async () => {
@@ -184,7 +199,7 @@ it('informa ao formulário a url padrão de cada provedor que tem uma', async ()
 it('ainda informa a url padrão depois de a salva passar a valer', async () => {
     await api.http
         .put('/api/v1/settings/ai')
-        .send({ provider: 'ollama', url: 'http://192.168.0.124:11434' })
+        .send({ provider: 'ollama', url: 'http://192.168.0.124:11434', model: 'llama3.1:8b' })
         .expect(200)
 
     const response = await api.http.get('/api/v1/settings/ai')
@@ -195,14 +210,16 @@ it('ainda informa a url padrão depois de a salva passar a valer', async () => {
 })
 
 it('recusa um provedor que não existe', async () => {
-    const response = await api.http.put('/api/v1/settings/ai').send({ provider: 'inventado', key: 'sk-secreta' })
+    const response = await api.http
+        .put('/api/v1/settings/ai')
+        .send({ provider: 'inventado', key: 'sk-secreta', model: 'gpt-4o' })
 
     expect(response.status).toBe(422)
     expect(response.body.errors.provider).toBeDefined()
 })
 
 it('recusa trocar para um provedor que ainda não tem chave', async () => {
-    const response = await api.http.put('/api/v1/settings/ai').send({ provider: 'openai' })
+    const response = await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', model: 'gpt-4o' })
 
     expect(response.status).toBe(422)
     expect(response.body.errors.key).toBeDefined()
@@ -210,7 +227,7 @@ it('recusa trocar para um provedor que ainda não tem chave', async () => {
 
 /** Provedor local não tem chave para pedir, e era a validação que travava o cadastro dele. */
 it('salva um provedor que não pede chave nenhuma', async () => {
-    const response = await api.http.put('/api/v1/settings/ai').send({ provider: 'ollama' })
+    const response = await api.http.put('/api/v1/settings/ai').send({ provider: 'ollama', model: 'llama3.1:8b' })
 
     expect(response.status).toBe(200)
     expect(response.body.provider).toBe('ollama')
@@ -219,10 +236,10 @@ it('salva um provedor que não pede chave nenhuma', async () => {
 
 /** A tela devolve a chave guardada no campo, então reativar o provedor a reenvia junto. */
 it('deixa um provedor que já tem chave voltar a ser o ativo', async () => {
-    await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', key: 'sk-secreta' }).expect(200)
-    await api.http.put('/api/v1/settings/ai').send({ provider: 'ollama' }).expect(200)
+    await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', key: 'sk-secreta', model: 'gpt-4o' }).expect(200)
+    await api.http.put('/api/v1/settings/ai').send({ provider: 'ollama', model: 'llama3.1:8b' }).expect(200)
 
-    const response = await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', key: 'sk-secreta' })
+    const response = await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', key: 'sk-secreta', model: 'gpt-4o' })
 
     expect(response.status).toBe(200)
     expect(response.body.provider).toBe('openai')
@@ -230,7 +247,7 @@ it('deixa um provedor que já tem chave voltar a ser o ativo', async () => {
 })
 
 it('reporta a ia como configurada enquanto houver provedor ativo', async () => {
-    await api.http.put('/api/v1/settings/ai').send({ provider: 'ollama' }).expect(200)
+    await api.http.put('/api/v1/settings/ai').send({ provider: 'ollama', model: 'llama3.1:8b' }).expect(200)
 
     const response = await api.http.get('/api/v1/settings/ai')
 
@@ -240,7 +257,7 @@ it('reporta a ia como configurada enquanto houver provedor ativo', async () => {
 
 /** "Sem IA" na tela: é este campo que desabilita, no frontend, todo botão que chamaria um agente. */
 it('desliga a ia quando o formulário volta sem provedor', async () => {
-    await api.http.put('/api/v1/settings/ai').send({ provider: 'ollama' }).expect(200)
+    await api.http.put('/api/v1/settings/ai').send({ provider: 'ollama', model: 'llama3.1:8b' }).expect(200)
 
     const response = await api.http.put('/api/v1/settings/ai').send({ provider: '' })
 
@@ -252,7 +269,7 @@ it('desliga a ia quando o formulário volta sem provedor', async () => {
 
 /** Desligar não apaga cadastro: religar o provedor não pode pedir a chave de novo. */
 it('mantém todas as credenciais depois de a ia ser desligada', async () => {
-    await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', key: 'sk-secreta' }).expect(200)
+    await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', key: 'sk-secreta', model: 'gpt-4o' }).expect(200)
 
     await api.http.put('/api/v1/settings/ai').send({ provider: '' }).expect(200)
 
@@ -271,4 +288,85 @@ it('reporta a ia desligada quando o ambiente também não nomeia provedor', asyn
     expect(response.status).toBe(200)
     expect(response.body.provider).toBe('')
     expect(response.body.configured).toBe(false)
+})
+
+/**
+ * O arquivo de chave sobrevive à instalação, e nem toda chave que está lá é uma chave desta versão:
+ * a instalação que veio do Laravel tem a `APP_KEY` dele, em base64, onde o acutis espera 64 dígitos
+ * hexadecimais. Sem tratar isso, salvar qualquer cadastro morre com "Invalid key length" — 500 na
+ * tela, e nada explicando o que fazer.
+ */
+it('salva mesmo com a chave de cifra herdada do Laravel no lugar', async () => {
+    mkdirSync(join(api.root, 'runtime'), { recursive: true })
+    writeFileSync(join(api.root, 'runtime/app-key'), 'base64:ng601MGsTEfzZzdFGJY9Az7BQVngrMH/zV4BnHs40nM=')
+
+    const response = await api.http
+        .put('/api/v1/settings/ai')
+        .send({ provider: 'openai', key: 'sk-secreta', model: 'gpt-4o' })
+
+    expect(response.status).toBe(200)
+    expect(response.body.credentials.openai.key).toBe('sk-secreta')
+})
+
+/** O provedor responde no lugar da rede de verdade: o teste é do que a tela recebe, não do Ollama. */
+function respondWith(body: unknown, ok = true): void {
+    vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => new Response(JSON.stringify(body), { status: ok ? 200 : 401 }))
+    )
+}
+
+/**
+ * A lista é o que substitui o campo de texto livre: o nome do modelo muda com o tempo, varia por
+ * conta e um erro de digitação só apareceria na primeira geração.
+ */
+it('lista os modelos que o provedor oferece', async () => {
+    respondWith({ models: [{ name: 'qwen3-coder:30b', size: 30_000_000_000 }, { name: 'llama3.1:8b' }] })
+
+    const response = await api.http
+        .post('/api/v1/settings/ai/models')
+        .send({ provider: 'ollama', url: 'http://192.168.0.124:11434' })
+
+    expect(response.status).toBe(200)
+    expect(response.body.map((model: { id: string }) => model.id)).toEqual(['llama3.1:8b', 'qwen3-coder:30b'])
+    expect(response.body[1].label).toBe('qwen3-coder:30b · 30.0 GB')
+})
+
+/** A tela pergunta antes de salvar, então a chave digitada vem no corpo e vale mais que a guardada. */
+it('usa a chave que veio no formulário, ainda não salva', async () => {
+    respondWith({ data: [{ id: 'gpt-4o' }] })
+
+    const response = await api.http.post('/api/v1/settings/ai/models').send({ provider: 'openai', key: 'sk-nova' })
+
+    expect(response.status).toBe(200)
+    expect(response.body).toEqual([{ id: 'gpt-4o', label: 'gpt-4o' }])
+
+    const [, init] = vi.mocked(fetch).mock.calls[0]
+
+    expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer sk-nova')
+})
+
+/** Chave errada é 401 e endereço errado é recusa de conexão; a tela precisa dizer qual dos dois foi. */
+it('explica por que a listagem falhou em vez de devolver lista vazia', async () => {
+    respondWith({ error: 'unauthorized' }, false)
+
+    const response = await api.http.post('/api/v1/settings/ai/models').send({ provider: 'openai', key: 'sk-errada' })
+
+    expect(response.status).toBe(422)
+    expect(response.body.errors.provider[0]).toContain('401')
+})
+
+it('recusa listar modelos de um provedor que não existe', async () => {
+    const response = await api.http.post('/api/v1/settings/ai/models').send({ provider: 'inventado' })
+
+    expect(response.status).toBe(422)
+    expect(response.body.errors.provider).toBeDefined()
+})
+
+/** Nem todo provedor da lista tem catálogo; a tela precisa saber para manter o campo digitável. */
+it('avisa quando o provedor não oferece lista de modelos', async () => {
+    const response = await api.http.post('/api/v1/settings/ai/models').send({ provider: 'bedrock' })
+
+    expect(response.status).toBe(422)
+    expect(response.body.errors.provider[0]).toContain('lista de modelos')
 })

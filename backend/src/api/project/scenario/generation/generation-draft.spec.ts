@@ -30,6 +30,15 @@ vi.mock('../../../ai/agents/gherkin.js', () => ({
     }))
 }))
 
+/** As tags saíram do Gherkin e passaram a vir daqui, que é o passo que nomeia o teste. */
+vi.mock('../../../ai/agents/metadata.js', () => ({
+    writeMetadata: vi.fn(async () => ({
+        title: 'Login do Usuário',
+        fileName: 'login-do-usuario',
+        tags: ['@read', '@login']
+    }))
+}))
+
 let api: Harness
 let dir: string
 
@@ -42,7 +51,7 @@ beforeEach(async () => {
     // outro caminho e tem casos próprios.
     await api.http
         .put('/api/v1/settings/ai')
-        .send({ provider: 'ollama', modelCheapest: 'llama3.1:8b' })
+        .send({ provider: 'ollama', model: 'llama3.1:8b' })
         .expect(200)
 
     await api.http.post('/api/v1/projects/create/template').send({ name: 'Portal Sistema' }).expect(201)
@@ -79,10 +88,10 @@ it('devolve um rascunho editável com título, tags, domínio e caminho, sem esc
 
     expect(response.status).toBe(200)
     expect(response.body.title).toBe('Login do Usuário')
-    expect(response.body.tags).toEqual(['@read'])
+    expect(response.body.tags).toEqual(['@read', '@login'])
     expect(response.body.domain).toBe('login')
     expect(response.body.path).toBe('login-do-usuario')
-    expect(response.body.gherkin).toBe('@read\nFuncionalidade: Login do Usuário\n  Cenário: entra')
+    expect(response.body.gherkin).toBe('Funcionalidade: Login do Usuário\n  Cenário: entra')
     expect(response.body.playwright).toContain('test.describe')
 
     expect(existsSync(join(dir, 'tests/login-do-usuario.spec.ts'))).toBe(false)
@@ -108,8 +117,21 @@ it('marca o rascunho como @write quando a gravação altera dados', async () => 
     const response = await draft(body)
 
     expect(response.status).toBe(200)
-    expect(response.body.tags).toEqual(['@write'])
-    expect(response.body.gherkin.startsWith('@write')).toBe(true)
+    // A primeira tag é decisão de código, não do modelo: é ela que separa o que roda em produção.
+    expect(response.body.tags).toEqual(['@write', '@login'])
+    expect(response.body.playwright).toContain("'@write'")
+})
+
+/**
+ * A tag mora no teste, não na especificação. Deixá-la no `.feature` dava duas fontes para a mesma
+ * informação — e o modelo, escrevendo a linha, às vezes a quebrava em duas.
+ */
+it('nunca escreve tags no gherkin', async () => {
+    const response = await draft(payload({ publico: true }))
+
+    expect(response.status).toBe(200)
+    expect(response.body.gherkin).not.toContain('@')
+    expect(response.body.playwright).toContain("'@publico'")
 })
 
 it('dá um prazo maior à espera onde a gravação mostra o usuário aguardando a tela carregar', async () => {
@@ -171,6 +193,25 @@ it('nunca repete um segmento que a url base já carrega', async () => {
     expect(response.body.playwright).toContain('${base}/produtos')
     expect(response.body.playwright).not.toContain('/intranet/produtos')
     expect(response.body.warnings.join('\n')).not.toContain('segmento-repetido')
+})
+
+/**
+ * Quem manda no caminho é a URL do ambiente, e não a que o navegador tinha aberto quando a gravação
+ * começou: em runtime o spec concatena sobre `process.env.URL`. Gravar a partir da raiz do host e
+ * ter o ambiente apontando para uma subpasta produzia `${base}/plataforma` com base já terminando em
+ * `/plataforma` — e o teste ia para `/plataforma/plataforma`.
+ */
+it('tira o caminho da url do ambiente, não da que abriu a gravação', async () => {
+    declare(EnvKey.URL, 'https://sistema.test/intranet')
+
+    const body = payload({ baseUrl: 'https://sistema.test' })
+    ;(body.events as RecordedEvent[])[0]!.url = 'https://sistema.test/intranet/produtos'
+
+    const response = await draft(body)
+
+    expect(response.status).toBe(200)
+    expect(response.body.playwright).toContain('${base}/produtos')
+    expect(response.body.playwright).not.toContain('/intranet/produtos')
 })
 
 it('confere a url por padrão do segmento, nunca por igualdade exata', async () => {
@@ -350,8 +391,7 @@ it('marca o cenário como público quando ele foi gravado sem sessão', async ()
     const response = await draft(payload({ publico: true }))
 
     expect(response.status).toBe(200)
-    expect(response.body.tags).toEqual(['@read', '@publico'])
-    expect(response.body.gherkin).toContain('@publico')
+    expect(response.body.tags).toEqual(['@read', '@login', '@publico'])
     expect(response.body.playwright).toContain('@publico')
 })
 
@@ -359,8 +399,8 @@ it('deixa o cenário autenticado por padrão, sem a tag de público', async () =
     const response = await draft()
 
     expect(response.status).toBe(200)
-    expect(response.body.tags).toEqual(['@read'])
-    expect(response.body.gherkin).not.toContain('@publico')
+    expect(response.body.tags).toEqual(['@read', '@login'])
+    expect(response.body.playwright).not.toContain('@publico')
 })
 
 /**
@@ -375,7 +415,8 @@ it('rascunha o spec sem gherkin quando não há provedor de ia ativo', async () 
     expect(response.status).toBe(200)
     expect(response.body.gherkin).toBe('')
     expect(response.body.domain).toBe('')
-    expect(response.body.tags).toEqual([])
+    // A tag de leitura/escrita sai da gravação, não do modelo: ela existe mesmo sem IA.
+    expect(response.body.tags).toEqual(['@read'])
     expect(response.body.playwright).toContain('test.describe')
 })
 
