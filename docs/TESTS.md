@@ -5,9 +5,8 @@ Como rodar cada suíte do monorepo na mão, e o que cada uma tem de peculiar.
 ## Sumário
 
 - [Visão geral](#visão-geral)
-- [Backend (Pest)](#backend-pest)
 - [Frontend (Vitest)](#frontend-vitest)
-- [Webdriver (Vitest)](#webdriver-vitest)
+- [Backend (Vitest)](#backend-vitest)
 - [E2E (Playwright)](#e2e-playwright)
 - [Rodar tudo](#rodar-tudo)
 
@@ -15,30 +14,11 @@ Como rodar cada suíte do monorepo na mão, e o que cada uma tem de peculiar.
 
 | Suíte | Ferramenta | Onde ficam os testes | Comando | Precisa da stack de pé? |
 |-------|-----------|----------------------|---------|-------------------------|
-| Laravel (sai na migração) | Pest / PHPUnit | `backend-laravel/tests/` | `cd backend-laravel && composer test` | não |
 | Frontend | Vitest + `@nuxt/test-utils` | `frontend/tests/` | `cd frontend && pnpm test` | não |
 | Backend | Vitest | `backend/**/*.spec.ts` | `cd backend && pnpm test` | não |
-| E2E | Playwright | `e2e/tests/` | `cd e2e && pnpm test` | não — a suíte sobe os três serviços sozinha |
+| E2E | Playwright | `e2e/tests/` | `cd e2e && pnpm test` | não — a suíte sobe os dois serviços sozinha |
 
-As três primeiras são unitárias/de integração local: rodam em segundos, sem rede e sem serviço subindo. O E2E é o único caro (~2 min) e o único que exige as dependências do host instaladas (PHP, Composer, Node, pnpm).
-
-## Laravel (Pest)
-
-Sai quando a migração para Node terminar; até lá é ele que serve `/api/v1`.
-
-```sh
-cd backend-laravel
-composer test                      # suíte inteira
-php artisan test --filter=Recording  # um arquivo/teste
-php artisan test tests/Feature/V1   # um diretório
-```
-
-### Peculiaridades
-
-- **`composer test` roda `config:clear` antes.** Se você tiver rodado `config:cache` em algum momento, o config cacheado congela o `APP_ENV` de desenvolvimento e os testes passam a bater no banco errado. Chamar `php artisan test` direto pula essa limpeza — é seguro no dia a dia, mas se um teste falhar por motivo inexplicável de ambiente, rode `composer test`.
-- **Banco é SQLite em memória**, fixado em `backend-laravel/phpunit.xml` (`DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`). Nenhum teste toca o `database/database.sqlite` de desenvolvimento nem o `database/e2e.sqlite` do E2E.
-- **Nenhum teste toca o banco, e nenhuma migration roda.** O estado do domínio (projetos, cenários, execuções) vive no filesystem em `~/.acutis` e no git — as únicas migrations são scaffolding do Laravel (`users`, `cache`, `jobs`, `telescope_entries`). Como o banco é `:memory:` e o `tests/Pest.php` não usa `RefreshDatabase`, o primeiro teste que persistir algo vai falhar com `no such table`, erro que não aponta para a causa. Nesse momento, adicione `->use(RefreshDatabase::class)` no `tests/Pest.php` (ou `uses()` no arquivo do teste).
-- Duas suítes declaradas no `phpunit.xml`: `Unit` (`tests/Unit`) e `Feature` (`tests/Feature`). Só a `Feature` recebe o `TestCase` do Laravel.
+As duas primeiras são unitárias/de integração local: rodam em segundos, sem rede e sem serviço subindo. O E2E é o único caro (~2 min) e o único que exige as dependências do host instaladas (Node, pnpm).
 
 ## Frontend (Vitest)
 
@@ -59,7 +39,7 @@ pnpm vitest                                # watch mode
 
 ## Backend (Vitest)
 
-Gravador, runner e a API que está sendo migrada do Laravel para `src/api`.
+Gravador, runner e a API `/api/v1` (`src/api`) — os três no mesmo processo desde a migração para Node.
 
 ```sh
 cd backend
@@ -87,10 +67,10 @@ pnpm exec playwright show-report                     # abre o relatório da últ
 ### Peculiaridades
 
 - **`pnpm test -- --grep @project` NÃO filtra.** O `--` não repassa a flag nesta versão do pnpm e o Playwright roda a suíte inteira **sem avisar** — termina verde e parece que respeitou o escopo. Para escopar, use `pnpm exec playwright test`.
-- **O build e o seed estão no `pretest`, não no `playwright test`.** `pnpm test` dispara `scripts/setup.sh` (migrate + seed do banco de E2E, build do frontend) e o `build:ui` + `build` do backend. `pnpm exec playwright test` pula tudo isso. Editou `backend/src/**`? Rode `pnpm test` uma vez antes de escopar com `pnpm exec`, senão os testes rodam contra um bundle velho.
-- **Banco dedicado.** A suíte usa `backend-laravel/database/e2e.sqlite` (gitignored) com `migrate:fresh --seed` a cada rodada. Seu banco de desenvolvimento não é tocado.
-- **Portas 42xx, isoladas do desenvolvimento** (backend 4200, frontend 4300, webdriver 4400 — fonte única em `e2e/support/ports.ts`). Não é preciso derrubar a stack local para rodar a suíte. Ao checar porta ocupada, use `lsof -nP -iTCP:4300 -sTCP:LISTEN`: sem o `-sTCP:LISTEN`, o `lsof` também casa conexões do navegador e você conclui errado que há servidor de pé.
-- **Só o frontend sobe pelo `webServer` do Playwright.** Backend e webdriver sobem de dentro dos próprios specs (`support/backend.ts`, `support/webdriver.ts`), que esperam a porta liberar antes e depois de cada uso.
+- **O build está no `pretest`, não no `playwright test`.** `pnpm test` dispara `scripts/setup.sh` (build do frontend) e o `build:ui` + `build` do backend. `pnpm exec playwright test` pula tudo isso. Editou `backend/src/**`? Rode `pnpm test` uma vez antes de escopar com `pnpm exec`, senão os testes rodam contra um bundle velho.
+- **Estado dedicado.** Cada spec aponta o backend para um diretório de projetos temporário, e o SQLite das configurações é derivado dele — o seu `~/.acutis` não é tocado.
+- **Portas 42xx, isoladas do desenvolvimento** (frontend 4300, backend 4400 — fonte única em `e2e/support/ports.ts`). Não é preciso derrubar a stack local para rodar a suíte. Ao checar porta ocupada, use `lsof -nP -iTCP:4300 -sTCP:LISTEN`: sem o `-sTCP:LISTEN`, o `lsof` também casa conexões do navegador e você conclui errado que há servidor de pé.
+- **Só o frontend sobe pelo `webServer` do Playwright.** O backend sobe de dentro dos próprios specs (`support/backend.ts`, `support/webdriver.ts` — o mesmo processo, dois nomes por assunto), que esperam a porta liberar antes e depois de cada uso.
 - **`workers: 1`, `fullyParallel: false`, `retries: 0`.** É deliberado: os serviços disputam portas fixas. Se o tempo doer, a saída é porta por spec, não subir os workers.
 - **O recorder roda headless na suíte** (`RECORDER_HEADLESS=1` em `support/webdriver.ts`). Para assistir a uma execução: `RECORDER_HEADLESS=0 pnpm test`.
 - **Vídeo de toda execução** fica em `e2e/test-results/` (`video: 'on'`) — útil para entender falha que só acontece na suíte.
@@ -98,13 +78,12 @@ pnpm exec playwright show-report                     # abre o relatório da últ
 
 ## Rodar tudo
 
-Não existe um comando único que rode as quatro suítes. Na ordem do mais barato para o mais caro:
+Não existe um comando único que rode as três suítes. Na ordem do mais barato para o mais caro:
 
 ```sh
-(cd backend-laravel && composer test)
-(cd frontend        && pnpm test)
-(cd backend         && pnpm test)
-(cd e2e             && pnpm test)
+(cd frontend && pnpm test)
+(cd backend  && pnpm test)
+(cd e2e      && pnpm test)
 ```
 
-As três primeiras são independentes e podem rodar em paralelo. O E2E vai por último: é o único que sobe serviços, e uma falha nas suítes rápidas quase sempre explica a falha dele.
+As duas primeiras são independentes e podem rodar em paralelo. O E2E vai por último: é o único que sobe serviços, e uma falha nas suítes rápidas quase sempre explica a falha dele.

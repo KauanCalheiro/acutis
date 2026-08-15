@@ -211,11 +211,20 @@ reprovarem o que hoje reprovam.
 
 **Pronto quando:** cada endpoint responder o mesmo JSON que o Laravel responde hoje.
 
-## Fase 5 — A troca
+## Fase 5 — A troca ✅
 
-- Apontar o `useClients` do BFF para o webdriver
-- Rodar a suíte E2E inteira (157 testes) — **este é o critério de aceite da migração**
-- Apagar `backend/`, tirar PHP e Composer do `dev.sh`, do compose, do CI e da documentação
+- ~~Apontar o `useClients` do BFF para o webdriver~~ — feito: `nuxt.config.ts` e o compose apontam
+  para a porta 4000
+- ~~Rodar a suíte E2E inteira~~ — feito, verde
+- ~~Apagar o Laravel, tirar PHP e Composer do `dev.sh`, do compose e da documentação~~ — feito;
+  `backend-laravel/` não existe mais
+
+O que sobrou do Laravel no repositório é comentário de proveniência nos `*.spec.ts` ("portado de
+`backend-laravel/tests/...`"), de propósito: é o rastro de onde cada teste veio.
+
+**Uma perda assumida:** o Telescope não tem equivalente no Nest. No lugar dele entrou o diário de
+requisições (`backend/src/api/kernel/request-log.ts`), que grava uma linha JSON por requisição com
+payload, tempos e as chamadas HTTP disparadas para fora — sem UI, e sem dependência nova.
 
 ## Fase 6 — O CLI
 

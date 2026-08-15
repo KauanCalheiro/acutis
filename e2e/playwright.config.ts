@@ -1,5 +1,5 @@
 import { defineConfig } from '@playwright/test'
-import { BACKEND_URL, FRONTEND_URL, PORTS, WEBDRIVER_URL } from './support/ports'
+import { FRONTEND_URL, PORTS, WEBDRIVER_URL } from './support/ports'
 
 export default defineConfig({
     testDir: './tests',
