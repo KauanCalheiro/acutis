@@ -291,6 +291,26 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
         })
     })
 
+    /**
+     * O provedor de IA recusando é o erro que o usuário mais vê, e antes ele virava sempre a mesma
+     * frase genérica: o motivo e o que fazer a respeito vêm do backend e precisam chegar à tela.
+     */
+    test('shows what the ai provider said when it refuses, instead of a generic sentence', async ({ page }) => {
+        const refusal = 'O provedor claude-code atingiu o limite de uso no modelo claude-sonnet-5. Espere alguns minutos ou escolha outro modelo nas configurações.'
+
+        await page.route('**/api/projects/alpha-store/tests/draft', async (route) => {
+            await route.fulfill({
+                status: 429,
+                contentType: 'application/json',
+                body: JSON.stringify({ statusCode: 429, data: { message: refusal } }),
+            })
+        })
+
+        await page.getByTestId('revisao-gerar').click()
+
+        await expect(page.getByTestId('revisao-erro')).toContainText(refusal, { timeout: 10_000 })
+    })
+
     test('drafts the scenario, lets the user edit the contexts, then posts the edited draft', async ({ page }) => {
         let drafted: { baseUrl?: string, events?: Array<{ type?: string, html?: string | null }> } | null = null
         await page.route('**/api/projects/alpha-store/tests/draft', async (route) => {

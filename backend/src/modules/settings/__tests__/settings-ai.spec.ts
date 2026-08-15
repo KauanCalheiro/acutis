@@ -50,7 +50,7 @@ it('oferece todos os provedores suportados, com nada configurado ainda', async (
 
     expect(response.status).toBe(200)
     expect(response.body.provider).toBe('gemini')
-    expect(response.body.providers).toEqual(['anthropic', 'gemini', 'ollama', 'openai', 'openrouter'])
+    expect(response.body.providers).toEqual(['anthropic', 'claude-code', 'gemini', 'ollama', 'openai', 'openrouter'])
 })
 
 it('só oferece provedor que o backend consegue chamar', async () => {
@@ -370,6 +370,44 @@ it('recusa listar modelos de um provedor que não existe', async () => {
 
     expect(response.status).toBe(422)
     expect(response.body.errors.provider).toBeDefined()
+})
+
+/**
+ * O Claude Agent roda o Claude Code da máquina, que já está autenticado: não há chave nem endereço
+ * para cadastrar, só o modelo.
+ */
+it('cadastra o claude agent sem pedir credencial nenhuma', async () => {
+    const response = await api.http
+        .put('/api/v1/settings/ai')
+        .send({ provider: 'claude-code', model: 'claude-sonnet-5' })
+
+    expect(response.status).toBe(200)
+    expect(response.body.provider).toBe('claude-code')
+    expect(await settings().resolved()).toMatchObject({
+        provider: 'claude-code',
+        key: null,
+        model: 'claude-sonnet-5'
+    })
+})
+
+/** Não há endereço a oferecer: o provedor não fala HTTP. */
+it('não anuncia endereço padrão para o claude agent', async () => {
+    const response = await api.http.get('/api/v1/settings/ai')
+
+    expect(response.status).toBe(200)
+    expect(response.body.provider_urls['claude-code']).toBeUndefined()
+})
+
+/** O binário não tem catálogo, então a lista é fixa e sai sem tocar na rede. */
+it('lista os modelos do claude agent sem chamar a rede', async () => {
+    respondWith({ data: [] })
+
+    const response = await api.http.post('/api/v1/settings/ai/models').send({ provider: 'claude-code' })
+
+    expect(response.status).toBe(200)
+    expect(response.body.map((model: { id: string }) => model.id)).toContain('claude-sonnet-5')
+    expect(response.body.length).toBeGreaterThan(5)
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled()
 })
 
 /** Provedor sem catálogo mantém o campo de modelo digitável, com o motivo à mostra. */
