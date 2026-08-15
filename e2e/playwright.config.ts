@@ -1,8 +1,15 @@
 import { defineConfig } from '@playwright/test'
 import { FRONTEND_URL, PORTS, WEBDRIVER_URL } from './support/ports'
 
+/**
+ * Os testes que só funcionam com um modelo de verdade atrás do backend. Sem `OLLAMA_URL` cadastrada
+ * a suíte os pula: numa máquina sem IA eles falhariam por falta de provedor, e não por regressão.
+ */
+const AI_DEPENDENT = /@ia/
+
 export default defineConfig({
     testDir: './tests',
+    ...(process.env.OLLAMA_URL ? {} : { grepInvert: AI_DEPENDENT }),
     timeout: 30_000,
     fullyParallel: false,
     retries: 0,
