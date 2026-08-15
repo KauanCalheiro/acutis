@@ -7,8 +7,9 @@
  */
 import { Injectable } from '@nestjs/common'
 import { cpSync, existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { Git, providerFromUrl } from '../git/git.js'
+import type { CloneRequest, GitService } from '../git/git.service.js'
 import { acutis } from '../kernel/acutis.js'
 import { NotFound, ValidationFailed } from '../kernel/errors.js'
 import { slug as toSlug } from '../kernel/slug.js'
@@ -248,6 +249,28 @@ export class ProjectService {
 
         environments.set(EnvKey.USER, username)
         environments.set(EnvKey.PASSWORD, password, true)
+    }
+
+    /**
+     * O projeto que nasce de um repositório existente.
+     *
+     * O clone é feito por quem sabe fazê-lo (`GitService`); aqui se cuida do que faz o diretório
+     * clonado virar um projeto do acutis: o manifesto e o primeiro ambiente.
+     */
+    async createFromClone(request: CloneRequest, git: GitService): Promise<Project> {
+        const name = request.name || basename(request.url).replace(/\.git$/, '')
+        const slug = toSlug(name)
+        const path = join(acutis().root, slug)
+
+        await git.clone(request, path)
+
+        const createdAt = writeManifest(path, name, slug)
+
+        new Environments(path).ensure()
+
+        const repository = await Git.in(path).remoteUrl()
+
+        return new Project(name, slug, path, createdAt, repository, providerFromUrl(repository))
     }
 
     create(name: string, template: string = DEFAULT_TEMPLATE): Project {

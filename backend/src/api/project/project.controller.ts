@@ -3,6 +3,8 @@
  * frontend trocar de backend sem alterar uma chamada.
  */
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common'
+import { GitService } from '../git/git.service.js'
+import { CloneProjectDto } from './dto/clone-project.dto.js'
 import { CreateProjectDto } from './dto/create-project.dto.js'
 import { ProjectSettingsDto } from './dto/project-settings.dto.js'
 import { UpdateProjectDto } from './dto/update-project.dto.js'
@@ -20,7 +22,10 @@ interface ListParams {
 
 @Controller('api/v1/projects')
 export class ProjectController {
-    constructor(private readonly projects: ProjectService) {}
+    constructor(
+        private readonly projects: ProjectService,
+        private readonly git: GitService
+    ) {}
 
     @Get()
     index(@Query() params: ListParams): Promise<Paginated<Project>> {
@@ -44,6 +49,12 @@ export class ProjectController {
     @HttpCode(201)
     store(@Body() dto: CreateProjectDto): Project {
         return this.projects.create(dto.name)
+    }
+
+    @Post('create/clone')
+    @HttpCode(201)
+    clone(@Body() dto: CloneProjectDto): Promise<Project> {
+        return this.projects.createFromClone(dto, this.git)
     }
 
     @Put(':project')
