@@ -2,8 +2,6 @@
 import { IsNotEmpty, IsString, IsUrl } from 'class-validator'
 
 export class ProjectSettingsDto {
-    @IsString({ message: 'A URL base do projeto é obrigatória.' })
-    @IsNotEmpty({ message: 'A URL base do projeto é obrigatória.' })
     /**
      * Exige o esquema, como a regra `url` do Laravel: sem ele, `nao-e-url` passaria por nome de
      * host. E dispensa TLD, porque ambiente interno costuma ser `app.local` ou `sistema.test`.
@@ -12,5 +10,7 @@ export class ProjectSettingsDto {
         { require_tld: false, require_protocol: true },
         { message: 'A URL base deve ser uma URL válida.' }
     )
+    @IsNotEmpty({ message: 'A URL base do projeto é obrigatória.' })
+    @IsString({ message: 'A URL base do projeto é obrigatória.' })
     baseUrl!: string
 }

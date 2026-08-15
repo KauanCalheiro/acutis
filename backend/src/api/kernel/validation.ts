@@ -27,6 +27,10 @@ export function validationPipe(): ValidationPipe {
     return new ValidationPipe({
         transform: true,
         whitelist: true,
+        // Uma mensagem por campo, como o Laravel: sem isto um corpo vazio acumula todas as regras
+        // daquele campo e o usuário recebe "é obrigatório" junto de "já existe um projeto com este
+        // nome" — avisos que se contradizem sobre o mesmo campo em branco.
+        stopAtFirstError: true,
         exceptionFactory: (errors: ValidationError[]) => new ValidationFailed(collect(errors))
     })
 }

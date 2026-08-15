@@ -46,11 +46,17 @@ function IsAvailableProjectName(options?: ValidationOptions) {
     }
 }
 
+/**
+ * A ordem dos decorators é o inverso da ordem de avaliação: o class-validator roda de baixo para
+ * cima, e com `stopAtFirstError` só a primeira falha vira mensagem. Por isso as regras específicas
+ * ficam em cima e as básicas embaixo — senão um campo em branco seria acusado de "já existe um
+ * projeto com este nome" antes de ser acusado de estar em branco.
+ */
 export class CreateProjectDto {
-    @IsString({ message: 'O nome do projeto é obrigatório.' })
-    @IsNotEmpty({ message: 'O nome do projeto é obrigatório.' })
-    @MaxLength(255, { message: 'O nome do projeto é muito longo.' })
-    @IsSluggable()
     @IsAvailableProjectName()
+    @IsSluggable()
+    @MaxLength(255, { message: 'O nome do projeto é muito longo.' })
+    @IsNotEmpty({ message: 'O nome do projeto é obrigatório.' })
+    @IsString({ message: 'O nome do projeto é obrigatório.' })
     name!: string
 }

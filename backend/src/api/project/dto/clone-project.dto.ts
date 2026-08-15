@@ -56,10 +56,14 @@ function IsAvailableCloneTarget(options?: ValidationOptions) {
     }
 }
 
+/**
+ * Os decorators avaliam de baixo para cima, e com `stopAtFirstError` só a primeira falha vira
+ * mensagem: as regras específicas ficam em cima, as básicas embaixo.
+ */
 export class CloneProjectDto {
-    @IsString({ message: 'A URL do repositório é obrigatória.' })
-    @IsNotEmpty({ message: 'A URL do repositório é obrigatória.' })
     @IsAvailableCloneTarget()
+    @IsNotEmpty({ message: 'A URL do repositório é obrigatória.' })
+    @IsString({ message: 'A URL do repositório é obrigatória.' })
     url!: string
 
     @IsOptional()
