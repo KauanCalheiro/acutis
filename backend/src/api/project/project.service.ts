@@ -12,9 +12,13 @@ import { Git, providerFromUrl } from '../git/git.js'
 import { acutis } from '../kernel/acutis.js'
 import { NotFound, ValidationFailed } from '../kernel/errors.js'
 import { slug as toSlug } from '../kernel/slug.js'
+import { AUTH_ID, authExists } from './auth/auth.js'
+import { EnvKey } from './environment/env-key.js'
 import { Environments } from './environment/environments.js'
 import { Project, type ProjectManifest } from './entities/project.entity.js'
-import { writeManifest } from './manifest.js'
+import { readManifest, writeManifest } from './manifest.js'
+import { Runs } from './scenario/runs.js'
+import { listScenarios } from './scenario/scenario.js'
 import { DEFAULT_TEMPLATE, templatePath } from './template.js'
 
 /** Os campos por que a listagem aceita ordenar. Fora deles, ordena por nome. */
@@ -127,6 +131,49 @@ export class ProjectService {
         const data = query.page?.size ? projects.slice((number - 1) * size, number * size) : projects
 
         return { data, meta: { current_page: number, per_page: size, total } }
+    }
+
+    /**
+     * O estado da autenticação do projeto, que a tela usa para decidir o que oferecer.
+     *
+     * `failing` só existe quando há login configurado e a última execução dele falhou — é o que
+     * distingue "nunca configurou" de "configurou e quebrou".
+     */
+    private authStatus(path: string, manifest: Partial<ProjectManifest & { auth_skipped: boolean }>): string {
+        if (!authExists(path)) {
+            return manifest.auth_skipped ? 'skipped' : 'unset'
+        }
+
+        return new Runs(path, AUTH_ID).lastPassed() === false ? 'failing' : 'configured'
+    }
+
+    async findOne(slug: string): Promise<Record<string, unknown>> {
+        const path = this.pathOf(slug)
+        const manifest = readManifest(path)
+        const project = await this.toProject(path)
+        const environments = new Environments(path)
+        const baseUrl = environments.value(EnvKey.URL)
+
+        // O projeto vem achatado na raiz, e não sob uma chave `project`: é o formato que o
+        // `ProjectShowResource` do Laravel devolve, e a tela lê `name` e `slug` direto.
+        return {
+            name: project.name,
+            slug: project.slug,
+            path: project.path,
+            repository: project.repository,
+            provider: project.provider,
+            branch: await Git.in(path).branch(),
+            created_at: project.created_at,
+            updated_at: statSync(path).mtime.toISOString(),
+            scenarios: listScenarios(path),
+            auth_status: this.authStatus(path, manifest),
+            base_url: baseUrl,
+            storage_state: join(path, environments.storageState()),
+            // Sem URL o projeto não roda nada, então a tela pede — a menos que o usuário já tenha
+            // dito que não quer informá-la.
+            requires_url: !baseUrl && !manifest.url_skipped,
+            vscode_url: `vscode://file${this.hostPathOf(slug)}`
+        }
     }
 
     /**

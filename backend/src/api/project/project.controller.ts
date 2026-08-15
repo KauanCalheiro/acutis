@@ -33,6 +33,11 @@ export class ProjectController {
         })
     }
 
+    @Get(':project')
+    show(@Param('project') slug: string): Promise<Record<string, unknown>> {
+        return this.projects.findOne(slug)
+    }
+
     @Post('create/template')
     @HttpCode(201)
     store(@Body() dto: CreateProjectDto): Project {
