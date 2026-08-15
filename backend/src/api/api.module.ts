@@ -5,9 +5,11 @@
  * fronteira que mantém o gravador ignorante de quem o usa.
  */
 import { Module } from '@nestjs/common'
+import { GitModule } from './git/git.module.js'
+import { EnvironmentModule } from './project/environment/environment.module.js'
 import { ProjectModule } from './project/project.module.js'
 
 @Module({
-    imports: [ProjectModule]
+    imports: [EnvironmentModule, GitModule, ProjectModule]
 })
 export class ApiModule {}

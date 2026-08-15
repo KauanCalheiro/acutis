@@ -34,11 +34,26 @@ export class Git {
         }
     }
 
-    /** Um cliente apontado para um diretório qualquer, para clone e sondagem de remote. */
+    /**
+     * Um cliente apontado para um diretório qualquer, para clone e sondagem de remote.
+     *
+     * O `env` recebe só o que se quer acrescentar, nunca `process.env` inteiro: o `simple-git`
+     * recusa rodar quando enxerga `PAGER` no ambiente, e é o que quebraria toda chamada aqui.
+     * Sem `.env()`, o processo filho já herda o ambiente do usuário — que é o que faz o clone
+     * enxergar as chaves e o credential helper dele.
+     */
     static client(baseDir: string, env: Record<string, string> = {}): SimpleGit {
-        const git = simpleGit({ baseDir, binary: acutis().git })
+        // O simple-git bloqueia binário customizado e GIT_SSH_COMMAND por padrão, supondo que
+        // viriam de entrada não confiável. Aqui o binário vem da nossa configuração (o app
+        // empacotado leva o próprio git no Windows) e o SSH_COMMAND aponta uma chave temporária que
+        // nós mesmos escrevemos — nada disso é digitado por terceiro.
+        const git = simpleGit({
+            baseDir,
+            binary: acutis().git,
+            unsafe: { allowUnsafeCustomBinary: true, allowUnsafeSshCommand: true }
+        })
 
-        return Object.keys(env).length === 0 ? git : git.env({ ...process.env, ...env })
+        return Object.keys(env).length === 0 ? git : git.env(env)
     }
 
     private client(): SimpleGit {

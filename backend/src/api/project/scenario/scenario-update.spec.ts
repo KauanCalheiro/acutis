@@ -7,12 +7,13 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import { startApi, type Harness } from '../../testing/harness.js'
+import { ScenarioModule } from './scenario.module.js'
 
 let api: Harness
 let dir: string
 
 beforeEach(async () => {
-    api = await startApi()
+    api = await startApi([ScenarioModule])
     dir = api.projectPath('minha-loja')
 
     mkdirSync(dir, { recursive: true })

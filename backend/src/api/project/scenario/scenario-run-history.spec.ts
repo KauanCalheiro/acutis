@@ -12,6 +12,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import { RunnerService } from '../../../runner/runner.service.js'
 import { startApi, type Harness } from '../../testing/harness.js'
+import { ScenarioModule } from './scenario.module.js'
 
 let api: Harness
 let dir: string
@@ -37,7 +38,7 @@ const runner = {
 
 beforeEach(async () => {
     queued = []
-    api = await startApi([{ provide: RunnerService, value: runner }])
+    api = await startApi([ScenarioModule], [{ provide: RunnerService, value: runner }])
     dir = api.projectPath('minha-loja')
     history = join(dir, 'runs/login/entrar')
 
