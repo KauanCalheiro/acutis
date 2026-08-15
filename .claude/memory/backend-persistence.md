@@ -1,11 +1,11 @@
 ---
 name: backend-persistence
-description: Onde o backend guarda estado — o projeto é um diretório em disco (acutis.json, tests/, features/, environments/, runs/); o único banco é o SQLite das configurações
+description: Onde o backend guarda estado — o projeto é um diretório em disco (acutis.json, tests/, features/, environments/, runs/); o único banco é o SQLite das configurações, com migrations do TypeORM
 metadata:
   type: project
 ---
 
-Ver [backend](backend.md). Não há ORM, migration nem model: **o repositório é o sistema de arquivos**.
+Ver [backend](backend.md). **O repositório é o sistema de arquivos**: projeto, cenário, ambiente e histórico são arquivos. O banco existe só para as configurações do próprio acutis.
 
 ## Um projeto é um diretório
 
@@ -28,13 +28,24 @@ Quem lê e escreve cada peça é um provider (`Manifest`, `Dotenv`, `Environment
 
 ## O único banco
 
-`<raiz>/runtime/database.sqlite`, via `better-sqlite3`, com **duas tabelas de configuração**: `settings` e `ai_settings`. SQL direto no `settings/providers/database.ts` — sem ORM e sem framework de migration; mudança de esquema é uma função de migração ali mesmo (ver `migrateToSingleModel`).
+`<raiz>/runtime/database.sqlite`, TypeORM sobre `better-sqlite3`, com **duas tabelas de configuração**: `settings` (uma linha por chave global) e `ai_settings` (uma linha por provedor de IA).
 
-- A chave de API do provedor vai cifrada em AES-256-GCM; a chave de cifra fica em `<raiz>/runtime/app-key`, gerada na primeira execução.
+- Entidades em `settings/entities/` (`Setting`, `AiCredential`); o `SettingsService` fala com elas por repositório, o que torna assíncrono todo método que lê ou grava.
+- As opções da conexão saem de `config/database.ts`, montadas por função — o caminho é lido na hora, não no import, porque a raiz muda por execução.
+- A chave de API do provedor vai cifrada em AES-256-GCM (`settings/providers/crypto.ts`); a chave de cifra fica em `<raiz>/runtime/app-key`, gerada na primeira execução e **fora** do banco.
 - Isolar a raiz de projetos isola o banco junto — é o que o teste e o E2E fazem, sem variável separada.
+
+## Migrations
+
+Uma migration por tabela, em `src/migrations/`, escritas com a API do TypeORM (`runner.createTable(new Table(...))`) e listadas à mão em `config/database.ts` — não por glob, que não sobrevive ao empacotamento do `dist/`.
+
+- `migrationsRun: true`: o boot aplica o que faltar. O acutis roda na máquina de quem usa, que nunca vai rodar um comando de migration.
+- Mudança de esquema é **migration nova**, nunca edição de uma já aplicada nem `synchronize`.
+- Em desenvolvimento não há base para migrar: `pnpm db:fresh` apaga o banco e o refaz pelas migrations (respeita `ACUTIS_PROJECTS_PATH`, não toca no `app-key`).
+- Nada de código de compatibilidade com esquema antigo enquanto o produto não tiver instalação de verdade.
 
 ## Consequências
 
-- Não existe transação: escrita que envolve dois arquivos precisa ser idempotente e tolerar meio caminho.
+- Não existe transação no que é arquivo: escrita que envolve dois deles precisa ser idempotente e tolerar meio caminho.
 - Nada de estado em memória entre requisições — a verdade está em disco, e é relida.
 - Projeto apagado é diretório removido; cenário apagado leva junto spec, feature e a gravação.
