@@ -1,6 +1,6 @@
-FROM php:8.5-cli
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+FROM mcr.microsoft.com/playwright:v1.61.1-noble
+RUN npm install -g pnpm@11.9.0
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git unzip gosu \
+    && apt-get install -y --no-install-recommends gosu \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app

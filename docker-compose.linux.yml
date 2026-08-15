@@ -1,13 +1,16 @@
 name: acutis
 
 services:
-  backend:
+  # No Linux o backend roda na rede do host, então o nome de serviço deixa de resolvê-lo: quem
+  # falava com ele pelo nome passa a falar pelo gateway. Antes era o Laravel; agora é o frontend,
+  # que herdou a chamada à API.
+  frontend:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      WEBDRIVER_URL: http://host.docker.internal:24000
+      NUXT_API_ACUTIS_URL: http://host.docker.internal:24000
 
-  webdriver:
+  backend:
     network_mode: host
     ports: !reset []
     environment:

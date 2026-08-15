@@ -4,9 +4,10 @@
 
 | Documento | Assunto |
 |-----------|---------|
-| [LOCAL.md](LOCAL.md) | Stack como processos diretos no host — precisa de PHP, Composer, Node e pnpm instalados |
+| [LOCAL.md](LOCAL.md) | Stack como processos diretos no host — precisa de Node e pnpm instalados |
 | [DOCKER.md](DOCKER.md) | Stack em containers via `docker compose` — não precisa de runtime nenhum no host |
-| [TESTS.md](TESTS.md) | As quatro suítes de teste (backend, frontend, webdriver, e2e): comandos e peculiaridades |
+| [TESTS.md](TESTS.md) | As três suítes de teste (backend, frontend, e2e): comandos e peculiaridades |
+| [DEPLOY.md](DEPLOY.md) | Publicar o `acutis-cli` no npm — o que vai no pacote e como testar antes |
 
 ## Qual modo usar
 
@@ -24,6 +25,7 @@ Os três conjuntos são disjuntos de propósito: a suíte E2E roda com a stack d
 
 | Serviço | Local | Docker (host) | E2E |
 |---------|-------|---------------|-----|
-| backend (Laravel) | 8000 | 28000 | 4200 |
 | frontend (Nuxt) | 3000 | 23000 | 4300 |
-| webdriver (NestJS) | 4000 | 24000 | 4400 |
+| backend (NestJS) | 4000 | 24000 | 4400 |
+
+O backend serve a API `/api/v1`, o gravador e o runner no mesmo processo desde a migração para Node.

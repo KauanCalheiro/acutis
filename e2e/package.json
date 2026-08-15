@@ -3,9 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "pretest": "./scripts/setup.sh && pnpm --dir ../webdriver build:ui && pnpm --dir ../webdriver build",
+    "pretest": "./scripts/setup.sh && pnpm --dir ../backend build:ui && pnpm --dir ../backend build",
     "test": "playwright test",
-    "capture:fixture": "pnpm --dir ../webdriver build:ui && pnpm --dir ../webdriver build && node scripts/capture-sample-recording.ts"
+    "capture:fixture": "pnpm --dir ../backend build:ui && pnpm --dir ../backend build && node scripts/capture-sample-recording.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1"

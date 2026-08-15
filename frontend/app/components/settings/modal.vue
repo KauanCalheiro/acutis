@@ -2,8 +2,13 @@
 interface AiCredential {
   key: string | null
   url: string | null
-  model_cheapest: string | null
-  model_smartest: string | null
+  model: string | null
+}
+
+/** Um modelo que o provedor disse ter. O `id` é o que vai no cadastro; o `label`, o que a tela mostra. */
+interface AvailableModel {
+  id: string
+  label: string
 }
 
 interface AiSettings {
@@ -29,8 +34,10 @@ const settings = ref<AiSettings | null>(null)
 const provider = ref('')
 const key = ref('')
 const url = ref('')
-const modelCheapest = ref('')
-const modelSmartest = ref('')
+const model = ref('')
+const models = ref<AvailableModel[]>([])
+const modelsError = ref('')
+const loadingModels = ref(false)
 const loading = ref(false)
 const saving = ref(false)
 const revealed = ref(false)
@@ -51,6 +58,36 @@ const semIa = computed(() => provider.value === SEM_IA)
 /** O endereço que vale com o campo vazio, para o placeholder dizer o que vai acontecer. */
 const defaultUrl = computed(() => settings.value?.provider_urls[provider.value] ?? 'o endereço do provedor')
 
+/**
+ * A lista de modelos, perguntada ao provedor com o que está digitado agora.
+ *
+ * Vale o formulário e não o que está salvo porque a pergunta vem antes de salvar: o usuário cola a
+ * chave, busca e só então escolhe. Falhar aqui não é erro de tela — o campo continua digitável, e a
+ * mensagem diz o que corrigir, se foi a chave ou o endereço.
+ */
+async function loadModels() {
+  if (semIa.value) return
+
+  loadingModels.value = true
+  modelsError.value = ''
+
+  try {
+    models.value = await $fetch<AvailableModel[]>('/api/settings/ai/models', {
+      method: 'POST',
+      body: {
+        provider: provider.value,
+        key: key.value || null,
+        url: url.value || null
+      }
+    })
+  } catch (err) {
+    models.value = []
+    modelsError.value = extractServerError(err, 'Não foi possível listar os modelos do provedor.')
+  } finally {
+    loadingModels.value = false
+  }
+}
+
 // Cada provedor guarda o seu cadastro: trocar no select mostra o dele, não o do anterior. Levar um
 // para o outro apontaria a Anthropic para o endereço do Ollama.
 watch(provider, (chosen) => {
@@ -58,9 +95,14 @@ watch(provider, (chosen) => {
 
   key.value = saved?.key ?? ''
   url.value = saved?.url ?? ''
-  modelCheapest.value = saved?.model_cheapest ?? ''
-  modelSmartest.value = saved?.model_smartest ?? ''
+  model.value = saved?.model ?? ''
   revealed.value = false
+
+  // O modelo salvo já é uma opção: sem isso o campo abriria vazio até a busca responder.
+  models.value = model.value ? [{ id: model.value, label: model.value }] : []
+  modelsError.value = ''
+
+  loadModels()
 })
 
 async function load() {
@@ -71,12 +113,18 @@ async function load() {
 
     const active = settings.value.credentials[settings.value.provider]
 
+    // Reabrir no mesmo provedor não dispara o watch, e é ele quem busca os modelos.
+    const sameProvider = provider.value === (settings.value.provider || SEM_IA)
+
     provider.value = settings.value.provider || SEM_IA
     key.value = active?.key ?? ''
     url.value = active?.url ?? ''
-    modelCheapest.value = active?.model_cheapest ?? ''
-    modelSmartest.value = active?.model_smartest ?? ''
+    model.value = active?.model ?? ''
+    models.value = model.value ? [{ id: model.value, label: model.value }] : []
+    modelsError.value = ''
     revealed.value = false
+
+    if (sameProvider) loadModels()
   } catch (err) {
     toast.add({
       title: extractServerError(err, 'Não foi possível carregar a configuração.'),
@@ -102,8 +150,7 @@ async function save() {
         provider: semIa.value ? null : provider.value,
         key: key.value || null,
         url: url.value || null,
-        modelCheapest: modelCheapest.value || null,
-        modelSmartest: modelSmartest.value || null
+        model: model.value || null
       }
     })
 
@@ -213,36 +260,37 @@ async function save() {
 
       <UFormField
         v-if="!semIa"
-        label="Modelo de alto custo"
-        hint="opcional"
-        description="Usado onde a resposta precisa ser a melhor: correção do teste que falhou."
-        class="mb-4"
+        label="Modelo"
+        description="Quem escreve o cenário, sugere os data-testid e conserta o teste que falhou."
+        :error="modelsError || undefined"
       >
-        <UInput
-          v-model="modelSmartest"
-          placeholder="Nome do modelo no provedor"
-          class="w-full"
-          data-testid="config-ia-modelo-alto"
-        />
+        <div class="flex gap-2">
+          <USelectMenu
+            v-model="model"
+            :items="models.map(available => ({ label: available.label, value: available.id }))"
+            value-key="value"
+            :loading="loadingModels"
+            create-item
+            placeholder="Escolha o modelo do provedor"
+            class="flex-1"
+            data-testid="config-ia-modelo"
+            @create="(nome: string) => {
+              models.push({ id: nome, label: nome })
+              model = nome
+            }"
+          />
+          <UButton
+            icon="i-ic-round-refresh"
+            color="neutral"
+            variant="subtle"
+            :loading="loadingModels"
+            aria-label="Buscar os modelos do provedor"
+            data-testid="config-ia-modelo-buscar"
+            @click="loadModels"
+          />
+        </div>
         <template #help>
-          Em branco usa o modelo padrão do provedor.
-        </template>
-      </UFormField>
-
-      <UFormField
-        v-if="!semIa"
-        label="Modelo de baixo custo"
-        hint="opcional"
-        description="Usado no resto: escrita do cenário, validação e sugestão de data-testid."
-      >
-        <UInput
-          v-model="modelCheapest"
-          placeholder="Nome do modelo no provedor"
-          class="w-full"
-          data-testid="config-ia-modelo-baixo"
-        />
-        <template #help>
-          Em branco usa o modelo padrão do provedor.
+          A lista vem do próprio provedor. Buscar de novo depois de trocar a chave ou o endereço.
         </template>
       </UFormField>
     </template>

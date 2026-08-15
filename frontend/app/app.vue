@@ -1,59 +1,57 @@
 <script setup>
-const favicon = ref('/favicon.svg')
+const favicon = ref("/favicon.svg");
 
 useHead({
-  meta: [
-    { name: 'viewport', content: 'width=device-width, initial-scale=1' }
-  ],
-  link: [
-    { key: 'favicon', rel: 'icon', type: 'image/svg+xml', href: favicon }
-  ],
+  meta: [{ name: "viewport", content: "width=device-width, initial-scale=1" }],
+  link: [{ key: "favicon", rel: "icon", type: "image/svg+xml", href: favicon }],
   htmlAttrs: {
-    lang: 'en'
-  }
-})
+    lang: "en",
+  },
+});
 
 useSeoMeta({
-  title: 'Acutis'
-})
+  title: "Acutis",
+});
 
-const appConfig = useAppConfig()
-const colorMode = useColorMode()
+const appConfig = useAppConfig();
+const colorMode = useColorMode();
 
 function repaintFaviconWhenThemeColorsLand(framesLeftToWaitForTheme = 10) {
-  const style = getComputedStyle(document.documentElement)
-  const svg = logoSvg(style.getPropertyValue('--ui-primary'), style.getPropertyValue('--ui-bg'))
-  const repainted = `data:image/svg+xml,${encodeURIComponent(svg)}`
+  const style = getComputedStyle(document.documentElement);
+  const svg = logoSvg(
+    style.getPropertyValue("--ui-primary"),
+    style.getPropertyValue("--ui-bg"),
+  );
+  const repainted = `data:image/svg+xml,${encodeURIComponent(svg)}`;
 
-  const themeStillHoldsTheOldColors = repainted === favicon.value
+  const themeStillHoldsTheOldColors = repainted === favicon.value;
 
   if (themeStillHoldsTheOldColors && framesLeftToWaitForTheme > 0) {
-    requestAnimationFrame(() => repaintFaviconWhenThemeColorsLand(framesLeftToWaitForTheme - 1))
-    return
+    requestAnimationFrame(() =>
+      repaintFaviconWhenThemeColorsLand(framesLeftToWaitForTheme - 1),
+    );
+    return;
   }
 
-  favicon.value = repainted
+  favicon.value = repainted;
 }
 
-onMounted(() => repaintFaviconWhenThemeColorsLand())
+onMounted(() => repaintFaviconWhenThemeColorsLand());
 
-watch(
-  [
-    () => appConfig.ui.colors.primary,
-    () => colorMode.value
-  ],
-  () => nextTick(() => repaintFaviconWhenThemeColorsLand())
-)
+watch([() => appConfig.ui.colors.primary, () => colorMode.value], () =>
+  nextTick(() => repaintFaviconWhenThemeColorsLand()),
+);
 </script>
 
 <template>
-  <UApp :toaster="{ position: 'top-center' }">
-    <div class="flex min-h-screen">
-      <BaseNavbar />
-      <!-- A navbar é fixa, então saiu do fluxo: o padding aqui é o lugar que ela ocupa. -->
-      <main class="min-w-0 flex-1 pl-[5.25rem]">
-        <NuxtPage />
-      </main>
-    </div>
-  </UApp>
+  <ClientOnly>
+    <UApp :toaster="{ position: 'top-center' }">
+      <div class="flex min-h-screen">
+        <BaseNavbar />
+        <main class="min-w-0 flex-1 pl-21">
+          <NuxtPage />
+        </main>
+      </div>
+    </UApp>
+  </ClientOnly>
 </template>

@@ -1,5 +1,5 @@
 import { defineConfig } from '@playwright/test'
-import { BACKEND_URL, FRONTEND_URL, PORTS, WEBDRIVER_URL } from './support/ports'
+import { FRONTEND_URL, PORTS, WEBDRIVER_URL } from './support/ports'
 
 export default defineConfig({
     testDir: './tests',
@@ -21,7 +21,8 @@ export default defineConfig({
         env: {
             ...process.env,
             PORT: String(PORTS.frontend),
-            NUXT_API_ACUTIS_URL: BACKEND_URL,
+            // A API mora no mesmo processo do gravador desde a migração para Node.
+            NUXT_API_ACUTIS_URL: WEBDRIVER_URL,
             NUXT_PUBLIC_WEBDRIVER_ACUTIS_URL: WEBDRIVER_URL,
         },
     },

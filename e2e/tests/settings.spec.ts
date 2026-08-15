@@ -1,20 +1,33 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { rmSync } from 'node:fs'
-import { dirname } from 'node:path'
-import { databaseCopy, startBackend } from '../support/backend'
+import { isolatedProjects, startBackend } from '../support/backend'
+
+/**
+ * Escolhe o modelo digitando o nome.
+ *
+ * Clica na primeira opção filtrada, e não na de criar: quando existe um provedor de verdade
+ * respondendo (o Ollama da máquina de quem roda a suíte), o nome digitado casa com um item da lista
+ * e a opção de criar nem aparece. Sem provedor alcançável, a de criar é a única — e é ela que
+ * garante que provedor fora do ar não impede o cadastro.
+ */
+async function escolherModelo(page: Page, nome: string) {
+    await page.getByTestId('config-ia-modelo').click()
+    await page.keyboard.type(nome)
+    await page.getByRole('option').first().click()
+}
 
 test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
     let stopBackend: () => Promise<void>
-    let database: string
+    let projects: string
 
     test.beforeAll(async () => {
-        database = databaseCopy()
-        stopBackend = await startBackend({ DB_DATABASE: database })
+        projects = isolatedProjects()
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: projects })
     })
 
     test.afterAll(async () => {
         await stopBackend()
-        rmSync(dirname(database), { recursive: true, force: true })
+        rmSync(projects, { recursive: true, force: true })
     })
 
     test('opens from the navbar without taking the user off the page', async ({ page }) => {
@@ -36,6 +49,7 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
             await page.getByTestId('config-ia-provedor').click()
             await page.getByRole('option', { name: 'openai', exact: true }).click()
             await page.getByTestId('config-ia-chave').fill('sk-secreta-do-teste')
+            await escolherModelo(page, 'gpt-4o')
             await page.getByTestId('config-ia-salvar').click()
         })
 
@@ -69,6 +83,7 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
             await page.getByTestId('config-ia-provedor').click()
             await page.getByRole('option', { name: 'anthropic', exact: true }).click()
             await page.getByTestId('config-ia-chave').fill('sk-da-anthropic')
+            await escolherModelo(page, 'claude-sonnet-4-5')
             await page.getByTestId('config-ia-salvar').click()
             await expect(page.getByText('Configuração salva', { exact: true })).toBeVisible()
         })
@@ -82,7 +97,7 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
         })
     })
 
-    test('saves a local provider with its address and models, and no key at all', async ({ page }) => {
+    test('saves a local provider with its address and model, and no key at all', async ({ page }) => {
         await page.goto('/')
         await page.locator('[data-hydrated="true"]').waitFor()
 
@@ -91,20 +106,35 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
             await page.getByTestId('config-ia-provedor').click()
             await page.getByRole('option', { name: 'ollama', exact: true }).click()
             await page.getByTestId('config-ia-url').fill('http://192.168.0.124:11434')
-            await page.getByTestId('config-ia-modelo-alto').fill('qwen3-coder:30b')
-            await page.getByTestId('config-ia-modelo-baixo').fill('gemma4:31b')
+            await escolherModelo(page, 'qwen3-coder:30b')
             await page.getByTestId('config-ia-salvar').click()
         })
 
         await expect(page.getByText('Configuração salva', { exact: true })).toBeVisible()
 
-        await test.step('reopening brings the address and the models back', async () => {
+        await test.step('reopening brings the address and the model back', async () => {
             await page.getByTestId('navbar-configuracoes').click()
 
             await expect(page.getByTestId('config-ia-url')).toHaveValue('http://192.168.0.124:11434')
-            await expect(page.getByTestId('config-ia-modelo-alto')).toHaveValue('qwen3-coder:30b')
-            await expect(page.getByTestId('config-ia-modelo-baixo')).toHaveValue('gemma4:31b')
+            await expect(page.getByTestId('config-ia-modelo')).toContainText('qwen3-coder:30b')
         })
+    })
+
+    /**
+     * Não existe mais modelo padrão do provedor: quem pluga escolhe o modelo, e sem essa escolha o
+     * cadastro só falharia na primeira geração, com um 404 do provedor.
+     */
+    test('asks for the model of the provider being configured', async ({ page }) => {
+        await page.goto('/')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('navbar-configuracoes').click()
+        await page.getByTestId('config-ia-provedor').click()
+        await page.getByRole('option', { name: 'cohere', exact: true }).click()
+        await page.getByTestId('config-ia-chave').fill('sk-da-cohere')
+        await page.getByTestId('config-ia-salvar').click()
+
+        await expect(page.getByText('Escolha um modelo do provedor.')).toBeVisible()
     })
 
     test('shows the default address of the provider on the empty field', async ({ page }) => {
@@ -151,6 +181,7 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
         await page.getByTestId('navbar-configuracoes').click()
         await page.getByTestId('config-ia-provedor').click()
         await page.getByRole('option', { name: 'mistral', exact: true }).click()
+        await escolherModelo(page, 'mistral-large-latest')
         await page.getByTestId('config-ia-salvar').click()
 
         await expect(page.getByText('A chave de API do provedor escolhido é obrigatória.')).toBeVisible()

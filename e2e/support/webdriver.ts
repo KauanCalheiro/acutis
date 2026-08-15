@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { resolve } from 'node:path'
 import { FRONTEND_URL, PORTS, WEBDRIVER_URL } from './ports'
 
-const WEBDRIVER_DIR = resolve(import.meta.dirname, '../../webdriver')
+const WEBDRIVER_DIR = resolve(import.meta.dirname, '../../backend')
 
 export { WEBDRIVER_URL }
 

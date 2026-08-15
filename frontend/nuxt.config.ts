@@ -14,7 +14,9 @@ export default defineNuxtConfig({
   runtimeConfig: {
     api: {
       acutis: {
-        url: 'http://localhost:8000'
+        // O mesmo endereço do gravador: a API migrou do Laravel para dentro do backend Node, e os
+        // dois vivem no mesmo processo desde então.
+        url: 'http://localhost:4000'
       }
     },
     public: {

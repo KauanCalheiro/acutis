@@ -1,6 +1,6 @@
 ---
 name: backend-tdd
-description: Testar backend Laravel — escrever feature test Pest ANTES do código em backend/app; SQLite in-memory, CRUD V1
+description: Testar backend Laravel — escrever feature test Pest ANTES do código em backend-laravel/app; SQLite in-memory, CRUD V1
 metadata:
   type: feedback
 ---

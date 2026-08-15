@@ -9,7 +9,7 @@ metadata:
 
 Quando o teste depende de dado do **backend Laravel/DB**, usar banco dedicado — nunca o `database.sqlite` de dev:
 
-- `backend/database/e2e.sqlite` — isolado, só pra rodadas de E2E (gitignored)
+- `backend-laravel/database/e2e.sqlite` — isolado, só pra rodadas de E2E (gitignored)
 - Antes da suíte: `DB_DATABASE=database/e2e.sqlite php artisan migrate:fresh --seed`
 - `php artisan serve` da suíte aponta pro mesmo `DB_DATABASE`; cada rodada começa do mesmo estado semeado
 

@@ -11,7 +11,7 @@ Convenções universais de TDD em [tdd](tdd.md). Nunca implementar o webdriver s
 
 ## Setup
 
-- Unit (UI/pill): Vitest + jsdom → `pnpm test` (`webdriver/vite.ui.config.ts`, `test.include: ['src/ui/**/*.spec.ts']`)
+- Unit (UI/pill): Vitest + jsdom → `pnpm test` (`backend/vite.ui.config.ts`, `test.include: ['src/ui/**/*.spec.ts']`)
 - Typecheck do server (NestJS): `pnpm typecheck` — Typecheck da UI: `pnpm typecheck:ui`
 - E2E: Playwright na pasta raiz `e2e/`, sobe o webdriver real como processo filho (`WEBDRIVER_TEST_MODE=1`) e usa os endpoints `/debug/goto` e `/debug/click` pra dirigir a página gravada — nunca uma segunda conexão CDP separada pro mesmo navegador (duas sessões CDP brigando pelo mesmo alvo já causou fechamento de página em teste real)
 

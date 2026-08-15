@@ -1,6 +1,6 @@
 ---
 name: webdriver
-description: Serviço webdriver (webdriver/) — LER 1º ao mexer no NestJS (gateway/recorder/video) ou na UI/pill injetável; índice → tdd
+description: Serviço webdriver (backend/, era webdriver/) — LER 1º ao mexer no NestJS (gateway/recorder/video) ou na UI/pill injetável; índice → tdd
 metadata:
   type: feedback
 ---

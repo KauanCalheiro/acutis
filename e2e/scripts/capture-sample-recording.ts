@@ -4,7 +4,7 @@ import { copyFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from '
 import { createServer, type Server } from 'node:http'
 import { resolve } from 'node:path'
 
-const WEBDRIVER_DIR = resolve(import.meta.dirname, '../../webdriver')
+const WEBDRIVER_DIR = resolve(import.meta.dirname, '../../backend')
 const WEBDRIVER_URL = 'http://localhost:4400'
 const SAMPLE_APP_HTML = readFileSync(resolve(import.meta.dirname, '../fixtures/sample-app.html'))
 const OUTPUT_DIR = resolve(import.meta.dirname, '../fixtures/sample-recording')
