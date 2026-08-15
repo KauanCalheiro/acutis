@@ -8,7 +8,7 @@ metadata:
 NestJS, Playwright controlando o navegador de verdade (`recordVideo`/`page.screencast` — sem pedir permissão, é canal de automação, não API web). Substituiu a extensão Chrome removida.
 
 ```
-webdriver/
+backend/
 ├── src/
 │   ├── main.ts / app.module.ts
 │   ├── config/              # env, paths (VIDEOS_DIR, RECORDER_BUNDLE_PATH)

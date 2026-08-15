@@ -1,6 +1,6 @@
 ---
 name: run-local
-description: Use when the user wants to run, start, boot, or serve the acutis stack 100% locally (direct host processes, no Docker) — backend Laravel :8000, frontend Nuxt :3000, webdriver NestJS :4000. Triggers on "rodar local", "subir local", "run local", "start the app locally".
+description: Use when the user wants to run, start, boot, or serve the acutis stack 100% locally (direct host processes, no Docker) — backend-laravel :8000, frontend Nuxt :3000, backend NestJS :4000. Triggers on "rodar local", "subir local", "run local", "start the app locally".
 ---
 
 # Rodar a stack acutis 100% local
@@ -23,11 +23,11 @@ Faltando algum → parar e avisar o usuário; não tentar instalar runtime.
 
 | Serviço | Porta | URL |
 |---------|-------|-----|
-| backend (Laravel) | 8000 | http://localhost:8000 |
+| backend-laravel | 8000 | http://localhost:8000 |
 | frontend (Nuxt) | 3000 | http://localhost:3000 |
-| webdriver (NestJS) | 4000 | http://localhost:4000 |
+| backend (NestJS) | 4000 | http://localhost:4000 |
 
-Os configs (`frontend/nuxt.config.ts`, `webdriver/src/config/env.ts`, `backend/config/acutis.php`) já apontam pra esses defaults entre si — o Docker é que sobrescreve pros nomes de serviço, não o contrário.
+Os configs (`frontend/nuxt.config.ts`, `backend/src/config/env.ts`, `backend-laravel/config/acutis.php`) já apontam pra esses defaults entre si — o Docker é que sobrescreve pros nomes de serviço, não o contrário.
 
 ## Setup de primeira vez — backend (idempotente)
 
@@ -59,9 +59,9 @@ Rodando por um agente: lançar com `run_in_background` e derrubar depois com `ki
 ## Subir cada um separado (quando precisar isolar um serviço)
 
 ```sh
-cd backend  && php artisan serve                          # :8000
-cd frontend && pnpm install && pnpm dev                   # :3000
-cd webdriver && pnpm install && WEBDRIVER_TEST_MODE=1 pnpm dev   # :4000
+cd backend-laravel && php artisan serve                              # :8000
+cd frontend        && pnpm install && pnpm dev                       # :3000
+cd backend         && pnpm install && WEBDRIVER_TEST_MODE=1 pnpm dev # :4000
 ```
 
 **`WEBDRIVER_TEST_MODE=1` não é opcional pra rodar teste pela UI.** Os endpoints `/runner/*` (que o botão "Testar" usa, via backend) respondem **403** sem ela. O compose já seta; local precisa passar na linha de comando.
@@ -70,8 +70,8 @@ Lançar cada um com `run_in_background`, depois confirmar que respondem (curl na
 
 ## Reiniciar depois de editar
 
-- **backend / frontend**: hot reload, não precisa reiniciar.
-- **webdriver**: `pnpm dev` **NÃO é watch mode** — é `node` de uma vez só. Editou `webdriver/src/**` → matar (`pkill -f main.ts`) e subir de novo, senão serve código antigo silenciosamente.
+- **backend-laravel / frontend**: hot reload, não precisa reiniciar.
+- **backend**: `pnpm dev` **NÃO é watch mode** — é `node` de uma vez só. Editou `backend/src/**` → matar (`pkill -f main.ts`) e subir de novo, senão serve código antigo silenciosamente.
 
 ## Notas
 

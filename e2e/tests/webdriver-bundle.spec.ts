@@ -2,7 +2,7 @@ import { test, expect, chromium } from '@playwright/test'
 import { createServer, type Server } from 'node:http'
 import { resolve } from 'node:path'
 
-const RECORDER_BUNDLE_PATH = resolve(import.meta.dirname, '../../webdriver/dist-ui/driver-entry.js')
+const RECORDER_BUNDLE_PATH = resolve(import.meta.dirname, '../../backend/dist-ui/driver-entry.js')
 const FIXTURE_HTML = '<!doctype html><html><body><button id="btn">Click me</button></body></html>'
 
 test.describe('webdriver recorder bundle', { tag: ['@write', '@recording'] }, () => {

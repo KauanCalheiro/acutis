@@ -1,6 +1,6 @@
 ---
 name: run-docker
-description: Use when the user wants to run, start, boot, or serve the acutis stack via Docker (docker compose, ambiente isolado sem PHP/Node/Composer/pnpm no host) — frontend :23000, webdriver :24000, backend :28000. Triggers on "rodar no docker", "subir o compose", "run with docker", "docker compose up".
+description: Use when the user wants to run, start, boot, or serve the acutis stack via Docker (docker compose, ambiente isolado sem PHP/Node/Composer/pnpm no host) — frontend :23000, backend :24000, backend-laravel :28000. Triggers on "rodar no docker", "subir o compose", "run with docker", "docker compose up".
 ---
 
 # Rodar a stack acutis com Docker
@@ -28,8 +28,8 @@ docker compose -f docker-compose.dev.yml -f docker-compose.linux.yml up -d
 | Serviço | Host | Container | URL |
 |---------|------|-----------|-----|
 | frontend (Nuxt) | 23000 | 3000 | http://localhost:23000 |
-| webdriver (NestJS) | 24000 | 4000 | http://localhost:24000 |
-| backend (Laravel) | 28000 | 8000 | http://localhost:28000 |
+| backend (NestJS) | 24000 | 4000 | http://localhost:24000 |
+| backend-laravel | 28000 | 8000 | http://localhost:28000 |
 
 Tabela no README pra configurar o Nginx Proxy Manager. `NUXT_PUBLIC_WEBDRIVER_ACUTIS_URL` (frontend) e `CORS_ORIGIN` (webdriver) já vêm no compose apontando pras portas publicadas — trocou porta/domínio, ajustar lá (`environment` ganha de `env_file`).
 

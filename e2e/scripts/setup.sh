@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-cd "$(dirname "$0")/../../backend"
+cd "$(dirname "$0")/../../backend-laravel"
 
 composer install --quiet
 [ -f .env ] || cp .env.example .env

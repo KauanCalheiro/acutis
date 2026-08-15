@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { resolve } from 'node:path'
 
-const WEBDRIVER_DIR = resolve(import.meta.dirname, '../../webdriver')
+const WEBDRIVER_DIR = resolve(import.meta.dirname, '../../backend')
 const RUNNER_URL = 'http://localhost:4100'
 
 const PASSING_SPEC = `

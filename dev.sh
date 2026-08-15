@@ -4,7 +4,7 @@
 # intercalados e prefixados. Ctrl+C derruba tudo. É o equivalente local do
 # `docker compose -f docker-compose.dev.yml up`.
 #
-#   ./dev.sh              sobe backend :8000, frontend :3000, webdriver :4000
+#   ./dev.sh              sobe backend-laravel :8000, frontend :3000, backend :4000
 #   ./dev.sh --build      instala dependências e prepara o banco antes de subir
 #   ./dev.sh --headless   grava sem abrir janela (útil quando um agente dirige a ferramenta)
 #
@@ -48,17 +48,17 @@ done
 
 # --- build opcional -----------------------------------------------------------
 if [ "$BUILD" = "1" ]; then
-    info 'instalando dependências do backend'
-    (cd backend && composer install --no-interaction) || fail 'composer install falhou'
+    info 'instalando dependências do backend-laravel'
+    (cd backend-laravel && composer install --no-interaction) || fail 'composer install falhou'
 
-    [ -f backend/.env ] || cp backend/.env.example backend/.env
-    grep -q '^APP_KEY=.\+' backend/.env || (cd backend && php artisan key:generate)
-    touch backend/database/database.sqlite
+    [ -f backend-laravel/.env ] || cp backend-laravel/.env.example backend-laravel/.env
+    grep -q '^APP_KEY=.\+' backend-laravel/.env || (cd backend-laravel && php artisan key:generate)
+    touch backend-laravel/database/database.sqlite
 
     info 'migrando o banco'
-    (cd backend && php artisan migrate --force) || fail 'migrate falhou'
+    (cd backend-laravel && php artisan migrate --force) || fail 'migrate falhou'
 
-    for app in frontend webdriver; do
+    for app in frontend backend; do
         info "instalando dependências do $app"
         (cd "$app" && pnpm install) || fail "pnpm install falhou em $app"
     done
@@ -105,11 +105,11 @@ shutdown() {
 
 trap shutdown INT TERM
 
-start backend  "$C_BACK"   backend   php artisan serve
-start frontend "$C_FRONT"  frontend  pnpm dev
+start laravel  "$C_BACK"   backend-laravel  php artisan serve
+start frontend "$C_FRONT"  frontend         pnpm dev
 # WEBDRIVER_TEST_MODE=1 não é opcional: sem ela os endpoints /runner/* respondem
 # 403 e o botão "Testar" da interface não funciona.
-start webdriver "$C_DRIVER" webdriver env WEBDRIVER_TEST_MODE=1 RECORDER_HEADLESS="$HEADLESS" pnpm dev
+start backend  "$C_DRIVER" backend  env WEBDRIVER_TEST_MODE=1 RECORDER_HEADLESS="$HEADLESS" pnpm dev
 
 # --- espera ficar de pé -------------------------------------------------------
 (
@@ -120,9 +120,9 @@ start webdriver "$C_DRIVER" webdriver env WEBDRIVER_TEST_MODE=1 RECORDER_HEADLES
            ready http://localhost:3000 &&
            ready http://localhost:4000/health; then
             printf '\n%s==>%s stack de pé\n' "$C_INFO" "$C_OFF"
-            printf '    backend    http://localhost:8000\n'
+            printf '    laravel    http://localhost:8000  (sai no fim da migração)\n'
             printf '    frontend   http://localhost:3000\n'
-            printf '    webdriver  http://localhost:4000\n\n'
+            printf '    backend    http://localhost:4000\n\n'
             exit 0
         fi
         sleep 2

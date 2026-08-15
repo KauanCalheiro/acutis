@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { BACKEND_URL, PORTS, WEBDRIVER_URL } from './ports'
 
-const BACKEND_DIR = resolve(import.meta.dirname, '../../backend')
+// O Laravel, que sai quando a migração para Node terminar.
+const BACKEND_DIR = resolve(import.meta.dirname, '../../backend-laravel')
 
 /** O banco que o `pretest` migra. Não é o de desenvolvimento. */
 const E2E_DATABASE = resolve(BACKEND_DIR, 'database/e2e.sqlite')

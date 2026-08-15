@@ -11,7 +11,7 @@
 
 - [ ] Na listagem de testes do projeto (`frontend/app/pages/projects/[slug].vue`), adicionar botão "Rodar filtrados" ao lado da busca.
 - [ ] O botão dispara a run passando o texto da busca como filtro (ex.: `@tag` roda só os testes com essa tag), reaproveitando o matching que a busca já usa para exibir os testes.
-- [ ] Backend/runner precisa aceitar filtro por tag/texto na chamada que dispara a execução em lote (checar `webdriver/src/runner`).
+- [ ] Backend/runner precisa aceitar filtro por tag/texto na chamada que dispara a execução em lote (checar `backend/src/runner`).
 
 ## Empacotar a stack (webdriver + frontend + PHP + Git) num instalável
 
@@ -29,6 +29,6 @@
 
 ## Gravação gerar Playwright executável direto, sem IA corrigindo
 
-- [ ] Revisar o gerador de código a partir dos eventos gravados (`webdriver/src/recorder`) e listar os casos que hoje dependem da IA pra corrigir o código gerado.
+- [ ] Revisar o gerador de código a partir dos eventos gravados (`backend/src/recorder`) e listar os casos que hoje dependem da IA pra corrigir o código gerado.
 - [ ] Fechar os seletores/esperas desses casos na gravação (ex.: aguardar navegação, seletor estável) pra o código sair correto na primeira, sem passe de IA.
 - [ ] Rodar o código gerado direto no Playwright (sem o passo de IA) como critério de aceite pra fechar o item.

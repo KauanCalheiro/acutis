@@ -11,10 +11,10 @@ Monorepo com quatro subprojetos independentes. Comandos rodam num dos dois modos
 acutis/
 ├── CLAUDE.md
 ├── README.md
-├── backend/                # Laravel 13 / PHP 8.5
+├── backend/                # NestJS + Playwright — grava tela/eventos, injeta a pill, e src/api
+├── backend-laravel/        # Laravel 13 / PHP 8.5 — serve /api/v1 até a migração terminar
 ├── frontend/               # Nuxt 4 + Nuxt UI 4 / TypeScript / pnpm
-├── webdriver/              # NestJS + Playwright real — grava tela/eventos, injeta a pill
-└── e2e/                    # Playwright cross-tool (frontend + webdriver reais)
+└── e2e/                    # Playwright cross-tool (frontend + backend reais)
 ```
 
 ## Sub-memórias
