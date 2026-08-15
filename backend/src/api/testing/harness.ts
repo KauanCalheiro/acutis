@@ -25,17 +25,31 @@ export interface Harness {
     close: () => Promise<void>
 }
 
+/** Um provider trocado por outro no teste — é como o runner fica de fora sem subir navegador. */
+export interface Override {
+    provide: unknown
+    value: unknown
+}
+
 /**
  * Os módulos extras existem para o teste de um bloco ainda não integrado ao `ApiModule` poder subir
  * a API com ele dentro, sem antecipar a integração.
  */
-export async function startApi(extra: NonNullable<ModuleMetadata['imports']> = []): Promise<Harness> {
+export async function startApi(
+    extra: NonNullable<ModuleMetadata['imports']> = [],
+    overrides: Override[] = []
+): Promise<Harness> {
     const root = mkdtempSync(join(tmpdir(), 'acutis-test-'))
     const previousRoot = process.env.ACUTIS_PROJECTS_PATH
 
     process.env.ACUTIS_PROJECTS_PATH = root
 
-    const moduleRef = await Test.createTestingModule({ imports: [ApiModule, ...extra] }).compile()
+    const moduleRef = await overrides
+        .reduce(
+            (testing, override) => testing.overrideProvider(override.provide).useValue(override.value),
+            Test.createTestingModule({ imports: [ApiModule, ...extra] })
+        )
+        .compile()
     const app: INestApplication = moduleRef.createNestApplication()
 
     app.useGlobalPipes(validationPipe())
