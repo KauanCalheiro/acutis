@@ -39,7 +39,16 @@ export const PROVIDERS: Record<string, ProviderDefaults> = {
         modelSmartest: process.env.OLLAMA_MODEL_SMARTEST || 'llama3.1:8b'
     },
     openai: { url: process.env.OPENAI_URL || 'https://api.openai.com/v1' },
-    openrouter: {},
+    /**
+     * O OpenRouter serve centenas de modelos atrás de uma API compatível com a da OpenAI, e o nome
+     * do modelo carrega o fornecedor: `anthropic/claude-3.5-sonnet`, `qwen/qwen3-coder`. Sem um
+     * padrão razoável aqui, o campo nasceria vazio e o primeiro uso falharia por modelo em branco.
+     */
+    openrouter: {
+        url: process.env.OPENROUTER_URL || 'https://openrouter.ai/api/v1',
+        modelCheapest: process.env.OPENROUTER_MODEL_CHEAPEST || 'qwen/qwen3-coder',
+        modelSmartest: process.env.OPENROUTER_MODEL_SMARTEST || 'anthropic/claude-sonnet-4.5'
+    },
     voyageai: {},
     xai: {}
 }
