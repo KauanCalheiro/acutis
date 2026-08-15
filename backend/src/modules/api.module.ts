@@ -1,7 +1,4 @@
-/**
- * A API `/api/v1`. Entra no Nest ao lado do gravador e do runner, e pode chamá-los por injeção —
- * nunca o contrário.
- */
+/** A API `/api/v1`. */
 import { Module } from '@nestjs/common'
 import { GitModule } from './git/git.module.js'
 import { AiModule } from './ai/ai.module.js'

@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * A tela de um projeto: cenários, estado do login, ambiente ativo e os links que ela oferece.
- * Portado de `backend-laravel/tests/Feature/V1/ProjectShowTest.php`.
- */
+/** A tela de um projeto: cenários, estado do login, ambiente ativo e os links que ela oferece. */
 import { execFileSync } from 'node:child_process'
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'

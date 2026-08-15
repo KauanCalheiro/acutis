@@ -21,7 +21,6 @@ export function validationPipe(): ValidationPipe {
     return new ValidationPipe({
         transform: true,
         whitelist: true,
-        // Uma mensagem por campo: as regras do mesmo campo se contradiriam na tela.
         stopAtFirstError: true,
         exceptionFactory: (errors: ValidationError[]) => new ValidationFailed(collect(errors))
     })

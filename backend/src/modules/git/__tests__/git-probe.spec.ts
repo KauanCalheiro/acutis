@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * Sondagem de repositório: é o que a tela usa para decidir se pede credencial antes de clonar.
- * Portado de `backend-laravel/tests/Feature/V1/ProjectProbeTest.php`.
- */
+/** Sondagem de repositório: é o que a tela usa para decidir se pede credencial antes de clonar. */
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -16,8 +13,6 @@ let sourceRepo: string
 beforeEach(async () => {
     api = await startApi()
 
-    // Um repositório de verdade em disco: sondar um endereço remoto deixaria o teste dependente
-    // de rede, e a sondagem não distingue local de remoto.
     sourceRepo = join(mkdtempSync(join(tmpdir(), 'acutis-repo-')), 'origem')
     mkdirSync(sourceRepo, { recursive: true })
     execFileSync('git', ['init', '-q'], { cwd: sourceRepo })

@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * Listagem de projetos: filtro, busca, ordenação e paginação. Portado de
- * `backend-laravel/tests/Feature/V1/ProjectListTest.php`.
- */
+/** Listagem de projetos: filtro, busca, ordenação e paginação. */
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'

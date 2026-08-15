@@ -1,10 +1,4 @@
-/**
- * O que os testes da API precisam montar antes de exercitar qualquer coisa.
- *
- * Equivale ao `tests/Pest.php` do Laravel, e existe pelo mesmo motivo: um evento gravado tem doze
- * campos e um seletor tem onze, e repetir isso em cada teste esconde o que cada um está de fato
- * verificando.
- */
+/** O que os testes da API precisam montar antes de exercitar qualquer coisa. */
 import { ActiveVars } from '../../src/common/playwright/active-vars.js'
 import type { EnvironmentVar } from '../../src/modules/environment/providers/environment-var.js'
 import { Url } from '../../src/common/playwright/url.js'

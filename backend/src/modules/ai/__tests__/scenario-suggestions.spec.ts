@@ -1,12 +1,5 @@
 // @vitest-environment node
-/**
- * As sugestões de `data-testid` para os eventos sem seletor estável. Portado de
- * `backend-laravel/tests/Feature/V1/ScenarioSuggestionsTest.php`.
- *
- * Quem escrevia as sugestões era um agente, e ele está fora do escopo desta versão: a lista vem do
- * `stub.ts`. Os casos continuam os mesmos porque o que eles protegem continua o mesmo — a forma da
- * resposta, os 404 e a convenção de nome que o `SelectorRules` cobra de qualquer sugestão.
- */
+/** As sugestões de `data-testid` para os eventos sem seletor estável. */
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, expect, it } from 'vitest'
@@ -27,7 +20,6 @@ function write(relative: string, contents: string): void {
 }
 
 beforeEach(async () => {
-    // O `ApiModule` ainda não importa o módulo de IA; a integração é de quem coordena.
     api = await startApi([AiModule])
     dir = api.projectPath(SLUG)
 

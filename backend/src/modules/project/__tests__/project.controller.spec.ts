@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * Criação de projeto a partir do template. Portado de
- * `backend-laravel/tests/Feature/V1/ProjectTest.php`.
- */
+/** Criação de projeto a partir do template. */
 import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it } from 'vitest'

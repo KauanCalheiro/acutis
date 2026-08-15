@@ -2,9 +2,6 @@
 /**
  * O diário de requisições: uma linha JSON por requisição, com o que entrou, o que saiu e toda
  * chamada externa que ela disparou.
- *
- * Os testes sobem um app de verdade e um servidor externo de verdade — a captura acontece no
- * `fetch` global e no interceptor, e falsear qualquer um dos dois testaria o dublê.
  */
 import { Body, Controller, Get, INestApplication, Post } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
@@ -144,11 +141,6 @@ it('dá um identificador único a cada requisição', async () => {
     expect(segunda!.id).not.toBe(primeira!.id)
 })
 
-/**
- * O modelo responde em pedaços — um JSON por linha, um token em cada. Guardado cru, o corpo vira
- * uma sopa de milhares de fragmentos que estoura o teto e não deixa ler a resposta, que é
- * exatamente o que se quer olhar.
- */
 it('remonta a resposta que o modelo devolveu em pedaços', async () => {
     await http.post('/exemplo/stream').send({}).expect(201)
 
@@ -171,16 +163,11 @@ it('registra a chamada externa disparada dentro da requisição', async () => {
     expect(call.url).toBe(`${remoteUrl}/modelo`)
     expect(call.status).toBe(200)
     expect(call.durationMs).toBeGreaterThanOrEqual(0)
-    // O deslocamento desde o início é o que deixa ver o tempo entre uma chamada e a seguinte.
     expect(call.startedAtMs).toBeGreaterThanOrEqual(0)
     expect(call.request.body).toEqual({ prompt: 'escreva o gherkin' })
     expect(call.response.body).toEqual({ resposta: 'ok' })
 })
 
-/**
- * O arquivo fica em disco e vai parar em relatório de erro. A chave do provedor viaja em todo pedido
- * ao modelo, e escrevê-la aqui seria vazá-la num lugar que ninguém pensa em limpar.
- */
 it('nunca escreve credencial, nem em cabeçalho nem em campo de corpo', async () => {
     await http
         .post('/exemplo/quieto')
@@ -225,10 +212,6 @@ it('registra o erro da requisição que falhou, com o status que o cliente receb
     expect(entry!.error).toContain('Não encontrado')
 })
 
-/**
- * Uma semana é o que interessa para investigar; guardar mais só acumula lixo num diretório que
- * ninguém abre.
- */
 it('apaga o diário com mais de uma semana e mantém o de dentro da janela', async () => {
     const antigo = join(logDir(), 'requests-2020-01-01.jsonl')
     const recente = join(logDir(), 'requests-2020-01-02.jsonl')

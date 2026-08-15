@@ -1,20 +1,22 @@
 ---
 name: backend
-description: Backend Laravel — LER 1º ao criar/editar API, controller, model, migration, recurso; índice → model, contracts, action, filters, conventions, tdd
+description: Backend NestJS (backend/src/modules) — LER 1º ao criar/editar endpoint, DTO, service, recurso; índice → module, contracts, filters, persistence, conventions, tdd
 metadata:
   type: feedback
 ---
+
+A API `/api/v1` vive em `backend/src/modules`, um módulo Nest por domínio, no mesmo processo do gravador e do runner (`backend/src/webdriver` — ver [webdriver](webdriver.md)). Estrutura de pastas em [structure-webdriver](structure-webdriver.md).
 
 ## Sub-memórias
 
 | Arquivo | Assunto |
 |---------|---------|
-| [backend-model](backend-model.md) | Schema, migration, Model + Factory (PHP attributes) |
-| [backend-contracts](backend-contracts.md) | Entrada (`{Resource}Data`) e Saída (`{Resource}Resource`) |
-| [backend-action](backend-action.md) | Action (lógica de negócio), Controller, Rota |
-| [backend-filters](backend-filters.md) | QueryBuilder, filtros, paginação JSON API |
-| [backend-conventions](backend-conventions.md) | Pint, wrapping, estrutura de pastas, restrições |
-| [backend-tdd](backend-tdd.md) | Ciclo TDD — teste antes da implementação |
+| [backend-module](backend-module.md) | Anatomia do módulo: controller magro, service com a regra, providers, entities |
+| [backend-contracts](backend-contracts.md) | Entrada (`dto/*.dto.ts`, class-validator) e saída (`dto/responses/*.response.ts`) |
+| [backend-filters](backend-filters.md) | Listagem: `filter[]`, `search`, `sort`, paginação `page[]` |
+| [backend-persistence](backend-persistence.md) | O repositório é o sistema de arquivos; o único banco é o SQLite das configurações |
+| [backend-conventions](backend-conventions.md) | Estilo TS, erros em pt-BR, status HTTP, config, restrições |
+| [backend-tdd](backend-tdd.md) | Ciclo TDD — Vitest + `startApi`, teste antes da implementação |
 
 ---
 
@@ -23,14 +25,12 @@ metadata:
 ```
 HTTP Request
     ↓
-Route (routes/api/v1.php)
-    ↓
-Controller (V1/{Resource}Controller)
-    ↓                    ↓
-{Resource}Data        Model ←→ DB (schema.dbml → migration)
-(entrada)                ↓
-                  {Resource}Resource
-                  (saída)
+Controller (modules/{dominio}/{dominio}.controller.ts)
+    ↓                         ↓
+{X}Dto                    Service ←→ providers/ (disco, git, sqlite)
+(entrada, validada             ↓
+ pelo ValidationPipe)     {X}Response
+                          (saída, tipo do dto/responses/)
     ↓
 HTTP Response
 ```
@@ -42,7 +42,7 @@ HTTP Response
 TDD obriga o teste primeiro. Dependências técnicas ditam o resto:
 
 1. **Teste** — cobre o contrato HTTP de ponta a ponta (red) → [backend-tdd](backend-tdd.md)
-2. **Migration + Model + Factory** — derivados do [schema](schema.md) → [backend-model](backend-model.md)
-3. **Data / Resource** — contrato de entrada e saída → [backend-contracts](backend-contracts.md)
-4. **Action + Controller + Rota** — orquestra entrada → model → saída (atenção ao gotcha PT-BR) → [backend-action](backend-action.md)
-5. **Pint + commits** — [backend-conventions](backend-conventions.md) + [commit](commit.md)
+2. **Provider** — a leitura/escrita do que está em disco → [backend-persistence](backend-persistence.md)
+3. **DTO / Response** — contrato de entrada e saída → [backend-contracts](backend-contracts.md)
+4. **Service + Controller + Module** — orquestra entrada → provider → saída → [backend-module](backend-module.md)
+5. **`pnpm typecheck` + commits** — [backend-conventions](backend-conventions.md) + [commit](commit.md)

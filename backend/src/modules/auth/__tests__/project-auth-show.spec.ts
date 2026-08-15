@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * O setup de login que o projeto já tem, para a tela mostrar e o usuário editar. Portado de
- * `backend-laravel/tests/Feature/V1/ProjectAuthShowTest.php`.
- */
+/** O setup de login que o projeto já tem, para a tela mostrar e o usuário editar. */
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it } from 'vitest'

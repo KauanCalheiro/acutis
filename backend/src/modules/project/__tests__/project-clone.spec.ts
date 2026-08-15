@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * Importar um projeto que já existe num repositório. Portado de
- * `backend-laravel/tests/Feature/V1/ProjectCloneTest.php`.
- */
+/** Importar um projeto que já existe num repositório. */
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -17,8 +14,6 @@ let sourceRepo: string
 beforeEach(async () => {
     api = await startApi()
 
-    // Um repositório de verdade em disco: clonar de um endereço remoto deixaria o teste dependente
-    // de rede, e o git não distingue local de remoto na hora de clonar.
     sourceRepo = join(mkdtempSync(join(tmpdir(), 'acutis-source-')), 'fonte')
     mkdirSync(sourceRepo, { recursive: true })
 

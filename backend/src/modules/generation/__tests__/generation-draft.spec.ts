@@ -1,14 +1,5 @@
 // @vitest-environment node
-/**
- * O rascunho que a gravação vira antes de virar arquivo. Portado de
- * `backend-laravel/tests/Feature/V1/ProjectTestDraftTest.php`.
- *
- * A IA está fora do escopo da migração: onde o teste Pest falseava o `GherkinWriter`, aqui vale o
- * objeto fixo de `api/ai/stub.ts`, que é o mesmo conteúdo que aquele fake devolvia. Os casos que
- * afirmavam algo sobre o corretor (`ScenarioFixer`) ou sobre a execução do rascunho (`SpecRunner`)
- * — ambos não portados — afirmam agora o comportamento equivalente sem eles: o que as regras
- * apontam volta como aviso para o usuário resolver na revisão.
- */
+/** O rascunho que a gravação vira antes de virar arquivo. */
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -19,10 +10,7 @@ import { startApi, type Harness } from '../../../../test/support/harness.js'
 import { SettingsModule } from '../../settings/settings.module.js'
 import { GenerationModule } from '../generation.module.js'
 
-/**
- * O dublê do agente, no lugar do `GherkinWriter::fake()` que o Pest usava: o teste exercita o
- * caminho com IA ligada sem depender de modelo, de rede nem de provedor de verdade.
- */
+/** O dublê do agente que escreve o Gherkin. */
 vi.mock('../../ai/agents/gherkin.js', () => ({
     writeGherkin: vi.fn(async () => ({
         gherkin: 'Funcionalidade: Login do Usuário\n  Cenário: entra',
@@ -30,7 +18,7 @@ vi.mock('../../ai/agents/gherkin.js', () => ({
     }))
 }))
 
-/** As tags saíram do Gherkin e passaram a vir daqui, que é o passo que nomeia o teste. */
+/** O dublê do agente que nomeia o teste e escolhe as tags. */
 vi.mock('../../ai/agents/metadata.js', () => ({
     writeMetadata: vi.fn(async () => ({
         title: 'Login do Usuário',
@@ -47,8 +35,6 @@ const SLUG = 'portal-sistema'
 beforeEach(async () => {
     api = await startApi([GenerationModule, SettingsModule])
 
-    // Um provedor cadastrado é o que liga a IA: sem ele o rascunho sai só da gravação, que é o
-    // outro caminho e tem casos próprios.
     await api.http
         .put('/api/v1/settings/ai')
         .send({ provider: 'ollama', model: 'llama3.1:8b' })
@@ -117,15 +103,10 @@ it('marca o rascunho como @write quando a gravação altera dados', async () => 
     const response = await draft(body)
 
     expect(response.status).toBe(200)
-    // A primeira tag é decisão de código, não do modelo: é ela que separa o que roda em produção.
     expect(response.body.tags).toEqual(['@write', '@login'])
     expect(response.body.playwright).toContain("'@write'")
 })
 
-/**
- * A tag mora no teste, não na especificação. Deixá-la no `.feature` dava duas fontes para a mesma
- * informação — e o modelo, escrevendo a linha, às vezes a quebrava em duas.
- */
 it('nunca escreve tags no gherkin', async () => {
     const response = await draft(payload({ publico: true }))
 
@@ -160,10 +141,6 @@ it('lê da variável um valor digitado que o ambiente já guarda', async () => {
     expect(response.body.playwright).not.toContain('ABC123')
 })
 
-/**
- * O caso Pest afirmava que o valor de uma variável oculta nunca chegava ao prompt do modelo. Sem
- * modelo, o que continua valendo é o destino: ele não sai do ambiente, nem pela resposta.
- */
 it('nunca deixa o valor de uma variável oculta sair do ambiente', async () => {
     declare(EnvKey.PASSWORD, 'nunca-mande-isso', true)
 
@@ -195,12 +172,6 @@ it('nunca repete um segmento que a url base já carrega', async () => {
     expect(response.body.warnings.join('\n')).not.toContain('segmento-repetido')
 })
 
-/**
- * Quem manda no caminho é a URL do ambiente, e não a que o navegador tinha aberto quando a gravação
- * começou: em runtime o spec concatena sobre `process.env.URL`. Gravar a partir da raiz do host e
- * ter o ambiente apontando para uma subpasta produzia `${base}/plataforma` com base já terminando em
- * `/plataforma` — e o teste ia para `/plataforma/plataforma`.
- */
 it('tira o caminho da url do ambiente, não da que abriu a gravação', async () => {
     declare(EnvKey.URL, 'https://sistema.test/intranet')
 
@@ -234,8 +205,6 @@ it('confere a url por padrão do segmento, nunca por igualdade exata', async () 
 })
 
 it('preenche com a url da gravação a variável de url base que o projeto declarou vazia', async () => {
-    // O projeto nasce com a chave da URL declarada e sem valor; sem isto, o primeiro rascunho sairia
-    // acusado de variável vazia.
     expect(new Environments(dir).value(EnvKey.URL)).toBeFalsy()
 
     const response = await draft()
@@ -252,10 +221,6 @@ it('não tem o que avisar quando o spec gerado não quebra nenhuma regra', async
     expect(response.body.playwright).toContain('test.describe')
 })
 
-/**
- * Sem corretor não há laço: o que a regra aponta vira aviso e o spec volta como o emissor o
- * escreveu, em vez de ser reescrito até um teto de tentativas.
- */
 it('não entra em laço de correção: devolve o spec do emissor com o aviso', async () => {
     declare('SISTEMA', 'produtos')
 
@@ -283,11 +248,6 @@ it('avisa o usuário sobre uma chave declarada sem valor, em vez de tentar corri
     expect(response.body.warnings.join('\n')).toContain('TOKEN')
 })
 
-/**
- * O caso Pest conferia que a execução recebia a URL de homologação na variável que o spec lê. Sem
- * execução, o que resta e continua importando é a metade que sobrevive: o spec lê a URL da
- * variável, e por isso trocar de ambiente não exige reescrevê-lo.
- */
 it('aceita a url de execução e mantém o spec lendo a url da variável', async () => {
     const response = await draft(payload({ executionUrl: 'https://homolog.sistema.test' }))
 
@@ -296,10 +256,6 @@ it('aceita a url de execução e mantém o spec lendo a url da variável', async
     expect(response.body.playwright).not.toContain('homolog.sistema.test')
 })
 
-/**
- * O que ia para o corretor com o erro e a página quebrada agora volta ao usuário como aviso, no
- * formato `regra: mensagem`. E nada do DOM capturado sai na resposta: não há mais quem o receba.
- */
 it('devolve como aviso, com regra e mensagem, o que iria para o corretor', async () => {
     declare('SISTEMA', 'produtos')
 
@@ -333,11 +289,6 @@ it('produz o rascunho numa passagem só, sem repetir a geração', async () => {
     expect(second.body).toEqual(first.body)
 })
 
-/**
- * O caso Pest conferia que o Gherkin sobrevivia às cercas de código com que o modelo o embrulhava.
- * Sem modelo, o que se confere é que a saída estruturada do objeto fixo chega inteira ao rascunho —
- * Gherkin, domínio, e o título dentro do describe do spec.
- */
 it('usa a saída estruturada da ia como gherkin, domínio e título do spec', async () => {
     const response = await draft()
 
@@ -403,10 +354,6 @@ it('deixa o cenário autenticado por padrão, sem a tag de público', async () =
     expect(response.body.playwright).not.toContain('@publico')
 })
 
-/**
- * Sem provedor ativo o spec continua saindo da gravação, que é quem o escreve desde o emissor.
- * Gherkin e domínio ficam em branco para o usuário preencher na revisão, se quiser.
- */
 it('rascunha o spec sem gherkin quando não há provedor de ia ativo', async () => {
     await desligaIa()
 
@@ -415,7 +362,6 @@ it('rascunha o spec sem gherkin quando não há provedor de ia ativo', async () 
     expect(response.status).toBe(200)
     expect(response.body.gherkin).toBe('')
     expect(response.body.domain).toBe('')
-    // A tag de leitura/escrita sai da gravação, não do modelo: ela existe mesmo sem IA.
     expect(response.body.tags).toEqual(['@read'])
     expect(response.body.playwright).toContain('test.describe')
 })

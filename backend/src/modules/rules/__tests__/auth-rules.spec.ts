@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * As regras que só valem para o arquivo de login. Portado de
- * `backend-laravel/tests/Unit/Ai/Rules/AuthRulesTest.php`.
- */
+/** As regras que só valem para o arquivo de login. */
 import { expect, it } from 'vitest'
 import { Playwright } from '../../../common/playwright/playwright.js'
 import { specActiveVars, specUrl } from '../../../../test/support/fixtures.js'

@@ -9,7 +9,7 @@ metadata:
 
 **Proibido:** comentário em tom de conversa — narrar a decisão que foi tomada, o trade-off avaliado, o que aconteceria se fosse diferente, para quem serve, o motivo histórico. Nada de aparte com travessão justificando a escolha.
 
-```php
+```ts
 /** Uma linha do .env; null quando não é CHAVE=valor. */          // ✅
 
 /**                                                                // ❌
@@ -26,4 +26,4 @@ metadata:
 - Comentário explicando **uma decisão** → apagar. Se a decisão precisa sobreviver, vira memória curta em `.claude/memory/`, não linha de código.
 - Comentário explicando **o que o trecho faz** passo a passo → renomear variável/função/arquivo até o código falar sozinho.
 - Comentário de **uma linha, descritivo, sobre a responsabilidade** da função ou classe → pode ficar.
-- `@param`, `@return`, `@phpstan-type`, `@ts-expect-error` e diretivas de compilador não contam como comentário — mas não pendurar texto explicativo depois delas.
+- `@param`, `@return`, `@ts-expect-error`, `@vitest-environment` e diretivas de compilador não contam como comentário — mas não pendurar texto explicativo depois delas.

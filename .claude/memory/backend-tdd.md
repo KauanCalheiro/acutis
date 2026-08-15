@@ -1,6 +1,6 @@
 ---
 name: backend-tdd
-description: Testar backend Laravel — escrever feature test Pest ANTES do código em backend-laravel/app; SQLite in-memory, CRUD V1
+description: Testar a API — spec Vitest em __tests__/ ANTES do código, `// @vitest-environment node`, harness startApi com raiz de projetos temporária
 metadata:
   type: feedback
 ---
@@ -9,42 +9,49 @@ Especificações de stack para TDD no backend. Convenções universais em [tdd](
 
 ## Setup
 
-- Framework: Pest v4
-- DB de teste: SQLite `:memory:` (configurado em `phpunit.xml`)
-- Rodar: `php artisan test --compact --filter={Name}Test`
-- Criar: `php artisan make:test --pest V1/{Name}Test` → `tests/Feature/V1/`
+- Framework: **Vitest** (`backend/vitest.config.ts`).
+- O spec fica em `__tests__/` **dentro do módulo que ele cobre** (`src/modules/project/__tests__/project-list.spec.ts`).
+- O ambiente padrão é jsdom (por causa da pill), então todo spec de servidor abre com `// @vitest-environment node` na primeira linha.
+- Rodar: `pnpm test` · um arquivo: `pnpm test <trecho-do-nome>`.
 
-## Cobertura obrigatória por CRUD
+## Harness
+
+`startApi()` (de `test/support/harness.ts`) sobe a API de verdade com uma raiz de projetos temporária e devolve `{ root, http, projectPath, close }`. `http` é supertest.
+
+```ts
+let api: Harness
+
+beforeEach(async () => { api = await startApi() })
+afterEach(async () => { await api.close() })
+
+it('lista os projetos do diretório', async () => {
+    const response = await api.http.get('/api/v1/projects')
+
+    expect(response.status).toBe(200)
+    expect(response.body.data).toHaveLength(1)
+})
+```
+
+- Módulo ainda não integrado ao `ApiModule`: `startApi([MeuModule])`.
+- Dependência que subiria navegador ou chamaria modelo entra por override: `startApi([], [{ provide: RunnerService, value: duble }])`.
+- Fixtures de evento/seletor em `test/support/fixtures.ts` — nunca repetir o objeto inteiro em cada teste.
+
+## Cobertura obrigatória por recurso
 
 | Cenário | O que verificar |
 |---------|----------------|
-| `index` paginado | `assertJsonStructure(['data','links','meta'])` + count |
-| `index` paginação | `page[size]` e `page[number]`, `meta.current_page` |
-| `index` filtro | filtro por campo retorna só o registro correto |
-| `index` search | busca case-insensitive retorna o certo |
-| `show` | campos corretos no body |
-| `show` not found | 404 |
-| `store` success | 201 + `assertDatabaseHas` |
-| `store` defaults | flags boolean com valor default correto |
-| `store` validação | 422 + `assertJsonValidationErrors` |
-| `update` success | 200 + `assertDatabaseHas` |
-| `update` validação | 422 |
-| `update` not found | 404 |
-| `destroy` | 204 + `assertSoftDeleted` |
-| `destroy` not found | 404 |
-
-## Helpers Pest/Laravel
-
-```php
-use function Pest\Laravel\{getJson, postJson, putJson, deleteJson};
-
-it('description', function () {
-    Model::factory()->create([...]);
-    getJson('/api/v1/recurso')->assertOk()->assertJsonPath('field', value);
-});
-```
+| `index` | `{ data, meta }`, contagem e `meta.total` |
+| `index` paginação | `page[size]`/`page[number]` e `meta.current_page` |
+| `index` filtro/busca | devolve só o registro certo, case-insensitive |
+| `show` | os campos do response |
+| `show` inexistente | 404 |
+| `store` | 201 + o efeito em disco (arquivo/diretório criado) |
+| `store` validação | 422 + a mensagem em `errors` |
+| `update` | 200 + o efeito em disco |
+| `destroy` | 204 + o que saiu do disco junto |
 
 ## Gotchas
 
-- Route model binding com plurais PT-BR singulariza errado — se o teste retorna 404 inesperado, verificar se a rota tem `->parameters([...])` correto (ver [backend-action](backend-action.md))
-- `assertSoftDeleted` verifica `deleted_at` não-nulo, não ausência da linha
+- O teste afirma o **efeito em disco**, não a chamada interna: leia o arquivo com `readFileSync` e confira o conteúdo.
+- Nada de rede: repositório git de teste é um repo local criado com `execFileSync('git', ...)`, e provedor de IA entra como dublê.
+- O `whitelist` do ValidationPipe apaga campo não declarado — teste que manda campo extra e espera vê-lo de volta falha por isso, não por bug do service.

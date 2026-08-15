@@ -185,10 +185,7 @@ function runTest() {
 
 const tab = ref('eventos')
 
-/**
- * O rótulo é o que a aba mostra ao usuário; o valor nomeia o artefato e é o que os testes usam.
- * O Gherkin é opcional: sem arquivo .feature não há aba, e não uma aba que só diz "vazio".
- */
+/** O rótulo é o que a aba mostra; o valor nomeia o artefato. Sem arquivo .feature não há aba. */
 const tabs = computed<TabsItem[]>(() => [
   { label: 'Eventos', value: 'eventos' },
   ...(scenario.value!.gherkin ? [{ label: 'Cenário', value: 'gherkin' }] : []),

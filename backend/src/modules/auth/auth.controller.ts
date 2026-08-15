@@ -24,7 +24,6 @@ export class AuthController {
         this.auth.skip(slug)
     }
 
-    // 200, e não o 201 que o Nest dá a todo POST: a resposta é o arquivo gerado.
     @Post(':project/auth/record')
     @HttpCode(200)
     record(@Param('project') slug: string, @Body() dto: AuthRecordingDto): Promise<GeneratedAuthSetup> {

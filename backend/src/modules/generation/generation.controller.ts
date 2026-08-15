@@ -11,7 +11,6 @@ import { GenerationService, type TestDraft, type WrittenTest } from './generatio
 export class GenerationController {
     constructor(private readonly generation: GenerationService) {}
 
-    // 200, e não o 201 padrão do Nest: nada é criado aqui, o rascunho só existe na resposta.
     @Post('draft')
     @HttpCode(200)
     draft(@Param('project') slug: string, @Body() dto: DraftRecordingDto): Promise<TestDraft> {

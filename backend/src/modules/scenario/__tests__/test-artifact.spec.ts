@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * Leitura e reescrita do par `.feature` + `.spec.ts`. Portado de
- * `backend-laravel/tests/Unit/TestArtifactTest.php`.
- */
+/** Leitura e reescrita do par `.feature` + `.spec.ts`. */
 import { expect, it } from 'vitest'
 import {
     scenario,

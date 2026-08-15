@@ -1,10 +1,4 @@
-/**
- * O que a API responde sobre um projeto — o lugar das `ProjectResource` do Laravel.
- *
- * Os nomes em snake_case e o projeto achatado na raiz (e não sob uma chave `project`) são o formato
- * que o frontend já lê; o tipo existe para que mudá-lo seja uma decisão, e não um efeito colateral
- * de mexer no service.
- */
+/** O que a API responde sobre um projeto. */
 import type { ScenarioData } from '../../../scenario/providers/scenario.js'
 
 export interface ProjectResponse {

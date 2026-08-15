@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * O usuário disse que este projeto não tem login. Portado de
- * `backend-laravel/tests/Feature/V1/ProjectAuthSkipTest.php`.
- */
+/** O usuário disse que este projeto não tem login. */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it } from 'vitest'

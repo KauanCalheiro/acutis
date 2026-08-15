@@ -1,9 +1,6 @@
 import type { RecorderEvent } from '~/composables/webdriver'
 
-/**
- * Como o evento chama o elemento. Mesma ordem de fontes do `SpecEmitter::describe` do backend, e
- * pelo mesmo motivo: seletor CSS não descreve nada a quem lê — sem nome, o passo diz o genérico.
- */
+/** Como o evento chama o elemento, na mesma ordem de fontes do `SpecEmitter` do backend. */
 function target(event: RecorderEvent): string | null {
   const selectors = event.selectors
   const source = event.label || event.innerText || selectors?.placeholder || selectors?.text || ''
@@ -12,11 +9,7 @@ function target(event: RecorderEvent): string | null {
   return clean === '' ? null : clean
 }
 
-/**
- * O alvo entre aspas: separa o que veio da tela do verbo que o descreve, e assim "Clica em" e o
- * nome do botão não viram uma frase só. Substantivo genérico ("o campo") fica sem aspas de
- * propósito — não é nome de nada.
- */
+/** O alvo entre aspas, separando o que veio da tela do verbo que o descreve. */
 function quoted(what: string): string {
   return `"${what}"`
 }
@@ -35,13 +28,8 @@ function page(event: RecorderEvent): string {
 }
 
 /**
- * A frase que descreve o evento gravado, no mesmo vocabulário dos passos que aparecem ao rodar o
- * teste ("Clica em Entrar", "Preenche Senha") — a timeline de eventos e a de execução contam a
- * mesma história, e ler uma prepara para a outra. Verbo na 3ª pessoa: quem age é o teste, e as duas
- * telas narram o que ele fez, não o que se pede a alguém que faça.
- *
- * A navegação é dita pelo caminho, e não pelo título da página: o título é o mesmo do site inteiro
- * em quase todo lugar, e três "Abrir Intra - UNIVATES" seguidos não dizem para onde se foi.
+ * A frase que descreve o evento gravado, no mesmo vocabulário dos passos da execução
+ * ("Clica em Entrar", "Preenche Senha"). A navegação é dita pelo caminho da URL.
  */
 export function describeRecorderEvent(event: RecorderEvent): string {
   const what = target(event)

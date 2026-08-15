@@ -10,9 +10,8 @@ canais.
 | **Instalador desktop** | baixar o `.dmg`/`.exe`/`.AppImage` da release | nada |
 
 O instalador vive nas branches `feat/empacotamento-desktop` (Tauri) e
-`feat/empacotamento-desktop-electron`, com o processo em `docs/RELEASE.md` de cada uma. **Elas ainda
-embutem PHP e o Laravel** — precisam ser reconciliadas com a migração para Node antes da próxima
-release, e o bundle encolhe bastante quando isso acontecer.
+`feat/empacotamento-desktop-electron`, com o processo em `docs/RELEASE.md` de cada uma. Elas ainda
+não acompanharam a estrutura atual do backend e precisam ser reconciliadas antes da próxima release.
 
 ## Sumário
 

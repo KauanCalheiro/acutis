@@ -1,6 +1,5 @@
 /**
- * Faixa 42xx, exclusiva do E2E. As portas de desenvolvimento (frontend 3000, backend 4000) ficam
- * livres, então a suíte roda com a stack local de pé — sem derrubar nada.
+ * As portas exclusivas do E2E, que não colidem com as de desenvolvimento.
  *
  * Fonte única: mudar aqui muda o harness inteiro (Playwright, os dois starters e os scripts).
  */

@@ -18,7 +18,7 @@ export class BadRequest extends HttpError {
     }
 }
 
-/** Falha de validação: o formato que o frontend já espera do Laravel. */
+/** Falha de validação. */
 export class ValidationFailed extends HttpError {
     constructor(readonly errors: Record<string, string[]>, message = 'Os dados informados são inválidos.') {
         super(422, message)

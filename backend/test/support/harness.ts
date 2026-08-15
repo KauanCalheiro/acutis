@@ -1,10 +1,4 @@
-/**
- * O que todo teste de endpoint precisa: um diretório de projetos só dele e um app de pé.
- *
- * Equivale ao `beforeEach`/`afterEach` que os testes Pest repetiam — diretório temporário em
- * `sys_get_temp_dir()` e `config()->set('acutis.projects.path', ...)`. Aqui o caminho entra por
- * variável de ambiente, que é de onde a configuração lê.
- */
+/** O que todo teste de endpoint precisa: um diretório de projetos só dele e um app de pé. */
 import { Test } from '@nestjs/testing'
 import type { INestApplication, ModuleMetadata } from '@nestjs/common'
 import { mkdtempSync, rmSync } from 'node:fs'

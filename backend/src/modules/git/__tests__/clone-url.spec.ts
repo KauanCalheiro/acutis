@@ -1,5 +1,4 @@
 // @vitest-environment node
-/** Portado de `backend-laravel/tests/Unit/CloneUrlTest.php`. */
 import { expect, it } from 'vitest'
 import { tokenUrl } from '../providers/clone-url.js'
 

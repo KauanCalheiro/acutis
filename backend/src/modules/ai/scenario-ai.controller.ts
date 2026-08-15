@@ -8,7 +8,6 @@ import type { FixedSpec, SelectorSuggestion } from './providers/stub.js'
 export class ScenarioAiController {
     constructor(private readonly scenarios: ScenarioAiService) {}
 
-    // POST que não cria recurso: 200.
     @Post(':project/scenarios/:scenario(*)/fix')
     @HttpCode(200)
     fix(

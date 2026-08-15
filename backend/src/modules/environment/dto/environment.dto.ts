@@ -1,13 +1,8 @@
-/** Portado de `App\Data\V1\Project\EnvironmentData`. */
 import { Type } from 'class-transformer'
 import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, ValidateNested } from 'class-validator'
 import { ENV_KEY } from '../providers/environment-var.js'
 
 export class EnvironmentVarDto {
-    /**
-     * A chave vira variável do processo na hora de rodar, então precisa ser um nome que o shell
-     * aceite — espaço ou acento aqui quebraria a execução, não este formulário.
-     */
     @Matches(new RegExp(`^${ENV_KEY}$`), { message: 'A chave da variável é inválida.' })
     key!: string
 

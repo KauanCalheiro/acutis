@@ -23,7 +23,6 @@ services:
         required: false
     environment:
       # A raiz vista do host, para os links `vscode://file/` abrirem no editor de fora do container.
-      # Morava no serviço do Laravel; veio junto com a API.
       ACUTIS_PROJECTS_HOST_PATH: ${ACUTIS_PROJECTS_HOST_PATH:-}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:23000}
       WEBDRIVER_TEST_MODE: "1"

@@ -1,10 +1,6 @@
 // @vitest-environment node
 /**
- * As credenciais que o usuário digita quando a gravação não as revela. Portado de
- * `backend-laravel/tests/Feature/V1/ProjectAuthCredentialsTest.php`.
- *
- * A rota `POST :project/auth/credentials` já é servida pelo `ProjectController`; este arquivo
- * exercita a que existe, e não uma segunda cópia dela.
+ * As credenciais que o usuário digita quando a gravação não as revela.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'

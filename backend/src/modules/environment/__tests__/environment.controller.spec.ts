@@ -1,7 +1,7 @@
 // @vitest-environment node
 /**
  * Os ambientes do projeto: cada um com os mesmos nomes de variável e valores próprios, um deles
- * ativo. Portado de `backend-laravel/tests/Feature/V1/ProjectEnvironmentsTest.php`.
+ * ativo.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -21,8 +21,6 @@ const BASE = `/api/v1/projects/${SLUG}/environments`
 beforeEach(async () => {
     api = await startApi([EnvironmentModule])
 
-    // O projeto nasce à mão, e não pelo endpoint de criação, porque metade dos casos depende de
-    // como os ambientes se comportam antes de alguém tê-los criado.
     dir = api.projectPath(SLUG)
     mkdirSync(dir, { recursive: true })
     writeFileSync(join(dir, 'acutis.json'), JSON.stringify({
@@ -466,11 +464,6 @@ it('cai no valor padrão quando o ambiente ativo deixa a chave vazia', async () 
     expect(environments.value(EnvKey.URL, 'https://padrao.test')).toBe('https://padrao.test')
 })
 
-/**
- * No Laravel este caso e o seguinte iam pelo `POST /run` com o HTTP falso, checando o `env` que o
- * runner recebia. O endpoint de execução ainda não foi migrado, então a asserção recai sobre o que
- * o alimenta: o ambiente resolvido.
- */
 it('roda contra o ambiente ativo', async () => {
     writeFileSync(join(dir, '.env'), 'CUPOM_VALIDO=ABC\n')
 

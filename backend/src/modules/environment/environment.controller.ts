@@ -1,7 +1,4 @@
-/**
- * Os endpoints de ambiente, no mesmo caminho `/api/v1/*` que o Laravel serve hoje — é o que permite
- * o frontend trocar de backend sem alterar uma chamada.
- */
+/** Os endpoints de ambiente. */
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put } from '@nestjs/common'
 import { EnvironmentDto } from './dto/environment.dto.js'
 import { EnvironmentService, type EnvironmentList } from './environment.service.js'

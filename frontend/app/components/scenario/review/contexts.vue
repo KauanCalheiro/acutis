@@ -2,15 +2,9 @@
 import type { TestDraft } from '~/types/project'
 
 interface ScenarioReviewContexts {
-  /**
-   * O cenário de autenticação mora num caminho fixo e roda como setup de todos os outros, então
-   * arquivo, domínio e tags não são dele.
-   */
+  /** O cenário de autenticação não tem arquivo, domínio nem tags próprios. */
   isAuth?: boolean
-  /**
-   * O arquivo ainda não existe, então pode seguir o título enquanto ele é digitado. Editando um
-   * cenário já gravado o nome é fato consumado: só muda quando alguém mexe no campo.
-   */
+  /** Cenário ainda não gravado: o arquivo segue o título enquanto ninguém o editar à mão. */
   novo?: boolean
 }
 
@@ -38,8 +32,6 @@ function tagsFromPlaywright(playwright: string): string[] {
 }
 
 function stampGherkinTags(gherkin: string, tags: string[]): string {
-  // Sem descrição não há o que carimbar: as tags valem pelo spec, e uma linha de tag sozinha viraria
-  // um .feature que só tem tags. Quem escrever o Gherkin depois recebe o carimbo normalmente.
   if (!gherkin.trim()) return gherkin
 
   const lines = gherkin.split('\n')
@@ -84,9 +76,7 @@ const tagsText = computed({
   set: (value: string) => applyTags(tagsFromLine(value))
 })
 
-// Texto sem linha de tag não declara tag nenhuma — não declara lista vazia. Sem esta guarda, a
-// primeira letra digitada num Gherkin em branco apagaria as tags já escolhidas. Quem esvazia a
-// lista é o campo de tags, que é o controle direto dela.
+// Texto sem linha de tag não declara tag nenhuma — não declara lista vazia.
 watch(() => draft.value.gherkin, (gherkin) => {
   if (syncing) return
   const tags = tagsFromGherkin(gherkin)
@@ -99,10 +89,7 @@ watch(() => draft.value.playwright, (playwright) => {
   if (tags.length && tags.join(' ') !== draft.value.tags.join(' ')) applyTags(tags)
 })
 
-/**
- * No cenário novo o arquivo espelha o título, enquanto ninguém o tiver editado à mão: divergiu do
- * título anterior, é nome escolhido, e continuar seguindo passaria por cima dele.
- */
+/** No cenário novo o arquivo espelha o título, enquanto ninguém o tiver editado à mão. */
 watch(() => draft.value.title, (title, previous) => {
   if (!novo || draft.value.path !== slugify(previous)) return
 

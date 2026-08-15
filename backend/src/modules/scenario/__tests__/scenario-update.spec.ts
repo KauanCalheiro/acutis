@@ -1,8 +1,5 @@
 // @vitest-environment node
-/**
- * A edição de um cenário pela tela: renomear, mover de domínio, retagear e apagar o Gherkin.
- * Portado de `backend-laravel/tests/Feature/V1/ScenarioUpdateTest.php`.
- */
+/** A edição de um cenário pela tela: renomear, mover de domínio, retagear e apagar o Gherkin. */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it } from 'vitest'
