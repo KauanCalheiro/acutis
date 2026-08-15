@@ -1,20 +1,19 @@
 import { test, expect } from '@playwright/test'
 import { rmSync } from 'node:fs'
-import { dirname } from 'node:path'
-import { databaseCopy, startBackend } from '../support/backend'
+import { isolatedProjects, startBackend } from '../support/backend'
 
 test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
     let stopBackend: () => Promise<void>
-    let database: string
+    let projects: string
 
     test.beforeAll(async () => {
-        database = databaseCopy()
-        stopBackend = await startBackend({ DB_DATABASE: database })
+        projects = isolatedProjects()
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: projects })
     })
 
     test.afterAll(async () => {
         await stopBackend()
-        rmSync(dirname(database), { recursive: true, force: true })
+        rmSync(projects, { recursive: true, force: true })
     })
 
     test('opens from the navbar without taking the user off the page', async ({ page }) => {

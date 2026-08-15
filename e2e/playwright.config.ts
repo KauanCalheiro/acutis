@@ -21,7 +21,8 @@ export default defineConfig({
         env: {
             ...process.env,
             PORT: String(PORTS.frontend),
-            NUXT_API_ACUTIS_URL: BACKEND_URL,
+            // A API mora no mesmo processo do gravador desde a migração para Node.
+            NUXT_API_ACUTIS_URL: WEBDRIVER_URL,
             NUXT_PUBLIC_WEBDRIVER_ACUTIS_URL: WEBDRIVER_URL,
         },
     },

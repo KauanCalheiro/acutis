@@ -3,7 +3,6 @@ import { createServer, type Server } from 'node:http'
 import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { startBackend } from '../support/backend'
 import { projectsCopy } from '../support/projects'
 import { startWebdriver, WEBDRIVER_URL } from '../support/webdriver'
 import { chromium } from '@playwright/test'
@@ -161,7 +160,6 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
     let scenarioFixtureServer: Server
     let scenarioBaseUrl: string
     let stopScenarioWebdriver: () => Promise<void>
-    let stopBackend: () => Promise<void>
     let tmpProjects: string
 
     test.beforeAll(async () => {
@@ -173,15 +171,14 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
         const { port } = scenarioFixtureServer.address() as { port: number }
         scenarioBaseUrl = `http://127.0.0.1:${port}`
 
-        stopScenarioWebdriver = await startWebdriver()
-
         tmpProjects = projectsCopy(scenarioBaseUrl)
-        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
+
+        // Um processo só: desde a migração, a API e o gravador vivem juntos.
+        stopScenarioWebdriver = await startWebdriver({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
 
     test.afterAll(async () => {
         await stopScenarioWebdriver()
-        await stopBackend()
         rmSync(tmpProjects, { recursive: true, force: true })
         await new Promise<void>((r) => scenarioFixtureServer.close(() => r()))
     })
@@ -464,7 +461,6 @@ test.describe('recording authentication from the auth scenario page', { tag: ['@
     let authFixtureServer: Server
     let authBaseUrl: string
     let stopAuthWebdriver: () => Promise<void>
-    let stopBackend: () => Promise<void>
     let tmpProjects: string
 
     test.beforeAll(async () => {
@@ -476,15 +472,14 @@ test.describe('recording authentication from the auth scenario page', { tag: ['@
         const { port } = authFixtureServer.address() as { port: number }
         authBaseUrl = `http://127.0.0.1:${port}`
 
-        stopAuthWebdriver = await startWebdriver()
-
         tmpProjects = projectsCopy(authBaseUrl)
-        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
+
+        // Um processo só: desde a migração, a API e o gravador vivem juntos.
+        stopAuthWebdriver = await startWebdriver({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
 
     test.afterAll(async () => {
         await stopAuthWebdriver()
-        await stopBackend()
         rmSync(tmpProjects, { recursive: true, force: true })
         await new Promise<void>((r) => authFixtureServer.close(() => r()))
     })
@@ -794,19 +789,21 @@ test.describe('recording over cdp against a host chrome', { tag: ['@write', '@re
 
 test.describe('recording error when the host chrome is unreachable', { tag: ['@write', '@recording'] }, () => {
     let stopBadWebdriver: () => Promise<void>
-    let stopBackend: () => Promise<void>
     let tmpProjects: string
 
     test.beforeAll(async () => {
-        stopBadWebdriver = await startWebdriver({ RECORDER_CDP_URL: 'http://127.0.0.1:9997' })
-
         tmpProjects = projectsCopy()
-        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
+
+        // Um processo só, com o CDP apontado para uma porta morta: é o que faz o gravador falhar
+        // como falharia sem Chrome no host.
+        stopBadWebdriver = await startWebdriver({
+            RECORDER_CDP_URL: 'http://127.0.0.1:9997',
+            ACUTIS_PROJECTS_PATH: tmpProjects
+        })
     })
 
     test.afterAll(async () => {
         await stopBadWebdriver()
-        await stopBackend()
         rmSync(tmpProjects, { recursive: true, force: true })
     })
 
