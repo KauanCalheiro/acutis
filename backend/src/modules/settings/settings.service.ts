@@ -1,21 +1,18 @@
 /** As configurações de IA: o provedor ativo, o cadastro de cada um e o que deles já dá para usar. */
 import { type AvailableModel, listModels } from '../ai/providers/model-catalog.js'
 import { isSupported } from '../ai/providers/provider-model.js'
-import { Injectable } from '@nestjs/common'
+import { Injectable, type OnModuleInit } from '@nestjs/common'
+import { InjectRepository } from '@nestjs/typeorm'
+import type { Repository } from 'typeorm'
 import { ValidationFailed } from '../../common/exceptions/errors.js'
 import { PROVIDERS, PROVIDER_NAMES, defaultProviderUrls, providerFromEnvironment } from './providers/ai-providers.js'
-import { db, decrypt, encrypt } from './providers/database.js'
+import { decrypt, encrypt } from './providers/crypto.js'
+import { AiCredential } from './entities/ai-credential.entity.js'
+import { Setting } from './entities/setting.entity.js'
 import type { AiSettings, ProviderCredential, ResolvedProvider } from './entities/ai-settings.entity.js'
 
 /** A chave global que guarda qual provedor está ativo. */
 const AI_PROVIDER = 'ai.provider'
-
-interface CredentialRow {
-    provider: string
-    key: string | null
-    url: string | null
-    model: string | null
-}
 
 /** Campo em branco vira ausência. */
 function blankToNull(value: string | null | undefined): string | null {
@@ -23,33 +20,44 @@ function blankToNull(value: string | null | undefined): string | null {
 }
 
 @Injectable()
-export class SettingsService {
+export class SettingsService implements OnModuleInit {
+    constructor(
+        @InjectRepository(Setting) private readonly settings: Repository<Setting>,
+        @InjectRepository(AiCredential) private readonly aiCredentials: Repository<AiCredential>
+    ) {}
+
+    /** Toda a tela conta com uma linha por provedor, então ela nasce junto com o banco. */
+    async onModuleInit(): Promise<void> {
+        await this.aiCredentials.upsert(
+            PROVIDER_NAMES.map((provider) => ({ provider })),
+            { conflictPaths: ['provider'], skipUpdateIfNoValuesChanged: true }
+        )
+    }
+
     /** O provedor ativo; sem nada gravado, o das variáveis de ambiente. Fora da lista, é sem IA. */
-    activeProvider(): string {
-        const stored = this.storedProvider()
+    async activeProvider(): Promise<string> {
+        const stored = await this.storedProvider()
 
         return PROVIDER_NAMES.includes(stored) ? stored : ''
     }
 
-    private storedProvider(): string {
+    private async storedProvider(): Promise<string> {
         try {
-            const row = db().prepare('SELECT value FROM settings WHERE key = ?').get(AI_PROVIDER) as
-                | { value: string | null }
-                | undefined
+            const row = await this.settings.findOneBy({ key: AI_PROVIDER })
 
-            return row === undefined ? providerFromEnvironment() : (decrypt(row.value) ?? '')
+            return row === null ? providerFromEnvironment() : (decrypt(row.value) ?? '')
         } catch {
             return providerFromEnvironment()
         }
     }
 
-    show(): AiSettings {
-        const provider = this.activeProvider()
+    async show(): Promise<AiSettings> {
+        const provider = await this.activeProvider()
 
         return {
             provider,
             configured: provider !== '',
-            credentials: this.credentials(),
+            credentials: await this.credentials(),
             providers: PROVIDER_NAMES,
             provider_urls: defaultProviderUrls()
         }
@@ -59,36 +67,25 @@ export class SettingsService {
      * Grava o cadastro no provedor escolhido e o torna o ativo. Provedor vazio desliga a IA sem
      * tocar em cadastro nenhum.
      */
-    update(input: {
+    async update(input: {
         provider: string
         key?: string | null
         url?: string | null
         model?: string | null
-    }): AiSettings {
+    }): Promise<AiSettings> {
         const provider = input.provider ?? ''
 
-        this.ensureHasKey(provider, input.key)
+        await this.ensureHasKey(provider, input.key)
 
-        db()
-            .prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
-            .run(AI_PROVIDER, encrypt(provider))
+        await this.settings.save({ key: AI_PROVIDER, value: encrypt(provider) })
 
         if (provider !== '') {
-            db()
-                .prepare(`
-                    INSERT INTO ai_settings (provider, key, url, model)
-                    VALUES (@provider, @key, @url, @model)
-                    ON CONFLICT(provider) DO UPDATE SET
-                        key = excluded.key,
-                        url = excluded.url,
-                        model = excluded.model
-                `)
-                .run({
-                    provider,
-                    key: blankToNull(input.key) === null ? null : encrypt(input.key!),
-                    url: blankToNull(input.url),
-                    model: blankToNull(input.model)
-                })
+            await this.aiCredentials.save({
+                provider,
+                key: blankToNull(input.key) === null ? null : encrypt(input.key!),
+                url: blankToNull(input.url),
+                model: blankToNull(input.model)
+            })
         }
 
         return this.show()
@@ -100,7 +97,7 @@ export class SettingsService {
      */
     async availableModels(input: { provider: string, key?: string | null, url?: string | null }): Promise<AvailableModel[]> {
         const defaults = PROVIDERS[input.provider] ?? {}
-        const saved = this.credentialOf(input.provider)
+        const saved = await this.credentialOf(input.provider)
 
         try {
             return await listModels({
@@ -115,8 +112,8 @@ export class SettingsService {
     }
 
     /** Se há provedor suportado e modelo informado — ou seja, se dá para chamar um modelo agora. */
-    canUseAi(): boolean {
-        const config = this.resolved()
+    async canUseAi(): Promise<boolean> {
+        const config = await this.resolved()
 
         if (config.provider === '' || !isSupported(config.provider)) return false
 
@@ -124,10 +121,10 @@ export class SettingsService {
     }
 
     /** O cadastro do provedor ativo por cima dos padrões dele. */
-    resolved(): ResolvedProvider {
-        const provider = this.activeProvider()
+    async resolved(): Promise<ResolvedProvider> {
+        const provider = await this.activeProvider()
         const defaults = PROVIDERS[provider] ?? {}
-        const saved = this.credentialOf(provider)
+        const saved = await this.credentialOf(provider)
 
         return {
             provider,
@@ -138,26 +135,28 @@ export class SettingsService {
     }
 
     /** Cobra a chave de quem não é `keyless`, aceitando a que já estiver guardada. */
-    private ensureHasKey(provider: string, key?: string | null): void {
+    private async ensureHasKey(provider: string, key?: string | null): Promise<void> {
         if (provider === '' || PROVIDERS[provider]?.keyless) return
         if (blankToNull(key) !== null) return
-        if (this.credentialOf(provider)?.key) return
+        if ((await this.credentialOf(provider))?.key) return
 
         throw new ValidationFailed({ key: ['A chave de API do provedor escolhido é obrigatória.'] })
     }
 
     /** O cadastro de cada provedor, chave inclusive. */
-    private credentials(): Record<string, ProviderCredential> {
-        return Object.fromEntries(this.rows().map((row) => [row.provider, this.toCredential(row)]))
+    private async credentials(): Promise<Record<string, ProviderCredential>> {
+        const rows = await this.rows()
+
+        return Object.fromEntries(rows.map((row) => [row.provider, this.toCredential(row)]))
     }
 
-    private credentialOf(provider: string): ProviderCredential | null {
-        const row = this.rows().find((candidate) => candidate.provider === provider)
+    private async credentialOf(provider: string): Promise<ProviderCredential | null> {
+        const row = (await this.rows()).find((candidate) => candidate.provider === provider)
 
         return row === undefined ? null : this.toCredential(row)
     }
 
-    private toCredential(row: CredentialRow): ProviderCredential {
+    private toCredential(row: AiCredential): ProviderCredential {
         return {
             key: decrypt(row.key),
             url: row.url,
@@ -166,9 +165,9 @@ export class SettingsService {
     }
 
     /** Os cadastros gravados; lista vazia quando o banco ainda não existe. */
-    private rows(): CredentialRow[] {
+    private async rows(): Promise<AiCredential[]> {
         try {
-            return db().prepare('SELECT * FROM ai_settings').all() as CredentialRow[]
+            return await this.aiCredentials.find()
         } catch {
             return []
         }

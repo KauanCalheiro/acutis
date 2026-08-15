@@ -11,12 +11,12 @@ export class SettingsController {
     constructor(private readonly settings: SettingsService) {}
 
     @Get('ai')
-    showAi(): AiSettings {
+    showAi(): Promise<AiSettings> {
         return this.settings.show()
     }
 
     @Put('ai')
-    updateAi(@Body() dto: AiSettingsDto): AiSettings {
+    updateAi(@Body() dto: AiSettingsDto): Promise<AiSettings> {
         return this.settings.update(dto)
     }
 
