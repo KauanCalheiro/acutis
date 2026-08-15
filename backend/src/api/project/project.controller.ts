@@ -2,18 +2,51 @@
  * Os endpoints de projeto, no mesmo caminho `/api/v1/*` que o Laravel serve hoje — é o que permite o
  * frontend trocar de backend sem alterar uma chamada.
  */
-import { Body, Controller, HttpCode, Post } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common'
 import { CreateProjectDto } from './dto/create-project.dto.js'
+import { UpdateProjectDto } from './dto/update-project.dto.js'
 import { Project } from './entities/project.entity.js'
-import { ProjectService } from './project.service.js'
+import { ProjectService, type Paginated } from './project.service.js'
+
+/** Os parâmetros de listagem chegam como `filter[name]`, `page[size]` — o formato JSON:API. */
+interface ListParams {
+    filter?: { name?: string, slug?: string }
+    search?: string
+    sort?: string
+    page?: { size?: string, number?: string }
+}
 
 @Controller('api/v1/projects')
 export class ProjectController {
     constructor(private readonly projects: ProjectService) {}
 
+    @Get()
+    index(@Query() params: ListParams): Promise<Paginated<Project>> {
+        return this.projects.findAll({
+            filters: params.filter,
+            search: params.search,
+            sort: params.sort,
+            page: {
+                size: params.page?.size ? Number(params.page.size) : undefined,
+                number: params.page?.number ? Number(params.page.number) : undefined
+            }
+        })
+    }
+
     @Post('create/template')
     @HttpCode(201)
     store(@Body() dto: CreateProjectDto): Project {
         return this.projects.create(dto.name)
+    }
+
+    @Put(':project')
+    update(@Param('project') slug: string, @Body() dto: UpdateProjectDto): Promise<Project> {
+        return this.projects.update(slug, dto.name)
+    }
+
+    @Delete(':project')
+    @HttpCode(204)
+    destroy(@Param('project') slug: string): void {
+        this.projects.remove(slug)
     }
 }
