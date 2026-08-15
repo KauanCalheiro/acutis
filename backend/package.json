@@ -34,6 +34,7 @@
   ],
   "scripts": {
     "dev": "node --import @swc-node/register/esm-register src/main.ts",
+    "db:fresh": "node --import @swc-node/register/esm-register src/scripts/db-fresh.ts",
     "build": "tsc",
     "build:ui": "vite build --config vite.ui.config.ts",
     "cli:build": "pnpm build:ui && pnpm build && node scripts/bundle-frontend.js",
