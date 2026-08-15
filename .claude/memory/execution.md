@@ -5,14 +5,14 @@ metadata:
   type: feedback
 ---
 
-Dois jeitos de rodar a stack (backend, frontend, webdriver) — cada um com setup, portas e comandos próprios.
+Dois jeitos de rodar a stack (backend e frontend) — cada um com setup, portas e comandos próprios.
 
 ## Modos (cada um numa skill)
 
 | Skill | Assunto |
 |-------|---------|
-| skill `run-docker` | Ambiente isolado via `docker compose`, não precisa de PHP/Node/Composer/pnpm no host; comandos em `.claude/skills/run-docker/SKILL.md` |
-| skill `run-local` | Serviços direto no host, precisa de PHP/Node/Composer/pnpm instalados — modo que o [e2e](e2e.md) sempre usa; comandos em `.claude/skills/run-local/SKILL.md` |
+| skill `run-docker` | Ambiente isolado via `docker compose`, não precisa de Node/pnpm no host; comandos em `.claude/skills/run-docker/SKILL.md` |
+| skill `run-local` | Serviços direto no host, precisa de Node/pnpm instalados — modo que o [e2e](e2e.md) sempre usa; comandos em `.claude/skills/run-local/SKILL.md` |
 
 **Why:** os dois modos são válidos, mas não são intercambiáveis por serviço — misturar container Docker de um serviço com processo local do mesmo serviço no mesmo host causa conflito de porta/estado.
 

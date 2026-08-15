@@ -1,20 +1,20 @@
 ---
 name: run-local
-description: Use when the user wants to run, start, boot, or serve the acutis stack 100% locally (direct host processes, no Docker) — backend-laravel :8000, frontend Nuxt :3000, backend NestJS :4000. Triggers on "rodar local", "subir local", "run local", "start the app locally".
+description: Use when the user wants to run, start, boot, or serve the acutis stack 100% locally (direct host processes, no Docker) — frontend Nuxt :3000, backend NestJS :4000 (API + gravador + runner). Triggers on "rodar local", "subir local", "run local", "start the app locally".
 ---
 
 # Rodar a stack acutis 100% local
 
-Sobe backend, frontend e webdriver como processos diretos no host (sem Docker). É o mesmo modo que o e2e usa por baixo. Esta skill é a fonte de verdade dos comandos do modo local.
+Sobe backend e frontend como processos diretos no host (sem Docker). É o mesmo modo que o e2e usa por baixo. Esta skill é a fonte de verdade dos comandos do modo local.
 
 **Não misturar com Docker no mesmo serviço/host** (conflito de porta/estado). Se o compose estiver de pé, derrubar antes (`docker compose -f docker-compose.dev.yml down`).
 
 ## Pré-requisitos no host
 
-PHP 8.5+, Composer, Node 24+, pnpm. Checar antes de subir:
+Node 24+, pnpm. Checar antes de subir:
 
 ```sh
-php -v && composer --version && node -v && pnpm -v
+node -v && pnpm -v
 ```
 
 Faltando algum → parar e avisar o usuário; não tentar instalar runtime.
@@ -23,45 +23,34 @@ Faltando algum → parar e avisar o usuário; não tentar instalar runtime.
 
 | Serviço | Porta | URL |
 |---------|-------|-----|
-| backend-laravel | 8000 | http://localhost:8000 |
 | frontend (Nuxt) | 3000 | http://localhost:3000 |
 | backend (NestJS) | 4000 | http://localhost:4000 |
 
-Os configs (`frontend/nuxt.config.ts`, `backend/src/config/env.ts`, `backend-laravel/config/acutis.php`) já apontam pra esses defaults entre si — o Docker é que sobrescreve pros nomes de serviço, não o contrário.
+O backend serve a API, o gravador e o runner no mesmo processo. Os configs (`frontend/nuxt.config.ts`, `backend/src/config/env.ts`) já apontam pra esses defaults entre si — o Docker é que sobrescreve pros nomes de serviço, não o contrário.
 
-## Setup de primeira vez — backend (idempotente)
+## Setup de primeira vez
 
-```sh
-cd backend
-composer install
-[ -f .env ] || cp .env.example .env
-php artisan key:generate
-touch database/database.sqlite
-php artisan migrate
-```
+Só `pnpm install` em `frontend/` e `backend/` na primeira vez (ou após mudar dependência). O SQLite das configurações nasce sozinho na primeira execução.
 
-Frontend e webdriver: só `pnpm install` na primeira vez (ou após mudar dependência).
-
-## Subir os três de uma vez (preferido)
+## Subir os dois de uma vez (preferido)
 
 ```sh
-./dev.sh              # sobe os três, fica preso, logs prefixados; Ctrl+C derruba tudo
-./dev.sh --build      # instala dependências e prepara o banco antes de subir
+./dev.sh              # sobe os dois, fica preso, logs prefixados; Ctrl+C derruba tudo
+./dev.sh --build      # instala dependências antes de subir
 ./dev.sh --headless   # recorder sem janela — usar quando um agente dirige a ferramenta
 ```
 
 **`--headless` quando você não é a pessoa no micro.** O recorder abre Chromium visível por padrão, porque gravar é alguém usando o sistema. Dirigindo por API (`/debug/goto`, `/debug/click`), a janela só rouba o foco de quem está trabalhando na máquina.
 
-É o equivalente local do `docker compose up`. Já checa os pré-requisitos, recusa subir se alguma porta estiver ocupada, passa o `WEBDRIVER_TEST_MODE=1` e imprime as URLs quando os três respondem.
+É o equivalente local do `docker compose up`. Já checa os pré-requisitos, recusa subir se alguma porta estiver ocupada, passa o `WEBDRIVER_TEST_MODE=1` e imprime as URLs quando os dois respondem.
 
-Rodando por um agente: lançar com `run_in_background` e derrubar depois com `kill -INT <pid>` — o `set -m` do script coloca cada serviço no próprio process group, então o SIGINT limpa a árvore inteira (verificado: 3 processos → 0, portas liberadas).
+Rodando por um agente: lançar com `run_in_background` e derrubar depois com `kill -INT <pid>` — o `set -m` do script coloca cada serviço no próprio process group, então o SIGINT limpa a árvore inteira.
 
 ## Subir cada um separado (quando precisar isolar um serviço)
 
 ```sh
-cd backend-laravel && php artisan serve                              # :8000
-cd frontend        && pnpm install && pnpm dev                       # :3000
-cd backend         && pnpm install && WEBDRIVER_TEST_MODE=1 pnpm dev # :4000
+cd frontend && pnpm install && pnpm dev                       # :3000
+cd backend  && pnpm install && WEBDRIVER_TEST_MODE=1 pnpm dev # :4000
 ```
 
 **`WEBDRIVER_TEST_MODE=1` não é opcional pra rodar teste pela UI.** Os endpoints `/runner/*` (que o botão "Testar" usa, via backend) respondem **403** sem ela. O compose já seta; local precisa passar na linha de comando.
@@ -70,10 +59,10 @@ Lançar cada um com `run_in_background`, depois confirmar que respondem (curl na
 
 ## Reiniciar depois de editar
 
-- **backend-laravel / frontend**: hot reload, não precisa reiniciar.
+- **frontend**: hot reload, não precisa reiniciar.
 - **backend**: `pnpm dev` **NÃO é watch mode** — é `node` de uma vez só. Editou `backend/src/**` → matar (`pkill -f main.ts`) e subir de novo, senão serve código antigo silenciosamente.
 
 ## Notas
 
 - Sem `RECORDER_CDP_URL`, o recorder abre o próprio Chromium headed (não depende de Chrome externo, diferente do Docker).
-- E2E: não precisa subir nada à mão — `pnpm test` dentro de `e2e/` sobe os três como processos filhos e faz o seed do `database/e2e.sqlite` sozinho (`e2e/scripts/setup.sh` como `pretest`).
+- E2E: não precisa subir nada à mão — `pnpm test` dentro de `e2e/` sobe os dois como processos filhos (`e2e/scripts/setup.sh` como `pretest` faz o build do frontend).

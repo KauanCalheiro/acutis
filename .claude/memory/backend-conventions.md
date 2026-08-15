@@ -1,76 +1,44 @@
 ---
 name: backend-conventions
-description: Escrever/formatar PHP no backend Laravel — Pint, helpers blank/filled, Support fluente, wrapping, estrutura de pastas, restrições
+description: Escrever TypeScript no backend NestJS — estilo do repo, imports .js, erros de domínio em pt-BR, status HTTP, config em src/config, restrições
 metadata:
   type: feedback
 ---
 
-Convenções para qualquer mudança em `backend/`. Ver [backend](backend.md).
+Convenções para qualquer mudança em `backend/src`. Ver [backend](backend.md).
 
-## Formatação
+## Estilo
 
-Rodar após qualquer mudança em arquivo PHP:
-```
-vendor/bin/pint --dirty --format agent
-```
+- 4 espaços, sem ponto e vírgula no fim da linha, aspas simples.
+- **Import relativo sempre com `.js`** (`'./project.service.js'`) — é ESM de verdade, sem o sufixo o Node não resolve.
+- `type` explícito no import de tipo (`import type { ... }`).
+- Conferir com `pnpm typecheck` (e `pnpm typecheck:ui` quando mexer na pill) antes de dar a mudança por pronta.
 
-## Responses
+## Erros
 
-- **Toda resposta de controller retorna um Resource** (`app/Http/Resources/V1/{X}Resource`) — nunca `response()->json($data)` cru, nem devolver um objeto Spatie Data direto. Vale também pros endpoints de IA (geração de teste, auth setup): o retorno da Action é embrulhado num Resource. Resources aninham (`ProjectResource::make(...)` dentro de outro) e reusam parciais (`TestRunResource`). Campo opcional: `$this->x ? XResource::make($this->x) : null`.
-- `JsonResource::withoutWrapping()` ativo globalmente — respostas sem `data` wrapper, exceto paginação (que usa `data` + `links` + `meta`)
-- `store` retorna status 201; `destroy` retorna 204 (`response()->noContent()`)
+Erro de domínio é uma classe de `common/exceptions/errors.ts` — `NotFound`, `BadRequest`, `ValidationFailed` —, lançada pelo service. O `HttpErrorFilter` global traduz em resposta; o 422 leva `{ message, errors }`. Nunca montar `res.status(...).json(...)` à mão no controller.
+
+**Toda mensagem de erro em pt-BR**, inclusive as dos decorators de validação.
+
+## Respostas
+
+- O tipo de retorno do controller é o do `dto/responses/` — ver [backend-contracts](backend-contracts.md).
+- Sem wrapper `data`, exceto a paginação (`{ data, meta }`).
+- `store` responde 201; `destroy`, 204 (`@HttpCode(204)`); POST que não cria recurso, 200 (`@HttpCode(200)`).
 
 ## Config
 
-- Config aninhada em `config/acutis.php` (ex.: `acutis.projects.path`)
-- Acesso **sempre** via resolver tipado `acutis()` (helper global → `App\Support\AcutisConfig`), nunca `config('acutis...')` cru: `acutis()->projectsPath`
-- `AcutisConfig::resolve()` lê a config a cada chamada (respeita override em testes)
-
-## Enums
-
-- Valores de domínio com conjunto fechado = enum PHP em `app/Enums/` (ex.: `GitProvider: github|gitlab`)
-- Spatie Data suporta enums nativamente (`EnumCast` na entrada, `EnumTransformer` → `->value` na saída)
-- Em Resource, expor `$this->campo?->value`
-
-## Helpers do Laravel em vez de teste manual
-
-Checagem de vazio/preenchido **sempre** pelos helpers globais do Laravel — `blank()`, `filled()` — nunca `empty()`, `is_null()`, `=== null`, `!== ''`.
-
-```php
-if (filled($spec)) { ... }
-if (blank($this->remoteUrl())) { ... }
-```
-
-**Why:** um único critério de "vazio" pra string, array, Collection e null — `empty('0')` e `=== null` divergem justamente nos casos de borda. Vale pra qualquer helper do framework: se o Laravel já tem, usar o dele em vez de reimplementar (`Str::`, `Arr::`, `collect()`, `data_get()`).
-
-## Classes de Support com API fluente
-
-Classe de `app/Support/` que executa ações (não só consulta) é instanciada por um named constructor e **cada método de ação retorna `self`**, pra encadear:
-
-```php
-Git::in($path)->commit($message, $files)->push();
-```
-
-- Named constructor estático (`Git::in($path)`) guarda o contexto no construtor privado
-- Métodos de ação (`commit`, `push`) → `return $this`
-- Métodos de consulta (`branch`, `remoteUrl`, `author`) → retornam o valor
-- Nunca método estático recebendo o mesmo contexto de novo em cada chamada (`Git::commit($path, ...)`)
-
-**Why:** o contexto (path, conexão, etc.) é dito uma vez só, a leitura fica em ordem de execução e cada passo continua isolado e testável.
+- Variável de ambiente é lida **uma vez**, em `src/config/env.ts`, e exportada como constante (`PORT`, `CORS_ORIGIN`, `RECORDER_HEADLESS`). Nada de `process.env` espalhado pelos módulos.
+- A raiz de projetos é a exceção deliberada: sai de `common/utils/acutis.ts`, que relê a variável a cada chamada porque o teste a troca por execução.
 
 ## Estrutura de pastas
 
 ```
-app/Http/Controllers/V1/   ← controllers da v1
-app/Http/Resources/V1/     ← resources da v1
-app/Data/V1/{Resource}/    ← Spatie Data (DTOs) por recurso
-app/Action/                ← lógica de negócio (AsAction) → [backend-action](backend-action.md)
-app/Enums/                 ← enums de domínio
-app/Support/               ← helpers/resolvers (AcutisConfig, Git)
-tests/Feature/V1/          ← testes de feature da v1
-routes/api/v1.php          ← rotas da v1
+src/config/            ← env e caminhos
+src/common/            ← filters, pipes, interceptors, exceptions, utils, playwright, types
+src/modules/{dominio}/ ← a API, um módulo por domínio → [backend-module](backend-module.md)
+src/webdriver/         ← gravador, runner, vídeo e pill → [webdriver](webdriver.md)
+test/support/          ← harness e fixtures dos testes
 ```
 
-Não criar pastas base novas sem aprovação.
-
-Guidelines completas do Boost em `backend/CLAUDE.md`. Nunca comentar código — ver [comments](comments.md).
+Não criar pasta base nova sem aprovação. Nunca comentar deliberação — ver [comments](comments.md).

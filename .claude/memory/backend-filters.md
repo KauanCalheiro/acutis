@@ -1,40 +1,38 @@
 ---
 name: backend-filters
-description: Endpoint de listagem (index) no backend — spatie QueryBuilder: busca, filtros filter[], sort, paginação JSON API page[]
+description: Endpoint de listagem (index) — filter[campo], search, sort e paginação page[size]/page[number] no formato que o frontend já lê
 metadata:
   type: feedback
 ---
 
-Padrão obrigatório para `index` de qualquer controller. Ver [backend-action](backend-action.md) para contexto do Controller.
+Padrão do `index` de qualquer controller. Contexto do controller em [backend-module](backend-module.md).
 
-## QueryBuilder — padrão index
+## Parâmetros
 
-```php
-QueryBuilder::for(Model::class)
-    ->allowedSorts('id', 'descricao', 'created_at', 'updated_at')
-    ->allowedIncludes('relacao1', 'relacao2')
-    ->allowedFilters(
-        AllowedFilter::exact('id'),
-        AllowedFilter::partial('descricao'),
-        AllowedFilter::callback('search', function ($query, string $value): void {
-            $query->where(function ($q) use ($value): void {
-                $q->whereRaw('LOWER(descricao) LIKE LOWER(?)', ["%{$value}%"])
-                    ->orWhereRaw('CAST(id AS TEXT) LIKE ?', ["%{$value}%"]);
-            });
-        }),
-    )
-    ->jsonPaginate();
+Chegam no formato JSON:API, que é o que o frontend manda:
+
+| Query | Efeito |
+|-------|--------|
+| `filter[campo]=x` | match parcial, case-insensitive, no campo |
+| `search=x` | busca unificada nos campos que identificam o recurso |
+| `sort=campo` / `sort=-campo` | ordena; `-` inverte |
+| `page[size]` + `page[number]` | fatia a lista; sem `page[size]`, devolve tudo |
+
+O controller só converte o que vem como texto (`Number(params.page?.size)`) e repassa uma `ListQuery` ao service.
+
+## Service
+
+Não há ORM: a listagem carrega os itens (diretórios de projeto, arquivos de cenário), filtra, ordena e fatia em memória, nessa ordem.
+
+```ts
+const total = projects.length
+const size = query.page?.size ?? total
+const number = query.page?.number ?? 1
+const data = query.page?.size ? projects.slice((number - 1) * size, number * size) : projects
+
+return { data, meta: { current_page: number, per_page: size, total } }
 ```
 
-- `AllowedFilter::exact` — match exato (id, flags, FK)
-- `AllowedFilter::partial` — LIKE (descricao, nome, email)
-- `AllowedFilter::callback('search', ...)` — busca unificada em múltiplos campos; sempre incluir `id` como fallback numérico
-
-## Paginação
-
-Parâmetros: `page[number]` e `page[size]` (JSON API spec).
-Resposta inclui `data`, `links` e `meta` com `current_page`, `last_page`, `total`.
-
-## PostgreSQL
-
-Em produção o banco é PostgreSQL — usar `LOWER()`/`ILIKE` nas queries de busca. SQLite (testes) aceita `LOWER()` mas não `ILIKE`.
+- Campo de ordenação fora da lista permitida (`SORTABLE`) cai no default, nunca estoura.
+- Busca sempre case-insensitive (`toLowerCase().includes(...)`).
+- A resposta é `{ data, meta }` com `current_page`, `per_page` e `total` — é o que a tabela do frontend lê.

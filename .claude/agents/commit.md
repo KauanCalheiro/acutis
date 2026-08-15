@@ -14,7 +14,7 @@ O pedido escolhe o modo. `test` (ou "só os testes", "commita os testes") roda o
 1. `git status --short` e `git branch --show-current`.
 2. Nada modificado: dizer isso e parar.
 3. Na `main`: criar branch a partir do trabalho pendente (`git checkout -b <tipo>/<assunto-curto>`) antes de qualquer `git add`.
-4. Separar os arquivos em dois grupos: teste é o que casa com `**/tests/**`, `*Test.php`, `*.spec.ts`, `e2e/**`; implementação é o resto.
+4. Separar os arquivos em dois grupos: teste é o que casa com `**/tests/**`, `**/__tests__/**`, `*.spec.ts`, `e2e/**`; implementação é o resto.
 5. Cada grupo que junte coisas não relacionadas vira mais de um commit, um por coisa feita.
 6. Terminar com `git log --oneline -3` e relatar branch, hashes e assuntos.
 

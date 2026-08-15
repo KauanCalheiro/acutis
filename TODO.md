@@ -13,10 +13,10 @@
 - [ ] O botão dispara a run passando o texto da busca como filtro (ex.: `@tag` roda só os testes com essa tag), reaproveitando o matching que a busca já usa para exibir os testes.
 - [ ] Backend/runner precisa aceitar filtro por tag/texto na chamada que dispara a execução em lote (checar `backend/src/webdriver/runner`).
 
-## Empacotar a stack (webdriver + frontend + PHP + Git) num instalável
+## Empacotar a stack (webdriver + frontend + Git) num instalável
 
 - [ ] Decidir abordagem: Electron empacotando os serviços, binário único (ex.: via `pkg`/Bun compile) ou instalador batch que baixa/configura as dependências.
-- [ ] Levantar todas as dependências externas hoje assumidas no host (PHP, Composer, Node, Git, Playwright browsers) e o que falta vendorizar/embutir.
+- [ ] Levantar todas as dependências externas hoje assumidas no host (Node, Git, Playwright browsers) e o que falta vendorizar/embutir.
 - [ ] Prototipar um build mínimo (um serviço só) pra validar a abordagem escolhida antes de estender pros três.
 - [ ] Definir como o instalador provê/atualiza os binários do Playwright sem exigir `npx playwright install` manual do usuário final.
 
