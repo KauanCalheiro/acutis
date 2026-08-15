@@ -7,8 +7,9 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { canListModels, listModels } from '../../ai/providers/model-catalog.js'
 import { isSupported } from '../../ai/providers/provider-model.js'
+import { DataSource } from 'typeorm'
 import { PROVIDER_NAMES } from '../providers/ai-providers.js'
-import { db, encrypt } from '../providers/database.js'
+import { encrypt } from '../providers/crypto.js'
 import { SettingsService } from '../settings.service.js'
 import { startApi, type Harness } from '../../../../test/support/harness.js'
 import { SettingsModule } from '../settings.module.js'
@@ -36,7 +37,12 @@ afterEach(async () => {
 
 /** As configurações lidas fora do HTTP, para conferir o que um agente veria. */
 function settings(): SettingsService {
-    return new SettingsService()
+    return api.get<SettingsService>(SettingsService)
+}
+
+/** O banco daquele app, para o teste conferir o que ficou gravado. */
+function database(): DataSource {
+    return api.get<DataSource>(DataSource)
 }
 
 it('oferece todos os provedores suportados, com nada configurado ainda', async () => {
@@ -57,9 +63,10 @@ it('só oferece provedor que o backend consegue chamar', async () => {
 
 /** Instalação antiga pode ter ficado com um provedor que esta versão não chama mais. */
 it('trata como sem ia o provedor gravado que saiu da lista', async () => {
-    db()
-        .prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
-        .run('ai.provider', encrypt('deepseek'))
+    await database().query(
+        'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+        ['ai.provider', encrypt('deepseek')]
+    )
 
     const response = await api.http.get('/api/v1/settings/ai')
 
@@ -72,15 +79,15 @@ it('trata como sem ia o provedor gravado que saiu da lista', async () => {
 it('nasce com uma linha por provedor, todas vazias', async () => {
     await api.http.get('/api/v1/settings/ai').expect(200)
 
-    const rows = db().prepare('SELECT * FROM ai_settings').all() as { provider: string }[]
-    const ollama = db().prepare('SELECT * FROM ai_settings WHERE provider = ?').get('ollama') as {
+    const rows = await database().query('SELECT * FROM ai_settings') as { provider: string }[]
+    const [ollama] = await database().query('SELECT * FROM ai_settings WHERE provider = ?', ['ollama']) as {
         key: string | null
         url: string | null
-    }
+    }[]
 
     expect(rows).toHaveLength(PROVIDER_NAMES.length)
-    expect(ollama.key).toBeNull()
-    expect(ollama.url).toBeNull()
+    expect(ollama!.key).toBeNull()
+    expect(ollama!.url).toBeNull()
 })
 
 it('devolve todas as credenciais, para trocar de provedor preencher o formulário com o que ele tem', async () => {
@@ -126,9 +133,9 @@ it('mantém a credencial de um provedor que deixou de ser o ativo', async () => 
 it('guarda a chave cifrada em disco, para ler a linha não bastar', async () => {
     await api.http.put('/api/v1/settings/ai').send({ provider: 'openai', key: 'sk-secreta', model: 'gpt-4o' }).expect(200)
 
-    const raw = db().prepare('SELECT key FROM ai_settings WHERE provider = ?').get('openai') as { key: string }
+    const [raw] = await database().query('SELECT key FROM ai_settings WHERE provider = ?', ['openai']) as { key: string }[]
 
-    expect(raw.key).not.toContain('sk-secreta')
+    expect(raw!.key).not.toContain('sk-secreta')
 
     const response = await api.http.get('/api/v1/settings/ai')
 
@@ -156,7 +163,7 @@ it('aplica a credencial do provedor ativo sobre os padrões', async () => {
         })
         .expect(200)
 
-    expect(settings().resolved()).toMatchObject({
+    expect(await settings().resolved()).toMatchObject({
         provider: 'ollama',
         url: 'http://192.168.0.124:11434',
         model: 'qwen3-coder:30b'
@@ -167,7 +174,7 @@ it('aplica a credencial do provedor ativo sobre os padrões', async () => {
 it('não grava url quando o campo ficou vazio', async () => {
     await api.http.put('/api/v1/settings/ai').send({ provider: 'ollama', model: 'llama3.1:8b' }).expect(200)
 
-    expect(settings().resolved()).toMatchObject({
+    expect(await settings().resolved()).toMatchObject({
         url: 'http://localhost:11434',
         model: 'llama3.1:8b'
     })
@@ -183,19 +190,20 @@ it('recusa cadastrar um provedor sem escolher o modelo', async () => {
 it('deixa a configuração em paz quando nada foi salvo, para o ambiente continuar valendo', async () => {
     await api.http.get('/api/v1/settings/ai').expect(200)
 
-    expect(settings().resolved().provider).toBe('gemini')
+    expect((await settings().resolved()).provider).toBe('gemini')
 })
 
 it('continua respondendo antes de o banco existir, caindo no ambiente', async () => {
     await api.http.get('/api/v1/settings/ai').expect(200)
 
-    db().exec('DROP TABLE ai_settings; DROP TABLE settings;')
+    await database().query('DROP TABLE ai_settings')
+    await database().query('DROP TABLE settings')
 
     const response = await api.http.get('/api/v1/settings/ai')
 
     expect(response.status).toBe(200)
     expect(response.body.provider).toBe('gemini')
-    expect(settings().resolved().provider).toBe('gemini')
+    expect((await settings().resolved()).provider).toBe('gemini')
 })
 
 /** A tela mostra este endereço como placeholder: campo vazio deixa de ser adivinhação. */
@@ -242,7 +250,7 @@ it('salva um provedor que não pede chave nenhuma', async () => {
 
     expect(response.status).toBe(200)
     expect(response.body.provider).toBe('ollama')
-    expect(settings().activeProvider()).toBe('ollama')
+    expect(await settings().activeProvider()).toBe('ollama')
 })
 
 /** A tela devolve a chave guardada no campo, então reativar o provedor a reenvia junto. */
@@ -275,7 +283,7 @@ it('desliga a ia quando o formulário volta sem provedor', async () => {
     expect(response.status).toBe(200)
     expect(response.body.provider).toBe('')
     expect(response.body.configured).toBe(false)
-    expect(settings().activeProvider()).toBe('')
+    expect(await settings().activeProvider()).toBe('')
 })
 
 /** Desligar não apaga cadastro: religar o provedor não pode pedir a chave de novo. */
