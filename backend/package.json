@@ -39,7 +39,7 @@
     "cli:build": "pnpm build:ui && pnpm build && node scripts/bundle-frontend.js",
     "prepack": "pnpm --dir ../frontend build && pnpm cli:build",
     "start": "node dist/main.js",
-    "test": "vitest run --config vite.ui.config.ts",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "typecheck:ui": "vue-tsc --noEmit -p tsconfig.ui.json"
   },

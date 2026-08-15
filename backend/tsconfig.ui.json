@@ -6,7 +6,8 @@
     "lib": ["ES2022", "DOM"],
     "strict": true,
     "noEmit": true,
+    "skipLibCheck": true,
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["src/ui/**/*", "src/types/**/*", "vite.ui.config.ts"]
+  "include": ["src/webdriver/pill/**/*", "src/common/types/**/*", "test/setup/**/*", "vite.ui.config.ts"]
 }
