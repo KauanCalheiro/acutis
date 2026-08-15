@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { existsSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
-import { startBackend } from '../support/backend'
+import { BACKEND_URL, startBackend } from '../support/backend'
 import { projectReset, projectsCopy } from '../support/projects'
 
 test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
@@ -373,7 +373,13 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         await expect(page).toHaveURL('/projects/alpha-store/scenarios/login-do-cliente')
     })
 
-    test('suggests test ids for the events without one', async ({ page }) => {
+    test('suggests test ids for the events without one', { tag: '@ia' }, async ({ page, request }) => {
+        await test.step('point the backend at the configured ollama', async () => {
+            await request.put(`${BACKEND_URL}/api/v1/settings/ai`, {
+                data: { provider: 'ollama', url: process.env.OLLAMA_URL, model: process.env.OLLAMA_MODEL }
+            })
+        })
+
         await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
         await page.locator('[data-hydrated="true"]').waitFor()
 
