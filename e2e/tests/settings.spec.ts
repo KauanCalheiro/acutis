@@ -33,6 +33,25 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
         await expect(page).toHaveURL('/')
     })
 
+    test('lists only the providers the backend can call, named and with their logo', async ({ page }) => {
+        await page.goto('/')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('navbar-configuracoes').click()
+        await page.getByTestId('config-ia-provedor').click()
+
+        await expect(page.getByRole('option')).toHaveText([
+            'Sem IA',
+            'Anthropic',
+            'Google Gemini',
+            'Ollama',
+            'OpenAI',
+            'OpenRouter'
+        ])
+
+        await expect(page.getByRole('option', { name: 'OpenAI', exact: true }).locator('[class*="i-simple-icons:openai"]')).toBeVisible()
+    })
+
     test('saves the provider with its key, masked until asked to reveal it', async ({ page }) => {
         await page.goto('/')
         await page.locator('[data-hydrated="true"]').waitFor()
@@ -40,7 +59,7 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
         await test.step('pick a provider and paste its key', async () => {
             await page.getByTestId('navbar-configuracoes').click()
             await page.getByTestId('config-ia-provedor').click()
-            await page.getByRole('option', { name: 'openai', exact: true }).click()
+            await page.getByRole('option', { name: 'OpenAI', exact: true }).click()
             await page.getByTestId('config-ia-chave').fill('sk-secreta-do-teste')
             await escolherModelo(page, 'gpt-4o')
             await page.getByTestId('config-ia-salvar').click()
@@ -74,7 +93,7 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
         await test.step('configure a second provider', async () => {
             await page.getByTestId('navbar-configuracoes').click()
             await page.getByTestId('config-ia-provedor').click()
-            await page.getByRole('option', { name: 'anthropic', exact: true }).click()
+            await page.getByRole('option', { name: 'Anthropic', exact: true }).click()
             await page.getByTestId('config-ia-chave').fill('sk-da-anthropic')
             await escolherModelo(page, 'claude-sonnet-4-5')
             await page.getByTestId('config-ia-salvar').click()
@@ -84,7 +103,7 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
         await test.step('going back to the first one brings its own key', async () => {
             await page.getByTestId('navbar-configuracoes').click()
             await page.getByTestId('config-ia-provedor').click()
-            await page.getByRole('option', { name: 'openai', exact: true }).click()
+            await page.getByRole('option', { name: 'OpenAI', exact: true }).click()
 
             await expect(page.getByTestId('config-ia-chave')).toHaveValue('sk-secreta-do-teste')
         })
@@ -97,7 +116,7 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
         await test.step('point the local provider at another machine', async () => {
             await page.getByTestId('navbar-configuracoes').click()
             await page.getByTestId('config-ia-provedor').click()
-            await page.getByRole('option', { name: 'ollama', exact: true }).click()
+            await page.getByRole('option', { name: 'Ollama', exact: true }).click()
             await page.getByTestId('config-ia-url').fill('http://192.168.0.124:11434')
             await escolherModelo(page, 'qwen3-coder:30b')
             await page.getByTestId('config-ia-salvar').click()
@@ -119,8 +138,8 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
 
         await page.getByTestId('navbar-configuracoes').click()
         await page.getByTestId('config-ia-provedor').click()
-        await page.getByRole('option', { name: 'cohere', exact: true }).click()
-        await page.getByTestId('config-ia-chave').fill('sk-da-cohere')
+        await page.getByRole('option', { name: 'OpenRouter', exact: true }).click()
+        await page.getByTestId('config-ia-chave').fill('sk-do-openrouter')
         await page.getByTestId('config-ia-salvar').click()
 
         await expect(page.getByText('Escolha um modelo do provedor.')).toBeVisible()
@@ -132,7 +151,7 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
 
         await page.getByTestId('navbar-configuracoes').click()
         await page.getByTestId('config-ia-provedor').click()
-        await page.getByRole('option', { name: 'anthropic', exact: true }).click()
+        await page.getByRole('option', { name: 'Anthropic', exact: true }).click()
 
         await expect(page.getByTestId('config-ia-url')).toHaveValue('')
         await expect(page.getByTestId('config-ia-url')).toHaveAttribute('placeholder', 'https://api.anthropic.com/v1')
@@ -145,7 +164,7 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
         await test.step('point a configured provider at an internal address', async () => {
             await page.getByTestId('navbar-configuracoes').click()
             await page.getByTestId('config-ia-provedor').click()
-            await page.getByRole('option', { name: 'anthropic', exact: true }).click()
+            await page.getByRole('option', { name: 'Anthropic', exact: true }).click()
             await page.getByTestId('config-ia-url').fill('http://interno.acme:9000')
             await page.getByTestId('config-ia-salvar').click()
             await expect(page.getByText('Configuração salva', { exact: true })).toBeVisible()
@@ -165,8 +184,8 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
 
         await page.getByTestId('navbar-configuracoes').click()
         await page.getByTestId('config-ia-provedor').click()
-        await page.getByRole('option', { name: 'mistral', exact: true }).click()
-        await escolherModelo(page, 'mistral-large-latest')
+        await page.getByRole('option', { name: 'Google Gemini', exact: true }).click()
+        await escolherModelo(page, 'gemini-2.5-flash')
         await page.getByTestId('config-ia-salvar').click()
 
         await expect(page.getByText('A chave de API do provedor escolhido é obrigatória.')).toBeVisible()
@@ -197,7 +216,7 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
             await expect(page.getByTestId('config-ia-desligada')).toBeVisible()
 
             await page.getByTestId('config-ia-provedor').click()
-            await page.getByRole('option', { name: 'openai', exact: true }).click()
+            await page.getByRole('option', { name: 'OpenAI', exact: true }).click()
             await expect(page.getByTestId('config-ia-chave')).toHaveValue('sk-secreta-do-teste')
         })
     })
