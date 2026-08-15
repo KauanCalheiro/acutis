@@ -12,7 +12,9 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { aiConfigured, writeGherkin } from '../../../ai/stub.js'
+import { writeGherkin } from '../../../ai/agents/gherkin.js'
+import { writeMetadata } from '../../../ai/agents/metadata.js'
+import { SettingsService } from '../../../settings/settings.service.js'
 import { slug as toSlug } from '../../../kernel/slug.js'
 import { ActiveVars } from '../../../playwright/active-vars.js'
 import { Url } from '../../../playwright/url.js'
@@ -123,10 +125,13 @@ function markAsPublic(gherkin: string, playwright: string): [string, string] {
 export class GenerationService {
     private readonly logger = new Logger(GenerationService.name)
 
-    constructor(private readonly projects: ProjectService) {}
+    constructor(
+        private readonly projects: ProjectService,
+        private readonly settings: SettingsService
+    ) {}
 
     /** O rascunho editável: nada é escrito em disco até o usuário salvar. */
-    draft(slug: string, recording: DraftRecordingDto): TestDraft {
+    async draft(slug: string, recording: DraftRecordingDto): Promise<TestDraft> {
         const path = this.projects.pathOf(slug)
         const events = Recording.make(recording.events)
         const base = new Url(recording.baseUrl)
@@ -134,7 +139,13 @@ export class GenerationService {
 
         // Sem provedor de IA o cenário sai só da gravação: título, domínio e descrição ficam em
         // branco para o usuário preencher na revisão, e o spec continua vindo do emissor.
-        const written = aiConfigured() ? writeGherkin() : null
+        const written = this.settings.canUseAi()
+            ? await writeGherkin(this.settings.resolved(), {
+                baseUrl: recording.baseUrl,
+                events: events.redacted(environments)
+            })
+            : null
+
         const gherkin = written?.gherkin ?? ''
         const domain = written?.domain ?? ''
 

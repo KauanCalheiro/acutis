@@ -7,6 +7,7 @@
  * mutar: quem precisa do provedor ativo chama `resolved()` e recebe o cadastro já aplicado sobre os
  * padrões.
  */
+import { isSupported } from '../ai/provider-model.js'
 import { Injectable } from '@nestjs/common'
 import { ValidationFailed } from '../kernel/errors.js'
 import { PROVIDERS, PROVIDER_NAMES, defaultProviderUrls, providerFromEnvironment } from './ai-providers.js'
@@ -105,6 +106,21 @@ export class SettingsService {
         }
 
         return this.show()
+    }
+
+    /**
+     * Se dá para chamar modelo agora.
+     *
+     * Não basta ter um provedor escolhido: ele precisa ser um que o acutis saiba usar e ter um
+     * modelo informado. Sem isso, a tela desabilita os botões que chamariam IA em vez de deixar o
+     * usuário clicar e receber erro.
+     */
+    canUseAi(): boolean {
+        const config = this.resolved()
+
+        if (config.provider === '' || !isSupported(config.provider)) return false
+
+        return Boolean(config.modelCheapest ?? config.modelSmartest)
     }
 
     /**

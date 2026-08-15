@@ -19,7 +19,7 @@ export class ScenarioAiController {
         @Param('project') slug: string,
         @Param('scenario') scenarioId: string,
         @Body() _dto: ScenarioFixDto
-    ): FixedSpec {
+    ): Promise<FixedSpec> {
         return this.scenarios.fix(slug, scenarioId)
     }
 
@@ -28,7 +28,7 @@ export class ScenarioAiController {
     suggestions(
         @Param('project') slug: string,
         @Param('scenario') scenarioId: string
-    ): SelectorSuggestion[] {
+    ): Promise<SelectorSuggestion[]> {
         return this.scenarios.suggestions(slug, scenarioId)
     }
 }

@@ -11,12 +11,24 @@
  */
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { afterEach, beforeEach, expect, it } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { EnvKey } from '../../environment/env-key.js'
 import { Environments } from '../../environment/environments.js'
 import type { RecordedEvent } from '../../../recording/events.js'
 import { startApi, type Harness } from '../../../testing/harness.js'
+import { SettingsModule } from '../../../settings/settings.module.js'
 import { GenerationModule } from './generation.module.js'
+
+/**
+ * O dublê do agente, no lugar do `GherkinWriter::fake()` que o Pest usava: o teste exercita o
+ * caminho com IA ligada sem depender de modelo, de rede nem de provedor de verdade.
+ */
+vi.mock('../../../ai/agents/gherkin.js', () => ({
+    writeGherkin: vi.fn(async () => ({
+        gherkin: 'Funcionalidade: Login do Usuário\n  Cenário: entra',
+        domain: 'login'
+    }))
+}))
 
 let api: Harness
 let dir: string
@@ -24,7 +36,14 @@ let dir: string
 const SLUG = 'portal-sistema'
 
 beforeEach(async () => {
-    api = await startApi([GenerationModule])
+    api = await startApi([GenerationModule, SettingsModule])
+
+    // Um provedor cadastrado é o que liga a IA: sem ele o rascunho sai só da gravação, que é o
+    // outro caminho e tem casos próprios.
+    await api.http
+        .put('/api/v1/settings/ai')
+        .send({ provider: 'ollama', modelCheapest: 'llama3.1:8b' })
+        .expect(200)
 
     await api.http.post('/api/v1/projects/create/template').send({ name: 'Portal Sistema' }).expect(201)
 
@@ -349,32 +368,29 @@ it('deixa o cenário autenticado por padrão, sem a tag de público', async () =
  * Gherkin e domínio ficam em branco para o usuário preencher na revisão, se quiser.
  */
 it('rascunha o spec sem gherkin quando não há provedor de ia ativo', async () => {
-    process.env.ACUTIS_AI_PROVIDER = ''
+    await desligaIa()
 
-    try {
-        const response = await draft()
+    const response = await draft()
 
-        expect(response.status).toBe(200)
-        expect(response.body.gherkin).toBe('')
-        expect(response.body.domain).toBe('')
-        expect(response.body.tags).toEqual([])
-        expect(response.body.playwright).toContain('test.describe')
-    } finally {
-        delete process.env.ACUTIS_AI_PROVIDER
-    }
+    expect(response.status).toBe(200)
+    expect(response.body.gherkin).toBe('')
+    expect(response.body.domain).toBe('')
+    expect(response.body.tags).toEqual([])
+    expect(response.body.playwright).toContain('test.describe')
 })
+
+/** "Sem IA" é provedor em branco — a mesma escolha que a tela oferece. */
+async function desligaIa(): Promise<void> {
+    await api.http.put('/api/v1/settings/ai').send({ provider: '' }).expect(200)
+}
 
 /** Sem provedor, a tag @publico só tem onde ser carimbada no spec: não há feature para receber. */
 it('marca o cenário público só no spec quando não há ia', async () => {
-    process.env.ACUTIS_AI_PROVIDER = ''
+    await desligaIa()
 
-    try {
-        const response = await draft(payload({ publico: true }))
+    const response = await draft(payload({ publico: true }))
 
-        expect(response.status).toBe(200)
-        expect(response.body.gherkin).toBe('')
-        expect(response.body.playwright).toContain('@publico')
-    } finally {
-        delete process.env.ACUTIS_AI_PROVIDER
-    }
+    expect(response.status).toBe(200)
+    expect(response.body.gherkin).toBe('')
+    expect(response.body.playwright).toContain('@publico')
 })

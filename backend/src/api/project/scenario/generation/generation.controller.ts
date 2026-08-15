@@ -14,7 +14,7 @@ export class GenerationController {
     // 200, e não o 201 padrão do Nest: nada é criado aqui, o rascunho só existe na resposta.
     @Post('draft')
     @HttpCode(200)
-    draft(@Param('project') slug: string, @Body() dto: DraftRecordingDto): TestDraft {
+    draft(@Param('project') slug: string, @Body() dto: DraftRecordingDto): Promise<TestDraft> {
         return this.generation.draft(slug, dto)
     }
 
