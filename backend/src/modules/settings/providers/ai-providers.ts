@@ -12,18 +12,13 @@ export interface ProviderDefaults {
     keyless?: boolean
 }
 
-/** Todo provedor listado na tela; o banco nasce com uma linha para cada um. */
+/**
+ * Todo provedor listado na tela; o banco nasce com uma linha para cada um. Só entra aqui o que o
+ * backend consegue chamar de verdade — ver `LANGCHAIN_PROVIDER` em `ai/providers/provider-model.ts`.
+ */
 export const PROVIDERS: Record<string, ProviderDefaults> = {
     anthropic: { url: process.env.ANTHROPIC_URL || 'https://api.anthropic.com/v1' },
-    azure: { url: process.env.AZURE_OPENAI_URL },
-    bedrock: {},
-    cohere: {},
-    deepseek: {},
-    eleven: {},
     gemini: { url: process.env.GEMINI_URL || 'https://generativelanguage.googleapis.com/v1beta/' },
-    groq: {},
-    jina: {},
-    mistral: {},
     ollama: {
         keyless: true,
         url: process.env.OLLAMA_URL || 'http://localhost:11434',
@@ -34,9 +29,7 @@ export const PROVIDERS: Record<string, ProviderDefaults> = {
     openrouter: {
         url: process.env.OPENROUTER_URL || 'https://openrouter.ai/api/v1',
         model: process.env.OPENROUTER_MODEL || 'qwen/qwen3-coder'
-    },
-    voyageai: {},
-    xai: {}
+    }
 }
 
 export const PROVIDER_NAMES = Object.keys(PROVIDERS)

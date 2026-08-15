@@ -24,8 +24,14 @@ function blankToNull(value: string | null | undefined): string | null {
 
 @Injectable()
 export class SettingsService {
-    /** O provedor ativo; sem nada gravado, o das variáveis de ambiente. */
+    /** O provedor ativo; sem nada gravado, o das variáveis de ambiente. Fora da lista, é sem IA. */
     activeProvider(): string {
+        const stored = this.storedProvider()
+
+        return PROVIDER_NAMES.includes(stored) ? stored : ''
+    }
+
+    private storedProvider(): string {
         try {
             const row = db().prepare('SELECT value FROM settings WHERE key = ?').get(AI_PROVIDER) as
                 | { value: string | null }

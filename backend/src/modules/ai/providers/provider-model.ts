@@ -10,19 +10,15 @@ export class ProviderUnavailable extends Error {
     }
 }
 
-/** O nome do provedor no acutis → o nome dele no LangChain. */
+/**
+ * O nome do provedor no acutis → o nome dele no LangChain. Só entra quem tem o pacote instalado:
+ * o `initChatModel` importa `@langchain/<provedor>` na hora da chamada e falha se ele não existe.
+ */
 const LANGCHAIN_PROVIDER: Record<string, string> = {
     anthropic: 'anthropic',
-    azure: 'azure_openai',
-    bedrock: 'bedrock',
-    cohere: 'cohere',
-    deepseek: 'deepseek',
     gemini: 'google-genai',
-    groq: 'groq',
-    mistral: 'mistralai',
     ollama: 'ollama',
-    openai: 'openai',
-    xai: 'xai'
+    openai: 'openai'
 }
 
 /** O OpenRouter, que o `initChatModel` não infere e entra pela classe do pacote dele. */

@@ -56,10 +56,6 @@ const CATALOGS: Record<string, (config: ResolvedProvider) => Promise<AvailableMo
     },
 
     openai: (config) => openAiCompatible(config.url ?? 'https://api.openai.com/v1', config.key),
-    groq: (config) => openAiCompatible(config.url ?? 'https://api.groq.com/openai/v1', config.key),
-    deepseek: (config) => openAiCompatible(config.url ?? 'https://api.deepseek.com/v1', config.key),
-    xai: (config) => openAiCompatible(config.url ?? 'https://api.x.ai/v1', config.key),
-    azure: (config) => openAiCompatible(config.url ?? '', config.key),
 
     /** O OpenRouter, que rotula pelo `name` em vez do id. */
     async openrouter(config) {

@@ -21,6 +21,15 @@ interface AiSettings {
 /** "Sem IA" viaja com este nome na tela e volta a ser vazio ao salvar. */
 const SEM_IA = 'sem-ia'
 
+/** Como cada provedor se chama e se desenha; quem não estiver aqui aparece pelo id, sem logo. */
+const PROVEDORES: Record<string, { label: string, icon: string }> = {
+  anthropic: { label: 'Anthropic', icon: 'i-simple-icons-anthropic' },
+  gemini: { label: 'Google Gemini', icon: 'i-simple-icons-googlegemini' },
+  ollama: { label: 'Ollama', icon: 'i-simple-icons-ollama' },
+  openai: { label: 'OpenAI', icon: 'i-simple-icons-openai' },
+  openrouter: { label: 'OpenRouter', icon: 'i-simple-icons-openrouter' }
+}
+
 const open = defineModel<boolean>('open', {
   default: false
 })
@@ -42,13 +51,17 @@ const revealed = ref(false)
 const providerItems = computed(() => [
   {
     label: 'Sem IA',
-    value: SEM_IA
+    value: SEM_IA,
+    icon: 'i-ic-round-block'
   },
   ...(settings.value?.providers ?? []).map(name => ({
-    label: name,
-    value: name
+    label: PROVEDORES[name]?.label ?? name,
+    value: name,
+    icon: PROVEDORES[name]?.icon
   }))
 ])
+
+const providerIcon = computed(() => providerItems.value.find(item => item.value === provider.value)?.icon)
 
 const semIa = computed(() => provider.value === SEM_IA)
 
@@ -178,6 +191,7 @@ async function save() {
         <USelect
           v-model="provider"
           :items="providerItems"
+          :icon="providerIcon"
           class="w-full"
           data-testid="config-ia-provedor"
         />

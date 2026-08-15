@@ -5,8 +5,10 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { canListModels, listModels } from '../../ai/providers/model-catalog.js'
+import { isSupported } from '../../ai/providers/provider-model.js'
 import { PROVIDER_NAMES } from '../providers/ai-providers.js'
-import { db } from '../providers/database.js'
+import { db, encrypt } from '../providers/database.js'
 import { SettingsService } from '../settings.service.js'
 import { startApi, type Harness } from '../../../../test/support/harness.js'
 import { SettingsModule } from '../settings.module.js'
@@ -42,7 +44,28 @@ it('oferece todos os provedores suportados, com nada configurado ainda', async (
 
     expect(response.status).toBe(200)
     expect(response.body.provider).toBe('gemini')
-    expect(response.body.providers).toHaveLength(PROVIDER_NAMES.length)
+    expect(response.body.providers).toEqual(['anthropic', 'gemini', 'ollama', 'openai', 'openrouter'])
+})
+
+it('só oferece provedor que o backend consegue chamar', async () => {
+    const response = await api.http.get('/api/v1/settings/ai')
+
+    for (const provider of response.body.providers as string[]) {
+        expect(isSupported(provider)).toBe(true)
+    }
+})
+
+/** Instalação antiga pode ter ficado com um provedor que esta versão não chama mais. */
+it('trata como sem ia o provedor gravado que saiu da lista', async () => {
+    db()
+        .prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+        .run('ai.provider', encrypt('deepseek'))
+
+    const response = await api.http.get('/api/v1/settings/ai')
+
+    expect(response.status).toBe(200)
+    expect(response.body.provider).toBe('')
+    expect(response.body.configured).toBe(false)
 })
 
 /** O banco cria a linha de cada provedor, então a tela nunca encontra provedor sem cadastro. */
@@ -341,10 +364,18 @@ it('recusa listar modelos de um provedor que não existe', async () => {
     expect(response.body.errors.provider).toBeDefined()
 })
 
-/** Nem todo provedor da lista tem catálogo; a tela precisa saber para manter o campo digitável. */
+/** Provedor sem catálogo mantém o campo de modelo digitável, com o motivo à mostra. */
 it('avisa quando o provedor não oferece lista de modelos', async () => {
-    const response = await api.http.post('/api/v1/settings/ai/models').send({ provider: 'bedrock' })
+    const listing = listModels({ provider: 'bedrock', key: null, url: null, model: null })
 
-    expect(response.status).toBe(422)
-    expect(response.body.errors.provider[0]).toContain('lista de modelos')
+    await expect(listing).rejects.toThrow('lista de modelos')
+})
+
+/** Hoje todos oferecem; se entrar um sem catálogo, a tela precisa continuar dando conta. */
+it('oferece catálogo de modelos para todo provedor da lista', async () => {
+    const response = await api.http.get('/api/v1/settings/ai')
+
+    for (const provider of response.body.providers as string[]) {
+        expect(canListModels(provider)).toBe(true)
+    }
 })
