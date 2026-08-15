@@ -6,9 +6,10 @@
  */
 import { Module } from '@nestjs/common'
 import { GitModule } from './git/git.module.js'
+import { EnvironmentModule } from './project/environment/environment.module.js'
 import { ProjectModule } from './project/project.module.js'
 
 @Module({
-    imports: [GitModule, ProjectModule]
+    imports: [EnvironmentModule, GitModule, ProjectModule]
 })
 export class ApiModule {}

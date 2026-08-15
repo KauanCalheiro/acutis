@@ -6,7 +6,7 @@
  * variável de ambiente, que é de onde a configuração lê.
  */
 import { Test } from '@nestjs/testing'
-import type { INestApplication } from '@nestjs/common'
+import type { INestApplication, ModuleMetadata } from '@nestjs/common'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -25,13 +25,17 @@ export interface Harness {
     close: () => Promise<void>
 }
 
-export async function startApi(): Promise<Harness> {
+/**
+ * Os módulos extras existem para o teste de um bloco ainda não integrado ao `ApiModule` poder subir
+ * a API com ele dentro, sem antecipar a integração.
+ */
+export async function startApi(extra: NonNullable<ModuleMetadata['imports']> = []): Promise<Harness> {
     const root = mkdtempSync(join(tmpdir(), 'acutis-test-'))
     const previousRoot = process.env.ACUTIS_PROJECTS_PATH
 
     process.env.ACUTIS_PROJECTS_PATH = root
 
-    const moduleRef = await Test.createTestingModule({ imports: [ApiModule] }).compile()
+    const moduleRef = await Test.createTestingModule({ imports: [ApiModule, ...extra] }).compile()
     const app: INestApplication = moduleRef.createNestApplication()
 
     app.useGlobalPipes(validationPipe())
