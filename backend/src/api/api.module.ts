@@ -6,12 +6,14 @@
  */
 import { Module } from '@nestjs/common'
 import { GitModule } from './git/git.module.js'
+import { AiModule } from './ai/ai.module.js'
 import { EnvironmentModule } from './project/environment/environment.module.js'
 import { ProjectModule } from './project/project.module.js'
 import { GenerationModule } from './project/scenario/generation/generation.module.js'
 import { ScenarioModule } from './project/scenario/scenario.module.js'
+import { SettingsModule } from './settings/settings.module.js'
 
 @Module({
-    imports: [EnvironmentModule, GenerationModule, GitModule, ProjectModule, ScenarioModule]
+    imports: [AiModule, EnvironmentModule, GenerationModule, GitModule, ProjectModule, ScenarioModule, SettingsModule]
 })
 export class ApiModule {}
