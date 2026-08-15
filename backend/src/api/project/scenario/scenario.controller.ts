@@ -4,7 +4,7 @@
  * O id do cenário é curinga porque ele pode ter barra: um cenário em subpasta (`checkout/pagar`)
  * continua sendo um id só, e é assim que ele aparece na URL.
  */
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Query, Res } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res } from '@nestjs/common'
 import type { Response } from 'express'
 import { Environments } from '../environment/environments.js'
 import { ProjectService } from '../project.service.js'
@@ -46,6 +46,28 @@ export class ScenarioController {
      * O histórico só existe para cenário: rodar o projeto inteiro não pertence a nenhum, e gravar
      * essa execução sujaria o histórico de todos eles.
      */
+    /**
+     * Roda o projeto inteiro, ou o que o filtro alcançar, e devolve o resultado de uma vez.
+     *
+     * Era uma chamada HTTP ao webdriver; agora o runner é injetado, porque os dois passaram a viver
+     * no mesmo processo. O que sobrou de rede no meio era serialização e timeout entre dois pontos
+     * do mesmo `localhost`.
+     */
+    @Post(':project/run')
+    @HttpCode(200)
+    async run(
+        @Param('project') slug: string,
+        @Body('spec') spec?: string,
+        @Body('grep') grep?: string
+    ): Promise<{ passed: boolean, output: string }> {
+        const path = this.projects.pathOf(slug)
+        const env = new Environments(path).resolve()
+
+        const result = await this.runner.runProject(path, { spec, grep, env })
+
+        return { passed: Boolean(result.passed), output: result.output ?? '' }
+    }
+
     @Get(':project/run/stream')
     async runStream(
         @Param('project') slug: string,
