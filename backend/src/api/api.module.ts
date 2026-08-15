@@ -8,8 +8,9 @@ import { Module } from '@nestjs/common'
 import { GitModule } from './git/git.module.js'
 import { EnvironmentModule } from './project/environment/environment.module.js'
 import { ProjectModule } from './project/project.module.js'
+import { GenerationModule } from './project/scenario/generation/generation.module.js'
 
 @Module({
-    imports: [EnvironmentModule, GitModule, ProjectModule]
+    imports: [EnvironmentModule, GenerationModule, GitModule, ProjectModule]
 })
 export class ApiModule {}
