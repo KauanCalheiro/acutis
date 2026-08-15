@@ -1,6 +1,7 @@
 import 'reflect-metadata'
 import { NestFactory } from '@nestjs/core'
 import { HttpErrorFilter } from './api/kernel/http-error.filter.js'
+import { installRequestLog } from './api/kernel/request-log.js'
 import { validationPipe } from './api/kernel/validation.js'
 import { AppModule } from './app.module.js'
 import { CORS_ORIGIN, PORT } from './config/env.js'
@@ -16,6 +17,10 @@ async function bootstrap(): Promise<void> {
     app.useGlobalPipes(validationPipe())
     app.useGlobalFilters(new HttpErrorFilter())
 
+    // O diário em `runtime/logs/requests-<dia>.jsonl`: uma linha por requisição, com as chamadas
+    // externas que ela disparou. Nenhuma outra parte do código sabe que ele existe.
+    installRequestLog(app)
+
     app.enableCors({
         origin: CORS_ORIGIN,
         // A API migrada escreve, não só lê: sem POST, PUT e PATCH, criar projeto e salvar cenário
@@ -26,7 +31,7 @@ async function bootstrap(): Promise<void> {
 
     await app.listen(PORT)
 
-    console.log(`[INFO] acutis-webdriver listening on :${PORT}`)
+    console.log(`[INFO] acutis listening on :${PORT}`)
 }
 
 bootstrap()

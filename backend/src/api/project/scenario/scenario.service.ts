@@ -118,9 +118,11 @@ export class ScenarioService {
 
         // Campo em branco é ordem de apagar: a tela devolve o Gherkin guardado, e mantê-lo faria a
         // aba voltar com o texto que o usuário acabou de limpar.
+        // Lista vazia: as tags moram no spec, e o .feature nunca as recebe — nem as que o usuário
+        // tenha digitado no editor do Gherkin.
         const gherkin = (dto.gherkin ?? '').trim() === ''
             ? null
-            : stampGherkinTags(stampTitle(dto.gherkin!, dto.title), tags)
+            : stampGherkinTags(stampTitle(dto.gherkin!, dto.title), [])
         const playwright = stampPlaywrightTags(stampPlaywrightTitle(dto.playwright, dto.title), tags)
 
         mkdirSync(dirname(join(path, specRelative)), { recursive: true })

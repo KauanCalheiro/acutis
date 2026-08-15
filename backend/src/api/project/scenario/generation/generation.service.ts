@@ -34,7 +34,6 @@ import {
     stampPlaywrightTags,
     stampPlaywrightTitle,
     stampTitle,
-    tags as tagsOf,
     title as titleOf,
     uniquePath
 } from '../test-artifact.js'
@@ -79,46 +78,19 @@ function readWriteTag(events: RecordedEvent[]): string {
     return events.some((event) => ['fill', 'submit'].includes(event.type ?? '')) ? '@write' : '@read'
 }
 
-function ensureGherkinTag(gherkin: string, tag: string): string {
-    const firstLine = gherkin.split('\n')[0] ?? ''
-
-    if (!firstLine.trim().startsWith('@')) return `${tag}\n${gherkin}`
-
-    if (/@(read|write)\b/.test(firstLine)) return gherkin
-
-    return `${tag} ${gherkin.replace(/^\s+/, '')}`
-}
-
-/** Entra na frente da lista existente, preservando o que já estava lá. */
-function addPlaywrightTag(playwright: string, tag: string): string {
-    return playwright.replace(/tag:\s*\[/, `tag: ['${tag}', `)
-}
-
-function ensurePlaywrightTag(playwright: string, tag: string): string {
-    const list = playwright.match(/tag:\s*\[([^\]]*)\]/)
-
-    if (list) {
-        return /@(read|write)\b/.test(list[1]!) ? playwright : addPlaywrightTag(playwright, tag)
-    }
-
-    return playwright.replace(
-        /test\.describe\(\s*((["']).+?\2)\s*,\s*(?=\(|async)/,
-        `test.describe($1, { tag: ['${tag}'] }, `
-    )
-}
-
 /**
- * A tag @publico é o que separa, na hora de rodar, quem usa a sessão do projeto de quem roda limpo.
- * É ela que permite testar a própria tela de login num projeto autenticado.
+ * A lista final de tags do teste.
+ *
+ * A ordem é a regra: primeiro @read ou @write, que é decisão de código e separa o que pode rodar
+ * contra dados de verdade; depois as do modelo, que descrevem a área do fluxo; e @publico por
+ * último, que é escolha de quem gravou. Nenhuma delas vem do Gherkin — ele não guarda tags.
  */
-function markAsPublic(gherkin: string, playwright: string): [string, string] {
-    // Sem Gherkin, a lista de tags que vale é a que já está no spec: recarimbá-la a partir de um
-    // arquivo vazio apagaria o @read/@write que acabou de entrar ali.
-    if (gherkin.trim() === '') return ['', addPlaywrightTag(playwright, '@publico')]
+function tagList(readWrite: string, suggested: string[], publico: boolean): string[] {
+    const fromModel = suggested
+        .map((tag) => (tag.startsWith('@') ? tag : `@${tag}`))
+        .filter((tag) => !/^@(read|write|publico)$/.test(tag))
 
-    const list = [...tagsOf(gherkin), '@publico']
-
-    return [stampGherkinTags(gherkin, list), stampPlaywrightTags(playwright, list)]
+    return [...new Set([readWrite, ...fromModel, ...(publico ? ['@publico'] : [])])]
 }
 
 @Injectable()
@@ -134,8 +106,11 @@ export class GenerationService {
     async draft(slug: string, recording: DraftRecordingDto): Promise<TestDraft> {
         const path = this.projects.pathOf(slug)
         const events = Recording.make(recording.events)
-        const base = new Url(recording.baseUrl)
         const environments = this.environments(path, recording)
+        // A URL do ambiente, e não a que abriu o navegador: é sobre ela que o spec concatena em
+        // runtime. Gravar da raiz do host com o ambiente apontando para uma subpasta escrevia o
+        // caminho dela duas vezes. Mesma leitura que o setup de autenticação já fazia.
+        const base = new Url(environments.get(EnvKey.URL)?.value || recording.baseUrl)
 
         // Sem provedor de IA o cenário sai só da gravação: título, domínio e descrição ficam em
         // branco para o usuário preencher na revisão, e o spec continua vindo do emissor.
@@ -155,24 +130,26 @@ export class GenerationService {
 
         const issues = checkSpec(playwright, base, this.withDeclared(environments, events, envVars))
 
-        const tag = readWriteTag(recording.events)
+        // O agente que nomeia é o dono das tags. Sem IA não há quem sugira, e resta a que o código
+        // decide sozinho — que é justamente a que não pode faltar.
+        const named = gherkin !== '' && this.settings.canUseAi()
+            ? await writeMetadata(this.settings.resolved(), { gherkin, domain })
+            : null
 
-        let stampedGherkin = gherkin === '' ? '' : ensureGherkinTag(gherkin, tag)
-        let spec = ensurePlaywrightTag(playwright.value, tag)
+        const tags = tagList(readWriteTag(recording.events), named?.tags ?? [], recording.publico === true)
 
-        if (recording.publico === true) {
-            [stampedGherkin, spec] = markAsPublic(stampedGherkin, spec)
-        }
-
-        const title = titleOf(stampedGherkin)
+        // O Gherkin descreve o fluxo e nada mais: a lista vazia apaga qualquer linha de tags que o
+        // modelo tenha escrito mesmo instruído a não escrever.
+        const cleanGherkin = gherkin === '' ? '' : stampGherkinTags(gherkin, [])
+        const title = titleOf(cleanGherkin)
 
         return {
             title,
-            tags: tagsOf(stampedGherkin),
+            tags,
             domain,
             path: uniquePath(join(path, 'tests'), toSlug(title) || 'teste'),
-            gherkin: stampedGherkin,
-            playwright: spec,
+            gherkin: cleanGherkin,
+            playwright: stampPlaywrightTags(playwright.value, tags),
             envVars,
             warnings: issues.map((issue: Violation) => `${issue.rule}: ${issue.message}`)
         }
@@ -188,9 +165,10 @@ export class GenerationService {
         const spec = `tests/${domain}/${name}.spec.ts`
 
         // O Gherkin é opcional: sem provedor de IA o rascunho chega sem ele, e aí não há .feature.
+        // A lista vazia é intencional: as tags moram no spec, e o .feature nunca as recebe.
         const gherkin = (data.gherkin ?? '').trim() === ''
             ? null
-            : stampGherkinTags(stampTitle(data.gherkin!, data.title), tags)
+            : stampGherkinTags(stampTitle(data.gherkin!, data.title), [])
 
         const feature = gherkin === null ? null : `features/${domain}/${name}.feature`
         const playwright = stampPlaywrightTags(

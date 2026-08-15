@@ -28,10 +28,28 @@ const SCHEMA = `
         provider TEXT PRIMARY KEY,
         key TEXT,
         url TEXT,
-        model_cheapest TEXT,
-        model_smartest TEXT
+        model TEXT
     );
 `
+
+/**
+ * O cadastro tinha dois modelos, um barato e um esperto, herdados do `laravel/ai`. Virou um só, que
+ * o usuário escolhe numa lista vinda do próprio provedor.
+ *
+ * A migração preserva o que já estava lá: fica o modelo esperto, e o barato só entra se não houver
+ * esperto — quem cadastrou os dois escolheu o esperto para o que importava.
+ */
+function migrateToSingleModel(database: Database.Database): void {
+    const columns = database.prepare('PRAGMA table_info(ai_settings)').all() as { name: string }[]
+    const names = columns.map((column) => column.name)
+
+    if (!names.includes('model_cheapest')) return
+
+    database.exec('ALTER TABLE ai_settings ADD COLUMN model TEXT')
+    database.exec('UPDATE ai_settings SET model = COALESCE(model_smartest, model_cheapest)')
+    database.exec('ALTER TABLE ai_settings DROP COLUMN model_cheapest')
+    database.exec('ALTER TABLE ai_settings DROP COLUMN model_smartest')
+}
 
 /**
  * Uma conexão por caminho. O caminho vem da raiz do acutis, que o teste aponta para um diretório
@@ -64,6 +82,7 @@ export function db(): Database.Database {
     const connection = new Database(path)
 
     connection.exec(SCHEMA)
+    migrateToSingleModel(connection)
     seedProviders(connection)
     connections.set(path, connection)
 
@@ -76,14 +95,22 @@ export function db(): Database.Database {
  * Equivale ao `APP_KEY` do Laravel, e existe pelo mesmo motivo do cast `encrypted`: quem abrir o
  * arquivo do banco não deve encontrar a chave de API em claro.
  */
+/** 32 bytes em hexadecimal é o que o AES-256 aceita; qualquer outra coisa é chave de outra coisa. */
+function isUsable(key: string): boolean {
+    return /^[0-9a-fA-F]{64}$/.test(key)
+}
+
 function encryptionKey(): Buffer {
     const fromEnvironment = process.env.ACUTIS_APP_KEY
 
-    if (fromEnvironment) return Buffer.from(fromEnvironment, 'hex')
+    if (fromEnvironment && isUsable(fromEnvironment)) return Buffer.from(fromEnvironment, 'hex')
 
     const file = join(dirname(databasePath()), 'app-key')
 
-    if (!existsSync(file)) {
+    // O arquivo sobrevive à instalação, e nem toda chave que está lá é desta versão: a instalação
+    // que veio do Laravel tem a `APP_KEY` dele, em base64. Ela nunca cifrou nada neste formato, e
+    // insistir nela só produz "Invalid key length" ao salvar — 500 na tela, sem dizer o que fazer.
+    if (!existsSync(file) || !isUsable(readFileSync(file, 'utf8').trim())) {
         mkdirSync(dirname(file), { recursive: true })
         writeFileSync(file, randomBytes(32).toString('hex'), { mode: 0o600 })
     }

@@ -2,9 +2,7 @@
  * Conserta um teste Playwright que quebrou, seja por regra violada, seja por falha na execução.
  *
  * Instruções portadas do `ScenarioFixer` do Laravel, palavra por palavra.
- *
- * Usa o modelo esperto: errar aqui custa outra execução inteira do teste ao usuário, que é o passo
- * mais lento do produto.
+
  */
 import * as z from 'zod'
 import type { ResolvedProvider } from '../../settings/entities/ai-settings.entity.js'
@@ -45,9 +43,5 @@ export interface SpecFixInput {
 }
 
 export function fixSpec(config: ResolvedProvider, input: SpecFixInput): Promise<FixedSpec> {
-    return runAgent(
-        config,
-        { instructions: INSTRUCTIONS, schema: FixedSpecSchema, tier: 'smartest' },
-        input
-    )
+    return runAgent(config, { instructions: INSTRUCTIONS, schema: FixedSpecSchema }, input)
 }

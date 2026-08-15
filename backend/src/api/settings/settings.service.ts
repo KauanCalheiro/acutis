@@ -7,6 +7,7 @@
  * mutar: quem precisa do provedor ativo chama `resolved()` e recebe o cadastro já aplicado sobre os
  * padrões.
  */
+import { type AvailableModel, listModels } from '../ai/model-catalog.js'
 import { isSupported } from '../ai/provider-model.js'
 import { Injectable } from '@nestjs/common'
 import { ValidationFailed } from '../kernel/errors.js'
@@ -21,8 +22,7 @@ interface CredentialRow {
     provider: string
     key: string | null
     url: string | null
-    model_cheapest: string | null
-    model_smartest: string | null
+    model: string | null
 }
 
 /** Campo em branco é ausência: é assim que o padrão do provedor volta a valer. */
@@ -74,8 +74,7 @@ export class SettingsService {
         provider: string
         key?: string | null
         url?: string | null
-        modelCheapest?: string | null
-        modelSmartest?: string | null
+        model?: string | null
     }): AiSettings {
         const provider = input.provider ?? ''
 
@@ -88,24 +87,48 @@ export class SettingsService {
         if (provider !== '') {
             db()
                 .prepare(`
-                    INSERT INTO ai_settings (provider, key, url, model_cheapest, model_smartest)
-                    VALUES (@provider, @key, @url, @cheapest, @smartest)
+                    INSERT INTO ai_settings (provider, key, url, model)
+                    VALUES (@provider, @key, @url, @model)
                     ON CONFLICT(provider) DO UPDATE SET
                         key = excluded.key,
                         url = excluded.url,
-                        model_cheapest = excluded.model_cheapest,
-                        model_smartest = excluded.model_smartest
+                        model = excluded.model
                 `)
                 .run({
                     provider,
                     key: blankToNull(input.key) === null ? null : encrypt(input.key!),
                     url: blankToNull(input.url),
-                    cheapest: blankToNull(input.modelCheapest),
-                    smartest: blankToNull(input.modelSmartest)
+                    model: blankToNull(input.model)
                 })
         }
 
         return this.show()
+    }
+
+    /**
+     * Os modelos do provedor, perguntados a ele.
+     *
+     * O formulário manda o que está digitado agora, e é isso que vale: a pergunta serve para
+     * escolher antes de salvar. O que ficou em branco cai no cadastro guardado e depois no padrão do
+     * provedor, para trocar só a chave não obrigar a redigitar o endereço.
+     *
+     * A falha vira erro de campo porque é sempre isso: a chave está errada ou o endereço não
+     * responde, e a tela precisa dizer qual dos dois para o usuário saber o que corrigir.
+     */
+    async availableModels(input: { provider: string, key?: string | null, url?: string | null }): Promise<AvailableModel[]> {
+        const defaults = PROVIDERS[input.provider] ?? {}
+        const saved = this.credentialOf(input.provider)
+
+        try {
+            return await listModels({
+                provider: input.provider,
+                key: blankToNull(input.key) ?? saved?.key ?? null,
+                url: blankToNull(input.url) ?? saved?.url ?? defaults.url ?? null,
+                model: null
+            })
+        } catch (error) {
+            throw new ValidationFailed({ provider: [(error as Error).message] })
+        }
     }
 
     /**
@@ -120,7 +143,7 @@ export class SettingsService {
 
         if (config.provider === '' || !isSupported(config.provider)) return false
 
-        return Boolean(config.modelCheapest ?? config.modelSmartest)
+        return Boolean(config.model)
     }
 
     /**
@@ -136,8 +159,7 @@ export class SettingsService {
             provider,
             key: saved?.key ?? null,
             url: saved?.url ?? defaults.url ?? null,
-            modelCheapest: saved?.model_cheapest ?? defaults.modelCheapest ?? null,
-            modelSmartest: saved?.model_smartest ?? defaults.modelSmartest ?? null
+            model: saved?.model ?? defaults.model ?? null
         }
     }
 
@@ -176,8 +198,7 @@ export class SettingsService {
         return {
             key: decrypt(row.key),
             url: row.url,
-            model_cheapest: row.model_cheapest,
-            model_smartest: row.model_smartest
+            model: row.model
         }
     }
 

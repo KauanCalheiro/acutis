@@ -26,7 +26,7 @@ O prompt é um JSON com gherkin (a especificação) e, quando houver, domain (a 
 
 - O title é como uma pessoa chamaria o teste numa conversa, em português, sem prefixo técnico. Tire-o da linha Funcionalidade, encurtando o que for longo demais.
 - O fileName é o title em kebab-case minúsculo, sem acento, sem espaço e sem extensão. Ele vira caminho em disco e parte da URL: mantenha curto, no máximo seis palavras.
-- As tags começam com @ e são minúsculas. A primeira é exatamente uma entre @read (o fluxo só consulta) e @write (cria, altera ou remove dados) — copie a que já estiver na linha de tags do Gherkin, se houver. Depois dela, uma ou duas tags da área do fluxo, em português.
+- As tags começam com @ e são minúsculas. A primeira é exatamente uma entre @read (o fluxo só consulta) e @write (cria, altera ou remove dados). Depois dela, uma ou duas tags da área do fluxo, em português. O Gherkin não traz tags: decida pelo que o fluxo faz.
 - Nunca invente informação que não esteja no Gherkin.`
 
 export interface MetadataInput {

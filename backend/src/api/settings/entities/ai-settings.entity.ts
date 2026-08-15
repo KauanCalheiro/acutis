@@ -9,8 +9,7 @@
 export interface ProviderCredential {
     key: string | null
     url: string | null
-    model_cheapest: string | null
-    model_smartest: string | null
+    model: string | null
 }
 
 export interface AiSettings {
@@ -28,6 +27,5 @@ export interface ResolvedProvider {
     provider: string
     key: string | null
     url: string | null
-    modelCheapest: string | null
-    modelSmartest: string | null
+    model: string | null
 }

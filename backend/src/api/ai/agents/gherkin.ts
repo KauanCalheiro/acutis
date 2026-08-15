@@ -27,7 +27,7 @@ O prompt é um JSON com baseUrl e events, na ordem em que ocorreram.
 - Nomeie campos e botões pelos labels dos eventos, como o usuário os vê.
 - Valor escrito como {{CHAVE}} é um segredo mascarado: descreva o campo, nunca invente o valor.
 
-Acima da linha Funcionalidade, escreva uma linha de tags. A primeira é exatamente uma entre @read (o fluxo só consulta) e @write (cria, altera ou remove dados). Depois dela, quantas tags de ação forem úteis, em português.
+Comece o arquivo na linha Funcionalidade. Nunca escreva linha de tags: quem nomeia as tags é outro passo, e elas moram no teste, não na especificação.
 
 Em domain, uma palavra curta em português minúsculo identificando a área do fluxo.`
 

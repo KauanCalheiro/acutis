@@ -5,7 +5,7 @@
  * quem sabe disso é o service. Ver `SettingsService.ensureHasKey`.
  */
 import { Transform } from 'class-transformer'
-import { IsIn, IsOptional, IsString, IsUrl, ValidateIf } from 'class-validator'
+import { IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, ValidateIf } from 'class-validator'
 import { PROVIDER_NAMES } from '../ai-providers.js'
 
 /** O campo vazio da tela chega como `''` ou como `null`; ambos querem dizer "sem IA". */
@@ -25,11 +25,13 @@ export class AiSettingsDto {
     @IsUrl({ require_tld: false }, { message: 'A URL do provedor deve ser uma URL válida.' })
     url?: string | null
 
-    @IsOptional()
-    @IsString()
-    modelCheapest?: string | null
-
-    @IsOptional()
-    @IsString()
-    modelSmartest?: string | null
+    /**
+     * Obrigatório quando há provedor: o acutis não escolhe modelo por você, e um cadastro sem
+     * modelo só falharia na primeira geração. Sem provedor — a escolha "sem IA" — não há o que
+     * exigir.
+     */
+    @ValidateIf((dto: AiSettingsDto) => dto.provider !== AI_OFF)
+    @IsString({ message: 'Escolha um modelo do provedor.' })
+    @IsNotEmpty({ message: 'Escolha um modelo do provedor.' })
+    model?: string | null
 }

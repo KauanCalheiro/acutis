@@ -11,8 +11,8 @@
 export interface ProviderDefaults {
     /** O endereço usado sem cadastro. A tela mostra como placeholder do campo vazio. */
     url?: string
-    modelCheapest?: string
-    modelSmartest?: string
+    /** O modelo sugerido quando ninguém escolheu ainda. A tela usa como placeholder. */
+    model?: string
     /** Provedor local não tem chave a pedir, e exigi-la travaria o cadastro dele. */
     keyless?: boolean
 }
@@ -35,8 +35,7 @@ export const PROVIDERS: Record<string, ProviderDefaults> = {
     ollama: {
         keyless: true,
         url: process.env.OLLAMA_URL || 'http://localhost:11434',
-        modelCheapest: process.env.OLLAMA_MODEL_CHEAPEST || 'llama3.1:8b',
-        modelSmartest: process.env.OLLAMA_MODEL_SMARTEST || 'llama3.1:8b'
+        model: process.env.OLLAMA_MODEL || 'llama3.1:8b'
     },
     openai: { url: process.env.OPENAI_URL || 'https://api.openai.com/v1' },
     /**
@@ -46,8 +45,7 @@ export const PROVIDERS: Record<string, ProviderDefaults> = {
      */
     openrouter: {
         url: process.env.OPENROUTER_URL || 'https://openrouter.ai/api/v1',
-        modelCheapest: process.env.OPENROUTER_MODEL_CHEAPEST || 'qwen/qwen3-coder',
-        modelSmartest: process.env.OPENROUTER_MODEL_SMARTEST || 'anthropic/claude-sonnet-4.5'
+        model: process.env.OPENROUTER_MODEL || 'qwen/qwen3-coder'
     },
     voyageai: {},
     xai: {}

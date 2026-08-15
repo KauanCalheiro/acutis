@@ -1,12 +1,43 @@
 {
-  "name": "acutis-webdriver",
+  "name": "acutis-cli",
   "version": "1.0.0",
+  "description": "Grava, gera e roda testes Playwright a partir do navegador",
+  "//private": "Tire esta linha para poder publicar. Ela é o pino de segurança: enquanto estiver aqui, `npm publish` recusa — e `npm pack` continua funcionando para testar local.",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KauanCalheiro/acutis.git",
+    "directory": "backend"
+  },
+  "homepage": "https://github.com/KauanCalheiro/acutis#readme",
+  "keywords": [
+    "playwright",
+    "e2e",
+    "test-recorder",
+    "gherkin"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
+  "bin": {
+    "acutis": "bin/acutis.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "dist-ui",
+    "frontend",
+    "reporters/stream-reporter.cjs",
+    "stubs"
+  ],
   "scripts": {
     "dev": "node --import @swc-node/register/esm-register src/main.ts",
     "build": "tsc",
     "build:ui": "vite build --config vite.ui.config.ts",
+    "cli:build": "pnpm build:ui && pnpm build && node scripts/bundle-frontend.js",
+    "prepack": "pnpm --dir ../frontend build && pnpm cli:build",
     "start": "node dist/main.js",
     "test": "vitest run --config vite.ui.config.ts",
     "typecheck": "tsc --noEmit",

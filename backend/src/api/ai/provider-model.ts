@@ -12,9 +12,6 @@ import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import { initChatModel } from 'langchain'
 import type { ResolvedProvider } from '../settings/entities/ai-settings.entity.js'
 
-/** Qual dos dois modelos cadastrados usar. Espelha os atributos do `laravel/ai`. */
-export type ModelTier = 'cheapest' | 'smartest'
-
 export class ProviderUnavailable extends Error {
     constructor(provider: string, reason: string) {
         super(`O provedor ${provider} não pode ser usado: ${reason}`)
@@ -71,17 +68,12 @@ export function supportedProviders(): string[] {
  * Falha cedo e explicando: sem isto, um cadastro incompleto viraria um 401 do provedor no meio de
  * uma geração, e o usuário veria "erro ao gerar" sem saber que o problema é a chave em branco.
  */
-export async function chatModel(
-    config: ResolvedProvider,
-    tier: ModelTier = 'cheapest'
-): Promise<BaseChatModel> {
+export async function chatModel(config: ResolvedProvider): Promise<BaseChatModel> {
     if (!isSupported(config.provider)) {
         throw new ProviderUnavailable(config.provider, 'ele ainda não é suportado por esta versão')
     }
 
-    const model = tier === 'smartest'
-        ? config.modelSmartest ?? config.modelCheapest
-        : config.modelCheapest ?? config.modelSmartest
+    const model = config.model
 
     if (!model) {
         throw new ProviderUnavailable(config.provider, 'nenhum modelo foi informado no cadastro')

@@ -4,4 +4,9 @@ dist
 dist-ui
 test-results
 
+# O frontend compilado que o `cli:build` copia para dentro do pacote. É artefato de build, e vem
+# do diretório frontend/ ao lado.
+frontend
+*.tgz
+
 .pnpm-store

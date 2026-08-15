@@ -8,20 +8,13 @@
 import { END, START, StateGraph } from '@langchain/langgraph'
 import * as z from 'zod'
 import type { ResolvedProvider } from '../settings/entities/ai-settings.entity.js'
-import { chatModel, type ModelTier } from './provider-model.js'
+import { chatModel } from './provider-model.js'
 
 export interface AgentDefinition<Schema extends z.ZodType> {
     /** O system prompt. É o contrato com o modelo, e mudá-lo muda o produto. */
     instructions: string
     /** A forma da resposta. O modelo é obrigado a devolver exatamente isto. */
     schema: Schema
-    /**
-     * Qual modelo cadastrado usar.
-     *
-     * O barato dá conta do que é mecânico (nomear, resumir); o esperto vale onde errar custa uma
-     * volta inteira do usuário, como consertar um teste que não passou.
-     */
-    tier?: ModelTier
 }
 
 /**
@@ -44,7 +37,7 @@ export async function runAgent<Schema extends z.ZodType>(
 
     const graph = new StateGraph(State)
         .addNode('ask', async (state) => {
-            const model = await chatModel(config, agent.tier ?? 'cheapest')
+            const model = await chatModel(config)
             const structured = model.withStructuredOutput(agent.schema)
 
             const output = await structured.invoke([
