@@ -20,10 +20,10 @@ interface AiSettings {
 }
 
 /** "Sem IA" viaja com este nome na tela e volta a ser vazio ao salvar. */
-const SEM_IA = 'sem-ia'
+const NO_AI = 'no-ai'
 
 /** Como cada provedor se chama e se desenha; quem não estiver aqui aparece pelo id, sem logo. */
-const PROVEDORES: Record<string, { label: string, icon: string }> = {
+const PROVIDERS: Record<string, { label: string, icon: string }> = {
   'anthropic': { label: 'Anthropic', icon: 'i-simple-icons-anthropic' },
   // Nome e ícone travados pelas diretrizes de marca da Anthropic: "Claude Code" e o logo dele não
   // são permitidos em produto de terceiro. Não renomear — ver a memória ai-claude-agent.
@@ -55,25 +55,25 @@ const revealed = ref(false)
 const providerItems = computed(() => [
   {
     label: 'Sem IA',
-    value: SEM_IA,
+    value: NO_AI,
     icon: 'i-ic-round-block'
   },
   ...(settings.value?.providers ?? []).map(name => ({
-    label: PROVEDORES[name]?.label ?? name,
+    label: PROVIDERS[name]?.label ?? name,
     value: name,
-    icon: PROVEDORES[name]?.icon
+    icon: PROVIDERS[name]?.icon
   }))
 ])
 
 const providerIcon = computed(() => providerItems.value.find(item => item.value === provider.value)?.icon)
 
-const semIa = computed(() => provider.value === SEM_IA)
+const noAi = computed(() => provider.value === NO_AI)
 
 /** O Claude Agent roda o binário local: sem chave, sem endereço, só o modelo. */
 const claudeAgent = computed(() => provider.value === 'claude-code')
 
 /** Provedor que roda na máquina do usuário não cobra chave; nos outros o campo é obrigatório. */
-const keyRequired = computed(() => !semIa.value && !(settings.value?.keyless_providers ?? []).includes(provider.value))
+const keyRequired = computed(() => !noAi.value && !(settings.value?.keyless_providers ?? []).includes(provider.value))
 
 /** Onde a Anthropic documenta a instalação e o login do Claude Code. */
 const DOC_CLAUDE_CODE = 'https://docs.claude.com/en/docs/claude-code/setup'
@@ -83,7 +83,7 @@ const defaultUrl = computed(() => settings.value?.provider_urls[provider.value] 
 
 /** A lista de modelos, perguntada ao provedor com o que está digitado agora. */
 async function loadModels() {
-  if (semIa.value) return
+  if (noAi.value) return
 
   loadingModels.value = true
   modelsError.value = ''
@@ -136,9 +136,9 @@ async function load() {
 
     const active = settings.value.credentials[settings.value.provider]
 
-    const sameProvider = provider.value === (settings.value.provider || SEM_IA)
+    const sameProvider = provider.value === (settings.value.provider || NO_AI)
 
-    provider.value = settings.value.provider || SEM_IA
+    provider.value = settings.value.provider || NO_AI
     key.value = active?.key ?? ''
     url.value = active?.url ?? ''
     model.value = active?.model ?? ''
@@ -165,7 +165,7 @@ async function save() {
     await $fetch('/api/settings/ai', {
       method: 'PUT',
       body: {
-        provider: semIa.value ? null : provider.value,
+        provider: noAi.value ? null : provider.value,
         key: key.value || null,
         url: url.value || null,
         model: model.value || null
@@ -209,7 +209,7 @@ async function save() {
       </UFormField>
 
       <p
-        v-if="semIa"
+        v-if="noAi"
         class="text-sm text-muted"
         data-testid="config-ia-desligada"
       >
@@ -253,7 +253,7 @@ async function save() {
       </div>
 
       <UFormField
-        v-if="!semIa && !claudeAgent"
+        v-if="!noAi && !claudeAgent"
         label="Chave de API"
         :required="keyRequired"
         :hint="keyRequired ? undefined : 'opcional'"
@@ -288,7 +288,7 @@ async function save() {
       </UFormField>
 
       <UFormField
-        v-if="!semIa && !claudeAgent"
+        v-if="!noAi && !claudeAgent"
         label="Endereço do provedor"
         hint="opcional"
         description="Onde o provedor responde. Preencha para apontar para uma máquina sua."
@@ -307,7 +307,7 @@ async function save() {
       </UFormField>
 
       <UFormField
-        v-if="!semIa"
+        v-if="!noAi"
         label="Modelo"
         required
         description="Quem escreve o cenário, sugere os data-testid e conserta o teste que falhou."
@@ -323,9 +323,9 @@ async function save() {
             placeholder="Escolha o modelo do provedor"
             class="flex-1"
             data-testid="config-ia-modelo"
-            @create="(nome: string) => {
-              models.push({ id: nome, label: nome })
-              model = nome
+            @create="(name: string) => {
+              models.push({ id: name, label: name })
+              model = name
             }"
           />
           <UButton
