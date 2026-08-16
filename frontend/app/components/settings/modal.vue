@@ -23,11 +23,14 @@ const SEM_IA = 'sem-ia'
 
 /** Como cada provedor se chama e se desenha; quem não estiver aqui aparece pelo id, sem logo. */
 const PROVEDORES: Record<string, { label: string, icon: string }> = {
-  anthropic: { label: 'Anthropic', icon: 'i-simple-icons-anthropic' },
-  gemini: { label: 'Google Gemini', icon: 'i-simple-icons-googlegemini' },
-  ollama: { label: 'Ollama', icon: 'i-simple-icons-ollama' },
-  openai: { label: 'OpenAI', icon: 'i-simple-icons-openai' },
-  openrouter: { label: 'OpenRouter', icon: 'i-simple-icons-openrouter' }
+  'anthropic': { label: 'Anthropic', icon: 'i-simple-icons-anthropic' },
+  // Nome e ícone travados pelas diretrizes de marca da Anthropic: "Claude Code" e o logo dele não
+  // são permitidos em produto de terceiro. Não renomear — ver a memória ai-claude-agent.
+  'claude-code': { label: 'Claude Agent', icon: 'i-simple-icons-claude' },
+  'gemini': { label: 'Google Gemini', icon: 'i-simple-icons-googlegemini' },
+  'ollama': { label: 'Ollama', icon: 'i-simple-icons-ollama' },
+  'openai': { label: 'OpenAI', icon: 'i-simple-icons-openai' },
+  'openrouter': { label: 'OpenRouter', icon: 'i-simple-icons-openrouter' }
 }
 
 const open = defineModel<boolean>('open', {
@@ -64,6 +67,12 @@ const providerItems = computed(() => [
 const providerIcon = computed(() => providerItems.value.find(item => item.value === provider.value)?.icon)
 
 const semIa = computed(() => provider.value === SEM_IA)
+
+/** O Claude Agent roda o binário local: sem chave, sem endereço, só o modelo. */
+const claudeAgent = computed(() => provider.value === 'claude-code')
+
+/** Onde a Anthropic documenta a instalação e o login do Claude Code. */
+const DOC_CLAUDE_CODE = 'https://docs.claude.com/en/docs/claude-code/setup'
 
 /** O endereço que vale com o campo vazio, para o placeholder dizer o que vai acontecer. */
 const defaultUrl = computed(() => settings.value?.provider_urls[provider.value] ?? 'o endereço do provedor')
@@ -207,8 +216,42 @@ async function save() {
         que falhou.
       </p>
 
+      <div
+        v-if="claudeAgent"
+        class="mb-4"
+        data-testid="config-ia-claude-agent"
+      >
+        <p class="mb-3 text-sm text-muted">
+          Este provedor não usa chave de API nem cobra por token: ele roda o
+          <strong class="text-default">Claude Code</strong> instalado nesta máquina e fala pela
+          assinatura já autenticada nele (Pro, Max, Team ou Enterprise), com o mesmo limite de uso
+          que você tem no dia a dia.
+        </p>
+
+        <ol class="mb-3 list-decimal space-y-1 pl-5 text-sm text-muted">
+          <li>Instale o Claude Code na máquina que roda o acutis.</li>
+          <li>Rode <code class="rounded bg-elevated px-1 py-0.5 text-default">claude login</code> no terminal e autorize no navegador.</li>
+          <li>Escolha abaixo o modelo. Não há nada mais a preencher.</li>
+        </ol>
+
+        <p class="mb-3 text-sm text-muted">
+          Por depender do binário local, este provedor não funciona com o backend em container nem
+          em outra máquina.
+        </p>
+
+        <ULink
+          :to="DOC_CLAUDE_CODE"
+          target="_blank"
+          class="inline-flex items-center gap-1 text-sm text-primary"
+          data-testid="config-ia-claude-agent-documentacao"
+        >
+          Saiba mais na documentação do Claude Code
+          <UIcon name="i-ic-round-open-in-new" />
+        </ULink>
+      </div>
+
       <UFormField
-        v-if="!semIa"
+        v-if="!semIa && !claudeAgent"
         label="Chave de API"
         hint="opcional"
         description="Provedor que roda na sua máquina, como o Ollama, não pede chave."
@@ -241,7 +284,7 @@ async function save() {
       </UFormField>
 
       <UFormField
-        v-if="!semIa"
+        v-if="!semIa && !claudeAgent"
         label="Endereço do provedor"
         hint="opcional"
         description="Onde o provedor responde. Preencha para apontar para uma máquina sua."

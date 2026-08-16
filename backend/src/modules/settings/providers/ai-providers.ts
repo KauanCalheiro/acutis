@@ -3,6 +3,8 @@
  * ninguém informa nada.
  */
 
+import { CLAUDE_AGENT_DEFAULT_MODEL } from '../../ai/providers/claude-agent.js'
+
 export interface ProviderDefaults {
     /** O endereço usado sem cadastro. */
     url?: string
@@ -10,6 +12,8 @@ export interface ProviderDefaults {
     model?: string
     /** Provedor que não pede chave. */
     keyless?: boolean
+    /** O que dizer quando a credencial falta, para quem não chama a dele de "chave de API". */
+    keyError?: string
 }
 
 /**
@@ -18,6 +22,14 @@ export interface ProviderDefaults {
  */
 export const PROVIDERS: Record<string, ProviderDefaults> = {
     anthropic: { url: process.env.ANTHROPIC_URL || 'https://api.anthropic.com/v1' },
+    /**
+     * O "Claude Agent" da tela. Não fala HTTP: roda o Claude Code instalado na máquina, que já está
+     * autenticado, então não há endereço nem credencial para cadastrar.
+     */
+    'claude-code': {
+        keyless: true,
+        model: process.env.CLAUDE_AGENT_MODEL || CLAUDE_AGENT_DEFAULT_MODEL
+    },
     gemini: { url: process.env.GEMINI_URL || 'https://generativelanguage.googleapis.com/v1beta/' },
     ollama: {
         keyless: true,

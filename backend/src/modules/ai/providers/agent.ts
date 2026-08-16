@@ -2,13 +2,38 @@
 import { END, START, StateGraph } from '@langchain/langgraph'
 import * as z from 'zod'
 import type { ResolvedProvider } from '../../settings/entities/ai-settings.entity.js'
-import { chatModel } from './provider-model.js'
+import { claudeAgentOutput } from './claude-agent.js'
+import { providerFailure } from './provider-errors.js'
+import { chatModel, isNative } from './provider-model.js'
 
 export interface AgentDefinition<Schema extends z.ZodType> {
     /** O system prompt. */
     instructions: string
     /** A forma da resposta. O modelo é obrigado a devolver exatamente isto. */
     schema: Schema
+}
+
+/**
+ * Uma pergunta ao provedor. O Claude Code tem laço próprio e não passa pelo LangChain; o resto vai
+ * pelo modelo do LangChain com saída estruturada.
+ */
+async function ask<Schema extends z.ZodType>(
+    config: ResolvedProvider,
+    agent: AgentDefinition<Schema>,
+    input: unknown
+): Promise<z.infer<Schema>> {
+    if (isNative(config.provider)) {
+        return claudeAgentOutput(config, agent.instructions, agent.schema, input)
+    }
+
+    const model = await chatModel(config)
+
+    const output = await model.withStructuredOutput(agent.schema).invoke([
+        { role: 'system', content: agent.instructions },
+        { role: 'user', content: JSON.stringify(input, null, 2) }
+    ])
+
+    return output as z.infer<Schema>
 }
 
 /** Roda o agente uma vez; quem precisa de laço o monta por fora. */
@@ -24,15 +49,11 @@ export async function runAgent<Schema extends z.ZodType>(
 
     const graph = new StateGraph(State)
         .addNode('ask', async (state) => {
-            const model = await chatModel(config)
-            const structured = model.withStructuredOutput(agent.schema)
-
-            const output = await structured.invoke([
-                { role: 'system', content: agent.instructions },
-                { role: 'user', content: JSON.stringify(state.input, null, 2) }
-            ])
-
-            return { output }
+            try {
+                return { output: await ask(config, agent, state.input) }
+            } catch (error) {
+                throw providerFailure(config, error)
+            }
         })
         .addEdge(START, 'ask')
         .addEdge('ask', END)
