@@ -43,7 +43,7 @@ const fillable = computed(() => warnings.some(warning => warning.startsWith(EMPT
         color="warning"
         variant="link"
         class="mt-1 px-0"
-        :to="`/projects/${slug}?ambiente`"
+        :to="`/projects/${slug}?environment`"
         data-testid="ressalvas-ambiente"
       />
     </template>
