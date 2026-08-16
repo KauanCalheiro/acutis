@@ -1,3 +1,7 @@
 node_modules
 test-results/
 playwright-report/
+
+# O `home.spec` aponta o backend para as fixtures em vez de uma cópia, então ele cria a sua pasta
+# `runtime` (banco e logs) aqui dentro. Não é projeto de fixture: é resíduo de execução.
+fixtures/projects/runtime/

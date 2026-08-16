@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 import { spawn } from 'node:child_process'
 import { cpSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { basename, join, resolve } from 'node:path'
 import { startBackend } from '../support/backend'
 
 const FIXTURES_DIR = resolve(import.meta.dirname, '../fixtures/projects')
@@ -13,15 +13,32 @@ const overflowOf = (page: Page) => () => page.evaluate(
     () => document.documentElement.scrollHeight - window.innerHeight
 )
 
+/**
+ * Uma cópia das fixtures, sem a `runtime` que uma execução anterior possa ter deixado: é onde o
+ * backend guarda banco e logs, e herdá-la faria uma rodada enxergar a configuração da outra.
+ */
+function fixturesCopy(): string {
+    const dir = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
+
+    cpSync(FIXTURES_DIR, dir, { recursive: true, filter: (source) => basename(source) !== 'runtime' })
+
+    return dir
+}
+
 test.describe('projects home', { tag: ['@read', '@project'] }, () => {
     let stopBackend: () => Promise<void>
+    let projects: string
 
+    // Apontar o backend para as próprias fixtures faz ele criar `runtime` dentro delas, sujando o
+    // repositório a cada execução. Todo spec roda sobre uma cópia.
     test.beforeAll(async () => {
-        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: FIXTURES_DIR })
+        projects = fixturesCopy()
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: projects })
     })
 
     test.afterAll(async () => {
         await stopBackend()
+        rmSync(projects, { recursive: true, force: true })
     })
 
     test.beforeEach(async ({ page }) => {
@@ -125,8 +142,7 @@ test.describe('project creation', { tag: ['@write', '@project'] }, () => {
     let tmpGitRepo: string
 
     test.beforeAll(async () => {
-        tmpProjects = mkdtempSync(join(tmpdir(), 'acutis-projects-'))
-        cpSync(FIXTURES_DIR, tmpProjects, { recursive: true })
+        tmpProjects = fixturesCopy()
 
         tmpGitRepo = join(mkdtempSync(join(tmpdir(), 'acutis-git-')), 'clonado-do-git')
         for (const args of [
