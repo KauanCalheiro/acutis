@@ -1,10 +1,10 @@
 /** O que a gravação vira: primeiro um rascunho editável, depois os arquivos do projeto. */
 import { Injectable, Logger } from '@nestjs/common'
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 import { writeGherkin } from '../ai/agents/gherkin.js'
 import { writeMetadata } from '../ai/agents/metadata.js'
 import { SettingsService } from '../settings/settings.service.js'
+import { put } from '../../common/utils/file.js'
 import { slug as toSlug } from '../../common/utils/slug.js'
 import { ActiveVars } from '../../common/playwright/active-vars.js'
 import { Url } from '../../common/playwright/url.js'
@@ -150,9 +150,9 @@ export class GenerationService {
             tags
         )
 
-        this.put(join(path, spec), `${playwright}\n`)
+        put(join(path, spec), `${playwright}\n`)
 
-        if (feature !== null) this.put(join(path, feature), `${gherkin}\n`)
+        if (feature !== null) put(join(path, feature), `${gherkin}\n`)
 
         if (data.events) this.writeRecording(path, slug, spec, data.events, data.envVars ?? [])
 
@@ -181,18 +181,13 @@ export class GenerationService {
             this.projects.environmentsOf(slug).merge(values)
         }
 
-        this.put(join(path, eventsPathOf(spec)), JSON.stringify(recording.redacted(environments)))
+        put(join(path, eventsPathOf(spec)), JSON.stringify(recording.redacted(environments)))
 
         const html = recording.html()
 
         if (Object.keys(html).length > 0) {
-            this.put(join(path, htmlPathOf(spec)), JSON.stringify(html))
+            put(join(path, htmlPathOf(spec)), JSON.stringify(html))
         }
-    }
-
-    private put(file: string, contents: string): void {
-        mkdirSync(dirname(file), { recursive: true })
-        writeFileSync(file, contents)
     }
 
     /** As variáveis do ambiente ativo, com a URL desta gravação já preenchida. */

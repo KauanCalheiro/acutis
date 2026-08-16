@@ -1,9 +1,10 @@
 /** As operações de cenário: ler, editar, remover e guardar o que cada execução deixou. */
 import { Injectable } from '@nestjs/common'
-import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, isAbsolute, join, relative } from 'node:path'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs'
+import { isAbsolute, join, relative } from 'node:path'
 import { Git } from '../git/providers/git.js'
 import { ValidationFailed } from '../../common/exceptions/errors.js'
+import { put } from '../../common/utils/file.js'
 import { slug as toSlug } from '../../common/utils/slug.js'
 import { AUTH_FEATURE, AUTH_ID, AUTH_SPEC } from '../auth/providers/auth.js'
 import { ProjectService } from '../project/project.service.js'
@@ -99,14 +100,12 @@ export class ScenarioService {
             : stampGherkinTags(stampTitle(dto.gherkin!, dto.title), [])
         const playwright = stampPlaywrightTags(stampPlaywrightTitle(dto.playwright, dto.title), tags)
 
-        mkdirSync(dirname(join(path, specRelative)), { recursive: true })
-        writeFileSync(join(path, specRelative), `${playwright}\n`)
+        put(join(path, specRelative), `${playwright}\n`)
 
         if (gherkin === null) {
             rmSync(join(path, featureRelative), { force: true })
         } else {
-            mkdirSync(dirname(join(path, featureRelative)), { recursive: true })
-            writeFileSync(join(path, featureRelative), `${gherkin}\n`)
+            put(join(path, featureRelative), `${gherkin}\n`)
         }
 
         if (specRelative !== data.spec) {
