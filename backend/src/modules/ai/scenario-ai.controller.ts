@@ -2,7 +2,7 @@
 import { Body, Controller, HttpCode, Param, Post } from '@nestjs/common'
 import { ScenarioFixDto } from './dto/scenario-fix.dto.js'
 import { ScenarioAiService } from './scenario-ai.service.js'
-import type { FixedSpec, SelectorSuggestion } from './providers/stub.js'
+import type { FixedSpec, SelectorSuggestion } from './providers/disabled.js'
 
 @Controller('api/v1/projects')
 export class ScenarioAiController {

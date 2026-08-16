@@ -2,7 +2,9 @@
 import { Injectable } from '@nestjs/common'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { aiConfigured, fixedAuthSetup, writeGherkin } from '../ai/providers/stub.js'
+import { writeGherkin } from '../ai/agents/gherkin.js'
+import { fixSpec } from '../ai/agents/spec-fixer.js'
+import { SettingsService } from '../settings/settings.service.js'
 import { NotFound } from '../../common/exceptions/errors.js'
 import { put } from '../../common/utils/file.js'
 import { ActiveVars } from '../../common/playwright/active-vars.js'
@@ -88,7 +90,8 @@ function warningsFrom(issues: Violation[]): string[] {
 export class AuthService {
     constructor(
         private readonly projects: ProjectService,
-        private readonly runner: RunnerService
+        private readonly runner: RunnerService,
+        private readonly settings: SettingsService
     ) {}
 
     show(slug: string): string {
@@ -129,7 +132,7 @@ export class AuthService {
             put(join(path, htmlPathOf(AUTH_SPEC)), JSON.stringify(html))
         }
 
-        this.writeFeature(path, input, recording)
+        await this.writeFeature(path, input, recording)
 
         environments.ensure()
 
@@ -174,8 +177,9 @@ export class AuthService {
         run: SpecRun | null,
         emitted: Playwright
     ): Promise<[Playwright, string[]]> {
-        if (!aiConfigured()) return [emitted, warningsFrom(checkAuth(emitted, base, vars))]
+        if (!await this.settings.canUseAi()) return [emitted, warningsFrom(checkAuth(emitted, base, vars))]
 
+        const config = await this.settings.resolved()
         const events = recording.withoutPasswords()
         let playwright = emitted
 
@@ -188,23 +192,25 @@ export class AuthService {
                 return [playwright, warningsFrom(issues)]
             }
 
-            playwright = new Playwright(fixedAuthSetup({
+            const fixed = await fixSpec(config, {
                 spec: playwright.value,
-                violations: fixable,
-                error: result?.output,
+                violations: fixable.map(({ rule, message }) => ({ rule, message })),
+                run: result?.output === undefined ? undefined : { error: result.output },
                 html: result?.html,
                 events
-            }).playwright)
+            })
+
+            playwright = new Playwright(fixed.playwright)
         }
 
         return [playwright, []]
     }
 
     /** Escreve o `.feature` do login, no caminho fixo do auth. */
-    private writeFeature(path: string, input: AuthRecordingDto, recording: Recording): void {
-        if (!aiConfigured()) return
+    private async writeFeature(path: string, input: AuthRecordingDto, recording: Recording): Promise<void> {
+        if (!await this.settings.canUseAi()) return
 
-        const { gherkin } = writeGherkin({
+        const { gherkin } = await writeGherkin(await this.settings.resolved(), {
             baseUrl: input.baseUrl,
             events: recording.withoutPasswords()
         })
