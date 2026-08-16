@@ -71,7 +71,7 @@ pnpm exec playwright show-report                     # abre o relatório da últ
 - **Estado dedicado.** Cada spec aponta o backend para um diretório de projetos temporário, e o SQLite das configurações é derivado dele — o seu `~/.acutis` não é tocado.
 - **Portas 42xx, isoladas do desenvolvimento** (frontend 4300, backend 4400 — fonte única em `e2e/support/ports.ts`). Não é preciso derrubar a stack local para rodar a suíte. Ao checar porta ocupada, use `lsof -nP -iTCP:4300 -sTCP:LISTEN`: sem o `-sTCP:LISTEN`, o `lsof` também casa conexões do navegador e você conclui errado que há servidor de pé.
 - **Só o frontend sobe pelo `webServer` do Playwright.** O backend sobe de dentro dos próprios specs (`support/backend.ts`, `support/webdriver.ts` — o mesmo processo, dois nomes por assunto), que esperam a porta liberar antes e depois de cada uso.
-- **`workers: 1`, `fullyParallel: false`, `retries: 0`.** É deliberado: os serviços disputam portas fixas. Se o tempo doer, a saída é porta por spec, não subir os workers.
+- **`workers: 1`, `fullyParallel: false`, `retries: 0` local (1 no CI).** É deliberado: os serviços disputam portas fixas. Se o tempo doer, a saída é porta por spec, não subir os workers.
 - **O recorder roda headless na suíte** (`RECORDER_HEADLESS=1` em `support/webdriver.ts`). Para assistir a uma execução: `RECORDER_HEADLESS=0 pnpm test`.
 - **Vídeo de toda execução** fica em `e2e/test-results/` (`video: 'on'`) — útil para entender falha que só acontece na suíte.
 - **Tags:** todo `describe` marca `['@read'|'@write', '@dominio']`, então `--grep @write` ou `--grep @recording` filtram por comportamento, não por nome de arquivo.
@@ -87,3 +87,14 @@ Não existe um comando único que rode as três suítes. Na ordem do mais barato
 ```
 
 As duas primeiras são independentes e podem rodar em paralelo. O E2E vai por último: é o único que sobe serviços, e uma falha nas suítes rápidas quase sempre explica a falha dele.
+
+## No CI
+
+`.github/workflows/ci.yml` roda três jobs em todo push: `backend` (lint, typecheck, testes com cobertura), `frontend` (o mesmo) e `e2e`.
+
+| Ramo | O que o job `e2e` roda | Tempo |
+|------|------------------------|-------|
+| Qualquer um menos a `main` | `playwright test --grep @read` — 51 testes, sem gravador nem runner | ~40s |
+| `main` | a suíte inteira | minutos |
+
+A cobertura dos dois primeiros sobe como artefato (`coverage-backend`, `coverage-frontend`); o relatório do Playwright sobe só quando o E2E falha. O gate de cobertura está em `vitest.config.ts` de cada lado — 75% de linhas no backend, piso de 18% no frontend, onde a cobertura de tela mora no E2E e não no v8.

@@ -9,7 +9,7 @@ export default defineConfig({
     ...(process.env.OLLAMA_URL ? {} : { grepInvert: AI_DEPENDENT }),
     timeout: 30_000,
     fullyParallel: false,
-    retries: 0,
+    retries: process.env.CI ? 1 : 0,
     workers: 1,
     reporter: [['list'], ['html', { open: 'never' }]],
     use: {

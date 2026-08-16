@@ -9,6 +9,7 @@
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "@nuxt/test-utils": "^4.0.3",
     "@types/node": "^26.1.0",
     "@types/prismjs": "^1.26.6",
+    "@vitest/coverage-v8": "^4.1.10",
     "@vue/test-utils": "^2.4.11",
     "eslint": "^10.6.0",
     "happy-dom": "^20.10.6",

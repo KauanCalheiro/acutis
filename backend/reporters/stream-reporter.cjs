@@ -105,7 +105,11 @@ class StreamReporter {
 
         this.closeStep(test.id, step.title)
 
-        step.error ? this.failedSteps.add(test.id) : this.lastStep.set(test.id, step.title)
+        if (step.error) {
+            this.failedSteps.add(test.id)
+        } else {
+            this.lastStep.set(test.id, step.title)
+        }
 
         emit({
             event: 'step',

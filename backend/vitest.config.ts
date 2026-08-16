@@ -20,5 +20,12 @@ export default defineConfig({
             'test/**/*.spec.ts',
             'reporters/**/*.spec.ts',
         ],
+        coverage: {
+            provider: 'v8',
+            reporter: ['text-summary', 'lcov'],
+            include: ['src/**/*.ts', 'reporters/*.cjs'],
+            exclude: ['src/**/__tests__/**', 'src/migrations/**', 'src/**/*.vue', 'src/main.ts'],
+            thresholds: { lines: 75, functions: 82, branches: 80, statements: 75 },
+        },
     },
 })
