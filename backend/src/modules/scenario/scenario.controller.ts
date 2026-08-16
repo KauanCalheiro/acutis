@@ -90,6 +90,8 @@ export class ScenarioController {
 
         if (spec) {
             await this.scenarios.persistRun(path, spec, events, startedAt)
+        } else {
+            await this.scenarios.persistRuns(path, events, startedAt)
         }
 
         if (finished) response.write(`data: ${JSON.stringify(finished)}\n\n`)

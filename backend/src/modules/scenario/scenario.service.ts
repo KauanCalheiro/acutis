@@ -1,7 +1,7 @@
 /** As operações de cenário: ler, editar, remover e guardar o que cada execução deixou. */
 import { Injectable } from '@nestjs/common'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, isAbsolute, join, relative } from 'node:path'
 import { Git } from '../git/providers/git.js'
 import { ValidationFailed } from '../../common/exceptions/errors.js'
 import { slug as toSlug } from '../../common/utils/slug.js'
@@ -153,38 +153,103 @@ export class ScenarioService {
     /** Guarda a execução no histórico do cenário e a versiona, quando o projeto é repositório. */
     async persistRun(path: string, spec: string, events: RunEventRecord[], startedAt: Date): Promise<void> {
         const scenario = Scenario.fromSpec(path, spec)
-        const runs = new Runs(path, scenario.id)
+        const git = Git.in(path)
+        const committed = await this.record(path, scenario.id, spec, events, startedAt, git)
+
+        await (await git.commit(`chore: registrar execução de ${scenario.id}`, committed)).push()
+    }
+
+    /**
+     * Guarda uma execução por teste que reportou, que é o que a execução do projeto inteiro (ou do
+     * filtro) deixa para trás, num commit só.
+     */
+    async persistRuns(path: string, events: RunEventRecord[], startedAt: Date): Promise<void> {
+        const git = Git.in(path)
+        const committed: string[] = []
+        const ids: string[] = []
+
+        for (const [spec, own] of this.byScenario(path, events)) {
+            const id = Scenario.fromSpec(path, spec).id
+            const announced = own.find((event) => Array.isArray(event.steps))?.steps as string[] | undefined
+
+            committed.push(...await this.record(path, id, spec, own, startedAt, git, announced ?? []))
+            ids.push(id)
+        }
+
+        if (ids.length === 0) return
+
+        await (await git.commit(`chore: registrar execução de ${ids.length} cenário(s)`, committed)).push()
+    }
+
+    /** Grava a execução do cenário e devolve o que ela escreveu, para quem for commitar. */
+    private async record(
+        path: string,
+        id: string,
+        spec: string,
+        events: RunEventRecord[],
+        startedAt: Date,
+        git: Git,
+        announced?: string[]
+    ): Promise<string[]> {
+        const runs = new Runs(path, id)
         const specFile = join(path, spec)
 
         mkdirSync(runs.directory(), { recursive: true })
 
         const video = this.copyVideo(events, runs.directory())
-        const git = Git.in(path)
 
-        const run: Run = {
+        runs.append({
             started_at: startedAt.toISOString(),
             duration_ms: this.durationMs(events),
             passed: this.passed(events),
             branch: await git.branch(),
             author: await git.author(),
             video,
-            steps: this.steps(events),
+            steps: this.steps(events, announced),
             playwright: existsSync(specFile) ? sourceOf(specFile) : ''
-        }
+        })
 
-        runs.append(run)
+        const written = [`runs/${id}/${HISTORY}`]
 
-        const committed = [`runs/${scenario.id}/${HISTORY}`]
+        if (video) written.push(`runs/${id}/${VIDEO}`)
 
-        if (video) committed.push(`runs/${scenario.id}/${VIDEO}`)
-
-        await (await git.commit(`chore: registrar execução de ${scenario.id}`, committed)).push()
+        return written
     }
 
-    /** A timeline dos passos: a falha corrige a linha que já existe em vez de empilhar outra. */
-    private steps(events: RunEventRecord[]): RunStep[] {
+    /** Os eventos de cada teste, endereçados pelo spec do cenário dono deles. */
+    private byScenario(path: string, events: RunEventRecord[]): Map<string, RunEventRecord[]> {
+        const specOf = new Map<string, string>()
+        const grouped = new Map<string, RunEventRecord[]>()
+
+        for (const event of events) {
+            if (event.event !== 'test') continue
+
+            const id = asString(event.id)
+            const file = asString(event.file)
+            const spec = file === null ? null : relative(path, file)
+
+            // O histórico é do projeto: arquivo de fora dele não tem cenário aqui para receber a execução.
+            if (id && spec && !spec.startsWith('..') && !isAbsolute(spec)) specOf.set(id, spec)
+        }
+
+        for (const event of events) {
+            const spec = specOf.get(asString(event.id) ?? asString(event.testId) ?? '')
+
+            if (!spec) continue
+
+            grouped.set(spec, [...grouped.get(spec) ?? [], event])
+        }
+
+        return grouped
+    }
+
+    /**
+     * A timeline dos passos: a falha corrige a linha que já existe em vez de empilhar outra. Sem
+     * timeline anunciada, vale a do run, que numa execução de vários cenários é a soma de todos.
+     */
+    private steps(events: RunEventRecord[], announced?: string[]): RunStep[] {
         const started = events.find((event) => event.event === 'run:started')
-        const declared = Array.isArray(started?.steps) ? started.steps as string[] : []
+        const declared = announced ?? (Array.isArray(started?.steps) ? started.steps as string[] : [])
 
         const timeline: RunStep[] = declared.map((title) => ({
             title,
@@ -235,10 +300,15 @@ export class ScenarioService {
         return -1
     }
 
+    /** O resultado do run; sem ele, o do próprio teste, que é o caso de um cenário dentro de vários. */
     private passed(events: RunEventRecord[]): boolean {
         const finished = events.filter((event) => event.event === 'run:finished').pop()
 
-        return Boolean(finished?.passed ?? false)
+        if (finished) return Boolean(finished.passed ?? false)
+
+        const test = events.filter((event) => event.event === 'test' && event.status !== 'pending').pop()
+
+        return test?.status === 'success'
     }
 
     private durationMs(events: RunEventRecord[]): number {

@@ -1,14 +1,10 @@
 <script setup lang="ts">
-interface TestStep {
-  title: string
-  status: 'waiting' | 'running' | 'success' | 'failed'
-  error?: string | null
-}
+import type { RunStep } from '~/composables/run-stream'
 
 interface ScenarioTestRunModal {
   running?: boolean
   passed?: boolean
-  steps?: TestStep[]
+  steps?: RunStep[]
   videoUrl?: string | null
   projectName: string
   scenarioName: string
@@ -56,20 +52,6 @@ function seekToPreviewFrame(event: Event) {
   const video = event.target as HTMLVideoElement
 
   video.currentTime = video.duration * 0.25
-}
-
-const stepIcons: Record<TestStep['status'], string> = {
-  waiting: 'i-ic-round-radio-button-unchecked',
-  running: 'i-ic-round-radio-button-unchecked',
-  success: 'i-ic-round-check-circle',
-  failed: 'i-ic-round-error'
-}
-
-const stepColors: Record<TestStep['status'], string> = {
-  waiting: 'text-dimmed',
-  running: 'text-warning animate-pulse',
-  success: 'text-success',
-  failed: 'text-error'
 }
 </script>
 
@@ -180,42 +162,7 @@ const stepColors: Record<TestStep['status'], string> = {
             Timeline de eventos
           </p>
         </template>
-        <ol class="flex flex-col">
-          <li
-            v-for="(step, i) in steps"
-            :key="i"
-            data-testid="execucao-step"
-            :data-status="step.status"
-            class="flex items-stretch gap-3"
-          >
-            <div class="flex flex-col items-center">
-              <UIcon
-                :name="stepIcons[step.status]"
-                class="size-6 shrink-0 transition-colors"
-                :class="stepColors[step.status]"
-              />
-              <span
-                v-if="i < steps.length - 1"
-                class="w-px grow bg-accented"
-              />
-            </div>
-            <div class="pb-4 min-w-0">
-              <p
-                class="text-base"
-                data-testid="execucao-step-titulo"
-              >
-                {{ step.title }}
-              </p>
-              <p
-                v-if="step.status === 'failed' && step.error"
-                class="text-sm text-dimmed mt-1"
-                data-testid="execucao-step-erro"
-              >
-                <span class="font-semibold text-error">Erro:</span> {{ step.error }}
-              </p>
-            </div>
-          </li>
-        </ol>
+        <ScenarioTestRunSteps :steps="steps" />
 
         <template v-if="playwright">
           <p class="mt-6 mb-3 text-lg font-semibold">

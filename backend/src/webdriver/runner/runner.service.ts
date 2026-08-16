@@ -53,6 +53,8 @@ const WEBDRIVER_ROOT = resolve(import.meta.dirname, '../../..')
 const RUN_TAIL_MS = 1500
 const RUN_TAIL_ENV = 'ACUTIS_RUN_TAIL_MS'
 const FAILURE_HTML_FILE = 'failure.html'
+/** Onde o relatório HTML do Playwright é escrito, o mesmo caminho do config que o projeto recebe. */
+export const REPORT_DIR = 'results/report'
 const WRAPPER_FILE = 'acutis-run.ts'
 /** O wrapper do `@playwright/test` que escreve o HTML da página quando o teste termina vermelho. */
 const WRAPPER_SOURCE = [
@@ -137,14 +139,21 @@ export class RunnerService {
         await this.ensureRunTail(dir)
         const env = await this.projectEnv(dir, options.env)
 
-        const args = [`--reporter=${STREAM_REPORTER_PATH}`, ...TEST_TIMEOUT]
+        const args = [`--reporter=${STREAM_REPORTER_PATH},html`, ...TEST_TIMEOUT]
         if (options.spec) args.push(options.spec)
         if (options.grep) args.push('--grep', options.grep)
 
         return new Promise((resolvePromise) => {
             const child = spawn('npx', ['playwright', 'test', ...args], {
                 cwd: dir,
-                env: { ...process.env, ...env, PLAYWRIGHT_HTML_OPEN: 'never', [RUN_TAIL_ENV]: String(RUN_TAIL_MS), NODE_PATH: join(WEBDRIVER_ROOT, 'node_modules') },
+                env: {
+                    ...process.env,
+                    ...env,
+                    PLAYWRIGHT_HTML_OPEN: 'never',
+                    PLAYWRIGHT_HTML_OUTPUT_DIR: REPORT_DIR,
+                    [RUN_TAIL_ENV]: String(RUN_TAIL_MS),
+                    NODE_PATH: join(WEBDRIVER_ROOT, 'node_modules'),
+                },
             })
 
             let output = ''

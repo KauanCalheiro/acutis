@@ -5,6 +5,7 @@
 import { Injectable } from '@nestjs/common'
 import { cpSync, existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
+import { REPORT_DIR } from '../../webdriver/runner/runner.service.js'
 import { Git, providerFromUrl } from '../git/providers/git.js'
 import type { CloneRequest, GitService } from '../git/git.service.js'
 import { acutis } from '../../common/utils/acutis.js'
@@ -156,7 +157,8 @@ export class ProjectService {
             base_url: baseUrl,
             storage_state: join(path, environments.storageState()),
             requires_url: !baseUrl && !manifest.url_skipped,
-            vscode_url: `vscode://file${this.hostPathOf(slug)}`
+            vscode_url: `vscode://file${this.hostPathOf(slug)}`,
+            has_report: existsSync(join(path, REPORT_DIR, 'index.html'))
         }
     }
 

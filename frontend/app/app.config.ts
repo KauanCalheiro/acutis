@@ -5,6 +5,10 @@ export default defineAppConfig({
       neutral: 'neutral'
     },
     button: {
+      slots: {
+        base: 'group',
+        trailingIcon: 'transition-transform duration-200 group-data-[state=open]:rotate-180'
+      },
       defaultVariants: {
         size: 'xl'
       },

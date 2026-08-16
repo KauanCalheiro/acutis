@@ -175,7 +175,7 @@ function runTest() {
   fix.value = null
   fixError.value = null
 
-  startRun(scenario.value!.spec, async () => {
+  startRun({ spec: scenario.value!.spec }, async () => {
     await refreshScenario()
 
     // É a execução do login que decide o status de autenticação do projeto.

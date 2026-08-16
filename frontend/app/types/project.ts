@@ -27,6 +27,8 @@ export interface ProjectDetail extends Project {
   storage_state: string
   requires_url: boolean
   vscode_url: string
+  /** A última execução deixou relatório do Playwright, com vídeo e trace de cada teste. */
+  has_report: boolean
 }
 
 export interface EnvironmentVar {
