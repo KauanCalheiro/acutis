@@ -70,12 +70,12 @@ function readWriteTag(events: RecordedEvent[]): string {
 }
 
 /** A lista final de tags, nesta ordem: @read/@write, as do modelo e @publico. */
-function tagList(readWrite: string, suggested: string[], publico: boolean): string[] {
+function tagList(readWrite: string, suggested: string[], isPublic: boolean): string[] {
     const fromModel = suggested
         .map((tag) => (tag.startsWith('@') ? tag : `@${tag}`))
         .filter((tag) => !/^@(read|write|publico)$/.test(tag))
 
-    return [...new Set([readWrite, ...fromModel, ...(publico ? ['@publico'] : [])])]
+    return [...new Set([readWrite, ...fromModel, ...(isPublic ? ['@publico'] : [])])]
 }
 
 @Injectable()
@@ -114,7 +114,7 @@ export class GenerationService {
             ? await writeMetadata(await this.settings.resolved(), { gherkin, domain })
             : null
 
-        const tags = tagList(readWriteTag(recording.events), named?.tags ?? [], recording.publico === true)
+        const tags = tagList(readWriteTag(recording.events), named?.tags ?? [], recording.isPublic === true)
 
         const cleanGherkin = gherkin === '' ? '' : stampGherkinTags(gherkin, [])
         const title = titleOf(cleanGherkin)
