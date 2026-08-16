@@ -43,6 +43,7 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
         await expect(page.getByRole('option')).toHaveText([
             'Sem IA',
             'Anthropic',
+            'Claude Agent',
             'Google Gemini',
             'Ollama',
             'OpenAI',
@@ -189,6 +190,59 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
         await page.getByTestId('config-ia-salvar').click()
 
         await expect(page.getByText('A chave de API do provedor escolhido é obrigatória.')).toBeVisible()
+    })
+
+    /**
+     * O Claude Agent roda o binário local já autenticado: o formulário dele não pede credencial
+     * nenhuma, só explica o que instalar. O nome na tela nunca é "Claude Code" — diretriz de marca
+     * da Anthropic para produto de terceiro.
+     */
+    test('offers the local agent with no credential to fill in, only what to install', async ({ page }) => {
+        await page.goto('/')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await test.step('pick the local agent, named as the branding guidelines allow', async () => {
+            await page.getByTestId('navbar-configuracoes').click()
+            await page.getByTestId('config-ia-provedor').click()
+
+            await expect(page.getByRole('option', { name: 'Claude Code', exact: true })).toHaveCount(0)
+            await page.getByRole('option', { name: 'Claude Agent', exact: true }).click()
+        })
+
+        await test.step('there is no key, no address and no token to fill in', async () => {
+            await expect(page.getByTestId('config-ia-chave')).toBeHidden()
+            await expect(page.getByTestId('config-ia-url')).toBeHidden()
+            await expect(page.getByTestId('config-ia-token')).toHaveCount(0)
+        })
+
+        await test.step('the setup steps are on screen, with a link to the docs', async () => {
+            await expect(page.getByTestId('config-ia-claude-agent')).toContainText('claude login')
+            await expect(page.getByTestId('config-ia-claude-agent-documentacao')).toHaveAttribute(
+                'href',
+                'https://docs.claude.com/en/docs/claude-code/setup'
+            )
+        })
+    })
+
+    test('saves the local agent with just a model, and lists the models it reaches', async ({ page }) => {
+        await page.goto('/')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await test.step('pick the model offered by the local agent', async () => {
+            await page.getByTestId('navbar-configuracoes').click()
+            await page.getByTestId('config-ia-provedor').click()
+            await page.getByRole('option', { name: 'Claude Agent', exact: true }).click()
+            await escolherModelo(page, 'claude-sonnet-5')
+            await page.getByTestId('config-ia-salvar').click()
+        })
+
+        await expect(page.getByText('Configuração salva', { exact: true })).toBeVisible()
+
+        await test.step('reopening comes back on the same provider and model', async () => {
+            await page.getByTestId('navbar-configuracoes').click()
+
+            await expect(page.getByTestId('config-ia-modelo')).toContainText('claude-sonnet-5')
+        })
     })
 
     /** Deixa a IA desligada para o resto do describe: mantenha este teste por último. */

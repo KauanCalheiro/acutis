@@ -18,6 +18,13 @@ export class BadRequest extends HttpError {
     }
 }
 
+/** O provedor de IA recusou a chamada; a mensagem já vem pronta para o usuário. */
+export class ProviderFailed extends HttpError {
+    constructor(message: string, status = 502) {
+        super(status, message)
+    }
+}
+
 /** Falha de validação. */
 export class ValidationFailed extends HttpError {
     constructor(readonly errors: Record<string, string[]>, message = 'Os dados informados são inválidos.') {

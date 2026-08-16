@@ -85,8 +85,8 @@ async function generate() {
       }
     })
     step.value = 'edit'
-  } catch {
-    error.value = 'Não foi possível gerar o cenário. Tente novamente.'
+  } catch (err) {
+    error.value = extractServerError(err, 'Não foi possível gerar o cenário. Tente novamente.')
     step.value = 'review'
   }
 }
@@ -104,8 +104,8 @@ async function commit() {
     })
     open.value = false
     emit('generated')
-  } catch {
-    error.value = 'Não foi possível salvar o cenário. Tente novamente.'
+  } catch (err) {
+    error.value = extractServerError(err, 'Não foi possível salvar o cenário. Tente novamente.')
   } finally {
     submitting.value = false
   }
@@ -154,6 +154,7 @@ function rerecord() {
         variant="soft"
         :description="error"
         class="mt-4"
+        data-testid="revisao-erro"
       />
     </template>
 

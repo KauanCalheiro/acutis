@@ -1,5 +1,6 @@
 /** Os modelos que um provedor oferece, perguntados a ele e traduzidos para uma lista só. */
 import type { ResolvedProvider } from '../../settings/entities/ai-settings.entity.js'
+import { CLAUDE_AGENT_MODELS } from './claude-agent.js'
 
 export interface AvailableModel {
     /** O identificador que vai no cadastro, exatamente como o provedor o nomeia. */
@@ -40,6 +41,19 @@ async function openAiCompatible(base: string, key: string | null): Promise<Avail
     return list.filter((item) => item.id).map((item) => ({ id: item.id!, label: item.id! }))
 }
 
+/** O catálogo da Anthropic; quem autentica muda, o resto é igual. Cabeçalho nulo não vai. */
+async function anthropicCatalog(config: ResolvedProvider, auth: Record<string, string | null>): Promise<AvailableModel[]> {
+    const base = trimSlash(config.url ?? 'https://api.anthropic.com/v1')
+    const headers = Object.fromEntries(Object.entries(auth).filter(([, value]) => value !== null)) as Record<string, string>
+    const body = await fetchJson(`${base}/models`, { ...headers, 'anthropic-version': '2023-06-01' })
+    const list = (body as { data?: { id?: string, display_name?: string }[] }).data ?? []
+
+    return list.filter((item) => item.id).map((item) => ({
+        id: item.id!,
+        label: item.display_name ?? item.id!
+    }))
+}
+
 const CATALOGS: Record<string, (config: ResolvedProvider) => Promise<AvailableModel[]>> = {
     /** O Ollama lista o que foi baixado na máquina, e não pede chave. */
     async ollama(config) {
@@ -69,19 +83,10 @@ const CATALOGS: Record<string, (config: ResolvedProvider) => Promise<AvailableMo
         }))
     },
 
-    async anthropic(config) {
-        const base = trimSlash(config.url ?? 'https://api.anthropic.com/v1')
-        const body = await fetchJson(`${base}/models`, {
-            'x-api-key': config.key ?? '',
-            'anthropic-version': '2023-06-01'
-        })
-        const list = (body as { data?: { id?: string, display_name?: string }[] }).data ?? []
+    anthropic: (config) => anthropicCatalog(config, { 'x-api-key': config.key ?? '' }),
 
-        return list.filter((item) => item.id).map((item) => ({
-            id: item.id!,
-            label: item.display_name ?? item.id!
-        }))
-    },
+    /** O Claude Code não oferece catálogo: a lista é a que este projeto verificou. */
+    'claude-code': async () => CLAUDE_AGENT_MODELS.map((id) => ({ id, label: id })),
 
     /** O Gemini nomeia como `models/gemini-2.0-flash`; o cadastro quer só a parte final. */
     async gemini(config) {

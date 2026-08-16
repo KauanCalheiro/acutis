@@ -140,7 +140,9 @@ export class SettingsService implements OnModuleInit {
         if (blankToNull(key) !== null) return
         if ((await this.credentialOf(provider))?.key) return
 
-        throw new ValidationFailed({ key: ['A chave de API do provedor escolhido é obrigatória.'] })
+        const message = PROVIDERS[provider]?.keyError ?? 'A chave de API do provedor escolhido é obrigatória.'
+
+        throw new ValidationFailed({ key: [message] })
     }
 
     /** O cadastro de cada provedor, chave inclusive. */
