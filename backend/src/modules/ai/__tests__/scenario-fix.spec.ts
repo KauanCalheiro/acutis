@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import { startApi, type Harness } from '../../../../test/support/harness.js'
 import { AiModule } from '../ai.module.js'
-import { AI_DISABLED_SUMMARY } from '../providers/stub.js'
+import { AI_DISABLED_SUMMARY } from '../providers/disabled.js'
 
 let api: Harness
 let dir: string

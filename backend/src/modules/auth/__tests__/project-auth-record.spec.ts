@@ -3,11 +3,44 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it, vi, type MockInstance } from 'vitest'
-import { GHERKIN, aiLog, resetAiLog } from '../../ai/providers/stub.js'
+import { writeGherkin } from '../../ai/agents/gherkin.js'
+import { fixSpec } from '../../ai/agents/spec-fixer.js'
 import { RunnerService, type RunResult } from '../../../webdriver/runner/runner.service.js'
 import { startApi, type Harness } from '../../../../test/support/harness.js'
+import { SettingsModule } from '../../settings/settings.module.js'
 import { EnvKey } from '../../environment/providers/env-key.js'
 import { AuthModule } from '../auth.module.js'
+
+/** O setup que o corretor devolve, reconhecível pelos seletores que só ele usa. */
+const { CORRECTED } = vi.hoisted(() => ({
+    CORRECTED: [
+        "import { test as setup, expect } from '@playwright/test'",
+        '',
+        'const base = process.env.URL',
+        '',
+        "setup('autenticação', async ({ page }) => {",
+        '    await page.goto(base)',
+        "    await page.getByTestId('login-usuario').fill(process.env.AUTH_USER)",
+        "    await page.getByTestId('login-senha').fill(process.env.AUTH_PASSWORD)",
+        "    await expect(page.getByTestId('login-senha')).toBeHidden()",
+        "    await page.context().storageState({ path: process.env.STORAGE_STATE || 'storage-state.json' })",
+        '})',
+        ''
+    ].join('\n')
+}))
+
+/** O dublê do agente que escreve o Gherkin do login. */
+vi.mock('../../ai/agents/gherkin.js', () => ({
+    writeGherkin: vi.fn(async () => ({
+        gherkin: 'Funcionalidade: Entrar no sistema\n  Cenário: informa as credenciais',
+        domain: 'acesso'
+    }))
+}))
+
+/** O dublê do agente que conserta o setup que quebrou. */
+vi.mock('../../ai/agents/spec-fixer.js', () => ({
+    fixSpec: vi.fn(async () => ({ playwright: CORRECTED, summary: 'trocou o seletor do campo de senha' }))
+}))
 
 let api: Harness
 let dir: string
@@ -16,8 +49,9 @@ let runner: MockInstance<RunnerService['run']>
 const SLUG = 'portal-sistema'
 
 beforeEach(async () => {
-    api = await startApi([AuthModule])
-    resetAiLog()
+    vi.clearAllMocks()
+
+    api = await startApi([AuthModule, SettingsModule])
 
     runner = vi.spyOn(RunnerService.prototype, 'run')
     runsReturning({ passed: true, output: 'ok' })
@@ -36,6 +70,14 @@ function runsReturning(...results: RunResult[]): void {
 /** O ambiente do que foi mandado executar. */
 function runEnv(call = 0): Record<string, string> {
     return (runner.mock.calls[call]?.[1]?.env ?? {}) as Record<string, string>
+}
+
+/** Cadastra um provedor de IA, que é o que liga os agentes; sem isto o projeto roda sem modelo. */
+async function configureAi(): Promise<void> {
+    await api.http
+        .put('/api/v1/settings/ai')
+        .send({ provider: 'ollama', model: 'llama3.1:8b' })
+        .expect(200)
 }
 
 async function recordProject(name = 'Portal Sistema'): Promise<void> {
@@ -159,6 +201,7 @@ it('avisa quando a execução passou sem deixar sessão', async () => {
 
 it('manda ao corretor o setup que falhou na execução, com o erro e a página quebrada', async () => {
     await recordProject()
+    await configureAi()
     runsReturning(
         { passed: false, output: "locator('#pass') resolved to hidden", html: '<input data-testid="senha">' },
         { passed: true, output: 'ok' }
@@ -166,8 +209,57 @@ it('manda ao corretor o setup que falhou na execução, com o erro e a página q
 
     await record(recordPayload({ executionUrl: 'https://homolog.sistema.test' })).expect(200)
 
-    expect(aiLog.authFix?.error).toContain("locator('#pass') resolved to hidden")
-    expect(aiLog.authFix?.html).toContain('data-testid="senha"')
+    const [, input] = vi.mocked(fixSpec).mock.calls[0]!
+
+    expect(input.run?.error).toContain("locator('#pass') resolved to hidden")
+    expect(input.html).toContain('data-testid="senha"')
+})
+
+it('conserta o login com o provedor cadastrado nas configurações', async () => {
+    await recordProject()
+    await configureAi()
+    runsReturning(
+        { passed: false, output: 'falhou', html: '<input data-testid="senha">' },
+        { passed: true, output: 'ok' }
+    )
+
+    await record(recordPayload({ executionUrl: 'https://homolog.sistema.test' })).expect(200)
+
+    const [config] = vi.mocked(fixSpec).mock.calls[0]!
+
+    expect(config.provider).toBe('ollama')
+    expect(config.model).toBe('llama3.1:8b')
+})
+
+it('escreve o setup que o corretor devolveu, e não o que saiu da gravação', async () => {
+    await recordProject()
+    await configureAi()
+    runsReturning(
+        { passed: false, output: 'falhou', html: '<input data-testid="senha">' },
+        { passed: true, output: 'ok' }
+    )
+
+    const response = await record(recordPayload({ executionUrl: 'https://homolog.sistema.test' }))
+
+    expect(response.status).toBe(200)
+    expect(response.body.authSetup).toContain("getByTestId('login-senha')")
+    expect(file('tests/auth.setup.ts')).toContain("getByTestId('login-senha')")
+})
+
+/**
+ * Sem provedor não há corretor, e o que foi gravado é tudo o que existe. Substituí-lo por um
+ * arquivo qualquer entregaria ao usuário um login de outra aplicação.
+ */
+it('preserva o setup gravado quando não há provedor, mesmo que a execução falhe', async () => {
+    await recordProject()
+    runsReturning({ passed: false, output: 'falhou', html: '<input data-testid="senha">' })
+
+    const response = await record(recordPayload({ executionUrl: 'https://homolog.sistema.test' }))
+
+    expect(response.status).toBe(200)
+    expect(response.body.authSetup).toContain(`fill(process.env.${EnvKey.USER})`)
+    expect(response.body.authSetup).not.toContain("getByTestId('login-senha')")
+    expect(vi.mocked(fixSpec)).not.toHaveBeenCalled()
 })
 
 it('lê as credenciais das chaves do ambiente, sem nunca escrever a senha gravada', async () => {
@@ -331,50 +423,47 @@ it('escreve o html capturado do login em arquivo próprio, fora dos eventos', as
 
 it('escreve o gherkin do login ao lado do setup', async () => {
     await recordProject()
+    await configureAi()
 
     await record().expect(200)
 
-    expect(file('features/auth.feature')).toContain(GHERKIN.gherkin)
+    expect(file('features/auth.feature')).toContain('Funcionalidade: Entrar no sistema')
 })
 
 /** Sem provedor ativo o login continua sendo gravado: o que some é a descrição, que é o que a IA escrevia. */
-it('escreve o setup do login sem feature quando não há provedor de ia ativo', async () => {
-    const previous = process.env.ACUTIS_AI_PROVIDER
+it('escreve o setup do login sem feature quando não há provedor de ia cadastrado', async () => {
+    await recordProject()
 
-    process.env.ACUTIS_AI_PROVIDER = ''
+    const response = await record()
 
-    try {
-        await recordProject()
+    expect(response.status).toBe(200)
+    expect(response.body.authSetup).toContain("setup('autenticação'")
 
-        const response = await record()
-
-        expect(response.status).toBe(200)
-        expect(response.body.authSetup).toContain("setup('autenticação'")
-
-        expect(existsSync(join(dir, 'tests/auth.setup.ts'))).toBe(true)
-        expect(existsSync(join(dir, 'features/auth.feature'))).toBe(false)
-    } finally {
-        if (previous === undefined) delete process.env.ACUTIS_AI_PROVIDER
-        else process.env.ACUTIS_AI_PROVIDER = previous
-    }
+    expect(existsSync(join(dir, 'tests/auth.setup.ts'))).toBe(true)
+    expect(existsSync(join(dir, 'features/auth.feature'))).toBe(false)
+    expect(vi.mocked(writeGherkin)).not.toHaveBeenCalled()
 })
 
 it('mantém a feature de autenticação no caminho fixo, qualquer que seja o domínio sugerido', async () => {
     await recordProject()
+    await configureAi()
 
     await record().expect(200)
 
     expect(existsSync(join(dir, 'features/auth.feature'))).toBe(true)
-    expect(existsSync(join(dir, `features/${GHERKIN.domain}/auth.feature`))).toBe(false)
+    expect(existsSync(join(dir, 'features/acesso/auth.feature'))).toBe(false)
 })
 
 it('mostra ao escritor de gherkin os mesmos eventos marcados, nunca a senha real', async () => {
     await recordProject()
+    await configureAi()
 
     await record().expect(200)
 
-    const prompt = JSON.stringify(aiLog.gherkin)
+    const [config, input] = vi.mocked(writeGherkin).mock.calls[0]!
+    const prompt = JSON.stringify(input)
 
+    expect(config.provider).toBe('ollama')
     expect(prompt).toContain(`{{${EnvKey.PASSWORD}}}`)
     expect(prompt).not.toContain('topsecret123')
 })
@@ -444,7 +533,7 @@ it('sempre fecha o setup salvando a sessão, sem passar pelo corretor', async ()
     expect(response.body.authSetup).toContain(
         `await page.context().storageState({ path: process.env.${EnvKey.STORAGE_STATE} || 'storage-state.json' })`
     )
-    expect(aiLog.authFixCalls).toBe(0)
+    expect(vi.mocked(fixSpec)).not.toHaveBeenCalled()
 })
 
 it('confere a url por padrão, nunca por igualdade exata', async () => {
@@ -464,10 +553,11 @@ it('confere a url por padrão, nunca por igualdade exata', async () => {
 
 it('nunca chama o corretor quando o setup gerado não quebra regra', async () => {
     await recordProject()
+    await configureAi()
 
     await record().expect(200)
 
-    expect(aiLog.authFixCalls).toBe(0)
+    expect(vi.mocked(fixSpec)).not.toHaveBeenCalled()
 })
 
 it('conta como preenchidas as credenciais que esta gravação carrega, para o setup não ser acusado', async () => {
