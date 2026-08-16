@@ -2,7 +2,7 @@
  * Os endpoints de cenário. O id é curinga porque pode ter barra: um cenário em subpasta
  * (`checkout/pagar`) continua sendo um id só.
  */
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Res } from '@nestjs/common'
 import type { Response } from 'express'
 import { Environments } from '../environment/providers/environments.js'
 import { ProjectService } from '../project/project.service.js'
