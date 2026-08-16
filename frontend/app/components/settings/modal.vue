@@ -16,6 +16,7 @@ interface AiSettings {
   credentials: Record<string, AiCredential>
   providers: string[]
   provider_urls: Record<string, string>
+  keyless_providers: string[]
 }
 
 /** "Sem IA" viaja com este nome na tela e volta a ser vazio ao salvar. */
@@ -71,6 +72,9 @@ const semIa = computed(() => provider.value === SEM_IA)
 /** O Claude Agent roda o binário local: sem chave, sem endereço, só o modelo. */
 const claudeAgent = computed(() => provider.value === 'claude-code')
 
+/** Provedor que roda na máquina do usuário não cobra chave; nos outros o campo é obrigatório. */
+const keyRequired = computed(() => !semIa.value && !(settings.value?.keyless_providers ?? []).includes(provider.value))
+
 /** Onde a Anthropic documenta a instalação e o login do Claude Code. */
 const DOC_CLAUDE_CODE = 'https://docs.claude.com/en/docs/claude-code/setup'
 
@@ -101,6 +105,14 @@ async function loadModels() {
   }
 }
 
+/**
+ * Sem nada preenchido, perguntar ao provedor só rende erro na cara do usuário: espera ele terminar
+ * de digitar a chave (ou o endereço). O agente local não pede credencial nenhuma, então já pergunta.
+ */
+function loadModelsIfReady() {
+  if (claudeAgent.value || key.value || url.value) loadModels()
+}
+
 // Cada provedor guarda o seu cadastro: trocar no select mostra o dele, não o do anterior.
 watch(provider, (chosen) => {
   const saved = settings.value?.credentials[chosen]
@@ -113,7 +125,7 @@ watch(provider, (chosen) => {
   models.value = model.value ? [{ id: model.value, label: model.value }] : []
   modelsError.value = ''
 
-  loadModels()
+  loadModelsIfReady()
 })
 
 async function load() {
@@ -134,7 +146,7 @@ async function load() {
     modelsError.value = ''
     revealed.value = false
 
-    if (sameProvider) loadModels()
+    if (sameProvider) loadModelsIfReady()
   } catch (err) {
     toast.add({
       title: extractServerError(err, 'Não foi possível carregar a configuração.'),
@@ -188,6 +200,7 @@ async function save() {
 <template>
   <BaseModal
     v-model:open="open"
+    wide
     title="Inteligência artificial"
     description="Quem escreve, revisa e corrige os testes. Vale para o acutis inteiro, não para um projeto."
     :loading="loading"
@@ -195,6 +208,7 @@ async function save() {
     <template #body>
       <UFormField
         label="Provedor"
+        required
         class="mb-4"
       >
         <USelect
@@ -253,7 +267,8 @@ async function save() {
       <UFormField
         v-if="!semIa && !claudeAgent"
         label="Chave de API"
-        hint="opcional"
+        :required="keyRequired"
+        :hint="keyRequired ? undefined : 'opcional'"
         description="Provedor que roda na sua máquina, como o Ollama, não pede chave."
         class="mb-4"
       >
@@ -263,6 +278,7 @@ async function save() {
           placeholder="Cole a chave do provedor escolhido"
           class="w-full"
           data-testid="config-ia-chave"
+          @blur="loadModelsIfReady"
         >
           <template
             v-if="key"
@@ -295,6 +311,7 @@ async function save() {
           :placeholder="defaultUrl"
           class="w-full"
           data-testid="config-ia-url"
+          @blur="loadModelsIfReady"
         />
         <template #help>
           Em branco usa {{ defaultUrl }}.
@@ -304,6 +321,7 @@ async function save() {
       <UFormField
         v-if="!semIa"
         label="Modelo"
+        required
         description="Quem escreve o cenário, sugere os data-testid e conserta o teste que falhou."
         :error="modelsError || undefined"
       >
@@ -325,7 +343,7 @@ async function save() {
           <UButton
             icon="i-ic-round-refresh"
             color="neutral"
-            variant="subtle"
+            variant="soft"
             :loading="loadingModels"
             aria-label="Buscar os modelos do provedor"
             data-testid="config-ia-modelo-buscar"

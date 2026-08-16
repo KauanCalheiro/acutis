@@ -51,6 +51,13 @@ export function providerFromEnvironment(): string {
     return process.env.AI_PROVIDER ?? 'gemini'
 }
 
+/** Os provedores que não pedem chave: o formulário não marca o campo como obrigatório neles. */
+export function keylessProviders(): string[] {
+    return Object.entries(PROVIDERS)
+        .filter(([, defaults]) => Boolean(defaults.keyless))
+        .map(([name]) => name)
+}
+
 /** O endereço padrão de cada provedor que tem um. */
 export function defaultProviderUrls(): Record<string, string> {
     return Object.fromEntries(

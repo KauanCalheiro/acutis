@@ -5,7 +5,7 @@ import { Injectable, type OnModuleInit } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import type { Repository } from 'typeorm'
 import { ValidationFailed } from '../../common/exceptions/errors.js'
-import { PROVIDERS, PROVIDER_NAMES, defaultProviderUrls, providerFromEnvironment } from './providers/ai-providers.js'
+import { PROVIDERS, PROVIDER_NAMES, defaultProviderUrls, keylessProviders, providerFromEnvironment } from './providers/ai-providers.js'
 import { decrypt, encrypt } from './providers/crypto.js'
 import { AiCredential } from './entities/ai-credential.entity.js'
 import { Setting } from './entities/setting.entity.js'
@@ -59,7 +59,8 @@ export class SettingsService implements OnModuleInit {
             configured: provider !== '',
             credentials: await this.credentials(),
             providers: PROVIDER_NAMES,
-            provider_urls: defaultProviderUrls()
+            provider_urls: defaultProviderUrls(),
+            keyless_providers: keylessProviders()
         }
     }
 
