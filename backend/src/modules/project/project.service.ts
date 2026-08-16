@@ -37,11 +37,12 @@ function contains(haystack: string, needle: string): boolean {
 
 @Injectable()
 export class ProjectService {
-    /** O diretório do projeto; 404 quando não existe. */
+    /** O diretório do projeto dentro da raiz; 404 quando não existe ou quando o slug aponta para fora dela. */
     pathOf(slug: string): string {
-        const path = join(acutis().root, slug)
+        const root = acutis().root
+        const path = join(root, slug)
 
-        if (!existsSync(join(path, 'acutis.json'))) {
+        if (!path.startsWith(`${root}/`) || !existsSync(join(path, 'acutis.json'))) {
             throw new NotFound('Projeto não encontrado.')
         }
 
