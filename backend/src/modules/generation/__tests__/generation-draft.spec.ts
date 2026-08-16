@@ -108,7 +108,7 @@ it('marca o rascunho como @write quando a gravação altera dados', async () => 
 })
 
 it('nunca escreve tags no gherkin', async () => {
-    const response = await draft(payload({ publico: true }))
+    const response = await draft(payload({ isPublic: true }))
 
     expect(response.status).toBe(200)
     expect(response.body.gherkin).not.toContain('@')
@@ -339,7 +339,7 @@ it('valida a gravação antes de rascunhar', async () => {
 })
 
 it('marca o cenário como público quando ele foi gravado sem sessão', async () => {
-    const response = await draft(payload({ publico: true }))
+    const response = await draft(payload({ isPublic: true }))
 
     expect(response.status).toBe(200)
     expect(response.body.tags).toEqual(['@read', '@login', '@publico'])
@@ -375,7 +375,7 @@ async function desligaIa(): Promise<void> {
 it('marca o cenário público só no spec quando não há ia', async () => {
     await desligaIa()
 
-    const response = await draft(payload({ publico: true }))
+    const response = await draft(payload({ isPublic: true }))
 
     expect(response.status).toBe(200)
     expect(response.body.gherkin).toBe('')

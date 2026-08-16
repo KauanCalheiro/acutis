@@ -60,7 +60,7 @@ export class DraftRecordingDto {
     /** Cenário gravado sem sessão: roda limpo, sem o storage state do projeto. */
     @IsOptional()
     @IsBoolean()
-    publico?: boolean
+    isPublic?: boolean
 
     @IsOptional()
     @IsString()

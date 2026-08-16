@@ -106,7 +106,7 @@ watch(() => draft.value.title, (title, previous) => {
       <UFormField label="Título do cenário">
         <UInput
           v-model="draft.title"
-          :maxlength="LIMITE_TITULO"
+          :maxlength="TITLE_LIMIT"
           data-testid="contexto-titulo"
           class="w-full"
         />
@@ -118,7 +118,7 @@ watch(() => draft.value.title, (title, previous) => {
       >
         <UInput
           v-model="draft.path"
-          :maxlength="LIMITE_CAMINHO"
+          :maxlength="PATH_LIMIT"
           data-testid="contexto-path"
           class="w-full"
         />
@@ -132,7 +132,7 @@ watch(() => draft.value.title, (title, previous) => {
     >
       <UInput
         v-model="draft.domain"
-        :maxlength="LIMITE_CAMINHO"
+        :maxlength="PATH_LIMIT"
         data-testid="contexto-dominio"
         class="w-full"
       />

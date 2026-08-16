@@ -57,9 +57,9 @@ onMounted(() => {
 
 const environmentsOpen = ref(false)
 
-/** `?ambiente` abre o modal, que é para onde a ressalva de variável sem valor aponta. */
+/** `?environment` abre o modal, que é para onde a ressalva de variável sem valor aponta. */
 onMounted(() => {
-  if (useRoute().query.ambiente !== undefined) environmentsOpen.value = true
+  if (useRoute().query.environment !== undefined) environmentsOpen.value = true
 })
 
 async function onEnvironmentsSaved() {
@@ -406,7 +406,7 @@ async function remove() {
     <ScenarioReviewModal
       v-model:open="reviewOpen"
       :slug="slug"
-      :publico="recordingPublic"
+      :is-public="recordingPublic"
       @generated="refresh()"
       @rerecord="recordAgain"
     />

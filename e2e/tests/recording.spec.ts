@@ -287,7 +287,7 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
         })
 
         await test.step('an empty variable offers the environment screen, which is where it is filled', async () => {
-            await expect(page.getByTestId('ressalvas-ambiente')).toHaveAttribute('href', '/projects/alpha-store?ambiente')
+            await expect(page.getByTestId('ressalvas-ambiente')).toHaveAttribute('href', '/projects/alpha-store?environment')
         })
     })
 

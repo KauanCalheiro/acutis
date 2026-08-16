@@ -3,10 +3,10 @@ import type { TestDraft } from '~/types/project'
 
 interface ScenarioReviewModal {
   slug: string
-  publico?: boolean
+  isPublic?: boolean
 }
 
-const { slug, publico = false } = defineProps<ScenarioReviewModal>()
+const { slug, isPublic = false } = defineProps<ScenarioReviewModal>()
 
 const open = defineModel<boolean>('open', {
   default: false
@@ -81,7 +81,7 @@ async function generate() {
       body: {
         baseUrl: baseUrl.value,
         events: mappedEvents.value,
-        publico
+        isPublic
       }
     })
     step.value = 'edit'
