@@ -53,6 +53,74 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
         await expect(page.getByRole('option', { name: 'OpenAI', exact: true }).locator('[class*="i-simple-icons:openai"]')).toBeVisible()
     })
 
+    /**
+     * Trocar de provedor sem nada preenchido não fala com ele: a busca espera a chave sair do campo.
+     * Assim a tela não abre já com o erro de "não consegui listar".
+     */
+    test('only asks the provider for its models once there is a credential', async ({ page }) => {
+        let perguntas = 0
+
+        await page.route('**/api/settings/ai/models', route => {
+            perguntas++
+
+            return route.fulfill({ json: [{ id: 'gemini-2.5-flash', label: 'gemini-2.5-flash' }] })
+        })
+
+        await page.goto('/')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await test.step('pick a provider with no key saved', async () => {
+            await page.getByTestId('navbar-configuracoes').click()
+            await page.getByTestId('config-ia-provedor').click()
+            await page.getByRole('option', { name: 'Google Gemini', exact: true }).click()
+
+            await expect(page.getByTestId('config-ia-modelo')).toBeVisible()
+            expect(perguntas).toBe(0)
+        })
+
+        await test.step('leaving the key field asks for the models', async () => {
+            await page.getByTestId('config-ia-chave').fill('sk-do-gemini')
+            await page.getByTestId('config-ia-chave').blur()
+
+            await expect.poll(() => perguntas).toBe(1)
+            await expect(page.getByTestId('config-ia-modelo')).toContainText('Escolha o modelo')
+        })
+    })
+
+    /** O asterisco do obrigatório é desenhado pelo `::after` do label, então é a classe que o denuncia. */
+    const marcadoObrigatorio = /after:content-\['\*'\]/
+    /** O asterisco só aparece no que o provedor escolhido realmente cobra. */
+    test('marks the required fields, and only the ones the provider demands', async ({ page }) => {
+        await page.goto('/')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        const provedor = page.locator('label', { hasText: /^Provedor$/ })
+        const chave = page.locator('label', { hasText: 'Chave de API' })
+        const endereco = page.locator('label', { hasText: 'Endereço do provedor' })
+        const modelo = page.locator('label', { hasText: 'Modelo' })
+
+        await test.step('a provider that charges for the key asks for it', async () => {
+            await page.getByTestId('navbar-configuracoes').click()
+            await page.getByTestId('config-ia-provedor').click()
+            await page.getByRole('option', { name: 'OpenAI', exact: true }).click()
+
+            await expect(provedor).toHaveClass(marcadoObrigatorio)
+            await expect(chave).toHaveClass(marcadoObrigatorio)
+            await expect(modelo).toHaveClass(marcadoObrigatorio)
+            await expect(endereco).not.toHaveClass(marcadoObrigatorio)
+        })
+
+        await test.step('a provider that runs on the user machine only demands provider and model', async () => {
+            await page.getByTestId('config-ia-provedor').click()
+            await page.getByRole('option', { name: 'Ollama', exact: true }).click()
+
+            await expect(provedor).toHaveClass(marcadoObrigatorio)
+            await expect(modelo).toHaveClass(marcadoObrigatorio)
+            await expect(chave).not.toHaveClass(marcadoObrigatorio)
+            await expect(page.getByText('opcional').first()).toBeVisible()
+        })
+    })
+
     test('saves the provider with its key, masked until asked to reveal it', async ({ page }) => {
         await page.goto('/')
         await page.locator('[data-hydrated="true"]').waitFor()

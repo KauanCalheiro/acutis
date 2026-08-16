@@ -215,6 +215,14 @@ it('informa ao formulário a url padrão de cada provedor que tem uma', async ()
     expect(response.body.provider_urls.anthropic).toBe('https://api.anthropic.com/v1')
 })
 
+/** Sem isto o formulário não sabe de quem cobrar a chave, e marcaria o campo obrigatório para todos. */
+it('informa ao formulário quais provedores não pedem chave', async () => {
+    const response = await api.http.get('/api/v1/settings/ai')
+
+    expect(response.status).toBe(200)
+    expect(response.body.keyless_providers).toEqual(['claude-code', 'ollama'])
+})
+
 it('ainda informa a url padrão depois de a salva passar a valer', async () => {
     await api.http
         .put('/api/v1/settings/ai')
