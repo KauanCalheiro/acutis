@@ -4,9 +4,9 @@ import type { ScenarioDetail, TestDraft } from '~/types/project'
  * Título e caminho viram nome de arquivo, e o backend recusa acima disto. Os dois números
  * acompanham TestArtifact::TITLE_LIMIT e PATH_LIMIT.
  */
-export const LIMITE_TITULO = 120
+export const TITLE_LIMIT = 120
 
-export const LIMITE_CAMINHO = 80
+export const PATH_LIMIT = 80
 
 /** O nome de arquivo que um título vira. Acompanha o `Str::slug` que o backend aplica ao gravar. */
 export function slugify(value: string): string {
@@ -15,7 +15,7 @@ export function slugify(value: string): string {
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .slice(0, LIMITE_CAMINHO)
+    .slice(0, PATH_LIMIT)
     .replace(/^-+|-+$/g, '')
 }
 
