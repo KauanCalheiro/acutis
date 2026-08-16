@@ -20,6 +20,11 @@ Erro de domínio é uma classe de `common/exceptions/errors.ts` — `NotFound`, 
 
 **Toda mensagem de erro em pt-BR**, inclusive as dos decorators de validação.
 
+Erro vindo de fora (provedor de IA, processo externo) **nunca sobe cru** — vira `ProviderFailed` ou
+outro `HttpError` com mensagem que diz o que fazer. A tradução mora onde todos os chamadores passam:
+para os agentes é o `runAgent` (`ai/providers/provider-errors.ts`), não cada agente. Ver
+[ai-claude-agent](ai-claude-agent.md).
+
 ## Respostas
 
 - O tipo de retorno do controller é o do `dto/responses/` — ver [backend-contracts](backend-contracts.md).
