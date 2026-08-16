@@ -73,14 +73,26 @@ export class ScenarioController {
         response.setHeader('Cache-Control', 'no-cache')
         response.setHeader('X-Accel-Buffering', 'no')
 
+        // O `run:finished` manda a interface recarregar o cenário: só sai com o histórico gravado.
+        let finished: unknown = null
+
         await this.runner.streamProject(path, { spec, grep, env }, (event) => {
             events.push(event as unknown as RunEventRecord)
+
+            if (event.event === 'run:finished') {
+                finished = event
+
+                return
+            }
+
             response.write(`data: ${JSON.stringify(event)}\n\n`)
         })
 
         if (spec) {
             await this.scenarios.persistRun(path, spec, events, startedAt)
         }
+
+        if (finished) response.write(`data: ${JSON.stringify(finished)}\n\n`)
 
         response.end()
     }
