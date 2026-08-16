@@ -7,6 +7,8 @@ test-results
 # O frontend compilado que o `cli:build` copia para dentro do pacote. É artefato de build, e vem
 # do diretório frontend/ ao lado.
 frontend
+# Idem: a logo do banner, extraída do frontend pelo mesmo script.
+bin/logo-path.js
 *.tgz
 
 .pnpm-store

@@ -24,10 +24,9 @@ for arg in "$@"; do
 done
 
 if [ -t 1 ]; then
-    C_FRONT=$'\033[35m'; C_DRIVER=$'\033[33m'
     C_INFO=$'\033[32m'; C_WARN=$'\033[31m'; C_OFF=$'\033[0m'
 else
-    C_FRONT=''; C_DRIVER=''; C_INFO=''; C_WARN=''; C_OFF=''
+    C_INFO=''; C_WARN=''; C_OFF=''
 fi
 
 info() { printf '%s==>%s %s\n' "$C_INFO" "$C_OFF" "$1"; }
@@ -64,14 +63,17 @@ set -m
 PIDS=''
 WATCHER=''
 
+# A saída dos serviços não vai para o terminal: o único conteúdo é o banner. Os logs
+# ficam em .acutis/<serviço>.log (pasta já ignorada pelo git) para quando algo quebrar.
+LOGDIR=.acutis
+mkdir -p "$LOGDIR"
+
 start() {
-    local name="$1" color="$2" dir="$3"; shift 3
+    local name="$1" dir="$2"; shift 2
 
     (
         cd "$dir" || exit 1
-        "$@" 2>&1 | while IFS= read -r line; do
-            printf '%s%-9s%s %s\n' "$color" "$name" "$C_OFF" "$line"
-        done
+        exec "$@" >"../$LOGDIR/$name.log" 2>&1
     ) &
 
     PIDS="$PIDS $!"
@@ -97,27 +99,27 @@ shutdown() {
 
 trap shutdown INT TERM
 
-start frontend "$C_FRONT"  frontend         pnpm dev
+start frontend frontend pnpm dev
 # WEBDRIVER_TEST_MODE=1 não é opcional: sem ela os endpoints /runner/* respondem
 # 403 e o botão "Testar" da interface não funciona.
-start backend  "$C_DRIVER" backend  env WEBDRIVER_TEST_MODE=1 RECORDER_HEADLESS="$HEADLESS" pnpm dev
+start backend  backend  env WEBDRIVER_TEST_MODE=1 RECORDER_HEADLESS="$HEADLESS" pnpm dev
+
+node backend/bin/splash.mjs http://localhost:3000 http://localhost:4000
 
 # --- espera ficar de pé -------------------------------------------------------
+# Em silêncio: só abre a boca se algum serviço não subir.
 (
     ready() { curl -fsS -o /dev/null --max-time 2 "$1" 2>/dev/null; }
 
     for _ in $(seq 1 60); do
         if ready http://localhost:3000 &&
            ready http://localhost:4000/api/v1/projects; then
-            printf '\n%s==>%s stack de pé\n' "$C_INFO" "$C_OFF"
-            printf '    frontend   http://localhost:3000\n'
-            printf '    backend    http://localhost:4000  (api, gravador e runner)\n\n'
             exit 0
         fi
         sleep 2
     done
 
-    printf '%s==>%s algum serviço não respondeu em 2min — veja os logs acima\n' "$C_WARN" "$C_OFF"
+    printf '%s==>%s algum serviço não respondeu em 2min — logs em %s/\n' "$C_WARN" "$C_OFF" "$LOGDIR" >&2
 ) &
 WATCHER=$!
 
