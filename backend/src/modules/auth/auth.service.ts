@@ -1,9 +1,10 @@
 /** A autenticação do projeto: ler, editar, dispensar e gerar o `auth.setup.ts` a partir do login gravado. */
 import { Injectable } from '@nestjs/common'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { aiConfigured, fixedAuthSetup, writeGherkin } from '../ai/providers/stub.js'
 import { NotFound } from '../../common/exceptions/errors.js'
+import { put } from '../../common/utils/file.js'
 import { ActiveVars } from '../../common/playwright/active-vars.js'
 import { Playwright } from '../../common/playwright/playwright.js'
 import { Url } from '../../common/playwright/url.js'
@@ -15,7 +16,7 @@ import { RunnerService, type RunResult } from '../../webdriver/runner/runner.ser
 import { EnvKey } from '../environment/providers/env-key.js'
 import { environmentVar } from '../environment/providers/environment-var.js'
 import type { Environments } from '../environment/providers/environments.js'
-import { readManifest } from '../project/providers/manifest.js'
+import { patchManifest } from '../project/providers/manifest.js'
 import { ProjectService } from '../project/project.service.js'
 import { eventsPathOf, htmlPathOf } from '../scenario/providers/scenario.js'
 import { AUTH_FEATURE, AUTH_SPEC, ensureAuthConfig } from './providers/auth.js'
@@ -99,20 +100,14 @@ export class AuthService {
     }
 
     update(slug: string, authSetup: string): string {
-        const path = this.projects.pathOf(slug)
-
-        mkdirSync(join(path, 'tests'), { recursive: true })
-        writeFileSync(join(path, AUTH_SPEC), authSetup)
+        put(join(this.projects.pathOf(slug), AUTH_SPEC), authSetup)
 
         return authSetup
     }
 
     /** O usuário disse que este projeto não tem login; a tela para de oferecer a gravação. */
     skip(slug: string): void {
-        const path = this.projects.pathOf(slug)
-        const manifest = { ...readManifest(path), auth_skipped: true }
-
-        writeFileSync(join(path, 'acutis.json'), `${JSON.stringify(manifest, null, 4)}\n`)
+        patchManifest(this.projects.pathOf(slug), { auth_skipped: true })
     }
 
     /** Converte o login gravado num `auth.setup.ts` e deixa o projeto pronto para executá-lo. */
@@ -125,16 +120,13 @@ export class AuthService {
         const generated = await this.generate(environments, input, recording)
 
         ensureAuthConfig(path)
-        writeFileSync(join(path, AUTH_SPEC), generated.authSetup)
-        writeFileSync(
-            join(path, eventsPathOf(AUTH_SPEC)),
-            JSON.stringify(recording.withoutPasswords())
-        )
+        put(join(path, AUTH_SPEC), generated.authSetup)
+        put(join(path, eventsPathOf(AUTH_SPEC)), JSON.stringify(recording.withoutPasswords()))
 
         const html = recording.html()
 
         if (Object.keys(html).length > 0) {
-            writeFileSync(join(path, htmlPathOf(AUTH_SPEC)), JSON.stringify(html))
+            put(join(path, htmlPathOf(AUTH_SPEC)), JSON.stringify(html))
         }
 
         this.writeFeature(path, input, recording)
@@ -217,10 +209,7 @@ export class AuthService {
             events: recording.withoutPasswords()
         })
 
-        const file = join(path, AUTH_FEATURE)
-
-        mkdirSync(dirname(file), { recursive: true })
-        writeFileSync(file, `${gherkin}\n`)
+        put(join(path, AUTH_FEATURE), `${gherkin}\n`)
     }
 
     /** As variáveis do ambiente ativo com a URL e as credenciais desta gravação já preenchidas. */
