@@ -3,8 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "pretest": "./scripts/setup.sh && pnpm --dir ../backend build:ui && pnpm --dir ../backend build",
+    "build": "./scripts/setup.sh && pnpm --dir ../backend build:ui && pnpm --dir ../backend build",
+    "pretest": "pnpm build",
     "test": "playwright test",
+    "pretest:smoke": "pnpm build",
+    "test:smoke": "playwright test --grep @read",
     "capture:fixture": "pnpm --dir ../backend build:ui && pnpm --dir ../backend build && node scripts/capture-sample-recording.ts"
   },
   "devDependencies": {
