@@ -1,5 +1,10 @@
 /** Os endpoints de projeto. */
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query, Res } from '@nestjs/common'
+import type { Response } from 'express'
+import { existsSync, statSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { NotFound } from '../../common/exceptions/errors.js'
+import { REPORT_DIR } from '../../webdriver/runner/runner.service.js'
 import { GitService } from '../git/git.service.js'
 import { CloneProjectDto } from './dto/clone-project.dto.js'
 import { CreateProjectDto } from './dto/create-project.dto.js'
@@ -9,6 +14,8 @@ import { AuthCredentialsDto } from '../auth/dto/auth-credentials.dto.js'
 import type { PaginatedResponse, ProjectShowResponse } from './dto/responses/project.response.js'
 import { Project } from './entities/project.entity.js'
 import { ProjectService } from './project.service.js'
+
+const INDEX = 'index.html'
 
 /** Os parâmetros de listagem chegam como `filter[name]`, `page[size]` — o formato JSON:API. */
 interface ListParams {
@@ -41,6 +48,26 @@ export class ProjectController {
     @Get(':project')
     show(@Param('project') slug: string): Promise<ProjectShowResponse> {
         return this.projects.findOne(slug)
+    }
+
+    /**
+     * O relatório HTML da última execução, servido como site: o índice, e os arquivos que ele
+     * carrega para mostrar vídeo e trace.
+     */
+    @Get(':project/report/*')
+    report(
+        @Param('project') slug: string,
+        @Param('0') path: string | undefined,
+        @Res() response: Response
+    ): void {
+        const root = resolve(this.projects.pathOf(slug), REPORT_DIR)
+        const requested = path ?? ''
+        const file = resolve(root, requested === '' ? INDEX : requested)
+
+        if (!file.startsWith(`${root}/`) && file !== root) throw new NotFound('Relatório não encontrado.')
+        if (!existsSync(file) || statSync(file).isDirectory()) throw new NotFound('Relatório não encontrado.')
+
+        response.sendFile(file)
     }
 
     @Post('create/template')

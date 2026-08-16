@@ -7,8 +7,12 @@ const STEP_TITLE = /\w+\.step\(\s*(['"`])((?:\\.|(?!\1).)*)\1/g
 const AUTH_SETUP_FILE = /auth\.setup\.ts$/
 const AUTH_STEP = 'Autenticação'
 
+function fileOf(test) {
+    return (test.location && test.location.file) || ''
+}
+
 function isAuthSetup(test) {
-    return AUTH_SETUP_FILE.test((test.location && test.location.file) || '')
+    return AUTH_SETUP_FILE.test(fileOf(test))
 }
 
 function emit(payload) {
@@ -53,9 +57,9 @@ class StreamReporter {
         const tests = suite.allTests()
         const outros = tests.filter((test) => !isAuthSetup(test))
 
-        // O login só é infraestrutura quando há outro teste no run. Rodando o setup sozinho ele é o
-        // assunto, e aí a timeline e o vídeo dele são exatamente o que se quer ver.
-        this.authAsDependency = outros.length > 0 && outros.length < tests.length
+        // O login só é infraestrutura na execução de um cenário: ali ele antecede a timeline de quem
+        // se está olhando. Sozinho, ou no meio de vários, ele é um assunto com timeline própria.
+        this.authAsDependency = outros.length === 1 && outros.length < tests.length
 
         const files = [...new Set((this.authAsDependency ? outros : tests).map((test) => test.location.file))]
         const steps = declaredStepTitles(files)
@@ -72,7 +76,14 @@ class StreamReporter {
     }
 
     onTestBegin(test) {
-        emit({ event: 'test', id: test.id, title: test.title, status: 'pending' })
+        emit({
+            event: 'test',
+            id: test.id,
+            title: test.title,
+            file: fileOf(test),
+            status: 'pending',
+            steps: this.collapsesAuth(test) ? [AUTH_STEP] : declaredStepTitles([fileOf(test)]),
+        })
 
         if (this.collapsesAuth(test)) {
             emit({ event: 'step', testId: test.id, title: AUTH_STEP, status: 'pending' })
@@ -164,6 +175,7 @@ class StreamReporter {
             event: 'test',
             id: test.id,
             title: test.title,
+            file: fileOf(test),
             status,
             durationMs: result.duration,
             error,

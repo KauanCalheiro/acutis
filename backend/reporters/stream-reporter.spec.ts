@@ -1,4 +1,7 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterAll, describe, expect, it, vi } from 'vitest'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import StreamReporter from './stream-reporter.cjs'
 
 const MARKER = '@@ACUTIS_RUN@@'
@@ -9,6 +12,8 @@ interface Emitted {
     status?: string
     error?: string | null
     durationMs?: number
+    steps?: string[]
+    file?: string
 }
 
 function record(run: (reporter: InstanceType<typeof StreamReporter>) => void): Emitted[] {
@@ -130,6 +135,101 @@ describe('stream reporter', () => {
         })
 
         expect(emitted.filter(event => event.status === 'failed')).toHaveLength(0)
+    })
+})
+
+describe('passos declarados de cada teste', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'acutis-reporter-'))
+
+    function specFile(name: string, steps: string[]) {
+        const file = join(dir, name)
+        writeFileSync(file, steps.map(title => `await test.step('${title}', async () => {})`).join('\n'))
+
+        return file
+    }
+
+    function suiteOf(tests: unknown[]) {
+        return { allTests: () => tests }
+    }
+
+    afterAll(() => {
+        rmSync(dir, { recursive: true, force: true })
+    })
+
+    it('anuncia os passos do arquivo do teste assim que ele começa', () => {
+        const file = specFile('login.spec.ts', ['Abrir a home', 'Entrar'])
+        const test = { id: 't1', title: 'Login do cliente', location: { file } }
+
+        const emitted = record((reporter) => {
+            reporter.onBegin(null, suiteOf([test]))
+            reporter.onTestBegin(test)
+        })
+
+        const begin = emitted.find(event => event.event === 'test' && event.status === 'pending')
+
+        expect(begin!.steps).toEqual(['Abrir a home', 'Entrar'])
+    })
+
+    it('diz de qual arquivo o teste veio, que é o cenário dono da execução', () => {
+        const file = specFile('quem-sou.spec.ts', ['Abrir a home'])
+        const test = { id: 't1', title: 'Login do cliente', location: { file } }
+
+        const emitted = record((reporter) => {
+            reporter.onBegin(null, suiteOf([test]))
+            reporter.onTestBegin(test)
+            reporter.onTestEnd(test, { status: 'passed', duration: 100, errors: [], attachments: [] })
+        })
+
+        const reported = emitted.filter(event => event.event === 'test')
+
+        expect(reported.map(event => event.file)).toEqual([file, file])
+    })
+
+    it('dá a cada teste só os passos do arquivo dele', () => {
+        const login = { id: 't1', title: 'Login do cliente', location: { file: specFile('um.spec.ts', ['Abrir a home']) } }
+        const cadastro = { id: 't2', title: 'Cadastro de produto', location: { file: specFile('dois.spec.ts', ['Salvar o produto']) } }
+
+        const emitted = record((reporter) => {
+            reporter.onBegin(null, suiteOf([login, cadastro]))
+            reporter.onTestBegin(login)
+            reporter.onTestBegin(cadastro)
+        })
+
+        const begins = emitted.filter(event => event.event === 'test' && event.status === 'pending')
+
+        expect(begins.map(event => event.steps)).toEqual([['Abrir a home'], ['Salvar o produto']])
+    })
+
+    it('mostra o login inteiro quando o run tem vários cenários, porque ali ele é um item da lista', () => {
+        const auth = { id: 'auth', title: 'Autenticação', location: { file: specFile('auth.setup.ts', ['Preencher credenciais', 'Entrar']) } }
+        const um = { id: 's1', title: 'Ver disciplina', location: { file: specFile('ver-disciplina.spec.ts', ['Abrir a disciplina']) } }
+        const dois = { id: 's2', title: 'Ver nota', location: { file: specFile('ver-nota.spec.ts', ['Abrir a nota']) } }
+
+        const emitted = record((reporter) => {
+            reporter.onBegin(null, suiteOf([auth, um, dois]))
+            reporter.onTestBegin(auth)
+            reporter.onStepBegin(auth, null, { category: 'test.step', title: 'Preencher credenciais', duration: 1 })
+        })
+
+        const begin = emitted.find(event => event.event === 'test' && event.status === 'pending')
+        const steps = emitted.filter(event => event.event === 'step')
+
+        expect(begin!.steps).toEqual(['Preencher credenciais', 'Entrar'])
+        expect(steps.map(event => event.title)).toEqual(['Preencher credenciais'])
+    })
+
+    it('anuncia o login colapsado como passo único quando ele é só a dependência', () => {
+        const auth = { id: 'auth', title: 'Autenticação', location: { file: specFile('auth.setup.ts', ['Preencher credenciais', 'Entrar']) } }
+        const scenario = { id: 's1', title: 'Ver disciplina', location: { file: specFile('ver.spec.ts', ['Abrir a disciplina']) } }
+
+        const emitted = record((reporter) => {
+            reporter.onBegin(null, suiteOf([auth, scenario]))
+            reporter.onTestBegin(auth)
+        })
+
+        const begin = emitted.find(event => event.event === 'test' && event.status === 'pending')
+
+        expect(begin!.steps).toEqual(['Autenticação'])
     })
 })
 

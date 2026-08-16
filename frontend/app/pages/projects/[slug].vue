@@ -37,7 +37,17 @@ const scenarios = computed(() => {
   )
 })
 
-const renameOpen = ref(false)
+const filteredRun = useRunStream(() => slug.value)
+const filteredRunOpen = ref(false)
+
+/** O que roda é o que está na tela: os títulos filtrados viram o `--grep` do Playwright. */
+function runFiltered() {
+  filteredRunOpen.value = true
+  filteredRun.start({
+    grep: scenarios.value.map(scenario => scenario.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
+  })
+}
+
 const settingsOpen = ref(false)
 
 /** O modal de configurações abre sozinho no projeto que ainda não tem URL base. */
@@ -131,7 +141,7 @@ function recordPublic() {
 function recordAuthenticated() {
   recordingMode.value = 'authenticated'
   authRunOpen.value = true
-  authRun.start(AUTH_SPEC, () => {
+  authRun.start({ spec: AUTH_SPEC }, () => {
     refresh()
 
     if (!authRun.passed.value) return
@@ -207,12 +217,11 @@ async function remove() {
             data-testid="projeto-origem"
           />
         </div>
-        <h1
-          class="text-3xl font-bold truncate"
-          data-testid="projeto-nome"
-        >
-          {{ project!.name }}
-        </h1>
+        <ProjectRenameInline
+          :slug="slug"
+          :name="project!.name"
+          @renamed="onRenamed"
+        />
         <p
           class="text-sm text-muted italic truncate"
           :title="project!.repository ?? undefined"
@@ -247,12 +256,15 @@ async function remove() {
           data-testid="projeto-auth"
         />
         <BaseButtonIcon
-          icon="i-ic-round-edit"
-          label="Renomear projeto"
+          v-if="project!.has_report"
+          icon="i-ic-round-assessment"
+          label="Relatório da última execução"
           color="neutral"
           variant="soft"
-          data-testid="projeto-editar"
-          @click="renameOpen = true"
+          :to="reportUrlFor(slug)"
+          target="_blank"
+          external
+          data-testid="projeto-relatorio"
         />
         <BaseButtonIcon
           icon="i-ic-round-code"
@@ -334,6 +346,16 @@ async function remove() {
         icon="i-ic-round-search"
         placeholder="Buscar cenário..."
         class="flex-1 min-w-48"
+      />
+      <UButton
+        :label="`Rodar ${scenarios.length} filtrados`"
+        trailing-icon="i-ic-round-play-arrow"
+        color="neutral"
+        variant="soft"
+        :disabled="!scenarios.length"
+        :loading="filteredRun.running.value"
+        data-testid="projeto-rodar-filtrados"
+        @click="runFiltered"
       />
       <UDropdownMenu
         v-if="!webdriver.recording && hasAuth"
@@ -426,13 +448,6 @@ async function remove() {
       @record="recordDefault"
     />
 
-    <ProjectRenameModal
-      v-model:open="renameOpen"
-      :slug="project!.slug"
-      :name="project!.name"
-      @renamed="onRenamed"
-    />
-
     <ProjectEnvironmentsModal
       v-model:open="environmentsOpen"
       :slug="slug"
@@ -444,6 +459,18 @@ async function remove() {
       :slug="slug"
       :base-url="project!.base_url"
       @saved="refresh()"
+    />
+
+    <ProjectRunFilteredModal
+      v-model:open="filteredRunOpen"
+      :running="filteredRun.running.value"
+      :passed="filteredRun.passed.value"
+      :tests="filteredRun.tests.value"
+      :project-name="project!.name"
+      :slug="slug"
+      :filter="search"
+      :tested-at="filteredRun.testedAt.value"
+      :output="filteredRun.output.value"
     />
 
     <ScenarioTestRunModal

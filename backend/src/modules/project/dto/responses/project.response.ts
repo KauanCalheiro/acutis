@@ -21,6 +21,8 @@ export interface ProjectShowResponse extends ProjectResponse {
     /** Sem URL o projeto não roda nada, então a tela pede — a menos que o usuário já tenha recusado. */
     requires_url: boolean
     vscode_url: string
+    /** A última execução deixou relatório do Playwright, com vídeo e trace de cada teste. */
+    has_report: boolean
 }
 
 /** A listagem no formato JSON:API que o frontend pagina. */
