@@ -15,6 +15,8 @@ import { createServer } from 'node:net'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { splash } from './splash.mjs'
+
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const FRONTEND_ENTRY = join(PACKAGE_ROOT, 'frontend/server/index.mjs')
 
@@ -112,14 +114,13 @@ async function main() {
     process.env.CORS_ORIGIN = webUrl
     // Sem isto o `/runner/video` responde 403 e o vídeo da execução que falhou não abre na tela.
     process.env.WEBDRIVER_TEST_MODE = '1'
-
-    info('subindo a api, o gravador e o runner')
+    // A api sobe dentro deste processo, então o log dela cairia no terminal de quem só quis
+    // abrir a ferramenta. Fica só o que indica problema — e quem quiser o resto passa LOG_LEVEL.
+    process.env.LOG_LEVEL ??= 'error,fatal'
 
     await import(join(PACKAGE_ROOT, 'dist/main.js'))
 
     if (!await waitFor(`${apiUrl}/health`)) fail('a api não respondeu em 60s')
-
-    info('subindo a interface')
 
     const frontend = spawn(process.execPath, [FRONTEND_ENTRY], {
         stdio: ['ignore', 'ignore', 'inherit'],
@@ -143,7 +144,8 @@ async function main() {
 
     if (!await waitFor(webUrl)) fail('a interface não respondeu em 60s')
 
-    console.log(`\n  acutis em ${webUrl}\n  api      em ${apiUrl}\n\n  Ctrl+C para parar.\n`)
+    console.log(splash(webUrl, apiUrl))
+    console.log('  Ctrl+C para parar.\n')
 
     openBrowser(webUrl)
 }
