@@ -14,7 +14,7 @@ import { checkSpec } from '../rules/spec-rules.js'
 import { SettingsService } from '../settings/settings.service.js'
 import { fragileTargets, suggestSelectors } from './agents/selector.js'
 import { fixSpec } from './agents/spec-fixer.js'
-import { fixedSpec, fixedSuggestions, type FixedSpec, type SelectorSuggestion } from './providers/stub.js'
+import { fixedSpec, fixedSuggestions, type FixedSpec, type SelectorSuggestion } from './providers/disabled.js'
 
 @Injectable()
 export class ScenarioAiService {
