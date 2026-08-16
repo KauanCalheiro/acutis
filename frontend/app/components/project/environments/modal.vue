@@ -25,15 +25,7 @@ const confirmingRemove = ref(false)
 const confirmingClose = ref(false)
 const loading = ref(false)
 const saving = ref(false)
-const toast = useToast()
-
-function complain(message: string) {
-  toast.add({
-    title: message,
-    color: 'error',
-    icon: 'i-ic-round-error'
-  })
-}
+const notify = useNotify()
 
 const environments = computed(() => list.value?.environments ?? [])
 const current = computed(() => environments.value.find(environment => environment.slug === selected.value) ?? null)
@@ -106,7 +98,7 @@ async function load() {
     if (target) select(target)
     else selected.value = null
   } catch (err) {
-    complain(extractServerError(err, 'Não foi possível carregar os ambientes.'))
+    notify.failure(err, 'Não foi possível carregar os ambientes.')
   } finally {
     loading.value = false
   }
@@ -124,13 +116,9 @@ async function act(action: () => Promise<unknown>, done: string, failure: string
     await load()
     emit('saved')
 
-    toast.add({
-      title: done,
-      color: 'success',
-      icon: 'i-ic-round-check-circle'
-    })
+    notify.success(done)
   } catch (err) {
-    complain(extractServerError(err, failure))
+    notify.failure(err, failure)
   } finally {
     saving.value = false
   }

@@ -38,7 +38,7 @@ const open = defineModel<boolean>('open', {
   default: false
 })
 
-const toast = useToast()
+const notify = useNotify()
 
 const settings = ref<AiSettings | null>(null)
 const provider = ref('')
@@ -148,11 +148,7 @@ async function load() {
 
     if (sameProvider) loadModelsIfReady()
   } catch (err) {
-    toast.add({
-      title: extractServerError(err, 'Não foi possível carregar a configuração.'),
-      color: 'error',
-      icon: 'i-ic-round-error'
-    })
+    notify.failure(err, 'Não foi possível carregar a configuração.')
   } finally {
     loading.value = false
   }
@@ -180,17 +176,9 @@ async function save() {
 
     open.value = false
 
-    toast.add({
-      title: 'Configuração salva',
-      color: 'success',
-      icon: 'i-ic-round-check-circle'
-    })
+    notify.success('Configuração salva')
   } catch (err) {
-    toast.add({
-      title: extractServerError(err, 'Não foi possível salvar a configuração.'),
-      color: 'error',
-      icon: 'i-ic-round-error'
-    })
+    notify.failure(err, 'Não foi possível salvar a configuração.')
   } finally {
     saving.value = false
   }
