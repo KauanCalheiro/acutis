@@ -355,8 +355,102 @@ it('só anuncia o fim depois de guardar a execução', async () => {
     expect(savedRuns()).toHaveLength(1)
 })
 
-it('não guarda histórico quando o projeto inteiro roda', async () => {
-    queued.push(passingRun())
+/** Rodando o projeto (ou o filtro), cada teste que reportou vira uma execução no histórico dele. */
+function projectRun(): string {
+    return runEvents([
+        { event: 'run:started', total: 2, steps: ['Acessar a home', 'Salvar o produto'] },
+        { event: 'test', id: 'a1', title: 'Entrar', file: join(dir, 'tests/login/entrar.spec.ts'), status: 'pending', steps: ['Acessar a home'] },
+        { event: 'test', id: 'a2', title: 'Cadastrar', file: join(dir, 'tests/produto/cadastrar.spec.ts'), status: 'pending', steps: ['Salvar o produto'] },
+        { event: 'step', testId: 'a1', title: 'Acessar a home', status: 'pending' },
+        { event: 'step', testId: 'a1', title: 'Acessar a home', status: 'success', durationMs: 120, error: null },
+        { event: 'test', id: 'a1', title: 'Entrar', file: join(dir, 'tests/login/entrar.spec.ts'), status: 'success', durationMs: 900, error: null, videoPath: null },
+        { event: 'step', testId: 'a2', title: 'Salvar o produto', status: 'pending' },
+        { event: 'step', testId: 'a2', title: 'Salvar o produto', status: 'failed', durationMs: 300, error: 'não achou o botão' },
+        { event: 'test', id: 'a2', title: 'Cadastrar', file: join(dir, 'tests/produto/cadastrar.spec.ts'), status: 'failed', durationMs: 400, error: 'não achou o botão', videoPath: null },
+        { event: 'run:finished', status: 'failed', passed: false }
+    ])
+}
+
+async function streamProject(body: string): Promise<void> {
+    queued.push(body)
+
+    const response = await api.http.get('/api/v1/projects/minha-loja/run/stream')
+
+    expect(response.status).toBe(200)
+}
+
+function savedRunsOf(id: string): Record<string, unknown>[] {
+    return readFileSync(join(dir, 'runs', id, 'history.ndjson'), 'utf8')
+        .split('\n')
+        .filter((line) => line.trim() !== '')
+        .map((line) => JSON.parse(line) as Record<string, unknown>)
+}
+
+it('guarda uma execução no histórico de cada cenário que rodou', async () => {
+    mkdirSync(join(dir, 'tests/produto'), { recursive: true })
+    writeFileSync(join(dir, 'tests/produto/cadastrar.spec.ts'), "test.describe('Cadastrar', () => {})")
+
+    await streamProject(projectRun())
+
+    expect(savedRunsOf('login/entrar')).toHaveLength(1)
+    expect(savedRunsOf('produto/cadastrar')).toHaveLength(1)
+})
+
+it('dá a cada cenário o resultado e a duração do teste dele, não os do run inteiro', async () => {
+    await streamProject(projectRun())
+
+    const entrar = savedRunsOf('login/entrar')[0]!
+    const cadastrar = savedRunsOf('produto/cadastrar')[0]!
+
+    expect(entrar.passed).toBe(true)
+    expect(entrar.duration_ms).toBe(900)
+    expect(cadastrar.passed).toBe(false)
+    expect(cadastrar.duration_ms).toBe(400)
+})
+
+it('dá a cada cenário só os passos que o teste dele anunciou', async () => {
+    await streamProject(projectRun())
+
+    expect(savedRunsOf('login/entrar')[0]!.steps).toEqual([
+        { title: 'Acessar a home', status: 'success', duration_ms: 120, error: null }
+    ])
+    expect(savedRunsOf('produto/cadastrar')[0]!.steps).toEqual([
+        { title: 'Salvar o produto', status: 'failed', duration_ms: 300, error: 'não achou o botão' }
+    ])
+})
+
+it('commita as execuções do projeto inteiro de uma vez só', async () => {
+    initRepository()
+
+    await streamProject(projectRun())
+
+    const subjects = gitOutput(dir, ['log', '--pretty=format:%s']).split('\n').filter((line) => line.trim() !== '')
+    const log = gitOutput(dir, ['log', '-1', '--name-only', '--pretty=format:%s'])
+
+    expect(subjects).toHaveLength(2)
+    expect(log).toContain('runs/login/entrar/history.ndjson')
+    expect(log).toContain('runs/produto/cadastrar/history.ndjson')
+})
+
+it('ignora o teste cujo arquivo está fora do projeto', async () => {
+    queued.push(runEvents([
+        { event: 'run:started', total: 1, steps: [] },
+        { event: 'test', id: 'a1', title: 'Vizinho', file: '/outro/projeto/tests/x.spec.ts', status: 'success', durationMs: 10, videoPath: null },
+        { event: 'run:finished', status: 'passed', passed: true }
+    ]))
+
+    const response = await api.http.get('/api/v1/projects/minha-loja/run/stream')
+
+    expect(response.status).toBe(200)
+    expect(existsSync(join(dir, 'runs'))).toBe(false)
+    expect(existsSync(join(dir, '../outro'))).toBe(false)
+})
+
+it('não guarda nada quando nenhum teste chegou a reportar', async () => {
+    queued.push(runEvents([
+        { event: 'run:started', total: 0, steps: [] },
+        { event: 'run:finished', status: 'failed', passed: false }
+    ]))
 
     const response = await api.http.get('/api/v1/projects/minha-loja/run/stream')
 

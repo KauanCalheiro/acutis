@@ -41,6 +41,17 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
         await expect(page.getByTestId('projeto-origem')).toHaveText('Local')
     })
 
+    test('says the title is clickable to rename it', async ({ page }) => {
+        await page.mouse.move(640, 500)
+
+        await expect(async () => {
+            await page.getByTestId('projeto-nome').hover()
+            await expect(page.getByText('Clique para renomear', { exact: true }).first()).toBeVisible({ timeout: 1000 })
+        }).toPass({ timeout: 10_000 })
+
+        await expect(page.getByTestId('projeto-nome')).toHaveCSS('cursor', 'pointer')
+    })
+
     test('returns to the home from the header button', async ({ page }) => {
         await page.getByTestId('projeto-voltar').click()
 
@@ -75,7 +86,6 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
     test('icon-only actions show an immediate tooltip on hover', async ({ page }) => {
         for (const [testid, label] of [
             ['projeto-remover', 'Remover projeto'],
-            ['projeto-editar', 'Renomear projeto'],
             ['projeto-voltar', 'Voltar'],
             ['projeto-vscode', 'Abrir no VS Code'],
         ] as const) {
@@ -105,6 +115,111 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
 
         await expect(page.getByTestId('cenario-card')).toHaveCount(1)
         await expect(page.getByTestId('cenario-card')).toContainText('Login do cliente')
+    })
+
+    test('runs every scenario left by the search filter', async ({ page }) => {
+        let requestedUrl: string | null = null
+        await page.route('**/api/projects/alpha-store/run-stream*', async (route) => {
+            requestedUrl = route.request().url()
+            const events = [
+                { event: 'run:started', total: 2, steps: ['Abrir a home', 'Entrar', 'Salvar o produto'] },
+                { event: 'test', id: 't1', title: 'Login do cliente entra com credenciais válidas', status: 'pending', steps: ['Abrir a home', 'Entrar'] },
+                { event: 'test', id: 't2', title: 'Cadastro de produto cria um produto', status: 'pending', steps: ['Salvar o produto'] },
+                { event: 'step', testId: 't1', title: 'Abrir a home', status: 'pending' },
+                { event: 'step', testId: 't1', title: 'Abrir a home', status: 'success', durationMs: 100 },
+                { event: 'step', testId: 't1', title: 'Entrar', status: 'pending' },
+                { event: 'step', testId: 't1', title: 'Entrar', status: 'success', durationMs: 100 },
+                { event: 'test', id: 't1', title: 'Login do cliente entra com credenciais válidas', status: 'success', durationMs: 120 },
+                { event: 'step', testId: 't2', title: 'Salvar o produto', status: 'pending' },
+                { event: 'step', testId: 't2', title: 'Salvar o produto', status: 'failed', durationMs: 50, error: "locator('#salvar') resolved to hidden" },
+                { event: 'test', id: 't2', title: 'Cadastro de produto cria um produto', status: 'failed', durationMs: 80, error: "locator('#salvar') resolved to hidden" },
+                { event: 'run:finished', status: 'failed', passed: false },
+            ]
+            await route.fulfill({
+                status: 200,
+                contentType: 'text/event-stream',
+                body: events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join(''),
+            })
+        })
+
+        await test.step('filter by tag and run what is on screen', async () => {
+            await page.getByTestId('cenario-busca').fill('@write')
+
+            await expect(page.getByTestId('cenario-card')).toHaveCount(1)
+            await expect(page.getByTestId('projeto-rodar-filtrados')).toHaveText(/Rodar 1 filtrados/)
+
+            await page.getByTestId('projeto-rodar-filtrados').click()
+        })
+
+        await expect(page.getByTestId('execucao-status')).toContainText('Falha')
+        expect(requestedUrl).toContain('grep=Cadastro+de+produto')
+        expect(requestedUrl).not.toContain('spec=')
+
+        const tests = page.getByTestId('execucao-teste')
+        await expect(tests).toHaveCount(2)
+        await expect(tests.nth(0)).toHaveAttribute('data-status', 'success')
+        await expect(tests.nth(1)).toHaveAttribute('data-status', 'failed')
+
+        await test.step('offer the playwright report of the run', async () => {
+            await expect(page.getByTestId('execucao-relatorio')).toHaveAttribute(
+                'href',
+                /\/api\/v1\/projects\/alpha-store\/report\/$/,
+            )
+        })
+
+        await test.step('open the steps of the test that failed', async () => {
+            await expect(tests.nth(1).getByTestId('execucao-step-erro')).toContainText("locator('#salvar') resolved to hidden")
+
+            await tests.nth(0).getByTestId('execucao-teste-abrir').click()
+
+            await expect(tests.nth(0).getByTestId('execucao-step-titulo')).toHaveText(['Abrir a home', 'Entrar'])
+        })
+    })
+
+    test('shows the whole timeline of a scenario as soon as it is announced', async ({ page }) => {
+        await page.route('**/api/projects/alpha-store/run-stream*', async (route) => {
+            const events = [
+                { event: 'run:started', total: 2, steps: ['Abrir a home', 'Entrar', 'Salvar o produto'] },
+                { event: 'test', id: 't1', title: 'Login do cliente entra com credenciais válidas', status: 'pending', steps: ['Abrir a home', 'Entrar'] },
+                { event: 'test', id: 't2', title: 'Cadastro de produto cria um produto', status: 'pending', steps: ['Salvar o produto'] },
+                { event: 'step', testId: 't1', title: 'Abrir a home', status: 'pending' },
+            ]
+            await route.fulfill({
+                status: 200,
+                contentType: 'text/event-stream',
+                body: events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join(''),
+            })
+        })
+
+        await page.getByTestId('projeto-rodar-filtrados').click()
+
+        const tests = page.getByTestId('execucao-teste')
+        await expect(tests).toHaveCount(2)
+
+        await test.step('open the scenario that has not started yet', async () => {
+            await tests.nth(1).getByTestId('execucao-teste-abrir').click()
+
+            const steps = tests.nth(1).getByTestId('execucao-step')
+            await expect(steps).toHaveCount(1)
+            await expect(steps.nth(0)).toHaveAttribute('data-status', 'waiting')
+            await expect(steps.nth(0).getByTestId('execucao-step-titulo')).toHaveText('Salvar o produto')
+        })
+
+        await test.step('the scenario in progress shows what is done and what is left', async () => {
+            await tests.nth(0).getByTestId('execucao-teste-abrir').click()
+
+            const steps = tests.nth(0).getByTestId('execucao-step')
+            await expect(steps).toHaveCount(2)
+            await expect(steps.nth(0)).toHaveAttribute('data-status', 'running')
+            await expect(steps.nth(1)).toHaveAttribute('data-status', 'waiting')
+        })
+    })
+
+    test('keeps the run button disabled when the search leaves no scenario', async ({ page }) => {
+        await page.getByTestId('cenario-busca').fill('não existe')
+
+        await expect(page.getByTestId('cenario-card')).toHaveCount(0)
+        await expect(page.getByTestId('projeto-rodar-filtrados')).toBeDisabled()
     })
 
     test('returns 404 for an unknown project', async ({ page }) => {
@@ -272,18 +387,55 @@ test.describe('project management', { tag: ['@write', '@project'] }, () => {
         rmSync(tmpProjects, { recursive: true, force: true })
     })
 
-    test('renames the project', async ({ page }) => {
+    test('offers the report of the last run once a run has left one', async ({ page }) => {
+        await page.goto('/projects/alpha-store')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await expect(page.getByTestId('projeto-relatorio')).toBeHidden()
+
+        mkdirSync(join(tmpProjects, 'alpha-store/results/report'), { recursive: true })
+        writeFileSync(join(tmpProjects, 'alpha-store/results/report/index.html'), '<html>relatório</html>')
+
+        await page.reload()
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        const report = page.getByTestId('projeto-relatorio')
+        await expect(report).toBeVisible()
+        await expect(report).toHaveAttribute('href', /\/api\/v1\/projects\/alpha-store\/report\/$/)
+        await expect(report).toHaveAttribute('target', '_blank')
+    })
+
+    test('renames the project by editing the title itself', async ({ page }) => {
         await page.goto('/projects/beta-blog')
         await page.locator('[data-hydrated="true"]').waitFor()
 
-        await test.step('open the edit modal and save the new name', async () => {
-            await page.getByTestId('projeto-editar').click()
-            await page.getByTestId('projeto-form-nome').fill('Blog Renomeado')
-            await page.getByTestId('projeto-form-salvar').click()
+        await test.step('turn the title into a field and confirm the new name', async () => {
+            await page.getByTestId('projeto-nome').click()
+            await page.getByTestId('projeto-nome-campo').fill('Blog Renomeado')
+            await page.getByTestId('projeto-nome-confirmar').click()
         })
 
         await expect(page).toHaveURL('/projects/blog-renomeado')
         await expect(page.getByTestId('projeto-nome')).toHaveText('Blog Renomeado')
+        await expect(page.getByTestId('projeto-nome-campo')).toBeHidden()
+    })
+
+    test('cancels the rename and brings the previous name back', async ({ page }) => {
+        await page.goto('/projects/echo-docs')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('projeto-nome').click()
+        await page.getByTestId('projeto-nome-campo').fill('Nome Que Não Vai Valer')
+        await page.getByTestId('projeto-nome-cancelar').click()
+
+        await expect(page).toHaveURL('/projects/echo-docs')
+        await expect(page.getByTestId('projeto-nome')).toHaveText('Echo Docs')
+
+        await test.step('and the field opens again with the name that is actually saved', async () => {
+            await page.getByTestId('projeto-nome').click()
+
+            await expect(page.getByTestId('projeto-nome-campo')).toHaveValue('Echo Docs')
+        })
     })
 
     test('dismisses the alert when the project does not need login', async ({ page }) => {

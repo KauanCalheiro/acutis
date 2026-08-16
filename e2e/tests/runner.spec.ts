@@ -352,6 +352,28 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         })
     })
 
+    /** O relatório do Playwright é o que dá acesso a vídeo e trace de cada teste da última execução. */
+    test('leaves the html report of the run behind', async ({ request }) => {
+        test.setTimeout(120_000)
+
+        const { mkdtemp, mkdir, writeFile } = await import('node:fs/promises')
+        const { existsSync } = await import('node:fs')
+        const { tmpdir } = await import('node:os')
+        const { join } = await import('node:path')
+
+        const dir = await mkdtemp(join(tmpdir(), 'acutis-report-'))
+        await mkdir(join(dir, 'tests'), { recursive: true })
+        await writeFile(join(dir, 'playwright.config.ts'),
+            "import { defineConfig } from '@playwright/test'\nexport default defineConfig({ testDir: './tests' })\n")
+        await writeFile(join(dir, 'tests', 'ok.spec.ts'),
+            "import { test, expect } from '@playwright/test'\ntest('passa', () => { expect(1).toBe(1) })\n")
+
+        const res = await request.post(`${RUNNER_URL}/runner/project/stream`, { data: { path: dir }, timeout: 90_000 })
+        expect(res.ok()).toBe(true)
+
+        expect(existsSync(join(dir, 'results/report/index.html'))).toBe(true)
+    })
+
     test('kills a test that runs past the thirty second timeout', async ({ request }) => {
         test.setTimeout(120_000)
 
