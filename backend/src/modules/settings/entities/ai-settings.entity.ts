@@ -15,6 +15,8 @@ export interface AiSettings {
     credentials: Record<string, ProviderCredential>
     providers: string[]
     provider_urls: Record<string, string>
+    /** Quem roda na máquina do usuário e não cobra credencial. */
+    keyless_providers: string[]
 }
 
 /** O provedor ativo já resolvido: cadastro por cima dos padrões, que é o que um agente usaria. */
