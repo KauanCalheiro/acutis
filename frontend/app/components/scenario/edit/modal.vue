@@ -41,9 +41,7 @@ async function save() {
     open.value = false
     emit('updated', updated)
   } catch (err) {
-    const e = err as { data?: { data?: { errors?: Record<string, string[]> } } }
-    const firstError = Object.values(e.data?.data?.errors ?? {})[0]?.[0]
-    error.value = firstError ?? 'Não foi possível salvar o cenário.'
+    error.value = extractServerError(err, 'Não foi possível salvar o cenário.')
   } finally {
     saving.value = false
   }

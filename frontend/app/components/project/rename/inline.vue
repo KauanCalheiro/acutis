@@ -10,7 +10,7 @@ const emit = defineEmits<{
   renamed: [slug: string]
 }>()
 
-const toast = useToast()
+const notify = useNotify()
 const editing = ref(false)
 const draft = ref(name)
 const saving = ref(false)
@@ -42,13 +42,7 @@ async function confirm() {
     editing.value = false
     emit('renamed', updated.slug)
   } catch (error) {
-    const failure = error as { data?: { data?: { errors?: Record<string, string[]> } } }
-
-    toast.add({
-      title: failure.data?.data?.errors?.name?.[0] ?? 'Não foi possível renomear o projeto.',
-      color: 'error',
-      icon: 'i-ic-round-error'
-    })
+    notify.failure(error, 'Não foi possível renomear o projeto.')
   } finally {
     saving.value = false
   }

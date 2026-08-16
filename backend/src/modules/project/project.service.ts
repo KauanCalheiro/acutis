@@ -16,7 +16,7 @@ import { EnvKey } from '../environment/providers/env-key.js'
 import { Environments } from '../environment/providers/environments.js'
 import type { PaginatedResponse, ProjectShowResponse } from './dto/responses/project.response.js'
 import { Project, type ProjectManifest } from './entities/project.entity.js'
-import { readManifest, writeManifest } from './providers/manifest.js'
+import { patchManifest, readManifest, writeManifest } from './providers/manifest.js'
 import { Runs } from '../scenario/providers/runs.js'
 import { listScenarios } from '../scenario/providers/scenario.js'
 import { DEFAULT_TEMPLATE, templatePath } from './providers/template.js'
@@ -184,16 +184,7 @@ export class ProjectService {
             path = newPath
         }
 
-        let manifest: Partial<ProjectManifest> = {}
-
-        try {
-            manifest = JSON.parse(readFileSync(join(path, 'acutis.json'), 'utf8')) as ProjectManifest
-        } catch {
-            manifest = {}
-        }
-
-        const updated = { ...manifest, name, slug: newSlug }
-        writeFileSync(join(path, 'acutis.json'), `${JSON.stringify(updated, null, 4)}\n`)
+        const manifest = patchManifest(path, { name, slug: newSlug })
 
         const repository = await Git.in(path).remoteUrl()
 
@@ -220,10 +211,7 @@ export class ProjectService {
 
     /** Marca no manifesto que a URL foi dispensada. */
     skipUrl(slug: string): void {
-        const path = this.pathOf(slug)
-        const manifest = { ...readManifest(path), url_skipped: true }
-
-        writeFileSync(join(path, 'acutis.json'), `${JSON.stringify(manifest, null, 4)}\n`)
+        patchManifest(this.pathOf(slug), { url_skipped: true })
     }
 
     saveCredentials(slug: string, username: string, password: string): void {

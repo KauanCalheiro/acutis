@@ -20,15 +20,7 @@ const emit = defineEmits<{
 const url = ref('')
 const saving = ref(false)
 const skipping = ref(false)
-const toast = useToast()
-
-function complain(message: string) {
-  toast.add({
-    title: message,
-    color: 'error',
-    icon: 'i-ic-round-error'
-  })
-}
+const notify = useNotify()
 
 watch(open, (isOpen) => {
   if (!isOpen) return
@@ -44,7 +36,7 @@ async function skip() {
     open.value = false
     emit('saved')
   } catch (err) {
-    complain(extractServerError(err, 'Não foi possível deixar a URL em branco.'))
+    notify.failure(err, 'Não foi possível deixar a URL em branco.')
   } finally {
     skipping.value = false
   }
@@ -61,13 +53,9 @@ async function save() {
     open.value = false
     emit('saved')
 
-    toast.add({
-      title: 'Configurações salvas',
-      color: 'success',
-      icon: 'i-ic-round-check-circle'
-    })
+    notify.success('Configurações salvas')
   } catch (err) {
-    complain(extractServerError(err, 'Não foi possível salvar as configurações.'))
+    notify.failure(err, 'Não foi possível salvar as configurações.')
   } finally {
     saving.value = false
   }
