@@ -104,7 +104,7 @@ start frontend frontend pnpm dev
 # 403 e o botão "Testar" da interface não funciona.
 start backend  backend  env WEBDRIVER_TEST_MODE=1 RECORDER_HEADLESS="$HEADLESS" pnpm dev
 
-node scripts/splash.mjs http://localhost:3000 http://localhost:4000
+node backend/bin/splash.mjs http://localhost:3000 http://localhost:4000
 
 # --- espera ficar de pé -------------------------------------------------------
 # Em silêncio: só abre a boca se algum serviço não subir.

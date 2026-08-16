@@ -1,20 +1,19 @@
 #!/usr/bin/env node
 // Banner da subida do acutis: a logo em ASCII, o nome em letra grande e os endereços
-// expostos. É a única coisa que o ./dev.sh escreve no terminal.
+// expostos. Usado nas duas frentes — o ./dev.sh do repositório e o `acutis` publicado.
 //
-//   node scripts/splash.mjs [urlFrontend] [urlApi]
+//   node backend/bin/splash.mjs [urlFrontend] [urlApi]   avulso
+//   import { splash } from './splash.mjs'                de dentro do bin
 
-import { readFileSync } from 'node:fs'
-
-const FRONTEND = process.argv[2] || 'http://localhost:3000'
-const API = process.argv[3] || 'http://localhost:4000'
+import { existsSync, readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 // Par, e metade disso é a altura em linhas — 18 dá 9 linhas. A célula do braille tem
 // 2 pontos de largura por 4 de altura, então COLS/2 linhas sempre resulta num bitmap
 // quadrado (COLS*2 por COLS*2 pontos).
-const COLS = 18
+const COLS = 20
 const STROKE = 4.5 // raio do traço em unidades do viewBox (o svg usa stroke-width 8)
-const SS = [2, 4] // braille: 2x4 pontos por célula
+const SS = [3, 6] // braille: 2x4 pontos por célula
 const BITS = [[0, 0, 0], [0, 1, 1], [0, 2, 2], [1, 0, 3], [1, 1, 4], [1, 2, 5], [0, 3, 6], [1, 3, 7]]
 
 const plain = !process.stdout.isTTY || process.env.NO_COLOR
@@ -23,8 +22,13 @@ const off = plain ? '' : '\x1b[0m'
 const BRAND = [125, 185, 240]
 
 // --- logo: o mesmo path que o frontend desenha, rasterizado em ASCII ----------
-const logoSrc = new URL('../frontend/app/utils/logo.ts', import.meta.url)
-const logoPath = readFileSync(logoSrc, 'utf8').match(/logoPath = '([^']+)'/)[1]
+// No repositório a fonte é o próprio arquivo do frontend, então não há um segundo desenho
+// para manter em dia. No pacote publicado esse arquivo não existe: o `cli:build` deixa uma
+// cópia gerada ao lado deste script.
+const repoSrc = new URL('../../frontend/app/utils/logo.ts', import.meta.url)
+const logoPath = existsSync(repoSrc)
+  ? readFileSync(repoSrc, 'utf8').match(/logoPath = '([^']+)'/)[1]
+  : (await import('./logo-path.js')).logoPath
 
 const segments = logoPath.split('M').slice(1).flatMap((chunk) => {
   const n = chunk.match(/-?\d+\.?\d*/g).map(Number)
@@ -103,7 +107,7 @@ const GLYPHS = {
 // passo de uma letra para a outra (SCALE*5 + GAP) precisa ser PAR, senão cada letra cai
 // meia célula fora e o traço racha. Mesma regra na vertical: altura múltipla de 4.
 const SCALE = 2 // 5x7 do glifo vira 10x14 pontos
-const GAP = 2 // passo de 12 pontos = 6 células exatas por letra
+const GAP = 5 // passo de 12 pontos = 6 células exatas por letra
 
 function renderWordmark(text) {
   const glyphs = [...text].map((ch) => GLYPHS[ch])
@@ -128,30 +132,37 @@ function renderWordmark(text) {
   return toBraille(px, w, h)
 }
 
-const wordmark = renderWordmark('ACUTIS')
-
 // --- composição ----------------------------------------------------------------
-const logo = renderLogo()
-const label = fg(120, 140, 165)
-const value = fg(150, 200, 245)
-
-const right = [
-  ...wordmark.map((l) => fg(...BRAND) + l + off),
-  '',
-  `${label}frontend${off}   ${value}${FRONTEND}${off}`,
-  `${label}api${off}        ${value}${API}${off}`,
-]
-
 const PAD = 1 // linha em branco acima e abaixo da logo
 const DROP = 1 // o bloco da direita começa uma linha abaixo do topo da logo
-const height = Math.max(logo.length, right.length + DROP) + PAD * 2
-const blank = ' '.repeat(COLS)
 
-const out = []
-for (let i = 0; i < height; i++) {
-  const l = logo[i - PAD] ?? blank
-  const r = right[i - PAD - DROP] ?? ''
-  out.push(`  ${fg(...BRAND)}${l}${off}   ${r}`.replace(/\s+$/, ''))
+export function splash(frontendUrl, apiUrl) {
+  const wordmark = renderWordmark('ACUTIS')
+  const logo = renderLogo()
+  const label = fg(120, 140, 165)
+  const value = fg(150, 200, 245)
+
+  const right = [
+    ...wordmark.map((l) => fg(...BRAND) + l + off),
+    '',
+    `${label}frontend${off}   ${value}${frontendUrl}${off}`,
+    `${label}api${off}        ${value}${apiUrl}${off}`,
+  ]
+
+  const height = Math.max(logo.length, right.length + DROP) + PAD * 2
+  const blank = ' '.repeat(logo[0].length)
+
+  const out = []
+  for (let i = 0; i < height; i++) {
+    const l = logo[i - PAD] ?? blank
+    const r = right[i - PAD - DROP] ?? ''
+    out.push(`  ${fg(...BRAND)}${l}${off}   ${r}`.replace(/\s+$/, ''))
+  }
+
+  return `\n${out.join('\n')}\n\n`
 }
 
-process.stdout.write(`\n${out.join('\n')}\n\n`)
+// chamado direto pelo ./dev.sh, que passa as urls como argumento
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  process.stdout.write(splash(process.argv[2] || 'http://localhost:3000', process.argv[3] || 'http://localhost:4000'))
+}
