@@ -1,46 +1,46 @@
 <script setup>
-const favicon = ref("/favicon.svg");
+const favicon = ref('/favicon.svg')
 
 useHead({
-  meta: [{ name: "viewport", content: "width=device-width, initial-scale=1" }],
-  link: [{ key: "favicon", rel: "icon", type: "image/svg+xml", href: favicon }],
+  meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1' }],
+  link: [{ key: 'favicon', rel: 'icon', type: 'image/svg+xml', href: favicon }],
   htmlAttrs: {
-    lang: "en",
-  },
-});
+    lang: 'en'
+  }
+})
 
 useSeoMeta({
-  title: "Acutis",
-});
+  title: 'Acutis'
+})
 
-const appConfig = useAppConfig();
-const colorMode = useColorMode();
+const appConfig = useAppConfig()
+const colorMode = useColorMode()
 
 function repaintFaviconWhenThemeColorsLand(framesLeftToWaitForTheme = 10) {
-  const style = getComputedStyle(document.documentElement);
+  const style = getComputedStyle(document.documentElement)
   const svg = logoSvg(
-    style.getPropertyValue("--ui-primary"),
-    style.getPropertyValue("--ui-bg"),
-  );
-  const repainted = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+    style.getPropertyValue('--ui-primary'),
+    style.getPropertyValue('--ui-bg')
+  )
+  const repainted = `data:image/svg+xml,${encodeURIComponent(svg)}`
 
-  const themeStillHoldsTheOldColors = repainted === favicon.value;
+  const themeStillHoldsTheOldColors = repainted === favicon.value
 
   if (themeStillHoldsTheOldColors && framesLeftToWaitForTheme > 0) {
     requestAnimationFrame(() =>
-      repaintFaviconWhenThemeColorsLand(framesLeftToWaitForTheme - 1),
-    );
-    return;
+      repaintFaviconWhenThemeColorsLand(framesLeftToWaitForTheme - 1)
+    )
+    return
   }
 
-  favicon.value = repainted;
+  favicon.value = repainted
 }
 
-onMounted(() => repaintFaviconWhenThemeColorsLand());
+onMounted(() => repaintFaviconWhenThemeColorsLand())
 
 watch([() => appConfig.ui.colors.primary, () => colorMode.value], () =>
-  nextTick(() => repaintFaviconWhenThemeColorsLand()),
-);
+  nextTick(() => repaintFaviconWhenThemeColorsLand())
+)
 </script>
 
 <template>
