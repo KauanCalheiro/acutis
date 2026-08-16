@@ -3,10 +3,11 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { afterEach, beforeEach, expect, it } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { RunnerService } from '../../../webdriver/runner/runner.service.js'
 import { startApi, type Harness } from '../../../../test/support/harness.js'
 import { ScenarioModule } from '../scenario.module.js'
+import { ScenarioService } from '../scenario.service.js'
 
 let api: Harness
 let dir: string
@@ -293,6 +294,63 @@ it('empurra a execução quando o projeto tem remote', async () => {
 
 it('ainda guarda a execução quando o projeto não é um repositório git', async () => {
     await streamScenario(passingRun())
+
+    expect(savedRuns()).toHaveLength(1)
+})
+
+/** Lê o stream conforme ele chega, em vez de esperar a resposta inteira. */
+function streamChunks(received: string[]): Promise<void> {
+    return new Promise((resolve, reject) => {
+        api.http.get('/api/v1/projects/minha-loja/run/stream?spec=tests/login/entrar.spec.ts')
+            .buffer(false)
+            .parse((response, done) => {
+                response.on('data', (chunk: Buffer) => received.push(chunk.toString()))
+                response.on('end', () => done(null, null))
+            })
+            .end((error) => error ? reject(error) : resolve())
+    })
+}
+
+async function waitFor(condition: () => boolean): Promise<void> {
+    for (let attempt = 0; attempt < 100; attempt++) {
+        if (condition()) return
+
+        await new Promise((resolve) => setTimeout(resolve, 10))
+    }
+
+    throw new Error('O stream não emitiu nada no tempo esperado.')
+}
+
+/** O `run:finished` é o sinal para a interface recarregar: só pode sair com o histórico já gravado. */
+it('só anuncia o fim depois de guardar a execução', async () => {
+    const scenarios = api.get<ScenarioService>(ScenarioService)
+    const persist = scenarios.persistRun.bind(scenarios)
+    let release = (): void => {}
+    const gate = new Promise<void>((resolve) => {
+        release = resolve
+    })
+
+    vi.spyOn(scenarios, 'persistRun').mockImplementation(async (...args) => {
+        await gate
+
+        return persist(...args)
+    })
+
+    queued.push(passingRun())
+
+    const received: string[] = []
+    const streaming = streamChunks(received)
+
+    try {
+        await waitFor(() => received.join('').includes('run:started'))
+
+        expect(received.join('')).not.toContain('run:finished')
+    } finally {
+        release()
+    }
+
+    await streaming
+    await waitFor(() => received.join('').includes('run:finished'))
 
     expect(savedRuns()).toHaveLength(1)
 })
