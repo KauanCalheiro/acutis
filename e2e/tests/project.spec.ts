@@ -365,7 +365,7 @@ test.describe('project settings', { tag: ['@write', '@project'] }, () => {
     })
 
     test('opens the environments already loaded when the url asks for them', async ({ page }) => {
-        await page.goto('/projects/alpha-store?ambiente')
+        await page.goto('/projects/alpha-store?environment')
         await page.locator('[data-hydrated="true"]').waitFor()
 
         await expect(page.getByTestId('ambientes-variaveis-chave-0')).toHaveValue('URL', { timeout: 10_000 })
