@@ -23,11 +23,21 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Lint
+        run: pnpm lint
+
       - name: Typecheck
         run: pnpm typecheck
 
       - name: Test
-        run: pnpm test
+        run: pnpm test:coverage
+
+      - name: Coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-backend
+          path: backend/coverage
 
   frontend:
     runs-on: ubuntu-latest
@@ -56,4 +66,11 @@ jobs:
         run: pnpm typecheck
 
       - name: Test
-        run: pnpm test
+        run: pnpm test:coverage
+
+      - name: Coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-frontend
+          path: frontend/coverage
