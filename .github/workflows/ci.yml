@@ -103,6 +103,8 @@ jobs:
 
       - name: Build
         run: pnpm --dir e2e build
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
 
       - name: Smoke
         if: github.ref != 'refs/heads/main'
