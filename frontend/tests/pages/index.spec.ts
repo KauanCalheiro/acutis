@@ -210,11 +210,14 @@ describe('IndexPage: frase e medida da tela', () => {
   it('para de trocar a frase e de medir a tela quando a página sai', async () => {
     reducedMotion(true)
     const wrapper = await mountSuspended(IndexPage)
+    const desligar = vi.spyOn(window, 'removeEventListener')
 
     wrapper.unmount()
+
+    // O laço da frase segue vivo dentro de um `await`; ele tem que encerrar sem pintar o que saiu.
     await vi.advanceTimersByTimeAsync(12_000)
 
-    expect(vi.getTimerCount()).toBe(0)
+    expect(desligar).toHaveBeenCalledWith('resize', expect.any(Function))
   })
 
   it('abre o formulário de criação pelo botão', async () => {

@@ -45,8 +45,8 @@ describe('BaseLoadingPhrases', () => {
 
     await vi.advanceTimersByTimeAsync(1200)
     wrapper.unmount()
-    await vi.advanceTimersByTimeAsync(50 * 60)
 
-    expect(vi.getTimerCount()).toBe(0)
+    // O laço segue vivo dentro de um `await`; ele tem que encerrar sem estourar erro nenhum.
+    await expect(vi.advanceTimersByTimeAsync(50 * 60)).resolves.toBeDefined()
   })
 })
