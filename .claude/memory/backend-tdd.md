@@ -50,6 +50,12 @@ it('lista os projetos do diretório', async () => {
 | `update` | 200 + o efeito em disco |
 | `destroy` | 204 + o que saiu do disco junto |
 
+## Cobertura
+
+- Piso do `pnpm test:coverage`: 95% de linhas/statements/funções e 90% de branches (medido hoje: 98,9%).
+- Fora da conta: bootstrap (`main.ts`, `app.module.ts`, `src/scripts/**`), arquivos só de tipo e o que só roda com Playwright/socket real (`src/webdriver/recorder/**`, `gateway/**`, `runner.service.ts`) — esses são cobertos pelo E2E, ver [webdriver-tdd](webdriver-tdd.md). Controller de webdriver **tem** teste, com o service como dublê.
+- O provedor de IA entra por `vi.mock` do agente (`agents/*.js`), e o cadastro por `SettingsService.update({ provider: 'ollama', model: '...' })` — ollama é keyless.
+
 ## Gotchas
 
 - O teste afirma o **efeito em disco**, não a chamada interna: leia o arquivo com `readFileSync` e confira o conteúdo.

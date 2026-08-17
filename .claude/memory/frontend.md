@@ -1,6 +1,6 @@
 ---
 name: frontend
-description: Frontend Nuxt — LER 1º ao criar/editar componente, página, tela, formulário; índice → props, style, table, icons, tdd (E2E em e2e.md)
+description: Frontend Nuxt — LER 1º ao criar/editar componente, página, tela, formulário; índice → props, style, table, icons, tests, tdd (E2E em e2e.md)
 metadata:
   type: feedback
 ---
@@ -21,3 +21,4 @@ metadata:
 | [frontend-crud](frontend-crud.md) | CRUD — form modal criar/editar, BaseConfirm remoção, coluna de ações, rotas proxy |
 | [frontend-api](frontend-api.md) | Chamar API — useFetch direto, handler 401/498 global, proxy Nitro, query bracket |
 | [frontend-icons](frontend-icons.md) | Ícones da app = Google Material Icons (`i-ic-round-*`); Nuxt UI mantém os dele, menos o carregando |
+| [frontend-tests](frontend-tests.md) | Teste unitário (Vitest + @nuxt/test-utils) — mountSuspended/UApp, modal no body, tabs por $emit, piso de cobertura |
