@@ -154,11 +154,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <!-- my-auto e não items-center: com conteúdo mais alto que a tela a margem automática zera, e a lista rola normal em vez de ter o topo cortado. -->
   <div
     ref="viewport"
     class="flex flex-col min-h-screen"
   >
+    <!-- my-auto e não items-center: com conteúdo mais alto que a tela a margem automática zera, e a lista rola normal em vez de ter o topo cortado. -->
     <UContainer
       :data-hydrated="hydrated"
       class="my-auto py-6 lg:py-10"
