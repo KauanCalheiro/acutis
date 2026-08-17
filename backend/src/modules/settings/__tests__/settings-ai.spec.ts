@@ -53,10 +53,9 @@ it('oferece todos os provedores suportados, com nada configurado ainda', async (
     expect(response.body.providers).toEqual(['anthropic', 'claude-code', 'gemini', 'ollama', 'openai', 'openrouter'])
 })
 
-it('só oferece provedor que o backend consegue chamar', async () => {
-    const response = await api.http.get('/api/v1/settings/ai')
-
-    for (const provider of response.body.providers as string[]) {
+// A lista oferecida é a mesma que o teste acima confere no endpoint; aqui é o suporte de cada uma.
+it('só oferece provedor que o backend consegue chamar', () => {
+    for (const provider of PROVIDER_NAMES) {
         expect(isSupported(provider)).toBe(true)
     }
 })

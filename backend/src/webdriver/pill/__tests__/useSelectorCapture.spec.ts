@@ -82,6 +82,25 @@ describe('useSelectorCapture', () => {
         expect(extractSelectors(el).text).toBeNull()
     })
 
+    it('descarta o seletor que o navegador nem aceita', () => {
+        setBody('<button data-testid=\'com"aspas\'>Quebrado</button>')
+        const el = document.querySelector('button')!
+
+        expect(extractSelectors(el).dataTestId).toBeNull()
+    })
+
+    it('não tem seletor para elemento que saiu da página', () => {
+        const el = document.createElement('button')
+
+        el.id = 'solto'
+
+        const selectors = extractSelectors(el)
+
+        expect(selectors.finder).toBeNull()
+        expect(selectors.cssStable).toBeNull()
+        expect(selectors.xpath).toBeNull()
+    })
+
     it('returns null for attributes that are absent', () => {
         setBody('<div>plain</div>')
         const el = document.querySelector('div')!

@@ -53,6 +53,34 @@ class ExemploController {
     quieto(@Body() body: Record<string, unknown>): unknown {
         return { recebido: Object.keys(body).length }
     }
+
+    /** Serviço que responde texto puro, não JSON. */
+    @Post('texto')
+    async texto(): Promise<unknown> {
+        const response = await fetch(`${remoteUrl}/texto`, { method: 'POST', body: 'oi' })
+
+        return { texto: await response.text() }
+    }
+
+    /** Streaming em que uma das linhas não é JSON. */
+    @Post('stream-sujo')
+    async streamSujo(): Promise<unknown> {
+        const response = await fetch(`${remoteUrl}/stream-sujo`, { method: 'POST', body: '{}' })
+
+        return { texto: await response.text() }
+    }
+
+    /** Serviço fora do ar: o fetch nem chega a responder. */
+    @Post('fora-do-ar')
+    async foraDoAr(): Promise<unknown> {
+        try {
+            await fetch('http://127.0.0.1:1/nao-responde', { method: 'POST', body: '{}' })
+        } catch {
+            return { caiu: true }
+        }
+
+        return { caiu: false }
+    }
 }
 
 beforeEach(async () => {
@@ -69,6 +97,23 @@ beforeEach(async () => {
                 JSON.stringify({ message: { role: 'assistant', content: 'kin": "oi"}' }, done: false }),
                 JSON.stringify({ message: { role: 'assistant', content: '' }, done: true })
             ].join('\n'))
+
+            return
+        }
+
+        if (request.url === '/stream-sujo') {
+            response.writeHead(200, { 'content-type': 'application/x-ndjson' })
+            response.end([
+                'isto não é json',
+                JSON.stringify({ message: { role: 'assistant', content: 'oi' }, done: true })
+            ].join('\n'))
+
+            return
+        }
+
+        if (request.url === '/texto') {
+            response.writeHead(200, { 'content-type': 'text/plain' })
+            response.end('resposta em texto puro')
 
             return
         }
@@ -210,6 +255,38 @@ it('registra o erro da requisição que falhou, com o status que o cliente receb
 
     expect(entry!.status).toBe(404)
     expect(entry!.error).toContain('Não encontrado')
+})
+
+it('guarda como texto o corpo que não é json', async () => {
+    await http.post('/exemplo/texto').send({}).expect(201)
+
+    const [entry] = entries()
+
+    expect(entry!.outbound[0]!.response.body).toBe('resposta em texto puro')
+})
+
+it('ignora a linha do streaming que não é json', async () => {
+    await http.post('/exemplo/stream-sujo').send({}).expect(201)
+
+    const [entry] = entries()
+
+    expect(JSON.stringify(entry!.outbound[0]!.response.body)).toContain('oi')
+})
+
+it('registra a chamada externa que nem chegou a responder', async () => {
+    await http.post('/exemplo/fora-do-ar').send({}).expect(201)
+
+    const [entry] = entries()
+
+    expect(entry!.outbound[0]!.error).toBeDefined()
+    expect(entry!.outbound[0]!.status).toBeNull()
+})
+
+it('não derruba a requisição quando não consegue escrever o diário', async () => {
+    rmSync(root, { recursive: true, force: true })
+    writeFileSync(root, 'agora sou um arquivo')
+
+    await http.post('/exemplo/quieto').send({ nome: 'acutis' }).expect(201)
 })
 
 it('apaga o diário com mais de uma semana e mantém o de dentro da janela', async () => {

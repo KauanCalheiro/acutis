@@ -7,11 +7,12 @@ export default defineVitestConfig({
       provider: 'v8',
       reporter: ['text-summary', 'lcov'],
       include: ['app/**/*.{ts,vue}'],
-      exclude: ['app/**/*.d.ts'],
-      // Piso simbólico: a cobertura de tela mora no E2E, não aqui. Ajustado de 18 para 16 quando o
-      // lockfile unificado trouxe o vite 8 — o v8 passou a instrumentar diferente e o mesmo código
-      // passou a medir ~0,6 ponto a menos.
-      thresholds: { lines: 16, functions: 16, branches: 16, statements: 16 }
+      // As páginas em app/pages/dev são bancada de desenvolvimento (404 em produção) e não têm
+      // teste por diretriz do projeto, então não entram na conta.
+      exclude: ['app/**/*.d.ts', 'app/pages/dev/**'],
+      // Piso um pouco abaixo do medido hoje (99/93/99/99), para o gate acusar regressão sem
+      // quebrar por uma linha a mais de template.
+      thresholds: { lines: 95, functions: 95, branches: 92, statements: 95 }
     }
   }
 })

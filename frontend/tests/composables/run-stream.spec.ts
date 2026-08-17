@@ -265,6 +265,18 @@ describe('useRunStream', () => {
     })
   })
 
+  it('corrige o passo que já fechou verde quando o timeout do teste chega depois', () => {
+    const stream = started(['abre o login'])
+    source().send({ event: 'step', title: 'abre o login', status: 'pending' })
+    source().send({ event: 'step', title: 'abre o login', status: 'success' })
+    source().send({ event: 'step', title: 'abre o login', status: 'failed', error: 'Test timeout of 30000ms exceeded' })
+
+    expect(stream.steps.value[0]).toMatchObject({
+      status: 'failed',
+      error: 'Test timeout of 30000ms exceeded'
+    })
+  })
+
   it('clears the tests of the previous run when the same stream starts again', () => {
     const stream = started(['abre o login'])
     source().send({ event: 'test', id: 't1', title: 'Login do cliente', status: 'success' })

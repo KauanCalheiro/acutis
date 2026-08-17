@@ -4,7 +4,9 @@ import { expect, it } from 'vitest'
 import {
     scenario,
     stampGherkinTags,
+    stampPlaywrightTags,
     stampPlaywrightTitle,
+    tags,
     title,
     TITLE_LIMIT
 } from '../providers/test-artifact.js'
@@ -65,4 +67,37 @@ it('deixa exatamente como veio um spec sem describe', () => {
     const spec = "setup('autenticação', async () => {})"
 
     expect(stampPlaywrightTitle(spec, 'Outro')).toBe(spec)
+})
+
+it('cai no nome de reserva quando a feature não nomeia nem título nem cenário', () => {
+    expect(title('Dado que estou na home')).toBe('teste')
+    expect(scenario('Dado que estou na home')).toBe('executa o fluxo gravado')
+})
+
+it('lê as tags só da primeira linha, e só quando ela é uma linha de tags', () => {
+    expect(tags('@read @cursos\nFuncionalidade: Consulta')).toEqual(['@read', '@cursos'])
+    expect(tags('Funcionalidade: Consulta\n@read')).toEqual([])
+    expect(tags('@\nFuncionalidade: Consulta')).toEqual([])
+})
+
+it('carimba a tag no describe que ainda não declarava nenhuma', () => {
+    const stamped = stampPlaywrightTags("test.describe('Login', async () => {})", ['@read'])
+
+    expect(stamped).toBe("test.describe('Login', {tag: ['@read']}, async () => {})")
+})
+
+it('troca a lista de tags que o describe já declarava', () => {
+    const stamped = stampPlaywrightTags("test.describe('Login', { tag: ['@antiga'] }, () => {})", ['@read'])
+
+    expect(stamped).toContain("tag: ['@read']")
+})
+
+it('deixa o spec como veio quando não há tag a carimbar', () => {
+    const spec = "test.describe('Login', () => {})"
+
+    expect(stampPlaywrightTags(spec, [])).toBe(spec)
+})
+
+it('deixa a feature sem linha de tags quando a lista fica vazia', () => {
+    expect(stampGherkinTags('@antiga\nFuncionalidade: Login', [])).toBe('Funcionalidade: Login')
 })
