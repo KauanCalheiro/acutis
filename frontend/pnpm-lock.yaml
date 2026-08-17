@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@acutis/contracts':
+        specifier: file:../contracts
+        version: file:../contracts
       '@iconify-json/ic':
         specifier: ^1.2.4
         version: 1.2.4
@@ -71,6 +74,9 @@ importers:
         version: 3.3.5(typescript@6.0.3)
 
 packages:
+
+  '@acutis/contracts@file:../contracts':
+    resolution: {directory: ../contracts, type: directory}
 
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
@@ -5657,6 +5663,10 @@ packages:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
 snapshots:
+
+  '@acutis/contracts@file:../contracts':
+    dependencies:
+      zod: 4.4.3
 
   '@alloc/quick-lru@5.2.0': {}
 

@@ -11,7 +11,7 @@ Antes de qualquer edição, **traçar o fluxo real** do ponto que o usuário cit
 
 **How to apply:**
 
-- Seguir a cadeia inteira: componente → `$fetch` da rota → `frontend/server/api/` → `backend/src/modules/{domínio}/{domínio}.controller.ts` → service → provider → destino final.
+- Seguir a cadeia inteira: componente → `$fetch` da rota → `frontend/server/api/` → `backend/src/controllers/{domínio}/` → `backend/src/use-cases/{domínio}/` → service → provider → destino final.
 - Antes de mexer em prompt de agente, confirmar qual agente aquele fluxo instancia; `grep` no nome da função a partir do service, não a partir do que o agente parece fazer.
 - Havendo variante (cenário vs. autenticação, criar vs. editar, público vs. autenticado), confirmar com o usuário qual ele usou antes de editar.
 - Bugfix: `grep` em todos os callers da função antes de corrigir — corrigir só o caminho relatado deixa os irmãos quebrados.

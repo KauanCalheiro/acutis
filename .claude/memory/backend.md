@@ -5,7 +5,7 @@ metadata:
   type: feedback
 ---
 
-A API `/api/v1` vive em `backend/src/modules`, um módulo Nest por domínio, no mesmo processo do gravador e do runner (`backend/src/webdriver` — ver [webdriver](webdriver.md)). Estrutura de pastas em [structure-webdriver](structure-webdriver.md).
+A API `/api/v1` entra por `backend/src/controllers`, passa por `backend/src/use-cases` e é composta pelos módulos Nest em `backend/src/modules`. O gravador e o runner vivem no mesmo processo, em `backend/src/webdriver`. Estrutura de pastas em [structure-webdriver](structure-webdriver.md).
 
 ## Sub-memórias
 
@@ -25,9 +25,9 @@ A API `/api/v1` vive em `backend/src/modules`, um módulo Nest por domínio, no 
 ```
 HTTP Request
     ↓
-Controller (modules/{dominio}/{dominio}.controller.ts)
+Controller (controllers/{dominio}/{dominio}.controller.ts)
     ↓                         ↓
-{X}Dto                    Service ←→ providers/ (disco, git, sqlite)
+{X}Dto                    Use case → Service ←→ providers/ (disco, git, sqlite)
 (entrada, validada             ↓
  pelo ValidationPipe)     {X}Response
                           (saída, tipo do dto/responses/)
@@ -44,5 +44,5 @@ TDD obriga o teste primeiro. Dependências técnicas ditam o resto:
 1. **Teste** — cobre o contrato HTTP de ponta a ponta (red) → [backend-tdd](backend-tdd.md)
 2. **Provider** (ou **migration**, quando a mudança tocar o banco) — a leitura/escrita do estado → [backend-persistence](backend-persistence.md)
 3. **DTO / Response** — contrato de entrada e saída → [backend-contracts](backend-contracts.md)
-4. **Service + Controller + Module** — orquestra entrada → provider → saída → [backend-module](backend-module.md)
+4. **Use case + Service + Controller + Module**: orquestra entrada, regra, provider e saída. Ver [backend-module](backend-module.md).
 5. **`pnpm typecheck` + commits** — [backend-conventions](backend-conventions.md) + [commit](commit.md)

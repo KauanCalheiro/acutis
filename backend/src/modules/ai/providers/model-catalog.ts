@@ -1,13 +1,9 @@
 /** Os modelos que um provedor oferece, perguntados a ele e traduzidos para uma lista só. */
 import type { ResolvedProvider } from '../../settings/entities/ai-settings.entity.js'
 import { CLAUDE_AGENT_MODELS } from './claude-agent.js'
+import type { AvailableModel } from '@acutis/contracts/settings'
 
-export interface AvailableModel {
-    /** O identificador que vai no cadastro, exatamente como o provedor o nomeia. */
-    id: string
-    /** O que a tela mostra. */
-    label: string
-}
+export type { AvailableModel } from '@acutis/contracts/settings'
 
 export class ModelListingFailed extends Error {
     constructor(provider: string, reason: string) {

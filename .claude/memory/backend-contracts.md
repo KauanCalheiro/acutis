@@ -7,7 +7,7 @@ metadata:
 
 Ver [backend](backend.md).
 
-## Entrada — `dto/{acao}.dto.ts`
+## Entrada: `src/dto/{dominio}/{acao}.dto.ts`
 
 Classe com decorators do `class-validator`. O `ValidationPipe` global (`common/pipes/validation.pipe.ts`) roda com `transform`, `whitelist` e `stopAtFirstError`, e converte a falha em 422 `{ message, errors }`.
 
@@ -25,7 +25,7 @@ export class CreateProjectDto {
 - Regra própria (nome disponível, valor sluggável) vira decorator local no mesmo arquivo, via `registerDecorator`.
 - `whitelist` apaga campo não declarado — DTO aninhado precisaria declarar tudo, então lista de objeto livre (eventos de gravação) fica como `@IsArray()` e é conferida à mão.
 
-## Saída — `dto/responses/{recurso}.response.ts`
+## Saída: `src/dto/{dominio}/responses/{recurso}.response.ts`
 
 Um `interface`/`type` por recurso, com os nomes exatamente como o frontend lê (snake_case, projeto achatado na raiz). O tipo é o contrato: mudar um campo é editar este arquivo, não um efeito colateral de mexer no service.
 

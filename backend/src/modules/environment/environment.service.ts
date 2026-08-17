@@ -5,14 +5,12 @@ import { slug as toSlug } from '../../common/utils/slug.js'
 import { Dotenv } from '../project/providers/dotenv.js'
 import { ProjectService } from '../project/project.service.js'
 import { environmentVar } from './providers/environment-var.js'
-import type { EnvironmentDto, EnvironmentVarDto } from './dto/environment.dto.js'
+import type { EnvironmentDto, EnvironmentVarDto } from '../../dto/environment/environment.dto.js'
 import { Environments, type Environment } from './providers/environments.js'
+import type { EnvironmentList } from '@acutis/contracts/environment'
 
-export interface EnvironmentList {
-    active: string | null
-    environments: Environment[]
-    known_keys: string[]
-}
+export type { Environment } from './providers/environments.js'
+export type { EnvironmentList } from '@acutis/contracts/environment'
 
 @Injectable()
 export class EnvironmentService {

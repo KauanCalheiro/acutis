@@ -3,6 +3,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { databasePath } from '../../../config/database.js'
+import { APP_CONFIG } from '../../../config/env.js'
 
 /** Se a chave serve para o AES-256: 32 bytes em hexadecimal. */
 function isUsable(key: string): boolean {
@@ -11,7 +12,7 @@ function isUsable(key: string): boolean {
 
 /** A chave de cifra, gerada na primeira execução e guardada ao lado do banco. */
 function encryptionKey(): Buffer {
-    const fromEnvironment = process.env.ACUTIS_APP_KEY
+    const fromEnvironment = APP_CONFIG.appKey
 
     if (fromEnvironment && isUsable(fromEnvironment)) return Buffer.from(fromEnvironment, 'hex')
 

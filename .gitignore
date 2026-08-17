@@ -8,3 +8,5 @@ docs/superpowers/
 .claude/.obsidian/*
 COMPARATIVO-TCC.md
 .DS_Store
+
+node_modules

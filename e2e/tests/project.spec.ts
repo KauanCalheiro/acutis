@@ -1,8 +1,50 @@
 import { test, expect } from '@playwright/test'
+import { createServer, type Server } from 'node:http'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { startBackend } from '../support/backend'
+import { PORTS } from '../support/ports'
 import { projectsCopy } from '../support/projects'
+
+test.describe('project API contract', { tag: ['@read', '@project'] }, () => {
+    let backend: Server
+
+    test.beforeAll(async () => {
+        backend = createServer((_, response) => {
+            response.writeHead(200, { 'Content-Type': 'application/json' })
+            response.end(JSON.stringify({ data: [{ slug: 42 }], meta: {} }))
+        })
+
+        await new Promise<void>((resolvePromise) => backend.listen(PORTS.webdriver, resolvePromise))
+    })
+
+    test.afterAll(async () => {
+        await new Promise<void>((resolvePromise, reject) => backend.close((error) => {
+            if (error) reject(error)
+            else resolvePromise()
+        }))
+    })
+
+    test('rejects an invalid backend response at the BFF boundary', async ({ request }) => {
+        const response = await request.get('/api/projects')
+
+        expect(response.status()).toBe(502)
+        await expect(response.json()).resolves.toMatchObject({
+            statusCode: 502,
+            statusMessage: 'Resposta inválida da API.'
+        })
+    })
+
+    test('rejects an invalid scenario response at the BFF boundary', async ({ request }) => {
+        const response = await request.get('/api/projects/alpha-store/scenarios/login')
+
+        expect(response.status()).toBe(502)
+        await expect(response.json()).resolves.toMatchObject({
+            statusCode: 502,
+            statusMessage: 'Resposta inválida da API.'
+        })
+    })
+})
 
 test.describe('project page', { tag: ['@read', '@project'] }, () => {
     let stopBackend: () => Promise<void>

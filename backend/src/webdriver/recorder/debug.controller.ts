@@ -1,5 +1,6 @@
 import { Body, Controller, ForbiddenException, Post } from '@nestjs/common'
 import { RecorderService } from './recorder.service.js'
+import { APP_CONFIG } from '../../config/env.js'
 
 @Controller('debug')
 export class DebugController {
@@ -8,7 +9,7 @@ export class DebugController {
     ) { }
 
     private ensureTestMode(): void {
-        if (process.env.WEBDRIVER_TEST_MODE !== '1') {
+        if (!APP_CONFIG.webdriverTestMode) {
             throw new ForbiddenException('debug endpoints only available with WEBDRIVER_TEST_MODE=1')
         }
     }

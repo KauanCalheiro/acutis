@@ -1,7 +1,7 @@
 /** O histórico de execuções de um cenário: um arquivo ndjson, uma linha por execução. */
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { RunStep } from '../dto/responses/scenario.response.js'
+import type { RunStep } from '../../../dto/scenario/responses/scenario.response.js'
 
 export const VIDEO = 'last.webm'
 export const HISTORY = 'history.ndjson'

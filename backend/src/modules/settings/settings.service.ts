@@ -11,7 +11,9 @@ import { decrypt, encrypt } from './providers/crypto.js'
 import { AiCredential } from './entities/ai-credential.entity.js'
 import { Setting } from './entities/setting.entity.js'
 import type { AiSettings, ProviderCredential, ResolvedProvider } from './entities/ai-settings.entity.js'
-import type { PingResponse } from './dto/responses/ping.response.js'
+import type { PingResponse } from '../../dto/settings/responses/ping.response.js'
+
+export type { AvailableModel } from '../ai/providers/model-catalog.js'
 
 /** A chave global que guarda qual provedor está ativo. */
 const AI_PROVIDER = 'ai.provider'

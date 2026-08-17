@@ -41,8 +41,11 @@ para os agentes é o `runAgent` (`ai/providers/provider-errors.ts`), não cada a
 ```
 src/config/            ← env, caminhos e as opções do banco
 src/common/            ← filters, pipes, interceptors, exceptions, utils, playwright, types
+src/controllers/       ← adaptadores HTTP, subdivididos por domínio
+src/use-cases/         ← operações da aplicação, subdivididas por domínio
+src/dto/               ← validação HTTP e responses, subdivididos por domínio
 src/migrations/        ← as migrations do TypeORM → [backend-persistence](backend-persistence.md)
-src/modules/{dominio}/ ← a API, um módulo por domínio → [backend-module](backend-module.md)
+src/modules/{dominio}/ ← composição Nest, services, entities, providers e testes
 src/scripts/           ← comandos de desenvolvimento (`pnpm db:fresh`)
 src/webdriver/         ← gravador, runner, vídeo e pill → [webdriver](webdriver.md)
 test/support/          ← harness e fixtures dos testes

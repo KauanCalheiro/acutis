@@ -4,7 +4,8 @@ import { randomUUID } from 'node:crypto'
 import type { Dirent } from 'node:fs'
 import { access, mkdir, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { join, relative, resolve } from 'node:path'
-import { RUNNER_DIR, STREAM_REPORTER_PATH } from '../../config/paths.js'
+import { REPORT_DIR, RUNNER_DIR, STREAM_REPORTER_PATH } from '../../config/paths.js'
+import { processEnvironment } from '../../config/env.js'
 import type { RunEvent } from '../../common/types/run.js'
 import { pruneHtml } from './html.js'
 
@@ -54,7 +55,6 @@ const RUN_TAIL_MS = 1500
 const RUN_TAIL_ENV = 'ACUTIS_RUN_TAIL_MS'
 const FAILURE_HTML_FILE = 'failure.html'
 /** Onde o relatório HTML do Playwright é escrito, o mesmo caminho do config que o projeto recebe. */
-export const REPORT_DIR = 'results/report'
 const WRAPPER_FILE = 'acutis-run.ts'
 /** O wrapper do `@playwright/test` que escreve o HTML da página quando o teste termina vermelho. */
 const WRAPPER_SOURCE = [
@@ -147,7 +147,7 @@ export class RunnerService {
             const child = spawn('npx', ['playwright', 'test', ...args], {
                 cwd: dir,
                 env: {
-                    ...process.env,
+                    ...processEnvironment(),
                     ...env,
                     PLAYWRIGHT_HTML_OPEN: 'never',
                     PLAYWRIGHT_HTML_OUTPUT_DIR: REPORT_DIR,
@@ -299,7 +299,7 @@ export class RunnerService {
             const child = spawn('npx', ['playwright', 'test', ...args], {
                 cwd: dir,
                 env: {
-                    ...process.env,
+                    ...processEnvironment(),
                     ...env,
                     PLAYWRIGHT_HTML_OPEN: 'never',
                     NODE_PATH: join(WEBDRIVER_ROOT, 'node_modules'),
