@@ -1,0 +1,18 @@
+{
+  "description": "Reutiliza os hooks do harness em .claude no Codex.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/commit-guard.mjs\" | node -e 'let output = \"\"; process.stdin.on(\"data\", (chunk) => output += chunk).on(\"end\", () => { if (!output.trim()) return; const result = JSON.parse(output); delete result.continue; process.stdout.write(JSON.stringify(result)); })'",
+            "timeout": 10,
+            "statusMessage": "Checking the commit standard"
+          }
+        ]
+      }
+    ]
+  }
+}
