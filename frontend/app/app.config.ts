@@ -4,6 +4,9 @@ export default defineAppConfig({
       primary: 'blue',
       neutral: 'neutral'
     },
+    icons: {
+      loading: 'line-md:loading-twotone-loop'
+    },
     button: {
       slots: {
         base: 'group',

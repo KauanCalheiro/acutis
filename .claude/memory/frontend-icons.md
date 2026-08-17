@@ -1,14 +1,22 @@
 ---
 name: frontend-icons
-description: Escolher/usar ícone na app (icon=, UIcon, name=) — SEMPRE i-ic-round-* (Google Material round); Nuxt UI mantém os dele
+description: Escolher/usar ícone na app (icon=, UIcon, name=) — SEMPRE i-ic-round-* (Google Material round); Nuxt UI mantém os dele, menos o loading, que é um só na app inteira
 metadata:
   type: feedback
 ---
 
 Ícones **da aplicação** usam **Google Material Icons** (`@iconify-json/ic`, prefixo `i-ic-*`). **SEMPRE a variante `round`** (filled + arredondado): `i-ic-round-<nome>` (ex.: `i-ic-round-swap-vert`). Nunca `baseline`/`sharp`. Variantes existentes: `baseline`, `round`, `outline`, `sharp`, `twotone`.
 
-- Os **defaults internos do Nuxt UI ficam como vêm** (não sobrescrever `app.config` `ui.icons`).
+- Os **defaults internos do Nuxt UI ficam como vêm** (não sobrescrever `app.config` `ui.icons`), **com uma exceção: `loading`**, ver abaixo.
 - Coleção registrada em `nuxt.config` → `icon.serverBundle.collections` (inclui `ic`).
 - Achar nome exato: `node -e "Object.keys(require('@iconify-json/ic/icons.json').icons).filter(k=>k.includes('round')&&k.includes('TERMO'))"`.
 
 Em uso hoje: `i-ic-round-search` (busca), `i-ic-round-filter-alt` (filtros), `i-ic-round-swap-vert` (ordenar), `i-ic-round-library-add-check` (item de sort selecionado).
+
+## O carregando é um só na aplicação inteira
+
+`line-md:loading-twotone-loop`, definido em `app/app.config.ts` → `ui.icons.loading`. Vale para todo componente do Nuxt UI com estado de carregando — botão, select, o que vier — e é o mesmo ícone que a timeline de execução usa no passo em andamento (`scenario/test-run/steps.vue`, `project/run-filtered/modal.vue`).
+
+**Why:** o spinner que vinha por padrão no Nuxt UI era um terceiro desenho de "esperando", ao lado do que a timeline já usava. Uma espera, um ícone.
+
+**How to apply:** não passar `loading-icon` por componente nem trocar o spinner numa tela só; se o carregando precisa mudar, muda no `app.config`. O E2E `spins the same loading icon the rest of the app uses` (`e2e/tests/settings.spec.ts`) trava isso — ele falha se a chave sair do `app.config`.

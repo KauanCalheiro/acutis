@@ -20,4 +20,4 @@ metadata:
 | [frontend-table](frontend-table.md) | UTable — columns só accessorKey, header/cell via slot, loading via pending |
 | [frontend-crud](frontend-crud.md) | CRUD — form modal criar/editar, BaseConfirm remoção, coluna de ações, rotas proxy |
 | [frontend-api](frontend-api.md) | Chamar API — useFetch direto, handler 401/498 global, proxy Nitro, query bracket |
-| [frontend-icons](frontend-icons.md) | Ícones da app = Google Material Icons (`i-ic-round-*`); Nuxt UI mantém os dele |
+| [frontend-icons](frontend-icons.md) | Ícones da app = Google Material Icons (`i-ic-round-*`); Nuxt UI mantém os dele, menos o carregando |

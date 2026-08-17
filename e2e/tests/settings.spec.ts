@@ -343,3 +343,91 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
         })
     })
 })
+
+/** O teste do cadastro não grava nada: ele só pergunta ao modelo se ele responde. */
+test.describe('ai settings model check', { tag: ['@read', '@settings'] }, () => {
+    let stopBackend: () => Promise<void>
+    let projects: string
+
+    test.beforeAll(async () => {
+        projects = isolatedProjects()
+        // O provedor vazio deixa o teste igual em qualquer máquina; sem isto, vale o AI_PROVIDER do ambiente.
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: projects, AI_PROVIDER: '' })
+    })
+
+    test.afterAll(async () => {
+        await stopBackend()
+        rmSync(projects, { recursive: true, force: true })
+    })
+
+    test('offers no test while there is no model to test', async ({ page }) => {
+        await page.goto('/')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('navbar-configuracoes').click()
+        await page.getByTestId('config-ia-provedor').click()
+        await page.getByRole('option', { name: 'Ollama', exact: true }).click()
+
+        await expect(page.getByTestId('config-ia-modelo-testar')).toBeDisabled()
+
+        await escolherModelo(page, 'llama3.1:8b')
+
+        await expect(page.getByTestId('config-ia-modelo-testar')).toBeEnabled()
+    })
+
+    test('spins the same loading icon the rest of the app uses', async ({ page }) => {
+        await page.goto('/')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('navbar-configuracoes').click()
+        await page.getByTestId('config-ia-provedor').click()
+        await page.getByRole('option', { name: 'Ollama', exact: true }).click()
+        await escolherModelo(page, 'llama3.1:8b')
+
+        // A resposta fica segura para o estado de carregando durar o bastante para ser afirmado.
+        await page.route('**/api/settings/ai/ping', async (route) => {
+            await new Promise((resolve) => setTimeout(resolve, 2000))
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ ok: true, model: 'llama3.1:8b', elapsed_ms: 10 })
+            })
+        })
+
+        await page.getByTestId('config-ia-modelo-testar').click()
+
+        await expect(
+            page.getByTestId('config-ia-modelo-testar').locator('[class*="line-md:loading-twotone-loop"]')
+        ).toBeVisible()
+    })
+
+    test('says what went wrong when the model does not answer, and saves nothing', async ({ page }) => {
+        await page.goto('/')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await test.step('point the provider at an address with nothing behind it', async () => {
+            await page.getByTestId('navbar-configuracoes').click()
+            await page.getByTestId('config-ia-provedor').click()
+            await page.getByRole('option', { name: 'Ollama', exact: true }).click()
+            await page.getByTestId('config-ia-url').fill('http://127.0.0.1:9997')
+            await escolherModelo(page, 'llama3.1:8b')
+        })
+
+        await test.step('the toast carries the reason the provider gave', async () => {
+            await page.getByTestId('config-ia-modelo-testar').click()
+
+            await expect(page.getByText(/Não foi possível falar com o provedor ollama/)).toBeVisible()
+        })
+
+        await test.step('the modal stays open, and the address tested was never written down', async () => {
+            await expect(page.getByTestId('config-ia-modelo')).toBeVisible()
+
+            await page.getByTestId('config-ia-fechar').click()
+            await page.getByTestId('navbar-configuracoes').click()
+            await page.getByTestId('config-ia-provedor').click()
+            await page.getByRole('option', { name: 'Ollama', exact: true }).click()
+
+            await expect(page.getByTestId('config-ia-url')).toHaveValue('')
+        })
+    })
+})

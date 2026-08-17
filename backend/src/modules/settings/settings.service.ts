@@ -1,4 +1,5 @@
 /** As configurações de IA: o provedor ativo, o cadastro de cada um e o que deles já dá para usar. */
+import { pingModel } from '../ai/agents/ping.js'
 import { type AvailableModel, listModels } from '../ai/providers/model-catalog.js'
 import { isSupported } from '../ai/providers/provider-model.js'
 import { Injectable, type OnModuleInit } from '@nestjs/common'
@@ -10,6 +11,7 @@ import { decrypt, encrypt } from './providers/crypto.js'
 import { AiCredential } from './entities/ai-credential.entity.js'
 import { Setting } from './entities/setting.entity.js'
 import type { AiSettings, ProviderCredential, ResolvedProvider } from './entities/ai-settings.entity.js'
+import type { PingResponse } from './dto/responses/ping.response.js'
 
 /** A chave global que guarda qual provedor está ativo. */
 const AI_PROVIDER = 'ai.provider'
@@ -97,19 +99,35 @@ export class SettingsService implements OnModuleInit {
      * no cadastro guardado e depois no padrão do provedor.
      */
     async availableModels(input: { provider: string, key?: string | null, url?: string | null }): Promise<AvailableModel[]> {
-        const defaults = PROVIDERS[input.provider] ?? {}
-        const saved = await this.credentialOf(input.provider)
-
         try {
-            return await listModels({
-                provider: input.provider,
-                key: blankToNull(input.key) ?? saved?.key ?? null,
-                url: blankToNull(input.url) ?? saved?.url ?? defaults.url ?? null,
-                model: null
-            })
+            return await listModels(await this.configFrom(input))
         } catch (error) {
             throw new ValidationFailed({ provider: [(error as Error).message] })
         }
+    }
+
+    /** O que o formulário mandou por cima do cadastro guardado, e este por cima do padrão do provedor. */
+    private async configFrom(
+        input: { provider: string, key?: string | null, url?: string | null, model?: string | null }
+    ): Promise<ResolvedProvider> {
+        const defaults = PROVIDERS[input.provider] ?? {}
+        const saved = await this.credentialOf(input.provider)
+
+        return {
+            provider: input.provider,
+            key: blankToNull(input.key) ?? saved?.key ?? null,
+            url: blankToNull(input.url) ?? saved?.url ?? defaults.url ?? null,
+            model: blankToNull(input.model) ?? null
+        }
+    }
+
+    /** Uma chamada de verdade ao modelo, para a tela saber se o cadastro funciona antes de gravá-lo. */
+    async ping(input: { provider: string, key?: string | null, url?: string | null, model: string }): Promise<PingResponse> {
+        const config = await this.configFrom(input)
+        const started = Date.now()
+        const result = await pingModel(config)
+
+        return { ok: result.ok, model: input.model, elapsed_ms: Date.now() - started }
     }
 
     /** Se há provedor suportado e modelo informado — ou seja, se dá para chamar um modelo agora. */

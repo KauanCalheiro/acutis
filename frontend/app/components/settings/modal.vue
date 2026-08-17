@@ -11,6 +11,13 @@ interface AvailableModel {
   label: string
 }
 
+/** O retorno do teste do cadastro: qual modelo atendeu e quanto demorou. */
+interface PingResponse {
+  ok: boolean
+  model: string
+  elapsed_ms: number
+}
+
 interface AiSettings {
   provider: string
   credentials: Record<string, AiCredential>
@@ -50,6 +57,7 @@ const modelsError = ref('')
 const loadingModels = ref(false)
 const loading = ref(false)
 const saving = ref(false)
+const testing = ref(false)
 const revealed = ref(false)
 
 const providerItems = computed(() => [
@@ -102,6 +110,29 @@ async function loadModels() {
     modelsError.value = extractServerError(err, 'Não foi possível listar os modelos do provedor.')
   } finally {
     loadingModels.value = false
+  }
+}
+
+/** Pergunta ao modelo escolhido se ele responde, com o que está na tela e sem gravar nada. */
+async function testModel() {
+  testing.value = true
+
+  try {
+    const result = await $fetch<PingResponse>('/api/settings/ai/ping', {
+      method: 'POST',
+      body: {
+        provider: provider.value,
+        key: key.value || null,
+        url: url.value || null,
+        model: model.value
+      }
+    })
+
+    notify.success(`${result.model} respondeu em ${(result.elapsed_ms / 1000).toFixed(1)}s`)
+  } catch (err) {
+    notify.failure(err, 'O modelo não respondeu.')
+  } finally {
+    testing.value = false
   }
 }
 
@@ -336,6 +367,16 @@ async function save() {
             aria-label="Buscar os modelos do provedor"
             data-testid="config-ia-modelo-buscar"
             @click="loadModels"
+          />
+          <UButton
+            icon="i-ic-round-play-arrow"
+            label="Testar"
+            color="neutral"
+            variant="soft"
+            :loading="testing"
+            :disabled="!model"
+            data-testid="config-ia-modelo-testar"
+            @click="testModel"
           />
         </div>
         <template #help>
