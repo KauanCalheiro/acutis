@@ -13,7 +13,7 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm --filter @acutis/backend --filter @acutis/frontend test",
-    "test:coverage": "pnpm --filter @acutis/backend --filter @acutis/frontend test:coverage",
+    "test:coverage": "pnpm --filter @acutis/backend test:coverage && pnpm --filter @acutis/frontend test:coverage",
     "test:e2e": "pnpm --filter @acutis/e2e test"
   }
 }
