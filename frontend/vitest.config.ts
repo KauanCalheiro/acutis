@@ -3,6 +3,11 @@ import { defineVitestConfig } from '@nuxt/test-utils/config'
 export default defineVitestConfig({
   test: {
     environment: 'nuxt',
+    // Cada arquivo sobe um app Nuxt inteiro: sem teto de workers, numa máquina já ocupada o
+    // `setupNuxt` estoura o hook antes de terminar.
+    maxWorkers: 4,
+    hookTimeout: 30_000,
+    testTimeout: 15_000,
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'lcov'],

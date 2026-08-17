@@ -14,6 +14,9 @@ export default defineConfig({
     test: {
         // A pill roda em jsdom; os testes de servidor declaram `// @vitest-environment node` no topo.
         environment: 'jsdom',
+        // Máquina ocupada atrasa o boot do app de teste; o padrão de 10s estourava o hook.
+        hookTimeout: 30_000,
+        testTimeout: 15_000,
         setupFiles: ['./test/setup/pill.ts'],
         include: [
             'src/**/__tests__/**/*.spec.ts',
