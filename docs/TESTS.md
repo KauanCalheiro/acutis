@@ -90,11 +90,11 @@ As duas primeiras são independentes e podem rodar em paralelo. O E2E vai por ú
 
 ## No CI
 
-`.github/workflows/ci.yml` roda três jobs em todo push: `backend` (lint, typecheck, testes com cobertura), `frontend` (o mesmo) e `e2e`.
+`.github/workflows/ci.yml` roda dois jobs em todo push: `backend` (lint, typecheck, testes com cobertura) e `frontend` (o mesmo). A cobertura sobe como artefato (`coverage-backend`, `coverage-frontend`), e o gate está no `vitest.config.ts` de cada lado — 75% de linhas no backend, piso de 18% no frontend, onde a cobertura de tela mora no E2E e não no v8.
 
-| Ramo | O que o job `e2e` roda | Tempo |
-|------|------------------------|-------|
-| Qualquer um menos a `main` | `playwright test --grep @read` — 51 testes, sem gravador nem runner | ~40s |
-| `main` | a suíte inteira | minutos |
+**O E2E não roda no CI.** A suíte depende de gravador, runner, vídeo e um Chromium de verdade, e no runner do GitHub os testes `@write` de `recording`, `runner` e CDP falham por ambiente, não por regressão. Rodar a suíte é local, antes de abrir o PR:
 
-A cobertura dos dois primeiros sobe como artefato (`coverage-backend`, `coverage-frontend`); o relatório do Playwright sobe só quando o E2E falha. O gate de cobertura está em `vitest.config.ts` de cada lado — 75% de linhas no backend, piso de 18% no frontend, onde a cobertura de tela mora no E2E e não no v8.
+```sh
+(cd e2e && pnpm test)                                  # tudo
+(cd e2e && pnpm exec playwright test --grep @read)      # os que não gravam nem executam, ~40s
+```
