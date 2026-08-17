@@ -188,19 +188,7 @@ test('caso único', async ({ page }) => {})`)
 })
 
 describe('link do editor', () => {
-    it('monta a url do vscode a partir do caminho do host configurado', async () => {
-        process.env.ACUTIS_PROJECTS_HOST_PATH = '/Users/dev/code/.acutis'
-
-        const response = await show()
-
-        expect(response.body.vscode_url).toBe('vscode://file/Users/dev/code/.acutis/minha-loja')
-
-        delete process.env.ACUTIS_PROJECTS_HOST_PATH
-    })
-
-    it('cai no caminho dos projetos quando não há caminho de host configurado', async () => {
-        delete process.env.ACUTIS_PROJECTS_HOST_PATH
-
+    it('monta a url do vscode a partir do caminho do projeto', async () => {
         const response = await show()
 
         expect(response.body.vscode_url).toBe(`vscode://file${dir}`)

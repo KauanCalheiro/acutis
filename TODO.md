@@ -1,5 +1,11 @@
 # TODO
 
+## Tentar fazer um provider para o Codex similar ao que foi feito para o Claude Agent (Claude Code...)
+
+## Envio de logs em caso de erro...
+
+## Revinar gravação de teste para gerar codigo mais inteligente, com esperas inteligentes.
+
 ## Valor preenchido pode ser dinâmico, não só o que foi gravado
 
 - [ ] Levantar os eventos `fill` de uma gravação (o "Preenche X com Y" da timeline) e decidir quais valores fazem sentido variar por execução (ex.: e-mail único a cada run, CPF válido gerado, data relativa a hoje).

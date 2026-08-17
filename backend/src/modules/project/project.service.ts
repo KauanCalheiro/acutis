@@ -47,11 +47,6 @@ export class ProjectService {
         return path
     }
 
-    /** O mesmo caminho visto do host, para montar o link `vscode://file/`. */
-    hostPathOf(slug: string): string {
-        return join(acutis().hostRoot, slug)
-    }
-
     environmentsOf(slug: string): Environments {
         return new Environments(this.pathOf(slug))
     }
@@ -167,7 +162,7 @@ export class ProjectService {
             base_url: baseUrl,
             storage_state: join(path, environments.storageState()),
             requires_url: !baseUrl && !manifest.url_skipped,
-            vscode_url: `vscode://file${this.hostPathOf(slug)}`,
+            vscode_url: `vscode://file${path}`,
             has_report: new ProjectReport(path).exists()
         }
     }

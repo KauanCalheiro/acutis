@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "@acutis/frontend",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,7 +13,7 @@
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
-    "@acutis/contracts": "file:../contracts",
+    "@acutis/contracts": "workspace:*",
     "@iconify-json/ic": "^1.2.4",
     "@iconify-json/line-md": "^1.2.16",
     "@iconify-json/lucide": "^1.2.114",

@@ -15,4 +15,4 @@ metadata:
 
 ## Gotchas
 
-- **CDP para o Chrome do host** (`RECORDER_CDP_URL`): o DevTools do Chrome rejeita requisições com header `Host` que não seja IP ou `localhost` — `host.docker.internal` puro falha com "Host header is specified and is not an IP address". O recorder resolve o hostname para IP antes do `connectOverCDP` (IPv4 preferido; o IPv6 do host.docker.internal não roteia no Docker Desktop). No modo CDP o `stop()` fecha só a aba e desconecta — nunca fechar o browser do usuário.
+- **CDP para um Chrome já aberto** (`RECORDER_CDP_URL`): serve para gravar na sessão logada do usuário, em vez de subir um Chromium novo. O DevTools do Chrome rejeita requisições com header `Host` que não seja IP ou `localhost`, então o recorder resolve o hostname para IP antes do `connectOverCDP` (IPv4 preferido). No modo CDP o `stop()` fecha só a aba e desconecta — nunca fechar o browser do usuário.

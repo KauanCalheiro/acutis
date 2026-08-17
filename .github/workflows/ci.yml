@@ -6,10 +6,6 @@ jobs:
   backend:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: backend
-
     steps:
       - uses: actions/checkout@v7
 
@@ -19,18 +15,20 @@ jobs:
           runtime: node@26
           install: false
           cache: true
-          cache-dependency-path: backend/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
+      # O install da raiz cobre o workspace inteiro; o `prepare` builda o @acutis/contracts, de que
+      # o typecheck e os testes dependem (o `dist` dele não é versionado).
       - run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: pnpm lint
+        run: pnpm --filter @acutis/backend lint
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: pnpm --filter @acutis/backend typecheck
 
       - name: Test
-        run: pnpm test:coverage
+        run: pnpm --filter @acutis/backend test:coverage
 
       - name: Coverage
         uses: actions/upload-artifact@v4
@@ -42,10 +40,6 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: frontend
-
     steps:
       - uses: actions/checkout@v7
 
@@ -55,18 +49,18 @@ jobs:
           runtime: node@26
           install: false
           cache: true
-          cache-dependency-path: frontend/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: pnpm lint
+        run: pnpm --filter @acutis/frontend lint
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: pnpm --filter @acutis/frontend typecheck
 
       - name: Test
-        run: pnpm test:coverage
+        run: pnpm --filter @acutis/frontend test:coverage
 
       - name: Coverage
         uses: actions/upload-artifact@v4

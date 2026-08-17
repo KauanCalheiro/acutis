@@ -1,21 +1,23 @@
 ---
 name: execution
-description: Índice de modos de execução — Docker ou local, LER antes de subir/rodar qualquer serviço (→ skills run-docker, run-local)
+description: Modo de execução da stack — só local, LER antes de subir/rodar qualquer serviço (→ skill run-local)
 metadata:
   type: feedback
 ---
 
-Dois jeitos de rodar a stack (backend e frontend) — cada um com setup, portas e comandos próprios.
+Um jeito só de rodar a stack (backend e frontend): processos diretos no host, via skill `run-local`
+(comandos em `.claude/skills/run-local/SKILL.md`). É o mesmo modo que o [e2e](e2e.md) usa.
 
-## Modos (cada um numa skill)
+**Why:** o Docker foi removido do projeto. O gravador precisa de um navegador com janela no host e o
+produto entregue é um CLI npm que roda na máquina do usuário — o container não isolava nada, só
+exigia furos (CDP para `host.docker.internal`, `network_mode: host` no Linux, tradução de path para
+os links `vscode://`). As duas dependências de máquina são Node 22+ e pnpm.
 
-| Skill | Assunto |
-|-------|---------|
-| skill `run-docker` | Ambiente isolado via `docker compose`, não precisa de Node/pnpm no host; comandos em `.claude/skills/run-docker/SKILL.md` |
-| skill `run-local` | Serviços direto no host, precisa de Node/pnpm instalados — modo que o [e2e](e2e.md) sempre usa; comandos em `.claude/skills/run-local/SKILL.md` |
+**How to apply:** seguir a skill `run-local` por completo (setup, comandos, troubleshooting). Se
+encontrar referência a `docker compose`, `docker-compose.dev.yml` ou `ACUTIS_PROJECTS_HOST_PATH` em
+algum documento, é resquício — não existe mais.
 
-**Why:** os dois modos são válidos, mas não são intercambiáveis por serviço — misturar container Docker de um serviço com processo local do mesmo serviço no mesmo host causa conflito de porta/estado.
-
-**How to apply:** escolher um modo e seguir a skill correspondente por completo (setup, comandos, troubleshooting) — não misturar instruções dos dois pro mesmo serviço numa mesma sessão de trabalho.
-
-**Reinício depois de editar código:** nem todo processo aplica mudança sozinho — antes de investigar "por que o comportamento não mudou" depois de editar algo, suspeitar primeiro de processo desatualizado precisando reiniciar. Motivo real já visto: `pnpm dev` do webdriver (ver skill `run-local`) não é watch mode, processo local ficou horas servindo código antigo sem erro nenhum. Docker tem o mesmo risco em casos pontuais — mudou o `Dockerfile`, precisa rebuild (`docker compose ... build`), só editar `entrypoint.sh` (bind mount) não.
+**Reinício depois de editar código:** nem todo processo aplica mudança sozinho — antes de investigar
+"por que o comportamento não mudou" depois de editar algo, suspeitar primeiro de processo
+desatualizado precisando reiniciar. Motivo real já visto: `pnpm dev` do backend (ver skill
+`run-local`) não é watch mode, processo local ficou horas servindo código antigo sem erro nenhum.

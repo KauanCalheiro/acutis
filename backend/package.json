@@ -1,5 +1,5 @@
 {
-  "name": "acutis-cli",
+  "name": "@acutis/backend",
   "version": "1.0.0",
   "description": "Grava, gera e roda testes Playwright a partir do navegador",
   "//private": "Tire esta linha para poder publicar. Ela é o pino de segurança: enquanto estiver aqui, `npm publish` recusa — e `npm pack` continua funcionando para testar local.",
@@ -38,7 +38,7 @@
     "build": "tsc",
     "build:ui": "vite build --config vite.ui.config.ts",
     "cli:build": "pnpm build:ui && pnpm build && node scripts/bundle-frontend.js",
-    "prepack": "pnpm --dir ../frontend build && pnpm cli:build",
+    "prepack": "pnpm --filter @acutis/frontend build && pnpm cli:build",
     "start": "node dist/main.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -47,7 +47,6 @@
     "typecheck:ui": "vue-tsc --noEmit -p tsconfig.ui.json"
   },
   "dependencies": {
-    "@acutis/contracts": "file:../contracts",
     "@anthropic-ai/claude-agent-sdk": "^0.3.233",
     "@langchain/anthropic": "^1.5.5",
     "@langchain/core": "^1.2.7",
@@ -77,6 +76,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@acutis/contracts": "workspace:*",
     "@eslint/js": "^9.39.5",
     "@nestjs/testing": "^11.1.29",
     "@playwright/test": "^1.61.1",

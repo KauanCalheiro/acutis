@@ -1,0 +1,19 @@
+{
+  "name": "acutis",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "prepare": "pnpm --filter @acutis/contracts build",
+    "dev": "./dev.sh",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter @acutis/backend --filter @acutis/frontend test",
+    "test:coverage": "pnpm --filter @acutis/backend --filter @acutis/frontend test:coverage",
+    "test:e2e": "pnpm --filter @acutis/e2e test"
+  }
+}

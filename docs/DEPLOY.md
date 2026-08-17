@@ -6,7 +6,7 @@ canais.
 
 | Canal | Comando de quem instala | Precisa de quê na máquina |
 |---|---|---|
-| **npm** (este documento) | `npx acutis-cli` | Node 22+ |
+| **npm** (este documento) | `npx @acutis/backend` | Node 22+ |
 | **Instalador desktop** | baixar o `.dmg`/`.exe`/`.AppImage` da release | nada |
 
 O instalador vive nas branches `feat/empacotamento-desktop` (Tauri) e
@@ -22,8 +22,16 @@ não acompanharam a estrutura atual do backend e precisam ser reconciliadas ante
 
 ## O que vai no pacote
 
-O pacote é o `backend/`, publicado como **`acutis-cli`** (`acutis` está tomado por um projeto
-abandonado de 2023). Ele carrega:
+O pacote é o `backend/`, publicado como **`@acutis/backend`** — o nome do pacote no workspace. O nome
+sem escopo `acutis` está tomado por um projeto abandonado de 2023; o escopo contorna isso e alinha os
+quatro pacotes do repositório sob o mesmo prefixo.
+
+> **Antes da primeira publicação:** o escopo `@acutis` precisa existir na conta do npm, e pacote
+> escopado nasce privado — a primeira publicação exige `npm publish --access public`. Se o nome de
+> instalação (`npx @acutis/backend`) incomodar na hora de divulgar, trocar o `name` para
+> `@acutis/cli` é uma linha; o binário continua se chamando `acutis` de qualquer forma.
+
+Ele carrega:
 
 | O quê | De onde vem |
 |---|---|
@@ -44,14 +52,14 @@ npm login                              # uma vez por máquina
 
 cd backend
 # tire a linha "private": true do package.json — é o pino de segurança
-npm publish
+npm publish --access public            # `--access public` só é obrigatório na primeira vez
 ```
 
 O `prepack` compila tudo antes de empacotar (frontend, `dist-ui`, `dist`), então não há como
 publicar um pacote com o frontend velho dentro. Publicado, qualquer um roda:
 
 ```sh
-npx acutis-cli
+npx @acutis/backend
 ```
 
 Para uma versão nova: `npm version patch|minor|major` (cria o commit e a tag) e `npm publish` de
@@ -64,11 +72,11 @@ Vale a pena sempre — é o que pegou o `stubs/` faltando no `files`, que fazia 
 
 ```sh
 cd backend
-npm pack                                    # gera acutis-cli-<versão>.tgz
+npm pack                                    # gera acutis-backend-<versão>.tgz
 
 mkdir /tmp/teste && cd /tmp/teste
 npm init -y
-npm install /caminho/para/acutis-cli-1.0.0.tgz
+npm install /caminho/para/acutis-backend-1.0.0.tgz
 ./node_modules/.bin/acutis
 ```
 
@@ -89,4 +97,10 @@ jq 'select(.status >= 500) | {url, error}' requests-*.jsonl
   da execução que falhou não abre.
 - **O pacote é publicado do `backend/`, não da raiz.** O `repository.directory` no `package.json`
   aponta isso para quem chegar pelo npm.
+- **`@acutis/contracts` é `devDependency` do backend, de propósito.** Todo import dele aqui é
+  `import type`: some na compilação, e nada em `dist/` o referencia (`grep -r @acutis/contracts
+  backend/dist` não acha nada). Em `dependencies` ele entraria no pacote publicado como
+  `"workspace:*"` — que o `npm install` de quem instalasse o CLI não sabe resolver. No frontend é o
+  contrário: lá os schemas zod são usados em runtime, então é dependência de verdade (e o `.output`
+  do Nuxt embute o código).
 - **Não há CI de publicação ainda.** O passo é manual; automatizar por tag é o que falta da Fase 6.
