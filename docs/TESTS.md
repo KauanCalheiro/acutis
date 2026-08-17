@@ -14,11 +14,11 @@ Como rodar cada suíte do monorepo na mão, e o que cada uma tem de peculiar.
 
 | Suíte | Ferramenta | Onde ficam os testes | Comando | Precisa da stack de pé? |
 |-------|-----------|----------------------|---------|-------------------------|
-| Frontend | Vitest + `@nuxt/test-utils` | `frontend/tests/` | `cd frontend && pnpm test` | não |
-| Backend | Vitest | `backend/**/*.spec.ts` | `cd backend && pnpm test` | não |
-| E2E | Playwright | `e2e/tests/` | `cd e2e && pnpm test` | não — a suíte sobe os dois serviços sozinha |
+| Frontend | Vitest + `@nuxt/test-utils` | `frontend/tests/` | `pnpm --filter @acutis/frontend test` | não |
+| Backend | Vitest | `backend/**/*.spec.ts` | `pnpm --filter @acutis/backend test` | não |
+| E2E | Playwright | `e2e/tests/` | `pnpm --filter @acutis/e2e test` | não — a suíte sobe os dois serviços sozinha |
 
-As duas primeiras são unitárias/de integração local: rodam em segundos, sem rede e sem serviço subindo. O E2E é o único caro (~2 min) e o único que exige as dependências do host instaladas (Node, pnpm).
+Os filtros rodam de qualquer diretório do repositório; entrar na pasta do pacote e rodar `pnpm test` dá no mesmo. As duas primeiras suítes são unitárias/de integração local: rodam em segundos, sem rede e sem serviço subindo. O E2E é o único caro (~2 min).
 
 ## Frontend (Vitest)
 
@@ -67,7 +67,7 @@ pnpm exec playwright show-report                     # abre o relatório da últ
 ### Peculiaridades
 
 - **`pnpm test -- --grep @project` NÃO filtra.** O `--` não repassa a flag nesta versão do pnpm e o Playwright roda a suíte inteira **sem avisar** — termina verde e parece que respeitou o escopo. Para escopar, use `pnpm exec playwright test`.
-- **O build está no `pretest`, não no `playwright test`.** `pnpm test` dispara `scripts/setup.sh` (build do frontend) e o `build:ui` + `build` do backend. `pnpm exec playwright test` pula tudo isso. Editou `backend/src/**`? Rode `pnpm test` uma vez antes de escopar com `pnpm exec`, senão os testes rodam contra um bundle velho.
+- **O build está no `pretest`, não no `playwright test`.** `pnpm test` dispara o `build` do frontend e o `build:ui` + `build` do backend, todos por `--filter`. `pnpm exec playwright test` pula tudo isso. Editou `backend/src/**`? Rode `pnpm test` uma vez antes de escopar com `pnpm exec`, senão os testes rodam contra um bundle velho.
 - **Estado dedicado.** Cada spec aponta o backend para um diretório de projetos temporário, e o SQLite das configurações é derivado dele — o seu `~/.acutis` não é tocado.
 - **Portas 42xx, isoladas do desenvolvimento** (frontend 4300, backend 4400 — fonte única em `e2e/support/ports.ts`). Não é preciso derrubar a stack local para rodar a suíte. Ao checar porta ocupada, use `lsof -nP -iTCP:4300 -sTCP:LISTEN`: sem o `-sTCP:LISTEN`, o `lsof` também casa conexões do navegador e você conclui errado que há servidor de pé.
 - **Só o frontend sobe pelo `webServer` do Playwright.** O backend sobe de dentro dos próprios specs (`support/backend.ts`, `support/webdriver.ts` — o mesmo processo, dois nomes por assunto), que esperam a porta liberar antes e depois de cada uso.
@@ -78,12 +78,11 @@ pnpm exec playwright show-report                     # abre o relatório da últ
 
 ## Rodar tudo
 
-Não existe um comando único que rode as três suítes. Na ordem do mais barato para o mais caro:
+`pnpm test` na raiz roda as duas suítes rápidas (backend e frontend). O E2E fica de fora de propósito — é caro e sobe serviços:
 
 ```sh
-(cd frontend && pnpm test)
-(cd backend  && pnpm test)
-(cd e2e      && pnpm test)
+pnpm test        # backend + frontend
+pnpm test:e2e    # a suíte cara, depois
 ```
 
 As duas primeiras são independentes e podem rodar em paralelo. O E2E vai por último: é o único que sobe serviços, e uma falha nas suítes rápidas quase sempre explica a falha dele.
@@ -95,6 +94,6 @@ As duas primeiras são independentes e podem rodar em paralelo. O E2E vai por ú
 **O E2E não roda no CI.** A suíte depende de gravador, runner, vídeo e um Chromium de verdade, e no runner do GitHub os testes `@write` de `recording`, `runner` e CDP falham por ambiente, não por regressão. Rodar a suíte é local, antes de abrir o PR:
 
 ```sh
-(cd e2e && pnpm test)                                  # tudo
+pnpm test:e2e                                          # tudo
 (cd e2e && pnpm exec playwright test --grep @read)      # os que não gravam nem executam, ~40s
 ```
