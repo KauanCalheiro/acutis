@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 #
-# Sobe a stack acutis 100% local e fica preso, com os logs dos dois serviços
-# intercalados e prefixados. Ctrl+C derruba tudo. É o equivalente local do
-# `docker compose -f docker-compose.dev.yml up`.
+# Sobe a stack acutis e fica preso, com os logs dos dois serviços intercalados e
+# prefixados. Ctrl+C derruba tudo.
 #
 #   ./dev.sh              sobe backend :4000 (API + gravador + runner) e frontend :3000
 #   ./dev.sh --build      instala as dependências antes de subir
@@ -41,7 +40,7 @@ done
 # também e acusa porta ocupada quando não há servidor nenhum.
 for port in 3000 4000; do
     if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
-        fail "porta $port já está em uso. Derrube o que está lá (ou o compose) antes."
+        fail "porta $port já está em uso. Derrube o que está lá antes."
     fi
 done
 
@@ -49,10 +48,9 @@ done
 if [ "$BUILD" = "1" ]; then
     # Não há mais banco a preparar: o SQLite das configurações nasce sozinho na primeira
     # requisição, e o resto do estado vive no filesystem e no git.
-    for app in frontend backend; do
-        info "instalando dependências do $app"
-        (cd "$app" && pnpm install) || fail "pnpm install falhou em $app"
-    done
+    # Um install só: o workspace da raiz cobre os quatro pacotes e builda o contracts no `prepare`.
+    info 'instalando dependências do workspace'
+    pnpm install || fail 'pnpm install falhou'
 fi
 
 # --- serviços -----------------------------------------------------------------
