@@ -47,6 +47,7 @@
     "typecheck:ui": "vue-tsc --noEmit -p tsconfig.ui.json"
   },
   "dependencies": {
+    "@acutis/contracts": "file:../contracts",
     "@anthropic-ai/claude-agent-sdk": "^0.3.233",
     "@langchain/anthropic": "^1.5.5",
     "@langchain/core": "^1.2.7",

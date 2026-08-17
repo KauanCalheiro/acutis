@@ -1,34 +1,6 @@
-export interface RunStep {
-  title: string
-  status: 'waiting' | 'running' | 'success' | 'failed'
-  error?: string | null
-  /** Qual teste emitiu o passo; ausente enquanto ele é só a semente da timeline. */
-  testId?: string
-  /** A posição que o teste declarou para o passo; ausente no que ele nunca anunciou. */
-  order?: number
-}
+import type { RunStreamEvent, RunTest, RunTimelineStep as RunStep } from '@acutis/contracts/scenario'
 
-export interface RunTest {
-  id: string
-  title: string
-  status: RunStep['status']
-  error: string | null
-  steps: RunStep[]
-}
-
-interface RunStreamEvent {
-  event: 'run:started' | 'step' | 'test' | 'run:finished'
-  id?: string
-  testId?: string
-  title: string
-  status: 'pending' | 'success' | 'failed' | 'skipped'
-  steps?: string[]
-  error?: string | null
-  videoPath?: string | null
-  passed: boolean
-  /** Saída do runner quando a execução morreu antes de qualquer teste reportar. */
-  output?: string
-}
+export type { RunTest, RunTimelineStep as RunStep } from '@acutis/contracts/scenario'
 
 /** O que o Playwright reporta por passo/teste, no vocabulário da timeline. */
 const STATUS: Record<RunStreamEvent['status'], RunStep['status']> = {

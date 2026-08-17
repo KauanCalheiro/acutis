@@ -1,15 +1,101 @@
 import type { LogLevel } from '@nestjs/common'
+import * as z from 'zod'
 
-export const PORT = Number(process.env.PORT) || 4000
-export const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000'
-export const RECORDER_CDP_URL = process.env.RECORDER_CDP_URL || ''
+const logLevelSchema = z.enum([
+    'log',
+    'error',
+    'warn',
+    'debug',
+    'verbose',
+    'fatal'
+])
 
-export const RECORDER_HEADLESS = process.env.RECORDER_HEADLESS === '1'
+const environmentSchema = z.object({
+    PORT: z.coerce.number().int().min(1).max(65_535).default(4000),
+    CORS_ORIGIN: z.url().default('http://localhost:3000'),
+    RECORDER_CDP_URL: z.string().default(''),
+    RECORDER_HEADLESS: z.enum([
+        '0',
+        '1'
+    ]).default('0'),
+    WEBDRIVER_TEST_MODE: z.enum([
+        '0',
+        '1'
+    ]).default('0'),
+    LOG_LEVEL: z.string().default('log,error,warn,debug,verbose,fatal'),
+    ACUTIS_APP_KEY: z.string().optional(),
+    ANTHROPIC_URL: z.string().optional(),
+    CLAUDE_AGENT_MODEL: z.string().optional(),
+    GEMINI_URL: z.string().optional(),
+    OLLAMA_URL: z.string().optional(),
+    OLLAMA_MODEL: z.string().optional(),
+    OPENAI_URL: z.string().optional(),
+    OPENROUTER_URL: z.string().optional(),
+    OPENROUTER_MODEL: z.string().optional()
+})
 
-// Níveis do logger do Nest. O `acutis` publicado sobe a API dentro do próprio processo do
-// terminal, e ali o inventário de rotas do boot só atrapalha — ele passa LOG_LEVEL=error e
-// fica só com o que indica problema. Vazio silencia tudo.
-export const LOG_LEVELS = (process.env.LOG_LEVEL ?? 'log,error,warn,debug,verbose,fatal')
-    .split(',')
-    .map((level) => level.trim())
-    .filter(Boolean) as LogLevel[]
+export interface AppConfig {
+    port: number
+    corsOrigin: string
+    recorderCdpUrl: string
+    recorderHeadless: boolean
+    webdriverTestMode: boolean
+    logLevels: LogLevel[]
+    appKey?: string
+    providers: {
+        anthropicUrl: string
+        claudeAgentModel?: string
+        geminiUrl: string
+        ollamaUrl: string
+        ollamaModel: string
+        openaiUrl: string
+        openrouterUrl: string
+        openrouterModel: string
+    }
+}
+
+export function readAppConfig(environment: Record<string, string | undefined>): AppConfig {
+    const result = environmentSchema.safeParse(environment)
+
+    if (!result.success) {
+        throw new Error(`Configuração inválida: ${z.prettifyError(result.error)}`)
+    }
+
+    const env = result.data
+    const logLevels = env.LOG_LEVEL
+        .split(',')
+        .map((level) => level.trim())
+        .filter(Boolean)
+        .map((level) => logLevelSchema.parse(level))
+
+    return {
+        port: env.PORT,
+        corsOrigin: env.CORS_ORIGIN,
+        recorderCdpUrl: env.RECORDER_CDP_URL,
+        recorderHeadless: env.RECORDER_HEADLESS === '1',
+        webdriverTestMode: env.WEBDRIVER_TEST_MODE === '1',
+        logLevels,
+        appKey: env.ACUTIS_APP_KEY,
+        providers: {
+            anthropicUrl: env.ANTHROPIC_URL ?? 'https://api.anthropic.com/v1',
+            claudeAgentModel: env.CLAUDE_AGENT_MODEL,
+            geminiUrl: env.GEMINI_URL ?? 'https://generativelanguage.googleapis.com/v1beta/',
+            ollamaUrl: env.OLLAMA_URL ?? 'http://localhost:11434',
+            ollamaModel: env.OLLAMA_MODEL ?? 'llama3.1:8b',
+            openaiUrl: env.OPENAI_URL ?? 'https://api.openai.com/v1',
+            openrouterUrl: env.OPENROUTER_URL ?? 'https://openrouter.ai/api/v1',
+            openrouterModel: env.OPENROUTER_MODEL ?? 'qwen/qwen3-coder'
+        }
+    }
+}
+
+export function processEnvironment(): NodeJS.ProcessEnv {
+    return process.env
+}
+
+export const APP_CONFIG = readAppConfig(processEnvironment())
+export const PORT = APP_CONFIG.port
+export const CORS_ORIGIN = APP_CONFIG.corsOrigin
+export const RECORDER_CDP_URL = APP_CONFIG.recorderCdpUrl
+export const RECORDER_HEADLESS = APP_CONFIG.recorderHeadless
+export const LOG_LEVELS = APP_CONFIG.logLevels

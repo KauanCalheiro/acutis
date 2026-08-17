@@ -1,4 +1,6 @@
 /** Um projeto do acutis: um diretório em `~/.acutis/<slug>` com um `acutis.json` dentro. */
+import type { Project as ProjectContract } from '@acutis/contracts/project'
+
 export class Project {
     constructor(
         readonly name: string,
@@ -8,7 +10,7 @@ export class Project {
         /** O `origin` do git, quando o diretório é um repositório. */
         readonly repository: string | null = null,
         /** GitHub, GitLab ou Bitbucket, deduzido da URL do remote. */
-        readonly provider: string | null = null
+        readonly provider: ProjectContract['provider'] = null
     ) {}
 }
 

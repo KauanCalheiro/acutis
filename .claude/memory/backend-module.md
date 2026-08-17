@@ -7,22 +7,19 @@ metadata:
 
 Ver [backend](backend.md).
 
-## Um módulo por domínio
+## Camadas globais e composição por domínio
 
-`backend/src/modules/{dominio}/` — `ai`, `auth`, `environment`, `generation`, `git`, `project`, `recording`, `rules`, `scenario`, `settings`. Dentro dele:
+Controllers, casos de uso e DTOs são encontrados pelo papel arquitetural e subdivididos por domínio:
 
 ```
-{dominio}/
-├── {dominio}.module.ts       # @Module — imports, controllers, providers, exports
-├── {dominio}.controller.ts   # rotas @Controller('api/v1/...')
-├── {dominio}.service.ts      # @Injectable — a regra de negócio
-├── dto/                      # entrada (class-validator) + dto/responses/ (saída)
-├── entities/                 # o objeto do domínio (Project, AiSettings)
-├── providers/                # leitura/escrita do que está em disco (Dotenv, Environments, Git)
-└── __tests__/                # os specs do módulo
+src/
+├── controllers/{dominio}/    # rotas HTTP magras
+├── use-cases/{dominio}/      # operações oferecidas pela aplicação
+├── dto/{dominio}/            # validação Nest e responses
+└── modules/{dominio}/        # module, services, entities, providers e testes
 ```
 
-Módulo novo entra em `modules/api.module.ts`, que é a API inteira. O nome do arquivo não encolhe por causa da pasta: `project.service.ts`, não `service.ts`.
+O arquivo `{dominio}.module.ts` registra controllers, casos de uso, services e adaptadores no Nest. Módulo novo entra em `modules/api.module.ts`, que compõe a API inteira.
 
 ## Controller — magro
 
@@ -31,7 +28,7 @@ Só recebe, delega e devolve. Nada de regra dentro dele:
 ```ts
 @Controller('api/v1/projects')
 export class ProjectController {
-    constructor(private readonly projects: ProjectService) {}
+    constructor(private readonly projects: ProjectUseCases) {}
 
     @Get(':project')
     show(@Param('project') slug: string): Promise<ProjectShowResponse> {

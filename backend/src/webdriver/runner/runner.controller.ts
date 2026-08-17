@@ -5,6 +5,7 @@ import type { ServerResponse } from 'node:http'
 import { watchableVideo } from './run-video.js'
 import { RunnerService, type RunResult } from './runner.service.js'
 import type { RunEvent } from '../../common/types/run.js'
+import { APP_CONFIG } from '../../config/env.js'
 
 @Controller('runner')
 export class RunnerController {
@@ -13,7 +14,7 @@ export class RunnerController {
     ) { }
 
     private ensureTestMode(): void {
-        if (process.env.WEBDRIVER_TEST_MODE !== '1') {
+        if (!APP_CONFIG.webdriverTestMode) {
             throw new ForbiddenException('runner endpoints only available with WEBDRIVER_TEST_MODE=1')
         }
     }
@@ -49,7 +50,7 @@ export class RunnerController {
         @Body('grep') grep?: string,
         @Body('env') env?: Record<string, string>,
     ): Promise<void> {
-        if (process.env.WEBDRIVER_TEST_MODE !== '1') {
+        if (!APP_CONFIG.webdriverTestMode) {
             res.statusCode = 403
             res.end(JSON.stringify({ message: 'runner endpoints only available with WEBDRIVER_TEST_MODE=1' }))
 

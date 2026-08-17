@@ -27,27 +27,13 @@ import {
     title as titleOf,
     uniquePath
 } from '../scenario/providers/test-artifact.js'
-import type { DraftRecordingDto } from './dto/draft-recording.dto.js'
-import type { WriteTestDto } from './dto/write-test.dto.js'
+import type { DraftRecordingDto } from '../../dto/generation/draft-recording.dto.js'
+import type { WriteTestDto } from '../../dto/generation/write-test.dto.js'
+import { DomainEventBus } from '../../common/events/domain-event-bus.js'
+import { ScenarioRecorded } from './events/scenario-recorded.js'
+import type { TestDraft, WrittenTest } from '@acutis/contracts/generation'
 
-export interface TestDraft {
-    title: string
-    tags: string[]
-    domain: string
-    path: string
-    gherkin: string
-    playwright: string
-    envVars: string[]
-    /** O que só o usuário resolve, como variável declarada sem valor. */
-    warnings: string[]
-}
-
-export interface WrittenTest {
-    gherkin: string | null
-    playwright: string
-    spec: string
-    feature: string | null
-}
+export type { TestDraft, WrittenTest } from '@acutis/contracts/generation'
 
 /** Os nomes escolhidos pela IA, indexados pelo marcador que cada um substitui. */
 function markedNames(envVars: string[]): Record<string, string> {
@@ -84,7 +70,8 @@ export class GenerationService {
 
     constructor(
         private readonly projects: ProjectService,
-        private readonly settings: SettingsService
+        private readonly settings: SettingsService,
+        private readonly events: DomainEventBus
     ) {}
 
     /** O rascunho editável: nada é escrito em disco até o usuário salvar. */
@@ -155,6 +142,8 @@ export class GenerationService {
         if (feature !== null) put(join(path, feature), `${gherkin}\n`)
 
         if (data.events) this.writeRecording(path, slug, spec, data.events, data.envVars ?? [])
+
+        void this.events.publish(new ScenarioRecorded(slug, spec))
 
         return { gherkin, playwright, spec, feature }
     }

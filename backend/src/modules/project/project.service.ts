@@ -3,23 +3,21 @@
  * `acutis.json` dentro.
  */
 import { Injectable } from '@nestjs/common'
-import { cpSync, existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { basename, join } from 'node:path'
-import { REPORT_DIR } from '../../webdriver/runner/runner.service.js'
+import { existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { Git, providerFromUrl } from '../git/providers/git.js'
-import type { CloneRequest, GitService } from '../git/git.service.js'
 import { acutis } from '../../common/utils/acutis.js'
 import { NotFound, ValidationFailed } from '../../common/exceptions/errors.js'
 import { slug as toSlug } from '../../common/utils/slug.js'
 import { AUTH_ID, authExists } from '../auth/providers/auth.js'
 import { EnvKey } from '../environment/providers/env-key.js'
 import { Environments } from '../environment/providers/environments.js'
-import type { PaginatedResponse, ProjectShowResponse } from './dto/responses/project.response.js'
+import type { PaginatedResponse, ProjectShowResponse } from '../../dto/project/responses/project.response.js'
 import { Project, type ProjectManifest } from './entities/project.entity.js'
-import { patchManifest, readManifest, writeManifest } from './providers/manifest.js'
+import { patchManifest, readManifest } from './providers/manifest.js'
+import { ProjectReport } from './providers/project-report.js'
 import { Runs } from '../scenario/providers/runs.js'
 import { listScenarios } from '../scenario/providers/scenario.js'
-import { DEFAULT_TEMPLATE, templatePath } from './providers/template.js'
 
 /** Os campos por que a listagem aceita ordenar. Fora deles, ordena por nome. */
 const SORTABLE = ['name', 'slug', 'created_at'] as const
@@ -56,6 +54,14 @@ export class ProjectService {
 
     environmentsOf(slug: string): Environments {
         return new Environments(this.pathOf(slug))
+    }
+
+    resolvedEnvironment(slug: string): Record<string, string> {
+        return this.environmentsOf(slug).resolve()
+    }
+
+    reportFile(slug: string, requested?: string): string {
+        return new ProjectReport(this.pathOf(slug)).file(requested)
     }
 
     /** Um projeto lido do disco, com o que o git souber contar sobre ele. */
@@ -129,7 +135,10 @@ export class ProjectService {
     }
 
     /** O estado da autenticação: `unset`, `skipped`, `configured` ou `failing`. */
-    private authStatus(path: string, manifest: Partial<ProjectManifest & { auth_skipped: boolean }>): string {
+    private authStatus(
+        path: string,
+        manifest: Partial<ProjectManifest & { auth_skipped: boolean }>
+    ): ProjectShowResponse['auth_status'] {
         if (!authExists(path)) {
             return manifest.auth_skipped ? 'skipped' : 'unset'
         }
@@ -159,7 +168,7 @@ export class ProjectService {
             storage_state: join(path, environments.storageState()),
             requires_url: !baseUrl && !manifest.url_skipped,
             vscode_url: `vscode://file${this.hostPathOf(slug)}`,
-            has_report: existsSync(join(path, REPORT_DIR, 'index.html'))
+            has_report: new ProjectReport(path).exists()
         }
     }
 
@@ -222,45 +231,4 @@ export class ProjectService {
         environments.set(EnvKey.PASSWORD, password, true)
     }
 
-    /** O projeto que nasce de um repositório existente: clona, escreve o manifesto e o primeiro ambiente. */
-    async createFromClone(request: CloneRequest, git: GitService): Promise<Project> {
-        const name = request.name || basename(request.url).replace(/\.git$/, '')
-        const slug = toSlug(name)
-        const path = join(acutis().root, slug)
-
-        await git.clone(request, path)
-
-        const createdAt = writeManifest(path, name, slug)
-
-        new Environments(path).ensure()
-
-        const repository = await Git.in(path).remoteUrl()
-
-        return new Project(name, slug, path, createdAt, repository, providerFromUrl(repository))
-    }
-
-    create(name: string, template: string = DEFAULT_TEMPLATE): Project {
-        const source = templatePath(template)
-
-        if (!existsSync(source) || !statSync(source).isDirectory()) {
-            throw new Error(`Template '${template}' não encontrado.`)
-        }
-
-        const slug = toSlug(name)
-        const path = join(acutis().root, slug)
-
-        cpSync(source, path, { recursive: true })
-
-        const packageFile = join(path, 'package.json')
-
-        if (existsSync(packageFile)) {
-            writeFileSync(packageFile, readFileSync(packageFile, 'utf8').replaceAll('{{name}}', slug))
-        }
-
-        const createdAt = writeManifest(path, name, slug)
-
-        new Environments(path).ensure()
-
-        return new Project(name, slug, path, createdAt)
-    }
 }

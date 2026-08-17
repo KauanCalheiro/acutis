@@ -13,9 +13,12 @@ backend/
 │   ├── main.ts / app.module.ts
 │   ├── config/                    # env, paths (VIDEOS_DIR, RECORDER_BUNDLE_PATH), opções do banco
 │   ├── common/                    # filters, pipes, interceptors, exceptions, utils, playwright, types
+│   ├── controllers/               # adaptadores HTTP, subdivididos por domínio
+│   ├── use-cases/                 # operações da aplicação, subdivididas por domínio
+│   ├── dto/                       # validação HTTP e responses
 │   ├── migrations/                # o esquema do SQLite de configurações, uma migration por tabela
 │   ├── scripts/                   # comandos de desenvolvimento (db-fresh)
-│   ├── modules/                   # a API /api/v1 — um módulo Nest por domínio
+│   ├── modules/                   # composição Nest, services, providers, entities e testes
 │   └── webdriver/
 │       ├── gateway/               # RecorderGateway (@WebSocketGateway) + adapter customizado por `type`
 │       ├── recorder/              # RecorderService (browser/context/page, screencast) + DebugController (só com WEBDRIVER_TEST_MODE=1)

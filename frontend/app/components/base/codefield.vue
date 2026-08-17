@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Prism from 'prismjs'
+import type { VNode } from 'vue'
 import 'prismjs/components/prism-typescript'
 import 'prismjs/components/prism-gherkin'
 
@@ -17,10 +18,29 @@ const model = defineModel<string>({
 
 const textarea = ref<HTMLTextAreaElement | null>(null)
 
-const highlighted = computed(() =>
-  // ponytail: v-html do próprio rascunho do usuário; Prism.highlight escapa entidades
-  Prism.highlight(model.value, Prism.languages[language]!, language) + '\n'
-)
+function renderTokens(stream: Prism.TokenStream): Array<string | VNode> {
+  if (typeof stream === 'string') return [stream]
+  if (Array.isArray(stream)) return stream.flatMap(renderTokens)
+
+  const aliases = Array.isArray(stream.alias)
+    ? stream.alias
+    : [stream.alias].filter(Boolean)
+
+  return [h('span', {
+    class: [
+      'token',
+      stream.type,
+      ...aliases
+    ]
+  }, renderTokens(stream.content))]
+}
+
+const highlighted = computed<Prism.TokenStream>(() => [
+  ...Prism.tokenize(model.value, Prism.languages[language]!),
+  '\n'
+])
+
+const HighlightedCode = defineComponent(() => () => h('code', null, renderTokens(highlighted.value)))
 
 function resize() {
   const el = textarea.value
@@ -47,7 +67,7 @@ onMounted(resize)
     <pre
       aria-hidden="true"
       class="codefield-box pointer-events-none absolute inset-0 m-0 overflow-hidden"
-    ><code v-html="highlighted" /></pre>
+    ><HighlightedCode /></pre>
     <textarea
       ref="textarea"
       v-model="model"
@@ -78,8 +98,7 @@ onMounted(resize)
 </style>
 
 <style>
-/* ponytail: paleta própria em vez de um tema Prism fixo, assim acompanha .dark do Nuxt UI;
-   token.* são gerados via v-html, escopo global necessário pra CSS scoped não alcançar */
+/* Paleta Prism compartilhada pelos temas claro e escuro. */
 .codefield .token.comment {
   color: #6a737d;
 }

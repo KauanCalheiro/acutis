@@ -16,6 +16,8 @@ import { fragileTargets, suggestSelectors } from './agents/selector.js'
 import { fixSpec } from './agents/spec-fixer.js'
 import { fixedSpec, fixedSuggestions, type FixedSpec, type SelectorSuggestion } from './providers/disabled.js'
 
+export type { FixedSpec, SelectorSuggestion } from './providers/disabled.js'
+
 @Injectable()
 export class ScenarioAiService {
     constructor(

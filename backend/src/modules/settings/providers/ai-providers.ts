@@ -4,6 +4,7 @@
  */
 
 import { CLAUDE_AGENT_DEFAULT_MODEL } from '../../ai/providers/claude-agent.js'
+import { APP_CONFIG, processEnvironment } from '../../../config/env.js'
 
 export interface ProviderDefaults {
     /** O endereço usado sem cadastro. */
@@ -21,26 +22,26 @@ export interface ProviderDefaults {
  * backend consegue chamar de verdade — ver `LANGCHAIN_PROVIDER` em `ai/providers/provider-model.ts`.
  */
 export const PROVIDERS: Record<string, ProviderDefaults> = {
-    anthropic: { url: process.env.ANTHROPIC_URL || 'https://api.anthropic.com/v1' },
+    anthropic: { url: APP_CONFIG.providers.anthropicUrl },
     /**
      * O "Claude Agent" da tela. Não fala HTTP: roda o Claude Code instalado na máquina, que já está
      * autenticado, então não há endereço nem credencial para cadastrar.
      */
     'claude-code': {
         keyless: true,
-        model: process.env.CLAUDE_AGENT_MODEL || CLAUDE_AGENT_DEFAULT_MODEL
+        model: APP_CONFIG.providers.claudeAgentModel ?? CLAUDE_AGENT_DEFAULT_MODEL
     },
-    gemini: { url: process.env.GEMINI_URL || 'https://generativelanguage.googleapis.com/v1beta/' },
+    gemini: { url: APP_CONFIG.providers.geminiUrl },
     ollama: {
         keyless: true,
-        url: process.env.OLLAMA_URL || 'http://localhost:11434',
-        model: process.env.OLLAMA_MODEL || 'llama3.1:8b'
+        url: APP_CONFIG.providers.ollamaUrl,
+        model: APP_CONFIG.providers.ollamaModel
     },
-    openai: { url: process.env.OPENAI_URL || 'https://api.openai.com/v1' },
+    openai: { url: APP_CONFIG.providers.openaiUrl },
     /** No OpenRouter o nome do modelo carrega o fornecedor: `qwen/qwen3-coder`. */
     openrouter: {
-        url: process.env.OPENROUTER_URL || 'https://openrouter.ai/api/v1',
-        model: process.env.OPENROUTER_MODEL || 'qwen/qwen3-coder'
+        url: APP_CONFIG.providers.openrouterUrl,
+        model: APP_CONFIG.providers.openrouterModel
     }
 }
 
@@ -48,7 +49,7 @@ export const PROVIDER_NAMES = Object.keys(PROVIDERS)
 
 /** O provedor que vale antes de alguém abrir a tela; vazio é "sem IA". */
 export function providerFromEnvironment(): string {
-    return process.env.AI_PROVIDER ?? 'gemini'
+    return processEnvironment().AI_PROVIDER ?? 'gemini'
 }
 
 /** Os provedores que não pedem chave: o formulário não marca o campo como obrigatório neles. */

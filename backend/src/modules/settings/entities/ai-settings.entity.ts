@@ -1,23 +1,5 @@
 /** O que a tela de configurações de IA lê e escreve. */
-
-/** O cadastro de um provedor. A chave volta em claro de propósito: veja `SettingsService`. */
-export interface ProviderCredential {
-    key: string | null
-    url: string | null
-    model: string | null
-}
-
-export interface AiSettings {
-    /** O provedor ativo. Vazio é "sem IA", e é um estado legítimo, não um erro. */
-    provider: string
-    /** Falso desabilita, no frontend, todo botão que chamaria um agente. */
-    configured: boolean
-    credentials: Record<string, ProviderCredential>
-    providers: string[]
-    provider_urls: Record<string, string>
-    /** Quem roda na máquina do usuário e não cobra credencial. */
-    keyless_providers: string[]
-}
+export type { ProviderCredential, AiSettings } from '@acutis/contracts/settings'
 
 /** O provedor ativo já resolvido: cadastro por cima dos padrões, que é o que um agente usaria. */
 export interface ResolvedProvider {

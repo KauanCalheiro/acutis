@@ -11,8 +11,9 @@ import { ProjectService } from '../project/project.service.js'
 import { HISTORY, Runs, VIDEO } from './providers/runs.js'
 import { eventsPathOf, Scenario, sourceOf } from './providers/scenario.js'
 import { stampGherkinTags, stampPlaywrightTags, stampPlaywrightTitle, stampTitle } from './providers/test-artifact.js'
-import type { UpdateScenarioDto } from './dto/update-scenario.dto.js'
-import type { RunStep, ScenarioResponse, ScenarioRunResponse } from './dto/responses/scenario.response.js'
+import type { UpdateScenarioDto } from '../../dto/scenario/update-scenario.dto.js'
+import type { RunStep, ScenarioResponse, ScenarioRunResponse } from '../../dto/scenario/responses/scenario.response.js'
+import type { RecorderEvent } from '@acutis/contracts/recording'
 
 /** O evento do reporter visto como dado, e não como união fechada. */
 export type RunEventRecord = Record<string, unknown>
@@ -54,7 +55,7 @@ export class ScenarioService {
             domain: data.domain,
             playwright: written ? sourceOf(spec) : '',
             gherkin: feature && existsSync(feature) ? readFileSync(feature, 'utf8') : null,
-            events: existsSync(eventsFile) ? JSON.parse(readFileSync(eventsFile, 'utf8')) as unknown : [],
+            events: existsSync(eventsFile) ? JSON.parse(readFileSync(eventsFile, 'utf8')) as RecorderEvent[] : [],
             updated_at: (written ? statSync(spec).mtime : new Date()).toISOString(),
             is_auth: scenario.isAuth(),
             runs: this.listRuns(path, scenario.id)
@@ -260,9 +261,12 @@ export class ScenarioService {
         for (const event of events) {
             if (event.event !== 'step' || event.status === 'pending') continue
 
+            const status = event.status === 'success' || event.status === 'failed'
+                ? event.status
+                : 'waiting'
             const ran: RunStep = {
                 title: String(event.title),
-                status: String(event.status),
+                status,
                 duration_ms: Number(event.durationMs ?? 0),
                 error: asString(event.error)
             }

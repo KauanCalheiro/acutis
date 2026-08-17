@@ -8,8 +8,9 @@ import { ProjectModule } from './project/project.module.js'
 import { GenerationModule } from './generation/generation.module.js'
 import { ScenarioModule } from './scenario/scenario.module.js'
 import { SettingsModule } from './settings/settings.module.js'
+import { DomainEventsModule } from '../common/events/domain-events.module.js'
 
 @Module({
-    imports: [AiModule, AuthModule, EnvironmentModule, GenerationModule, GitModule, ProjectModule, ScenarioModule, SettingsModule]
+    imports: [DomainEventsModule, AiModule, AuthModule, EnvironmentModule, GenerationModule, GitModule, ProjectModule, ScenarioModule, SettingsModule]
 })
 export class ApiModule {}

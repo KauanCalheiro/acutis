@@ -22,20 +22,18 @@ import { patchManifest } from '../project/providers/manifest.js'
 import { ProjectService } from '../project/project.service.js'
 import { eventsPathOf, htmlPathOf } from '../scenario/providers/scenario.js'
 import { AUTH_FEATURE, AUTH_SPEC, ensureAuthConfig } from './providers/auth.js'
-import type { AuthRecordingDto } from './dto/auth-recording.dto.js'
+import type { AuthRecordingDto } from '../../dto/auth/auth-recording.dto.js'
+import { DomainEventBus } from '../../common/events/domain-event-bus.js'
+import { AuthConfigured } from './events/auth-configured.js'
+import type { GeneratedAuthSetup } from '@acutis/contracts/auth'
+
+export type { GeneratedAuthSetup } from '@acutis/contracts/auth'
 
 /** Quantas voltas de correção o arquivo ganha antes de voltar como está, com os avisos. */
 const MAX_FIX_ATTEMPTS = 2
 
 /** O arquivo de sessão que a execução avulsa lê de volta. */
 const SESSION_FILE = 'storage-state.json'
-
-export interface GeneratedAuthSetup {
-    authSetup: string
-    credentialsNeeded: boolean
-    /** O que só o usuário resolve, como variável declarada sem valor. */
-    warnings: string[]
-}
 
 /** Roda o setup de verdade dentro do laço de correção, guardando o resultado da última execução. */
 class SpecRun {
@@ -91,7 +89,8 @@ export class AuthService {
     constructor(
         private readonly projects: ProjectService,
         private readonly runner: RunnerService,
-        private readonly settings: SettingsService
+        private readonly settings: SettingsService,
+        private readonly events: DomainEventBus
     ) {}
 
     show(slug: string): string {
@@ -104,6 +103,7 @@ export class AuthService {
 
     update(slug: string, authSetup: string): string {
         put(join(this.projects.pathOf(slug), AUTH_SPEC), authSetup)
+        void this.events.publish(new AuthConfigured(slug, 'editor'))
 
         return authSetup
     }
@@ -135,6 +135,7 @@ export class AuthService {
         await this.writeFeature(path, input, recording)
 
         environments.ensure()
+        void this.events.publish(new AuthConfigured(slug, 'recording'))
 
         if (credentials === null) return generated
 

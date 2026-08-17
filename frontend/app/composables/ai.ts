@@ -6,7 +6,7 @@ export const AI_OFF_HINT = 'Configure um provedor de IA para usar isto'
 
 /** Se existe provedor de IA ativo. */
 export function useAi() {
-  const { data } = useFetch<{ configured: boolean }>('/api/settings/ai', {
+  const { data } = useFetch<import('@acutis/contracts/settings').AiSettings>('/api/settings/ai', {
     key: AI_SETTINGS_KEY
   })
 
