@@ -1,13 +1,8 @@
-import { afterEach, vi } from 'vitest'
+import { vi } from 'vitest'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { defineComponent, h, nextTick, ref } from 'vue'
 import type { Component } from 'vue'
 import { UApp } from '#components'
-
-// O modal teleportado fica no body depois do teste; sem limpar, o caso seguinte acha o do anterior.
-afterEach(() => {
-  document.body.innerHTML = ''
-})
 
 /** O UModal teleporta o conteúdo para o body; cada caso deixa o seu lá, então vale o último. */
 export function field(testid: string) {
@@ -44,6 +39,10 @@ export async function type(testid: string, value: string) {
  * Devolve o estado do pai para o teste conferir o que o modal fez com ele.
  */
 export async function openModal(component: Component, props: Record<string, unknown> = {}) {
+  // Limpar na abertura, e não num afterEach: os hooks do vitest rodam em paralelo, e limpar o body
+  // enquanto o app do caso anterior é desmontado quebra o Vue (`nextSibling` de nó que já saiu).
+  document.body.innerHTML = ''
+
   const state = ref(false)
   const events: Record<string, unknown[][]> = {}
 
