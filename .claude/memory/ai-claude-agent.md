@@ -60,8 +60,8 @@ Documentação: <https://docs.claude.com/en/docs/claude-code/setup>
   entra no prompt do agente do acutis.
 - **Latência de 4 a 13 s por chamada**, contra ~1 s de uma API HTTP: é o spawn do binário a cada
   invocação. Aceitável para gerar cenário e consertar teste; pesa se algum dia virar laço de agente.
-- **Não roda em container.** O provedor depende do binário e do login na máquina — com o backend em
-  Docker, ele não funciona. A tela avisa.
+- **Depende do binário e do login na máquina.** Se o `claude` não estiver instalado/logado no host que
+  roda o backend, o provedor não funciona. A tela avisa.
 
 ## Saída estruturada
 
