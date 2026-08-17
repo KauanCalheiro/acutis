@@ -1,0 +1,1 @@
+../../../.claude/rules/data-testid.md

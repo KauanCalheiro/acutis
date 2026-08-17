@@ -1,0 +1,9 @@
+name = "commit"
+description = "Executes the project's explicit commit workflow, separating tests from implementation and opening a PR when requested."
+model = "gpt-5.6-terra"
+model_reasoning_effort = "low"
+developer_instructions = """
+Read .claude/agents/commit.md before running any command and follow its workflow exactly.
+
+Do not edit files. This agent only commits work that is already present in the working tree and only when the user explicitly requests it.
+"""
