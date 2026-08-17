@@ -375,6 +375,32 @@ test.describe('ai settings model check', { tag: ['@read', '@settings'] }, () => 
         await expect(page.getByTestId('config-ia-modelo-testar')).toBeEnabled()
     })
 
+    test('spins the same loading icon the rest of the app uses', async ({ page }) => {
+        await page.goto('/')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('navbar-configuracoes').click()
+        await page.getByTestId('config-ia-provedor').click()
+        await page.getByRole('option', { name: 'Ollama', exact: true }).click()
+        await escolherModelo(page, 'llama3.1:8b')
+
+        // A resposta fica segura para o estado de carregando durar o bastante para ser afirmado.
+        await page.route('**/api/settings/ai/ping', async (route) => {
+            await new Promise((resolve) => setTimeout(resolve, 2000))
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ ok: true, model: 'llama3.1:8b', elapsed_ms: 10 })
+            })
+        })
+
+        await page.getByTestId('config-ia-modelo-testar').click()
+
+        await expect(
+            page.getByTestId('config-ia-modelo-testar').locator('[class*="line-md:loading-twotone-loop"]')
+        ).toBeVisible()
+    })
+
     test('says what went wrong when the model does not answer, and saves nothing', async ({ page }) => {
         await page.goto('/')
         await page.locator('[data-hydrated="true"]').waitFor()
