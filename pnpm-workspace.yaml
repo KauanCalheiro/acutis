@@ -16,3 +16,13 @@ allowBuilds:
   esbuild: true
   unrs-resolver: false
   vue-demi: false
+
+# Os pacotes de binário do `@openai/codex-sdk`, 262 MB por plataforma. O provedor Codex roda o
+# `codex` instalado na máquina.
+ignoredOptionalDependencies:
+  - '@openai/codex-darwin-arm64'
+  - '@openai/codex-darwin-x64'
+  - '@openai/codex-linux-arm64'
+  - '@openai/codex-linux-x64'
+  - '@openai/codex-win32-arm64'
+  - '@openai/codex-win32-x64'

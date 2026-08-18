@@ -4,6 +4,7 @@
  */
 
 import { CLAUDE_AGENT_DEFAULT_MODEL } from '../../ai/providers/claude-agent.js'
+import { CODEX_DEFAULT_MODEL } from '../../ai/providers/codex-agent.js'
 import { APP_CONFIG, processEnvironment } from '../../../config/env.js'
 
 export interface ProviderDefaults {
@@ -30,6 +31,14 @@ export const PROVIDERS: Record<string, ProviderDefaults> = {
     'claude-code': {
         keyless: true,
         model: APP_CONFIG.providers.claudeAgentModel ?? CLAUDE_AGENT_DEFAULT_MODEL
+    },
+    /**
+     * O "Codex" da tela. Também não fala HTTP: roda o Codex instalado na máquina, que já está
+     * autenticado pela assinatura ChatGPT.
+     */
+    codex: {
+        keyless: true,
+        model: APP_CONFIG.providers.codexModel ?? CODEX_DEFAULT_MODEL
     },
     gemini: { url: APP_CONFIG.providers.geminiUrl },
     ollama: {

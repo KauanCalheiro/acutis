@@ -41,9 +41,9 @@ const CUSTOM_MODEL: Record<string, (config: ResolvedProvider, model: string) => 
 
 /**
  * Provedores que não são um modelo do LangChain: têm laço próprio e o `runAgent` os chama direto.
- * O Claude Code é um processo local, não um endpoint.
+ * O Claude Code e o Codex são processos locais, não endpoints.
  */
-const NATIVE = ['claude-code']
+const NATIVE = ['claude-code', 'codex']
 
 export function isNative(provider: string): boolean {
     return NATIVE.includes(provider)
