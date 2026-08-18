@@ -50,7 +50,7 @@ it('oferece todos os provedores suportados, com nada configurado ainda', async (
 
     expect(response.status).toBe(200)
     expect(response.body.provider).toBe('gemini')
-    expect(response.body.providers).toEqual(['anthropic', 'claude-code', 'gemini', 'ollama', 'openai', 'openrouter'])
+    expect(response.body.providers).toEqual(['anthropic', 'claude-code', 'codex', 'gemini', 'ollama', 'openai', 'openrouter'])
 })
 
 // A lista oferecida é a mesma que o teste acima confere no endpoint; aqui é o suporte de cada uma.
@@ -219,7 +219,7 @@ it('informa ao formulário quais provedores não pedem chave', async () => {
     const response = await api.http.get('/api/v1/settings/ai')
 
     expect(response.status).toBe(200)
-    expect(response.body.keyless_providers).toEqual(['claude-code', 'ollama'])
+    expect(response.body.keyless_providers).toEqual(['claude-code', 'codex', 'ollama'])
 })
 
 it('ainda informa a url padrão depois de a salva passar a valer', async () => {
@@ -414,6 +414,32 @@ it('lista os modelos do claude agent sem chamar a rede', async () => {
     expect(response.status).toBe(200)
     expect(response.body.map((model: { id: string }) => model.id)).toContain('claude-sonnet-5')
     expect(response.body.length).toBeGreaterThan(5)
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled()
+})
+
+/** O Codex roda o binário da máquina, que já está autenticado: só o modelo é cadastrável. */
+it('cadastra o codex sem pedir credencial nenhuma', async () => {
+    const response = await api.http
+        .put('/api/v1/settings/ai')
+        .send({ provider: 'codex', model: 'gpt-5.6-sol' })
+
+    expect(response.status).toBe(200)
+    expect(response.body.provider).toBe('codex')
+    expect(await settings().resolved()).toMatchObject({
+        provider: 'codex',
+        key: null,
+        model: 'gpt-5.6-sol'
+    })
+})
+
+/** O binário não tem catálogo, então a lista é fixa e sai sem tocar na rede. */
+it('lista os modelos do codex sem chamar a rede', async () => {
+    respondWith({ data: [] })
+
+    const response = await api.http.post('/api/v1/settings/ai/models').send({ provider: 'codex' })
+
+    expect(response.status).toBe(200)
+    expect(response.body.map((model: { id: string }) => model.id)).toContain('gpt-5.6-sol')
     expect(vi.mocked(fetch)).not.toHaveBeenCalled()
 })
 

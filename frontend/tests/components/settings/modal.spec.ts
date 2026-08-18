@@ -21,11 +21,12 @@ const api = {
     credentials: {
       'gemini': { key: 'chave-gemini', url: null, model: 'gemma-3' },
       'ollama': { key: null, url: null, model: null },
-      'claude-code': { key: null, url: null, model: null }
+      'claude-code': { key: null, url: null, model: null },
+      'codex': { key: null, url: null, model: null }
     } as Record<string, { key: string | null, url: string | null, model: string | null }>,
-    providers: ['claude-code', 'gemini', 'ollama'],
+    providers: ['claude-code', 'codex', 'gemini', 'ollama'],
     provider_urls: { ollama: 'http://localhost:11434' } as Record<string, string>,
-    keyless_providers: ['ollama', 'claude-code']
+    keyless_providers: ['ollama', 'claude-code', 'codex']
   },
   models: [{ id: 'gemma-3', label: 'Gemma 3' }] as unknown,
   modelsStatus: 200,
@@ -179,6 +180,18 @@ describe('SettingsModal', () => {
     expect(field('config-ia-claude-agent')).toBeDefined()
     expect(field('config-ia-chave')).toBeUndefined()
     expect(api.requests.at(-1)).toContain('"provider":"claude-code"')
+  })
+
+  it('não pede credencial nenhuma para o codex, e já lista os modelos', async () => {
+    const { wrapper } = await open()
+    api.requests.length = 0
+
+    await chooseProvider(wrapper, 'codex')
+
+    expect(field('config-ia-codex')).toBeDefined()
+    expect(field('config-ia-claude-agent')).toBeUndefined()
+    expect(field('config-ia-chave')).toBeUndefined()
+    expect(api.requests.at(-1)).toContain('"provider":"codex"')
   })
 
   it('desliga a IA sem pedir modelo', async () => {

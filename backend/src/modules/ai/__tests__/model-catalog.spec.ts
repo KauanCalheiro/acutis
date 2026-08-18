@@ -2,6 +2,7 @@
 /** A lista de modelos de cada provedor, perguntada a ele e traduzida para uma lista só. */
 import { afterEach, expect, it, vi } from 'vitest'
 import { CLAUDE_AGENT_MODELS } from '../providers/claude-agent.js'
+import { CODEX_MODELS } from '../providers/codex-agent.js'
 import { ModelListingFailed, canListModels, listModels } from '../providers/model-catalog.js'
 import type { ResolvedProvider } from '../../settings/entities/ai-settings.entity.js'
 
@@ -95,6 +96,14 @@ it('lista o catálogo fixo do agente local, sem perguntar a ninguém', async () 
 
     expect(await listModels(config({ provider: 'claude-code' })))
         .toEqual([...CLAUDE_AGENT_MODELS].sort().map(id => ({ id, label: id })))
+    expect(asked).toEqual([])
+})
+
+it('lista o catálogo fixo do codex, que a assinatura aceita', async () => {
+    answering({})
+
+    expect(await listModels(config({ provider: 'codex' })))
+        .toEqual([...CODEX_MODELS].sort().map(id => ({ id, label: id })))
     expect(asked).toEqual([])
 })
 

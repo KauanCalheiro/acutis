@@ -44,6 +44,7 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
             'Sem IA',
             'Anthropic',
             'Claude Agent',
+            'Codex',
             'Google Gemini',
             'Ollama',
             'OpenAI',
@@ -310,6 +311,42 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
             await page.getByTestId('navbar-configuracoes').click()
 
             await expect(page.getByTestId('config-ia-modelo')).toContainText('claude-sonnet-5')
+        })
+    })
+
+    /** O Codex também roda um binário local já autenticado: nada de credencial, só o que instalar. */
+    test('offers codex with no credential to fill in, and saves it with just a model', async ({ page }) => {
+        await page.goto('/')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await test.step('pick codex', async () => {
+            await page.getByTestId('navbar-configuracoes').click()
+            await page.getByTestId('config-ia-provedor').click()
+            await page.getByRole('option', { name: 'Codex', exact: true }).click()
+        })
+
+        await test.step('there is no key and no address to fill in', async () => {
+            await expect(page.getByTestId('config-ia-chave')).toBeHidden()
+            await expect(page.getByTestId('config-ia-url')).toBeHidden()
+        })
+
+        await test.step('the setup steps are on screen, with a link to the docs', async () => {
+            await expect(page.getByTestId('config-ia-codex')).toContainText('codex login')
+            await expect(page.getByTestId('config-ia-codex-documentacao')).toHaveAttribute(
+                'href',
+                'https://developers.openai.com/codex/cli'
+            )
+        })
+
+        await test.step('save the model it offers and come back on it', async () => {
+            await escolherModelo(page, 'gpt-5.6-sol')
+            await page.getByTestId('config-ia-salvar').click()
+
+            await expect(page.getByText('Configuração salva', { exact: true })).toBeVisible()
+
+            await page.getByTestId('navbar-configuracoes').click()
+
+            await expect(page.getByTestId('config-ia-modelo')).toContainText('gpt-5.6-sol')
         })
     })
 
