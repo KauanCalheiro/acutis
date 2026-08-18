@@ -1,7 +1,5 @@
 # TODO
 
-## Tentar fazer um provider para o Codex similar ao que foi feito para o Claude Agent (Claude Code...)
-
 ## Envio de logs em caso de erro...
 
 ## Revinar gravação de teste para gerar codigo mais inteligente, com esperas inteligentes.
