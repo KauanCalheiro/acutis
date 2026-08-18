@@ -26,6 +26,8 @@ const environmentSchema = z.object({
     ACUTIS_APP_KEY: z.string().optional(),
     ANTHROPIC_URL: z.string().optional(),
     CLAUDE_AGENT_MODEL: z.string().optional(),
+    CODEX_MODEL: z.string().optional(),
+    CODEX_PATH: z.string().optional(),
     GEMINI_URL: z.string().optional(),
     OLLAMA_URL: z.string().optional(),
     OLLAMA_MODEL: z.string().optional(),
@@ -45,6 +47,8 @@ export interface AppConfig {
     providers: {
         anthropicUrl: string
         claudeAgentModel?: string
+        codexModel?: string
+        codexPath: string
         geminiUrl: string
         ollamaUrl: string
         ollamaModel: string
@@ -79,6 +83,8 @@ export function readAppConfig(environment: Record<string, string | undefined>): 
         providers: {
             anthropicUrl: env.ANTHROPIC_URL ?? 'https://api.anthropic.com/v1',
             claudeAgentModel: env.CLAUDE_AGENT_MODEL,
+            codexModel: env.CODEX_MODEL,
+            codexPath: env.CODEX_PATH ?? 'codex',
             geminiUrl: env.GEMINI_URL ?? 'https://generativelanguage.googleapis.com/v1beta/',
             ollamaUrl: env.OLLAMA_URL ?? 'http://localhost:11434',
             ollamaModel: env.OLLAMA_MODEL ?? 'llama3.1:8b',

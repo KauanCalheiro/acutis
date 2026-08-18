@@ -35,6 +35,7 @@ const PROVIDERS: Record<string, { label: string, icon: string }> = {
   // Nome e ícone travados pelas diretrizes de marca da Anthropic: "Claude Code" e o logo dele não
   // são permitidos em produto de terceiro. Não renomear — ver a memória ai-claude-agent.
   'claude-code': { label: 'Claude Agent', icon: 'i-simple-icons-claude' },
+  'codex': { label: 'Codex', icon: 'i-simple-icons-openai' },
   'gemini': { label: 'Google Gemini', icon: 'i-simple-icons-googlegemini' },
   'ollama': { label: 'Ollama', icon: 'i-simple-icons-ollama' },
   'openai': { label: 'OpenAI', icon: 'i-simple-icons-openai' },
@@ -77,14 +78,21 @@ const providerIcon = computed(() => providerItems.value.find(item => item.value 
 
 const noAi = computed(() => provider.value === NO_AI)
 
-/** O Claude Agent roda o binário local: sem chave, sem endereço, só o modelo. */
 const claudeAgent = computed(() => provider.value === 'claude-code')
+
+const codex = computed(() => provider.value === 'codex')
+
+/** Provedor que roda o binário da máquina: sem chave, sem endereço, só o modelo. */
+const localAgent = computed(() => claudeAgent.value || codex.value)
 
 /** Provedor que roda na máquina do usuário não cobra chave; nos outros o campo é obrigatório. */
 const keyRequired = computed(() => !noAi.value && !(settings.value?.keyless_providers ?? []).includes(provider.value))
 
 /** Onde a Anthropic documenta a instalação e o login do Claude Code. */
 const DOC_CLAUDE_CODE = 'https://docs.claude.com/en/docs/claude-code/setup'
+
+/** Onde a OpenAI documenta a instalação e o login do Codex. */
+const DOC_CODEX = 'https://developers.openai.com/codex/cli'
 
 /** O endereço que vale com o campo vazio, para o placeholder dizer o que vai acontecer. */
 const defaultUrl = computed(() => settings.value?.provider_urls[provider.value] ?? 'o endereço do provedor')
@@ -141,7 +149,7 @@ async function testModel() {
  * de digitar a chave (ou o endereço). O agente local não pede credencial nenhuma, então já pergunta.
  */
 function loadModelsIfReady() {
-  if (claudeAgent.value || key.value || url.value) loadModels()
+  if (localAgent.value || key.value || url.value) loadModels()
 }
 
 // Cada provedor guarda o seu cadastro: trocar no select mostra o dele, não o do anterior.
@@ -283,8 +291,43 @@ async function save() {
         </ULink>
       </div>
 
+      <div
+        v-if="codex"
+        class="mb-4"
+        data-testid="config-ia-codex"
+      >
+        <p class="mb-3 text-sm text-muted">
+          Este provedor não usa chave de API nem cobra por token: ele roda o
+          <strong class="text-default">Codex</strong> instalado nesta máquina e fala pela assinatura
+          ChatGPT já autenticada nele (Plus, Pro, Business ou Enterprise), com o mesmo limite de uso
+          que você tem no dia a dia.
+        </p>
+
+        <ol class="mb-3 list-decimal space-y-1 pl-5 text-sm text-muted">
+          <li>Instale o Codex na máquina que roda o acutis.</li>
+          <li>Rode <code class="rounded bg-elevated px-1 py-0.5 text-default">codex login</code> no terminal e autorize no navegador.</li>
+          <li>Escolha abaixo o modelo. Não há nada mais a preencher.</li>
+        </ol>
+
+        <p class="mb-3 text-sm text-muted">
+          Por depender do binário local, este provedor não funciona com o backend em outra máquina.
+          Cada chamada gasta cerca de 12 mil tokens de entrada do seu limite, porque o Codex manda o
+          próprio prompt de sistema junto.
+        </p>
+
+        <ULink
+          :to="DOC_CODEX"
+          target="_blank"
+          class="inline-flex items-center gap-1 text-sm text-primary"
+          data-testid="config-ia-codex-documentacao"
+        >
+          Saiba mais na documentação do Codex
+          <UIcon name="i-ic-round-open-in-new" />
+        </ULink>
+      </div>
+
       <UFormField
-        v-if="!noAi && !claudeAgent"
+        v-if="!noAi && !localAgent"
         label="Chave de API"
         :required="keyRequired"
         :hint="keyRequired ? undefined : 'opcional'"
@@ -319,7 +362,7 @@ async function save() {
       </UFormField>
 
       <UFormField
-        v-if="!noAi && !claudeAgent"
+        v-if="!noAi && !localAgent"
         label="Endereço do provedor"
         hint="opcional"
         description="Onde o provedor responde. Preencha para apontar para uma máquina sua."

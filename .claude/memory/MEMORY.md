@@ -10,6 +10,7 @@ Instruções persistentes ficam em `./.claude/memory/`. Antes de qualquer ação
 | [e2e.md](e2e.md) | índice | criar/editar teste cross-tool em `e2e/` (Playwright, frontend + backend reais) (→ tags, backend, setup) |
 | [execution.md](execution.md) | índice | subir serviço, rodar comando de dev/teste — modo local, único que existe (→ local) |
 | [ai-claude-agent.md](ai-claude-agent.md) | reference | mexer no provedor "Claude Agent" (id `claude-code`) — Agent SDK, nome e ícone travados por diretriz de marca, setup e armadilhas do JSON Schema |
+| [ai-codex.md](ai-codex.md) | reference | mexer no provedor "Codex" (id `codex`): codex-sdk, binário fora do node_modules, modelos que a assinatura aceita |
 | [environments.md](environments.md) | reference | mexer em variável, segredo ou sessão do projeto testado — `environments/*.json` versionado, `.env` como cofre |
 | [commit.md](commit.md) | feedback | fazer git commit/branch/PR/merge — só quando pedido explicitamente, nunca na main, squash merge com descrição detalhada |
 | [specs.md](specs.md) | feedback | escrever spec de brainstorming — vai em `docs/superpowers/`, nunca commitada |

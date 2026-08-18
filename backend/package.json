@@ -62,6 +62,7 @@
     "@nestjs/platform-ws": "^10.4.15",
     "@nestjs/typeorm": "^11.0.3",
     "@nestjs/websockets": "^10.4.15",
+    "@openai/codex-sdk": "^0.147.0",
     "better-sqlite3": "^13.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",

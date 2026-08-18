@@ -14,20 +14,22 @@ function config(overrides: Partial<ResolvedProvider> = {}): ResolvedProvider {
     return { provider: 'ollama', key: null, url: null, model: 'llama3', ...overrides } as ResolvedProvider
 }
 
-it('separa o provedor nativo dos que são modelo do langchain', () => {
+it('separa os provedores nativos dos que são modelo do langchain', () => {
     expect(isNative('claude-code')).toBe(true)
+    expect(isNative('codex')).toBe(true)
     expect(isNative('ollama')).toBe(false)
 })
 
 it('sabe com quem consegue conversar', () => {
     expect(isSupported('claude-code')).toBe(true)
+    expect(isSupported('codex')).toBe(true)
     expect(isSupported('openrouter')).toBe(true)
     expect(isSupported('gemini')).toBe(true)
     expect(isSupported('deepseek')).toBe(false)
 })
 
 it('lista os provedores suportados em ordem', () => {
-    expect(supportedProviders()).toEqual(['anthropic', 'claude-code', 'gemini', 'ollama', 'openai', 'openrouter'])
+    expect(supportedProviders()).toEqual(['anthropic', 'claude-code', 'codex', 'gemini', 'ollama', 'openai', 'openrouter'])
 })
 
 it('recusa provedor que esta versão não conhece', async () => {
@@ -39,6 +41,8 @@ it('recusa provedor que esta versão não conhece', async () => {
 
 it('recusa montar modelo para o provedor nativo, que tem laço próprio', async () => {
     await expect(chatModel(config({ provider: 'claude-code' })))
+        .rejects.toThrow('o `runAgent` o chama direto')
+    await expect(chatModel(config({ provider: 'codex' })))
         .rejects.toThrow('o `runAgent` o chama direto')
 })
 

@@ -34,7 +34,7 @@ export const CLAUDE_AGENT_DEFAULT_MODEL = 'claude-sonnet-5'
  * `$schema: draft/2020-12` e o CLI recusa o que não resolve: `--json-schema is not a valid JSON
  * Schema: no schema with key or ref`.
  */
-function jsonSchemaOf(schema: z.ZodType): Record<string, unknown> {
+export function jsonSchemaOf(schema: z.ZodType): Record<string, unknown> {
     const { $schema, ...resto } = toJSONSchema(schema) as Record<string, unknown>
 
     return resto

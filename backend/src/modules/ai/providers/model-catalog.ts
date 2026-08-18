@@ -1,6 +1,7 @@
 /** Os modelos que um provedor oferece, perguntados a ele e traduzidos para uma lista só. */
 import type { ResolvedProvider } from '../../settings/entities/ai-settings.entity.js'
 import { CLAUDE_AGENT_MODELS } from './claude-agent.js'
+import { CODEX_MODELS } from './codex-agent.js'
 import type { AvailableModel } from '@acutis/contracts/settings'
 
 export type { AvailableModel } from '@acutis/contracts/settings'
@@ -83,6 +84,9 @@ const CATALOGS: Record<string, (config: ResolvedProvider) => Promise<AvailableMo
 
     /** O Claude Code não oferece catálogo: a lista é a que este projeto verificou. */
     'claude-code': async () => CLAUDE_AGENT_MODELS.map((id) => ({ id, label: id })),
+
+    /** O Codex também não oferece catálogo, e a assinatura ChatGPT recusa parte dos modelos. */
+    codex: async () => CODEX_MODELS.map((id) => ({ id, label: id })),
 
     /** O Gemini nomeia como `models/gemini-2.0-flash`; o cadastro quer só a parte final. */
     async gemini(config) {

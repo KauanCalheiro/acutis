@@ -18,9 +18,12 @@ function statusOf(error: unknown): number | null {
 
     if (typeof declared === 'number') return declared
 
-    const written = /^(\d{3})\b/.exec(candidate.message ?? '')
+    const message = candidate.message ?? ''
+    const written = /^(\d{3})\b/.exec(message) ?? /"status":\s*(\d{3})|status (\d{3})\b/.exec(message)
 
-    return written === null ? null : Number(written[1])
+    if (written === null) return null
+
+    return Number(written[1] ?? written[2])
 }
 
 function reasonOf(error: unknown): string {
@@ -32,9 +35,41 @@ function missingClaudeCode(error: unknown): boolean {
     return /executable not found|native binary not found|failed to launch|failed to spawn/i.test(reasonOf(error))
 }
 
+/** O Codex é um binário local: ou ele falta, ou ninguém rodou `codex login` nesta máquina. */
+function codexFailure(model: string, error: unknown): ProviderFailed | null {
+    if ((error as { code?: string }).code === 'ENOENT') {
+        return new ProviderFailed(
+            'O Codex não foi encontrado nesta máquina. Instale-o e rode `codex login` no terminal para este provedor funcionar.'
+        )
+    }
+
+    switch (statusOf(error)) {
+        case 401:
+        case 403:
+            return new ProviderFailed(
+                'O Codex desta máquina não está autenticado. Rode `codex login` no terminal e autorize no navegador.'
+            )
+
+        case 400:
+        case 404:
+            return new ProviderFailed(
+                `A assinatura ligada ao Codex não aceita o modelo ${model}. Escolha outro nas configurações de inteligência artificial.`
+            )
+
+        default:
+            return null
+    }
+}
+
 export function providerFailure(config: ResolvedProvider, error: unknown): ProviderFailed {
     const provider = config.provider
     const model = config.model ?? 'o modelo cadastrado'
+
+    if (provider === 'codex') {
+        const failure = codexFailure(model, error)
+
+        if (failure) return failure
+    }
 
     if (missingClaudeCode(error)) {
         return new ProviderFailed(

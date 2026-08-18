@@ -55,6 +55,9 @@ importers:
       '@nestjs/websockets':
         specifier: ^10.4.15
         version: 10.4.22(@nestjs/common@10.4.22(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2))(@nestjs/core@10.4.22)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@openai/codex-sdk':
+        specifier: ^0.147.0
+        version: 0.147.0
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -1783,6 +1786,15 @@ packages:
 
   '@one-ini/wasm@0.1.1':
     resolution: {integrity: sha512-XuySG1E38YScSJoMlqovLru4KTUNSjgVTIjyh7qMX6aNN5HY5Ct5LhRJdxO79JtTzKfzV/bnWpz+zquYrISsvw==}
+
+  '@openai/codex-sdk@0.147.0':
+    resolution: {integrity: sha512-nJL0maDBZy31uEArs+u46tW22veNdHjfs96AGaFTnI3jF+g8U+a422uaPiDZwEKmyxcNwStTRz6sIh6C7XxGFQ==}
+    engines: {node: '>=18'}
+
+  '@openai/codex@0.147.0':
+    resolution: {integrity: sha512-EQLEXecAG2ptxI7UpBMo2TR/ga5596/c/OsYF/0LoUDh5JANZ7IoGqlzBEWbuEVQ76JePIbtTW/ihCkp1a7Z3w==}
+    engines: {node: '>=16'}
+    hasBin: true
 
   '@oxc-project/types@0.144.0':
     resolution: {integrity: sha512-nuhZIOLuI6TFQ32I/WnUx+SCPY7SdSKwgnFHydAuoS1+Z4BRcaP+RRJmGzl9lw+0OFF7UmaESf7KQRXaNLHypg==}
@@ -7492,6 +7504,14 @@ packages:
   zod@4.4.3:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
+ignoredOptionalDependencies:
+  - '@openai/codex-darwin-arm64'
+  - '@openai/codex-darwin-x64'
+  - '@openai/codex-linux-arm64'
+  - '@openai/codex-linux-x64'
+  - '@openai/codex-win32-arm64'
+  - '@openai/codex-win32-x64'
+
 snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
@@ -9418,6 +9438,12 @@ snapshots:
       - encoding
 
   '@one-ini/wasm@0.1.1': {}
+
+  '@openai/codex-sdk@0.147.0':
+    dependencies:
+      '@openai/codex': 0.147.0
+
+  '@openai/codex@0.147.0': {}
 
   '@oxc-project/types@0.144.0': {}
 

@@ -3,8 +3,9 @@ import { END, START, StateGraph } from '@langchain/langgraph'
 import * as z from 'zod'
 import type { ResolvedProvider } from '../../settings/entities/ai-settings.entity.js'
 import { claudeAgentOutput } from './claude-agent.js'
+import { codexOutput } from './codex-agent.js'
 import { providerFailure } from './provider-errors.js'
-import { chatModel, isNative } from './provider-model.js'
+import { chatModel } from './provider-model.js'
 
 export interface AgentDefinition<Schema extends z.ZodType> {
     /** O system prompt. */
@@ -13,17 +14,25 @@ export interface AgentDefinition<Schema extends z.ZodType> {
     schema: Schema
 }
 
+/** Os provedores que rodam um binário da máquina e têm laço próprio, fora do LangChain. */
+const NATIVE_OUTPUT: Record<string, typeof claudeAgentOutput> = {
+    'claude-code': claudeAgentOutput,
+    codex: codexOutput
+}
+
 /**
- * Uma pergunta ao provedor. O Claude Code tem laço próprio e não passa pelo LangChain; o resto vai
- * pelo modelo do LangChain com saída estruturada.
+ * Uma pergunta ao provedor. Os agentes locais têm laço próprio e não passam pelo LangChain; o resto
+ * vai pelo modelo do LangChain com saída estruturada.
  */
 async function ask<Schema extends z.ZodType>(
     config: ResolvedProvider,
     agent: AgentDefinition<Schema>,
     input: unknown
 ): Promise<z.infer<Schema>> {
-    if (isNative(config.provider)) {
-        return claudeAgentOutput(config, agent.instructions, agent.schema, input)
+    const native = NATIVE_OUTPUT[config.provider]
+
+    if (native) {
+        return native(config, agent.instructions, agent.schema, input)
     }
 
     const model = await chatModel(config)
