@@ -1,16 +1,10 @@
-import { APP_CONFIG } from '@acutis/core/config/env.js'
-import { defineEventHandler, setHeader, setResponseStatus } from 'h3'
+import { defineEventHandler, setHeader } from 'h3'
 import type { RunEvent } from '@acutis/core/common/types/run.js'
 import { runnerProjectRequestSchema } from '#shared/contracts/runner'
 import { executionRunner } from '../../../utils/composition/execution'
 import { validatedBody } from '../../../utils/http'
 
 export default defineEventHandler(async (event) => {
-  if (!APP_CONFIG.webdriverTestMode) {
-    setResponseStatus(event, 403)
-    return { message: 'runner endpoints only available with WEBDRIVER_TEST_MODE=1' }
-  }
-
   const body = await validatedBody(event, runnerProjectRequestSchema)
   const response = event.node.res
   let finished: RunEvent | null = null

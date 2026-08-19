@@ -19,10 +19,6 @@ const environmentSchema = z.object({
     '0',
     '1'
   ]).default('0'),
-  WEBDRIVER_TEST_MODE: z.enum([
-    '0',
-    '1'
-  ]).default('0'),
   LOG_LEVEL: z.string().default('log,error,warn,debug,verbose,fatal'),
   ACUTIS_APP_KEY: z.string().optional(),
   ANTHROPIC_URL: z.string().optional(),
@@ -42,7 +38,6 @@ export interface AppConfig {
   corsOrigin: string
   recorderCdpUrl: string
   recorderHeadless: boolean
-  webdriverTestMode: boolean
   logLevels: LogLevel[]
   appKey?: string
   providers: {
@@ -78,7 +73,6 @@ export function readAppConfig(environment: Record<string, string | undefined>): 
     corsOrigin: env.CORS_ORIGIN,
     recorderCdpUrl: env.RECORDER_CDP_URL,
     recorderHeadless: env.RECORDER_HEADLESS === '1',
-    webdriverTestMode: env.WEBDRIVER_TEST_MODE === '1',
     logLevels,
     appKey: env.ACUTIS_APP_KEY,
     providers: {

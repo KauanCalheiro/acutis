@@ -17,7 +17,7 @@ import { splash } from './splash.mjs'
 import { ensureChromium } from './ensure-chromium.js'
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const FRONTEND_ENTRY = join(PACKAGE_ROOT, '.output/server/index.mjs')
+const SERVER_ENTRY = join(PACKAGE_ROOT, '.output/server/index.mjs')
 
 function fail(message) {
   console.error(`\x1b[31m==>\x1b[0m ${message}`)
@@ -66,8 +66,8 @@ function openBrowser(url) {
 }
 
 async function main() {
-  if (!existsSync(FRONTEND_ENTRY)) {
-    fail('o frontend não veio no pacote. Se você está rodando do repositório, use `pnpm cli:build` antes.')
+  if (!existsSync(SERVER_ENTRY)) {
+    fail('a aplicação não veio no pacote. Se você está rodando do repositório, use `pnpm cli:build` antes.')
   }
 
   await ensureChromium()
@@ -77,13 +77,13 @@ async function main() {
 
   process.env.PORT = String(webPort)
   process.env.NITRO_PORT = String(webPort)
-  // Sem isto o `/runner/video` responde 403 e o vídeo da execução que falhou não abre na tela.
-  process.env.WEBDRIVER_TEST_MODE = '1'
-  await import(FRONTEND_ENTRY)
+  process.env.HOST = '127.0.0.1'
+  process.env.NITRO_HOST = '127.0.0.1'
+  await import(SERVER_ENTRY)
 
-  if (!await waitFor(webUrl)) fail('a interface não respondeu em 60s')
+  if (!await waitFor(webUrl)) fail('a aplicação não respondeu em 60s')
 
-  console.log(splash(webUrl, webUrl))
+  console.log(splash(webUrl))
   console.log('  Ctrl+C para parar.\n')
 
   openBrowser(webUrl)

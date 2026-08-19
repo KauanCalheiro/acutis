@@ -1,9 +1,21 @@
 {
-  "name": "acutis",
-  "version": "1.0.0",
+  "name": "@acutis/cli",
+  "version": "1.0.0-beta.1",
   "description": "Grava, gera e roda testes Playwright a partir do navegador",
-  "private": true,
+  "private": false,
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KauanCalheiro/acutis.git"
+  },
+  "homepage": "https://github.com/KauanCalheiro/acutis#readme",
+  "bugs": {
+    "url": "https://github.com/KauanCalheiro/acutis/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "beta"
+  },
   "bin": {
     "acutis": "bin/acutis.js"
   },
@@ -27,6 +39,7 @@
     "postinstall": "nuxt prepare",
     "prepack": "pnpm build",
     "preview": "node bin/ensure-chromium.js && nuxt preview",
+    "release:beta": "pnpm publish --tag beta --access public",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "pnpm --filter @acutis/e2e test",

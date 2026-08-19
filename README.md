@@ -6,10 +6,16 @@ Esta é a versão final do TCC. A versão inicial (com erros e código legado) e
 
 ```sh
 pnpm install   # uma vez, na raiz
-./dev.sh       # interface + API + gravador + runner em :3000
+./dev.sh       # aplicação completa em :3000
 ```
 
 Precisa de Node 22+ e pnpm no `PATH`. O gravador baixa o Chromium compatível automaticamente na primeira execução.
+
+Para experimentar a versão beta publicada:
+
+```sh
+pnpm dlx @acutis/cli@beta
+```
 
 ## Documentação
 

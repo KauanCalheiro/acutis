@@ -31,7 +31,7 @@ async function waitHealthy(): Promise<void> {
     throw new Error('webdriver did not become healthy in time')
 }
 
-/** Sobe o webdriver em modo teste na porta do E2E e devolve o stop que espera a porta liberar. */
+/** Sobe o webdriver na porta do E2E e devolve o stop que espera a porta liberar. */
 export async function startWebdriver(env: Record<string, string> = {}): Promise<() => Promise<void>> {
     await waitPortFree()
 
@@ -40,7 +40,6 @@ export async function startWebdriver(env: Record<string, string> = {}): Promise<
         stdio: process.env.ACUTIS_E2E_STDIO === '1' ? 'inherit' : 'ignore',
         env: {
             ...process.env,
-            WEBDRIVER_TEST_MODE: '1',
             PORT: String(PORTS.webdriver),
             CORS_ORIGIN: FRONTEND_URL,
             // Sem janela por padrão; RECORDER_HEADLESS=0 para ver o navegador.

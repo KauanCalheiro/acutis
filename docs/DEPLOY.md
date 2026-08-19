@@ -20,9 +20,30 @@ O build produz:
 ## Testar o tarball
 
 ```sh
-npm exec --package ./acutis-1.0.0.tgz acutis
+npm exec --package ./acutis-cli-1.0.0-beta.1.tgz acutis
 ```
 
 O CLI escolhe uma porta livre, garante o Chromium do Playwright, inicia um único processo Nitro e abre a interface. `Ctrl+C` encerra o processo inteiro.
 
-O campo `private` do `package.json` continua sendo o pino de segurança. Remova-o somente no fluxo de publicação aprovado.
+## Publicar o beta
+
+O manifesto fixa o dist-tag `beta`, então a publicação não altera `latest`:
+
+```sh
+npm login
+npm whoami
+pnpm release:beta
+```
+
+Cada nova publicação precisa de uma versão inédita. Para avançar de `beta.1` para `beta.2`:
+
+```sh
+pnpm version prerelease --preid beta --no-git-tag-version
+pnpm release:beta
+```
+
+Depois da publicação, qualquer pessoa pode iniciar essa versão com:
+
+```sh
+pnpm dlx @acutis/cli@beta
+```

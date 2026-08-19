@@ -33,4 +33,4 @@ pnpm build
 pnpm preview
 ```
 
-Os endpoints internos `/runner/*` exigem `WEBDRIVER_TEST_MODE=1`.
+Os endpoints de runner e debug ficam disponíveis porque o Acutis opera como uma aplicação local confiável. O pacote publicado limita o servidor a `127.0.0.1`.

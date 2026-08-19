@@ -8,7 +8,6 @@ describe('configuração da aplicação', () => {
       PORT: '4100',
       CORS_ORIGIN: 'https://acutis.dev',
       RECORDER_HEADLESS: '1',
-      WEBDRIVER_TEST_MODE: '1',
       LOG_LEVEL: 'error,warn'
     })
 
@@ -16,7 +15,6 @@ describe('configuração da aplicação', () => {
       port: 4100,
       corsOrigin: 'https://acutis.dev',
       recorderHeadless: true,
-      webdriverTestMode: true,
       logLevels: [
         'error',
         'warn'

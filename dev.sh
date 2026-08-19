@@ -93,9 +93,9 @@ shutdown() {
 
 trap shutdown INT TERM
 
-start acutis env WEBDRIVER_TEST_MODE=1 RECORDER_HEADLESS="$HEADLESS" pnpm dev
+start acutis env RECORDER_HEADLESS="$HEADLESS" pnpm dev
 
-node bin/splash.mjs http://localhost:3000 http://localhost:3000
+node bin/splash.mjs http://localhost:3000
 
 # --- espera ficar de pé -------------------------------------------------------
 # Em silêncio: só abre a boca se algum serviço não subir.

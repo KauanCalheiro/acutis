@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Banner da subida do acutis: a logo em ASCII, o nome em letra grande e os endereços
-// expostos. Usado nas duas frentes — o ./dev.sh do repositório e o `acutis` publicado.
+// Banner da subida do acutis: a logo em ASCII, o nome em letra grande e o endereço
+// exposto. Usado pelo ./dev.sh do repositório e pelo `acutis` publicado.
 //
-//   node bin/splash.mjs [urlFrontend] [urlApi]            avulso
+//   node bin/splash.mjs [url]                             avulso
 //   import { splash } from './splash.mjs'                de dentro do bin
 
 import { existsSync, readFileSync } from 'node:fs'
@@ -136,7 +136,7 @@ function renderWordmark(text) {
 const PAD = 1 // linha em branco acima e abaixo da logo
 const DROP = 1 // o bloco da direita começa uma linha abaixo do topo da logo
 
-export function splash(frontendUrl, apiUrl) {
+export function splash(url) {
   const wordmark = renderWordmark('ACUTIS')
   const logo = renderLogo()
   const label = fg(120, 140, 165)
@@ -145,8 +145,7 @@ export function splash(frontendUrl, apiUrl) {
   const right = [
     ...wordmark.map(l => fg(...BRAND) + l + off),
     '',
-    `${label}frontend${off}   ${value}${frontendUrl}${off}`,
-    `${label}api${off}        ${value}${apiUrl}${off}`
+    `${label}aplicação${off}   ${value}${url}${off}`
   ]
 
   const height = Math.max(logo.length, right.length + DROP) + PAD * 2
@@ -165,5 +164,5 @@ export function splash(frontendUrl, apiUrl) {
 // chamado direto pelo ./dev.sh, que passa as urls como argumento
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const url = process.argv[2] || 'http://localhost:3000'
-  process.stdout.write(splash(url, process.argv[3] || url))
+  process.stdout.write(splash(url))
 }

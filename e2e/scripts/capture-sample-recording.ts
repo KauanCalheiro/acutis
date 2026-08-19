@@ -125,7 +125,7 @@ async function capture(): Promise<void> {
     const webdriver: ChildProcess = spawn('node', ['.output/server/index.mjs'], {
         cwd: WEBDRIVER_DIR,
         stdio: 'ignore',
-        env: { ...process.env, WEBDRIVER_TEST_MODE: '1' },
+        env: { ...process.env },
     })
 
     try {

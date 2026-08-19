@@ -1,26 +1,12 @@
 // @vitest-environment node
-/**
- * Os endpoints que o E2E usa para dirigir o runner. Eles só respondem com
- * `WEBDRIVER_TEST_MODE=1`, e o runner de verdade entra como dublê.
- */
+/** Os endpoints que o E2E usa para dirigir o runner, com o runner de verdade como dublê. */
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it } from 'vitest'
 import { startApi, type Harness } from '../../../../test/support/harness.js'
 import { RunnerService } from '../runner.service.js'
 import type { RunEvent } from '../../../common/types/run.js'
-
-const testMode = vi.hoisted(() => ({ on: true }))
-
-vi.mock('../../../config/env.js', async (importOriginal) => {
-  const original = await importOriginal<typeof import('../../../config/env.js')>()
-
-  return {
-    ...original,
-    APP_CONFIG: { ...original.APP_CONFIG, get webdriverTestMode() { return testMode.on } }
-  }
-})
 
 let api: Harness
 
@@ -51,7 +37,6 @@ const runner = {
 }
 
 beforeEach(async () => {
-  testMode.on = true
   runner.calls = []
   runner.result = { passed: true, output: 'tudo verde' }
   runner.events = []
@@ -142,15 +127,12 @@ it('devolve 404 para caminho que não é um vídeo da execução', async () => {
   expect((await api.http.get('/runner/video').query({ path: '/etc/passwd' })).status).toBe(404)
 })
 
-it('fica fora do ar sem o modo de teste do webdriver', async () => {
-  testMode.on = false
-
-  expect((await api.http.post('/runner/spec').send({ spec: 'test()' })).status).toBe(403)
-  expect((await api.http.post('/runner/project').send({ path: '/tmp' })).status).toBe(403)
-  expect((await api.http.get('/runner/video').query({ path: '/tmp/x.webm' })).status).toBe(403)
+it('mantém os endpoints disponíveis no modelo local confiável', async () => {
+  expect((await api.http.post('/runner/spec').send({ spec: 'test()' })).status).toBe(201)
+  expect((await api.http.post('/runner/project').send({ path: '/tmp' })).status).toBe(201)
+  expect((await api.http.get('/runner/video').query({ path: '/tmp/x.webm' })).status).toBe(404)
 
   const stream = await api.http.post('/runner/project/stream').send({ path: '/tmp' })
 
-  expect(stream.status).toBe(403)
-  expect(JSON.parse(stream.text).message).toContain('WEBDRIVER_TEST_MODE=1')
+  expect(stream.status).toBe(200)
 })

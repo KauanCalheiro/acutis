@@ -66,7 +66,7 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
         webdriverProcess = spawn('node', ['.output/server/index.mjs'], {
             cwd: WEBDRIVER_DIR,
             stdio: 'ignore',
-            env: { ...process.env, WEBDRIVER_TEST_MODE: '1', PORT: '4100' },
+            env: { ...process.env, PORT: '4100' },
         })
         await waitForWebdriver()
     })

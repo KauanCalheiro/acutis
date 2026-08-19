@@ -1,4 +1,3 @@
-import { APP_CONFIG } from '@acutis/core/config/env.js'
 import { watchableVideo } from '@acutis/core/webdriver/runner/run-video.js'
 import { createReadStream, existsSync, statSync } from 'node:fs'
 import {
@@ -12,10 +11,6 @@ import {
 } from 'h3'
 
 export default defineEventHandler(async (event) => {
-  if (!APP_CONFIG.webdriverTestMode) {
-    throw createError({ statusCode: 403, message: 'runner endpoints only available with WEBDRIVER_TEST_MODE=1' })
-  }
-
   const requested = getQuery(event).path
   const path = typeof requested === 'string' ? requested : ''
   if (!path.endsWith('.webm') || !existsSync(path)) throw createError({ statusCode: 404 })
