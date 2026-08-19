@@ -4,9 +4,9 @@
   "type": "module",
   "scripts": {
     "build": "pnpm --filter acutis build",
-    "pretest": "pnpm build",
+    "pretest": "node ../bin/ensure-chromium.js && pnpm build",
     "test": "playwright test",
-    "pretest:smoke": "pnpm build",
+    "pretest:smoke": "node ../bin/ensure-chromium.js && pnpm build",
     "test:smoke": "playwright test --grep @read",
     "capture:fixture": "pnpm --filter acutis build && node scripts/capture-sample-recording.ts"
   },
