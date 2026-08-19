@@ -13,7 +13,7 @@ export function isolatedProjects(): string {
     return mkdtempSync(join(tmpdir(), 'acutis-e2e-'))
 }
 
-/** Sobe o backend na porta do E2E e devolve o stop que espera a porta liberar. */
+/** Sobe a aplicação Nitro completa na porta do E2E. */
 export async function startBackend(env: Record<string, string> = {}): Promise<() => Promise<void>> {
     return startWebdriver(env)
 }

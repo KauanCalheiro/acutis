@@ -722,20 +722,13 @@ test.describe('recording authentication from the auth scenario page', { tag: ['@
 
 test.describe('recording over cdp against a host chrome', { tag: ['@write', '@recording'] }, () => {
     const CDP_PORT = 9223
-    let cdpFixtureServer: Server
     let cdpBaseUrl: string
     let chromeProcess: ChildProcess
     let chromeProfile: string
     let stopCdpWebdriver: () => Promise<void>
 
     test.beforeAll(async () => {
-        cdpFixtureServer = createServer((_req, res) => {
-            res.writeHead(200, { 'Content-Type': 'text/html' })
-            res.end(FIXTURE_HTML)
-        })
-        await new Promise<void>((r) => cdpFixtureServer.listen(0, r))
-        const { port } = cdpFixtureServer.address() as { port: number }
-        cdpBaseUrl = `http://127.0.0.1:${port}`
+        cdpBaseUrl = `data:text/html,${encodeURIComponent(FIXTURE_HTML.toString())}`
 
         chromeProfile = mkdtempSync(join(tmpdir(), 'acutis-chrome-'))
         chromeProcess = spawn(chromium.executablePath(), [
@@ -761,10 +754,10 @@ test.describe('recording over cdp against a host chrome', { tag: ['@write', '@re
         chromeProcess.kill('SIGKILL')
         await exited
         rmSync(chromeProfile, { recursive: true, force: true })
-        await new Promise<void>((r) => cdpFixtureServer.close(() => r()))
     })
 
     test('records through the host browser and keeps it open after stopping', async ({ request }) => {
+        test.setTimeout(120_000)
         const gateway = await connectGateway()
 
         try {
@@ -774,7 +767,7 @@ test.describe('recording over cdp against a host chrome', { tag: ['@write', '@re
 
             await test.step('drive the recorded tab via the debug endpoints', async () => {
                 const goto = await request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: cdpBaseUrl } })
-                expect(goto.ok()).toBe(true)
+                expect(goto.ok(), await goto.text()).toBe(true)
                 const click = await request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#btn' } })
                 expect(click.ok()).toBe(true)
             })

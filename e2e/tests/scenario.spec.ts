@@ -372,7 +372,7 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
 
     test('suggests test ids for the events without one', { tag: '@ia' }, async ({ page, request }) => {
         await test.step('point the backend at the configured ollama', async () => {
-            await request.put(`${BACKEND_URL}/api/v1/settings/ai`, {
+            await request.put(`${BACKEND_URL}/api/settings/ai`, {
                 data: { provider: 'ollama', url: process.env.OLLAMA_URL, model: process.env.OLLAMA_MODEL }
             })
         })

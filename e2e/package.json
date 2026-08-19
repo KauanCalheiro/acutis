@@ -3,12 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "pnpm --filter @acutis/frontend build && pnpm --filter @acutis/backend build:ui && pnpm --filter @acutis/backend build",
+    "build": "pnpm --filter acutis build",
     "pretest": "pnpm build",
     "test": "playwright test",
     "pretest:smoke": "pnpm build",
     "test:smoke": "playwright test --grep @read",
-    "capture:fixture": "pnpm --filter @acutis/backend build:ui && pnpm --filter @acutis/backend build && node scripts/capture-sample-recording.ts"
+    "capture:fixture": "pnpm --filter acutis build && node scripts/capture-sample-recording.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1"

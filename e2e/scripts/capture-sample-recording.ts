@@ -3,8 +3,9 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import { copyFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { createServer, type Server } from 'node:http'
 import { resolve } from 'node:path'
+import { PROJECT_ROOT } from '../support/project-root'
 
-const WEBDRIVER_DIR = resolve(import.meta.dirname, '../../backend')
+const WEBDRIVER_DIR = PROJECT_ROOT
 const WEBDRIVER_URL = 'http://localhost:4400'
 const SAMPLE_APP_HTML = readFileSync(resolve(import.meta.dirname, '../fixtures/sample-app.html'))
 const OUTPUT_DIR = resolve(import.meta.dirname, '../fixtures/sample-recording')
@@ -121,7 +122,7 @@ async function capture(): Promise<void> {
     await ensurePortIsFree()
 
     const { server, baseUrl } = await startSampleAppServer()
-    const webdriver: ChildProcess = spawn('node', ['dist/main.js'], {
+    const webdriver: ChildProcess = spawn('node', ['.output/server/index.mjs'], {
         cwd: WEBDRIVER_DIR,
         stdio: 'ignore',
         env: { ...process.env, WEBDRIVER_TEST_MODE: '1' },

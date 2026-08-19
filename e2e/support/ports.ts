@@ -4,7 +4,7 @@
  * Fonte única: mudar aqui muda o harness inteiro (Playwright, os dois starters e os scripts).
  */
 export const PORTS = {
-    frontend: 4300,
+    frontend: 4400,
     webdriver: 4400,
 } as const
 

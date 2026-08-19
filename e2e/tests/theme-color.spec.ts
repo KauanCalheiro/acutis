@@ -1,4 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
+import { rmSync } from 'node:fs'
+import { isolatedProjects, startBackend } from '../support/backend'
 
 function primaryColor(page: Page) {
     return page.evaluate(() =>
@@ -7,6 +9,19 @@ function primaryColor(page: Page) {
 }
 
 test.describe('theme primary color', { tag: ['@write', '@theme'] }, () => {
+    let stopBackend: () => Promise<void>
+    let projects: string
+
+    test.beforeAll(async () => {
+        projects = isolatedProjects()
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: projects })
+    })
+
+    test.afterAll(async () => {
+        await stopBackend()
+        rmSync(projects, { recursive: true, force: true })
+    })
+
     test.beforeEach(async ({ page }) => {
         await test.step('open the projects page and wait for hydration', async () => {
             await page.goto('/')
