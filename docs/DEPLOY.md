@@ -27,6 +27,8 @@ O CLI escolhe uma porta livre, garante o Chromium do Playwright, inicia um únic
 
 ## Publicar o beta
 
+O passo a passo completo, incluindo preparação da branch, avisos esperados e diagnóstico de erros, está em [Publicação beta do CLI](BETA.md).
+
 O manifesto fixa o dist-tag `beta`, então a publicação não altera `latest`:
 
 ```sh

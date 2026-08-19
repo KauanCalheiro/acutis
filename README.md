@@ -23,3 +23,4 @@ pnpm dlx @acutis/cli@beta
   - [Local](docs/LOCAL.md): o processo Nitro direto no host
   - [Testes](docs/TESTS.md): testes unitários, de integração e E2E
   - [Publicar](docs/DEPLOY.md): distribuir o CLI pelo npm
+  - [Publicar beta](docs/BETA.md): preparar a branch, publicar e validar `@acutis/cli@beta`
