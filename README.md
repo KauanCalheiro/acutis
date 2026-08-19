@@ -9,7 +9,7 @@ pnpm install   # uma vez, na raiz
 ./dev.sh       # interface + API + gravador + runner em :3000
 ```
 
-Precisa de Node 22+ e pnpm no `PATH`. O gravador abre o próprio Chromium; não há nada a instalar além disso.
+Precisa de Node 22+ e pnpm no `PATH`. O gravador baixa o Chromium compatível automaticamente na primeira execução.
 
 ## Documentação
 

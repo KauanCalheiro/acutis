@@ -13,6 +13,8 @@ pnpm install
 ./dev.sh
 ```
 
+A primeira execução baixa automaticamente o Chromium compatível com a versão instalada do Playwright. As próximas reutilizam o navegador guardado no cache da máquina.
+
 A aplicação fica em `http://localhost:3000`. O processo inclui interface, API, gravador e runner. O Nuxt recarrega as alterações durante o desenvolvimento.
 
 Para impedir que o recorder abra uma janela:

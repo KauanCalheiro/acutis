@@ -14,13 +14,10 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { splash } from './splash.mjs'
+import { ensureChromium } from './ensure-chromium.js'
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const FRONTEND_ENTRY = join(PACKAGE_ROOT, '.output/server/index.mjs')
-
-function info(message) {
-  console.log(`\x1b[32m==>\x1b[0m ${message}`)
-}
 
 function fail(message) {
   console.error(`\x1b[31m==>\x1b[0m ${message}`)
@@ -55,30 +52,6 @@ async function waitFor(url, timeoutMs = 60_000) {
   }
 
   return false
-}
-
-/**
- * O Chromium fica fora do pacote: são ~150 MB que o npm teria de baixar em toda instalação, e o
- * Playwright já guarda o dele num cache compartilhado da máquina. Baixa na primeira execução.
- */
-async function ensureChromium() {
-  const { chromium } = await import('playwright')
-
-  try {
-    if (existsSync(chromium.executablePath())) return
-  } catch {
-    // O Playwright também pode lançar antes de resolver o caminho quando o cache ainda não existe.
-  }
-
-  info('baixando o Chromium do Playwright (só na primeira execução)')
-
-  const install = spawn(process.execPath, [join(PACKAGE_ROOT, 'node_modules/playwright/cli.js'), 'install', 'chromium'], {
-    stdio: 'inherit'
-  })
-
-  const code = await new Promise(resolve => install.on('close', resolve))
-
-  if (code !== 0) fail('não foi possível baixar o Chromium. Rode `npx playwright install chromium` e tente de novo.')
 }
 
 function openBrowser(url) {

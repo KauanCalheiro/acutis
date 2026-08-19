@@ -27,7 +27,7 @@ O mesmo processo serve interface, API, WebSocket, gravador e runner.
 
 ## Setup de primeira vez
 
-`pnpm install` **na raiz** instala a aplicação e o pacote `e2e`. Só precisa rodar na primeira vez ou após mudar dependência. O SQLite das configurações nasce sozinho na primeira execução.
+`pnpm install` **na raiz** instala a aplicação e o pacote `e2e`. Só precisa rodar na primeira vez ou após mudar dependência. O SQLite das configurações nasce sozinho na primeira execução. O Chromium compatível com a versão do Playwright é conferido ao subir e baixado automaticamente quando ainda não existe no cache da máquina.
 
 ## Subir a aplicação
 
