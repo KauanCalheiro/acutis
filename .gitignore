@@ -10,3 +10,24 @@ COMPARATIVO-TCC.md
 .DS_Store
 
 node_modules
+
+# Nuxt e builds locais
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+dist-ui
+.tmp
+test-results
+coverage
+.pnpm-store
+
+# Ferramentas e ambiente local
+logs
+*.log
+.fleet
+.idea
+.env.*
+!.env.example

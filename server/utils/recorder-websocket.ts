@@ -1,0 +1,79 @@
+import type { RecordingEvent } from '@acutis/core/common/types/recording'
+import type { StopResult } from '@acutis/core/webdriver/recorder/recorder.service'
+
+interface RecorderPeer {
+  send(data: string): unknown
+}
+
+interface RecorderMessage {
+  text(): string
+}
+
+interface RecorderPort {
+  isRecording(): boolean
+  start(
+    onEvent: (event: RecordingEvent) => void,
+    onStarted: (recordingStartedAt: number) => void,
+    onRequestStop: () => void,
+    mode?: 'scenario' | 'auth',
+    storageStatePath?: string,
+    url?: string
+  ): Promise<void>
+  stop(): Promise<StopResult>
+}
+
+interface RecorderCommand {
+  type?: string
+  mode?: 'scenario' | 'auth'
+  storageState?: string
+  url?: string
+}
+
+function send(peer: RecorderPeer, payload: Record<string, unknown>) {
+  peer.send(JSON.stringify(payload))
+}
+
+export function createRecorderWebSocketHooks(recorder: RecorderPort) {
+  async function stop(peer: RecorderPeer) {
+    const result = await recorder.stop()
+    send(peer, { event: 'recorder:stop', ...result })
+  }
+
+  return {
+    open(peer: RecorderPeer) {
+      send(peer, { event: 'recorder:hello', recording: recorder.isRecording() })
+    },
+
+    async message(peer: RecorderPeer, message: RecorderMessage) {
+      const body = JSON.parse(message.text()) as RecorderCommand
+
+      if (body.type === 'WHO') {
+        send(peer, { event: 'recorder:hello', recording: recorder.isRecording() })
+        return
+      }
+
+      if (body.type === 'STOP_RECORDING') {
+        await stop(peer)
+        return
+      }
+
+      if (body.type !== 'START_RECORDING') return
+
+      try {
+        await recorder.start(
+          event => send(peer, { event: `recorder:${event.type}`, ...event }),
+          recordingStartedAt => send(peer, { event: 'recorder:started', recordingStartedAt }),
+          () => { void stop(peer) },
+          body.mode ?? 'scenario',
+          body.storageState,
+          body.url
+        )
+      } catch (error) {
+        send(peer, {
+          event: 'recorder:error',
+          error: error instanceof Error ? error.message : 'Erro ao iniciar a gravação.'
+        })
+      }
+    }
+  }
+}

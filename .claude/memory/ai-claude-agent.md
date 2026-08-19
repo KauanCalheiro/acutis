@@ -18,7 +18,7 @@ SDK, listam como **não permitidos** em produto de terceiro:
 - os nomes "Claude Code" e "Claude Code Agent";
 - "Claude Code-branded ASCII art or **visual elements that mimic Claude Code**" — o que inclui o logo.
 
-Por isso, em `frontend/app/components/settings/modal.vue`:
+Por isso, em `app/components/settings/modal.vue`:
 
 - o label é **Claude Agent** (forma que as diretrizes preferem para menus);
 - o ícone é `i-simple-icons-claude`, **não** `i-simple-icons-claudecode`.
@@ -45,11 +45,11 @@ Documentação: <https://docs.claude.com/en/docs/claude-code/setup>
 
 | Arquivo | Papel |
 |---------|-------|
-| `backend/src/modules/ai/providers/claude-agent.ts` | `claudeAgentOutput()`, a lista de modelos e o schema que o CLI aceita |
-| `backend/src/modules/ai/providers/agent.ts` | `ask()` desvia para o SDK quando o provedor é nativo; o resto vai pelo LangChain |
-| `backend/src/modules/ai/providers/provider-model.ts` | `NATIVE`/`isNative()` — quem não é modelo do LangChain; `chatModel()` recusa esses |
-| `backend/src/modules/ai/providers/model-catalog.ts` | Catálogo fixo: o binário não oferece lista |
-| `backend/src/modules/settings/providers/ai-providers.ts` | `keyless: true`, sem url — não há o que cadastrar |
+| `core/modules/ai/providers/claude-agent.ts` | `claudeAgentOutput()`, a lista de modelos e o schema que o CLI aceita |
+| `core/modules/ai/providers/agent.ts` | `ask()` desvia para o SDK quando o provedor é nativo; o resto vai pelo LangChain |
+| `core/modules/ai/providers/provider-model.ts` | `NATIVE`/`isNative()` — quem não é modelo do LangChain; `chatModel()` recusa esses |
+| `core/modules/ai/providers/model-catalog.ts` | Catálogo fixo: o binário não oferece lista |
+| `core/modules/settings/providers/ai-providers.ts` | `keyless: true`, sem url — não há o que cadastrar |
 
 ## Armadilhas (todas custaram tempo)
 

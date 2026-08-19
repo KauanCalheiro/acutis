@@ -1,23 +1,18 @@
 # Rodar o Acutis
 
-A stack roda como processos diretos no host — é o único modo. O gravador precisa de um navegador
-com janela e o produto final é um CLI npm que o usuário instala na própria máquina: containerizar o
-desenvolvimento simulava um cenário que não existe em produção.
+O Acutis roda diretamente no host. Um único processo Nuxt/Nitro serve a interface, a API, o WebSocket do gravador e o runner.
 
 | Documento | Assunto |
 |-----------|---------|
-| [LOCAL.md](LOCAL.md) | Subir a stack — precisa de Node 22+ e pnpm instalados |
-| [TESTS.md](TESTS.md) | As três suítes de teste (backend, frontend, e2e): comandos e peculiaridades |
-| [DEPLOY.md](DEPLOY.md) | Publicar o CLI no npm — o que vai no pacote e como testar antes |
+| [LOCAL.md](LOCAL.md) | Subir o app com Node 22+ e pnpm |
+| [TESTS.md](TESTS.md) | Testes Vitest e Playwright |
+| [DEPLOY.md](DEPLOY.md) | Empacotar e publicar o CLI |
 
 ## Portas
 
-Os dois conjuntos são disjuntos de propósito: a suíte E2E roda com a stack de desenvolvimento de
-pé, sem derrubar nada.
+| Execução | Porta |
+|----------|-------|
+| desenvolvimento | 3000 |
+| E2E | 4400 |
 
-| Serviço | Dev | E2E |
-|---------|-----|-----|
-| frontend (Nuxt) | 3000 | 4300 |
-| backend (NestJS) | 4000 | 4400 |
-
-O backend serve a API `/api/v1`, o gravador e o runner no mesmo processo desde a migração para Node.
+Todos os caminhos HTTP e WebSocket usam a mesma origem.

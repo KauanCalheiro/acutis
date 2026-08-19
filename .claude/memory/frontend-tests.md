@@ -5,7 +5,7 @@ metadata:
   type: feedback
 ---
 
-O frontend tem suíte unitária em `frontend/tests/` (Vitest, `environment: 'nuxt'`), além do E2E. Ela é o que sustenta o piso de cobertura do `pnpm test:coverage`. Convenções universais de TDD em [tdd](tdd.md).
+A aplicação tem suíte unitária em `tests/` (Vitest, `environment: 'nuxt'`), além do E2E. Ela é o que sustenta o piso de cobertura do `pnpm test:coverage`. Convenções universais de TDD em [tdd](tdd.md).
 
 **Why:** cada uma das armadilhas abaixo custou uma rodada de depuração; sem elas o teste falha por causa do ambiente, não do código.
 

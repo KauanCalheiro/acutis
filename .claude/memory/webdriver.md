@@ -1,11 +1,11 @@
 ---
 name: webdriver
-description: Serviço webdriver (backend/, era webdriver/) — LER 1º ao mexer no NestJS (gateway/recorder/video) ou na UI/pill injetável; índice → tdd
+description: Webdriver em core/webdriver — gravador, runner, vídeo, WebSocket e pill injetável
 metadata:
   type: feedback
 ---
 
-Índice do webdriver (NestJS, Playwright real controlando o navegador; UI/pill em `src/webdriver/pill/` via Vite+Vue). Ler a sub-memória do assunto antes de mexer. Estrutura de pastas em [structure-webdriver](structure-webdriver.md).
+Índice do webdriver. O Playwright controla o navegador real; a pill fica em `core/webdriver/pill/` e o WebSocket em `server/routes/ws.ts`. Ler a sub-memória do assunto antes de mexer.
 
 ## Sub-memórias
 

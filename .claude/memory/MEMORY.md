@@ -6,7 +6,7 @@ Instruções persistentes ficam em `./.claude/memory/`. Antes de qualquer ação
 |---------|------|------------|
 | [backend.md](backend.md) | índice | mexer na API: endpoint, controller, service, DTO, recurso (→ module, contracts, filters, persistence, conventions, tdd) |
 | [frontend.md](frontend.md) | índice | criar/editar componente, página, tela, formulário (→ naming, props, style, labels, responsive, table, crud, api, icons) |
-| [webdriver.md](webdriver.md) | índice | mexer no gravador/runner/vídeo (`backend/src/webdriver`) ou na pill/UI injetável (→ tdd) |
+| [webdriver.md](webdriver.md) | índice | mexer no gravador/runner/vídeo (`core/webdriver`) ou na pill/UI injetável (→ tdd) |
 | [e2e.md](e2e.md) | índice | criar/editar teste cross-tool em `e2e/` (Playwright, frontend + backend reais) (→ tags, backend, setup) |
 | [execution.md](execution.md) | índice | subir serviço, rodar comando de dev/teste — modo local, único que existe (→ local) |
 | [ai-claude-agent.md](ai-claude-agent.md) | reference | mexer no provedor "Claude Agent" (id `claude-code`) — Agent SDK, nome e ícone travados por diretriz de marca, setup e armadilhas do JSON Schema |

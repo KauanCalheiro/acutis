@@ -1,34 +1,25 @@
 ---
 name: structure-webdriver
-description: Estrutura de pastas do backend NestJS — common/modules/webdriver; comandos pnpm dev/build/test
+description: Estrutura do gravador e runner no Nitro unificado
 metadata:
   type: project
 ---
 
-NestJS, Playwright controlando o navegador de verdade (`recordVideo`/`page.screencast` — sem pedir permissão, é canal de automação, não API web). Substituiu a extensão Chrome removida.
+Playwright controla o navegador real por automação, sem extensão e sem API de captura da página.
 
 ```
-backend/
-├── src/
-│   ├── main.ts / app.module.ts
-│   ├── config/                    # env, paths (VIDEOS_DIR, RECORDER_BUNDLE_PATH), opções do banco
-│   ├── common/                    # filters, pipes, interceptors, exceptions, utils, playwright, types
-│   ├── controllers/               # adaptadores HTTP, subdivididos por domínio
-│   ├── use-cases/                 # operações da aplicação, subdivididas por domínio
-│   ├── dto/                       # validação HTTP e responses
-│   ├── migrations/                # o esquema do SQLite de configurações, uma migration por tabela
-│   ├── scripts/                   # comandos de desenvolvimento (db-fresh)
-│   ├── modules/                   # composição Nest, services, providers, entities e testes
-│   └── webdriver/
-│       ├── gateway/               # RecorderGateway (@WebSocketGateway) + adapter customizado por `type`
-│       ├── recorder/              # RecorderService (browser/context/page, screencast) + DebugController (só com WEBDRIVER_TEST_MODE=1)
-│       ├── runner/                # RunnerService — dispara e transmite a execução do Playwright
-│       ├── video/                 # VideoService/Controller — serve o .webm direto
-│       └── pill/                  # pill/recorder (Vue), injetada via addInitScript — build separado (vite.ui.config.ts → dist-ui/)
-├── test/                          # harness, fixtures e setup do jsdom
-├── vitest.config.ts               # a suíte
-├── tsconfig.json                  # server (exclui src/webdriver/pill e os __tests__)
-└── tsconfig.ui.json               # pill (@/* → src/*)
+core/webdriver/
+├── recorder/              # browser, contexto, página e screencast
+├── runner/                # execução e transmissão do Playwright
+├── video/                 # armazenamento de webm
+├── gateway/               # tipos e envio de eventos
+└── pill/                  # UI Vue injetada pelo recorder
+
+server/routes/
+├── ws.ts                  # gateway WebSocket
+├── recording/             # vídeo da gravação
+├── runner/                # execução e vídeo do runner
+└── debug/                 # automação disponível em modo de teste
 ```
 
-**Comandos:** `pnpm dev` (server, porta 4000) · `pnpm build && pnpm start` (prod) · `pnpm build:ui` (bundle da pill) · `pnpm test` (Vitest da UI) · `pnpm db:fresh` (refaz o banco pelas migrations) · `pnpm typecheck` / `pnpm typecheck:ui`
+**Comandos:** `pnpm build:recorder` · `pnpm test` · `pnpm typecheck` · `pnpm test:e2e`
