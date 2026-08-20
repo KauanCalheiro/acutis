@@ -46,13 +46,9 @@ jobs:
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
-      # Trusted publishing exige npm >= 11.5.1; o runtime do pnpm não garante essa versão
-      - name: Install npm
-        run: npm install -g npm@latest
-
       # ponytail: sem lint/typecheck/test aqui, o ci.yml já roda em todo push
-      # Sem --provenance: a atestação vai para um log público e exige repositório público
+      # O npm do runtime do pnpm é 10.9.8 e trusted publishing exige >= 11.5.1, então a versão
+      # vem fixa pelo npx em vez de depender do PATH. Sem --provenance: a atestação vai para um
+      # log público de transparência e exige repositório público.
       - name: Publish
-        run: |
-          node -v && npm -v
-          npm publish --tag ${{ steps.resolve.outputs.tag }} --access public
+        run: npx -y npm@11.19.0 publish --tag ${{ steps.resolve.outputs.tag }} --access public
