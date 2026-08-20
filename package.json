@@ -61,6 +61,7 @@
     "@medv/finder": "^3.1.0",
     "@nuxt/ui": "^4.9.0",
     "@openai/codex-sdk": "^0.147.0",
+    "@playwright/test": "^1.61.1",
     "better-sqlite3": "^13.0.3",
     "langchain": "^1.5.8",
     "nuxt": "^4.4.8",
@@ -76,7 +77,6 @@
   "devDependencies": {
     "@nuxt/eslint": "^1.16.0",
     "@nuxt/test-utils": "^4.0.3",
-    "@playwright/test": "^1.61.1",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.1.0",
     "@types/prismjs": "^1.26.6",

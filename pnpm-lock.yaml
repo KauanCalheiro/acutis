@@ -53,6 +53,9 @@ importers:
       '@openai/codex-sdk':
         specifier: ^0.147.0
         version: 0.147.0
+      '@playwright/test':
+        specifier: ^1.61.1
+        version: 1.62.1
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -93,9 +96,6 @@ importers:
       '@nuxt/test-utils':
         specifier: ^4.0.3
         version: 4.1.0(@playwright/test@1.62.1)(@vue/test-utils@2.4.11(@vue/compiler-dom@3.5.41)(@vue/server-renderer@3.5.41)(vue@3.5.41(typescript@6.0.3)))(esbuild@0.28.2)(happy-dom@20.11.2)(jsdom@29.1.1(@noble/hashes@1.8.0))(magicast@0.5.4)(playwright-core@1.62.1)(rolldown@1.2.4)(rollup@4.62.4)(typescript@6.0.3)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(yaml@2.9.0))(vitest@4.1.10)
-      '@playwright/test':
-        specifier: ^1.61.1
-        version: 1.62.1
       '@types/better-sqlite3':
         specifier: ^9.6.0
         version: 9.6.0

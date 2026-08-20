@@ -1,9 +1,21 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, parse, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-function packageRoot(): string {
-  const starts = [process.argv[1] ? dirname(resolve(process.argv[1])) : '', process.cwd()]
+/** Os nomes de manifesto que marcam a raiz: o repositório e o pacote publicado. */
+const ROOT_NAMES = ['acutis', '@acutis/cli']
 
+/**
+ * A raiz de onde saem reporter, gravador, vídeos e runner.
+ *
+ * A busca começa neste arquivo — no pacote instalado, `process.argv[1]` e o `cwd` são o projeto de
+ * quem chamou o CLI, e apontariam tudo para a pasta errada.
+ */
+export function packageRoot(starts: string[] = [
+  dirname(fileURLToPath(import.meta.url)),
+  process.argv[1] ? dirname(resolve(process.argv[1])) : '',
+  process.cwd()
+]): string {
   for (const start of starts) {
     let current = start
     const filesystemRoot = parse(current).root
@@ -13,7 +25,7 @@ function packageRoot(): string {
       if (existsSync(manifest)) {
         try {
           const pkg = JSON.parse(readFileSync(manifest, 'utf8')) as { name?: string }
-          if (pkg.name === 'acutis') return current
+          if (pkg.name !== undefined && ROOT_NAMES.includes(pkg.name)) return current
         } catch {
           current = dirname(current)
           continue
