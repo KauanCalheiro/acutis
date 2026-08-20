@@ -1,0 +1,16 @@
+import { defineEventHandler, setResponseStatus } from 'h3'
+import { runnerProjectRequestSchema } from '#shared/contracts/runner'
+import { executionRunner } from '../../utils/composition/execution'
+import { validatedBody } from '../../utils/http'
+
+export default defineEventHandler(async (event) => {
+  const body = await validatedBody(event, runnerProjectRequestSchema)
+  const response = await executionRunner().runProject(body.path, {
+    spec: body.spec,
+    grep: body.grep,
+    env: body.env
+  })
+
+  setResponseStatus(event, 201)
+  return response
+})

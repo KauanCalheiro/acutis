@@ -3,7 +3,7 @@ name: ci
 on: push
 
 jobs:
-  backend:
+  app:
     runs-on: ubuntu-latest
 
     steps:
@@ -11,41 +11,6 @@ jobs:
 
       - uses: pnpm/setup@v2
         with:
-          version: 11
-          runtime: node@26
-          install: false
-          cache: true
-          cache-dependency-path: pnpm-lock.yaml
-
-      # O install da raiz cobre o workspace inteiro; o `prepare` builda o @acutis/contracts, de que
-      # o typecheck e os testes dependem (o `dist` dele não é versionado).
-      - run: pnpm install --frozen-lockfile
-
-      - name: Lint
-        run: pnpm --filter @acutis/backend lint
-
-      - name: Typecheck
-        run: pnpm --filter @acutis/backend typecheck
-
-      - name: Test
-        run: pnpm --filter @acutis/backend test:coverage
-
-      - name: Coverage
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-backend
-          path: backend/coverage
-
-  frontend:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: pnpm/setup@v2
-        with:
-          version: 11
           runtime: node@26
           install: false
           cache: true
@@ -54,17 +19,17 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: pnpm --filter @acutis/frontend lint
+        run: pnpm lint
 
       - name: Typecheck
-        run: pnpm --filter @acutis/frontend typecheck
+        run: pnpm typecheck
 
       - name: Test
-        run: pnpm --filter @acutis/frontend test:coverage
+        run: pnpm test:coverage
 
       - name: Coverage
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-frontend
-          path: frontend/coverage
+          name: coverage
+          path: coverage

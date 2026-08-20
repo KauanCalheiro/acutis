@@ -1,16 +1,9 @@
 packages:
-  - backend
-  - contracts
   - e2e
-  - frontend
 
-# Fusão dos dois arquivos que existiam por app. Onde eles discordavam — `esbuild` — vale o `true` do
-# backend: o `vite build` da UI injetável precisa do binário; o frontend passa sem ele porque o Nuxt
-# usa o esbuild que vem no bundle do vite dele.
+# Dependências nativas usadas pelo Nitro, pelo recorder e pela interface.
 allowBuilds:
-  '@nestjs/core': true
   '@parcel/watcher': false
-  '@swc/core': true
   '@tailwindcss/oxide': false
   better-sqlite3: true
   esbuild: true

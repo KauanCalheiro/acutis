@@ -453,7 +453,7 @@ test.describe('ai settings model check', { tag: ['@read', '@settings'] }, () => 
         await test.step('the toast carries the reason the provider gave', async () => {
             await page.getByTestId('config-ia-modelo-testar').click()
 
-            await expect(page.getByText(/Não foi possível falar com o provedor ollama/)).toBeVisible()
+            await expect(page.getByText('Não foi possível falar com o provedor ollama: fetch failed', { exact: true })).toBeVisible()
         })
 
         await test.step('the modal stays open, and the address tested was never written down', async () => {

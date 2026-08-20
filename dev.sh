@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 #
-# Sobe a stack acutis e fica preso, com os logs dos dois serviços intercalados e
-# prefixados. Ctrl+C derruba tudo.
+# Sobe a aplicação Nitro completa e fica preso. Ctrl+C derruba tudo.
 #
-#   ./dev.sh              sobe backend :4000 (API + gravador + runner) e frontend :3000
+#   ./dev.sh              sobe interface + API + gravador + runner em :3000
 #   ./dev.sh --build      instala as dependências antes de subir
 #   ./dev.sh --headless   grava sem abrir janela (útil quando um agente dirige a ferramenta)
 #
@@ -38,7 +37,7 @@ done
 
 # Só quem ESCUTA na porta importa: `lsof -ti tcp:3000` casa conexões de navegador
 # também e acusa porta ocupada quando não há servidor nenhum.
-for port in 3000 4000; do
+for port in 3000; do
     if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
         fail "porta $port já está em uso. Derrube o que está lá antes."
     fi
@@ -48,7 +47,7 @@ done
 if [ "$BUILD" = "1" ]; then
     # Não há mais banco a preparar: o SQLite das configurações nasce sozinho na primeira
     # requisição, e o resto do estado vive no filesystem e no git.
-    # Um install só: o workspace da raiz cobre os quatro pacotes e builda o contracts no `prepare`.
+    # Um install só cobre o workspace inteiro.
     info 'instalando dependências do workspace'
     pnpm install || fail 'pnpm install falhou'
 fi
@@ -67,12 +66,9 @@ LOGDIR=.acutis
 mkdir -p "$LOGDIR"
 
 start() {
-    local name="$1" dir="$2"; shift 2
+    local name="$1"; shift
 
-    (
-        cd "$dir" || exit 1
-        exec "$@" >"../$LOGDIR/$name.log" 2>&1
-    ) &
+    (exec "$@" >"$LOGDIR/$name.log" 2>&1) &
 
     PIDS="$PIDS $!"
 }
@@ -97,12 +93,9 @@ shutdown() {
 
 trap shutdown INT TERM
 
-start frontend frontend pnpm dev
-# WEBDRIVER_TEST_MODE=1 não é opcional: sem ela os endpoints /runner/* respondem
-# 403 e o botão "Testar" da interface não funciona.
-start backend  backend  env WEBDRIVER_TEST_MODE=1 RECORDER_HEADLESS="$HEADLESS" pnpm dev
+start acutis env RECORDER_HEADLESS="$HEADLESS" pnpm dev
 
-node backend/bin/splash.mjs http://localhost:3000 http://localhost:4000
+node bin/splash.mjs http://localhost:3000
 
 # --- espera ficar de pé -------------------------------------------------------
 # Em silêncio: só abre a boca se algum serviço não subir.
@@ -110,8 +103,7 @@ node backend/bin/splash.mjs http://localhost:3000 http://localhost:4000
     ready() { curl -fsS -o /dev/null --max-time 2 "$1" 2>/dev/null; }
 
     for _ in $(seq 1 60); do
-        if ready http://localhost:3000 &&
-           ready http://localhost:4000/api/v1/projects; then
+        if ready http://localhost:3000/api/projects; then
             exit 0
         fi
         sleep 2

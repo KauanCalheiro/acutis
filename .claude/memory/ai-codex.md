@@ -27,9 +27,9 @@ Documentação: <https://developers.openai.com/codex/cli>
 
 | Arquivo | Papel |
 |---------|-------|
-| `backend/src/modules/ai/providers/codex-agent.ts` | `codexOutput()`, a lista de modelos e o padrão |
-| `backend/src/modules/ai/providers/agent.ts` | `NATIVE_OUTPUT` desvia para o SDK do provedor nativo |
-| `backend/src/modules/ai/providers/provider-errors.ts` | `codexFailure()`: binário ausente, 401, modelo recusado |
+| `core/modules/ai/providers/codex-agent.ts` | `codexOutput()`, a lista de modelos e o padrão |
+| `core/modules/ai/providers/agent.ts` | `NATIVE_OUTPUT` desvia para o SDK do provedor nativo |
+| `core/modules/ai/providers/provider-errors.ts` | `codexFailure()`: binário ausente, 401, modelo recusado |
 | `pnpm-workspace.yaml` | `ignoredOptionalDependencies` deixa os binários do SDK fora |
 
 ## O binário de 262 MB fica fora do node_modules

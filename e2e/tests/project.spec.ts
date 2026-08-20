@@ -1,47 +1,41 @@
 import { test, expect } from '@playwright/test'
-import { createServer, type Server } from 'node:http'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { startBackend } from '../support/backend'
-import { PORTS } from '../support/ports'
 import { projectsCopy } from '../support/projects'
 
 test.describe('project API contract', { tag: ['@read', '@project'] }, () => {
-    let backend: Server
+    let stopBackend: () => Promise<void>
+    let tmpProjects: string
 
     test.beforeAll(async () => {
-        backend = createServer((_, response) => {
-            response.writeHead(200, { 'Content-Type': 'application/json' })
-            response.end(JSON.stringify({ data: [{ slug: 42 }], meta: {} }))
-        })
-
-        await new Promise<void>((resolvePromise) => backend.listen(PORTS.webdriver, resolvePromise))
+        tmpProjects = projectsCopy()
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
     })
 
     test.afterAll(async () => {
-        await new Promise<void>((resolvePromise, reject) => backend.close((error) => {
-            if (error) reject(error)
-            else resolvePromise()
-        }))
+        await stopBackend()
+        rmSync(tmpProjects, { recursive: true, force: true })
     })
 
-    test('rejects an invalid backend response at the BFF boundary', async ({ request }) => {
+    test('serves the project contract from the unified Nitro process', async ({ request }) => {
         const response = await request.get('/api/projects')
 
-        expect(response.status()).toBe(502)
+        expect(response.status()).toBe(200)
         await expect(response.json()).resolves.toMatchObject({
-            statusCode: 502,
-            statusMessage: 'Resposta inválida da API.'
+            data: expect.arrayContaining([
+                expect.objectContaining({ name: 'Alpha Store', slug: 'alpha-store' }),
+            ]),
+            meta: { total: 10 },
         })
     })
 
-    test('rejects an invalid scenario response at the BFF boundary', async ({ request }) => {
-        const response = await request.get('/api/projects/alpha-store/scenarios/login')
+    test('validates project input in the unified Nitro process', async ({ request }) => {
+        const response = await request.post('/api/projects', { data: { name: '' } })
 
-        expect(response.status()).toBe(502)
+        expect(response.status()).toBe(422)
         await expect(response.json()).resolves.toMatchObject({
-            statusCode: 502,
-            statusMessage: 'Resposta inválida da API.'
+            data: { errors: { name: ['O nome é obrigatório.'] } },
         })
     })
 })
@@ -205,7 +199,7 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
         await test.step('offer the playwright report of the run', async () => {
             await expect(page.getByTestId('execucao-relatorio')).toHaveAttribute(
                 'href',
-                /\/api\/v1\/projects\/alpha-store\/report\/$/,
+                /\/api\/projects\/alpha-store\/report\/$/,
             )
         })
 
@@ -429,7 +423,7 @@ test.describe('project management', { tag: ['@write', '@project'] }, () => {
         rmSync(tmpProjects, { recursive: true, force: true })
     })
 
-    test('offers the report of the last run once a run has left one', async ({ page }) => {
+    test('offers the report of the last run once a run has left one', async ({ page, request }) => {
         await page.goto('/projects/alpha-store')
         await page.locator('[data-hydrated="true"]').waitFor()
 
@@ -443,8 +437,12 @@ test.describe('project management', { tag: ['@write', '@project'] }, () => {
 
         const report = page.getByTestId('projeto-relatorio')
         await expect(report).toBeVisible()
-        await expect(report).toHaveAttribute('href', /\/api\/v1\/projects\/alpha-store\/report\/$/)
+        await expect(report).toHaveAttribute('href', /\/api\/projects\/alpha-store\/report\/$/)
         await expect(report).toHaveAttribute('target', '_blank')
+
+        const response = await request.get('/api/projects/alpha-store/report/')
+        expect(response.status()).toBe(200)
+        expect(await response.text()).toContain('relatório')
     })
 
     test('renames the project by editing the title itself', async ({ page }) => {

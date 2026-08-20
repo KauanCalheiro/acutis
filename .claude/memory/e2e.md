@@ -5,7 +5,7 @@ metadata:
   type: feedback
 ---
 
-Testes cross-tool (frontend + backend reais, com gravador e runner) vivem em `e2e/` na raiz do monorepo. Convenções universais de TDD em [tdd](tdd.md); testes de unidade de cada ferramenta ficam nas próprias pastas (`backend/src/**/__tests__/*.spec.ts` via Vitest). Convenções específicas do webdriver em [webdriver-tdd](webdriver-tdd.md).
+Testes cross-tool contra a aplicação Nitro real, com gravador e runner, vivem em `e2e/`. Convenções universais de TDD em [tdd](tdd.md); os testes unitários ficam em `core/**/__tests__` e `tests/`. Convenções específicas do webdriver em [webdriver-tdd](webdriver-tdd.md).
 
 ## Sub-memórias
 

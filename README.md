@@ -1,19 +1,26 @@
-# Acutis — TCC (Versão Final)
+# Acutis: TCC (Versão Final)
 
 Esta é a versão final do TCC. A versão inicial (com erros e código legado) está preservada em `../legacy-tcc/`.
 
 ## Começar
 
 ```sh
-pnpm install   # uma vez, na raiz — instala os quatro pacotes do workspace
-./dev.sh       # frontend :3000 · backend :4000 (API + gravador + runner)
+pnpm install   # uma vez, na raiz
+./dev.sh       # aplicação completa em :3000
 ```
 
-Precisa de Node 22+ e pnpm no `PATH`. O gravador abre o próprio Chromium — não há nada a instalar além disso.
+Precisa de Node 22+ e pnpm no `PATH`. O gravador baixa o Chromium compatível automaticamente na primeira execução.
+
+Para experimentar a versão beta publicada:
+
+```sh
+pnpm dlx @acutis/cli@beta
+```
 
 ## Documentação
 
-- [Rodar o Acutis](docs/RUN.md) — como subir a stack
-  - [Local](docs/LOCAL.md) — a stack como processos diretos no host
-  - [Testes](docs/TESTS.md) — as quatro suítes (backend, frontend, webdriver, e2e) e suas peculiaridades
-  - [Publicar](docs/DEPLOY.md) — distribuir o CLI pelo npm
+- [Rodar o Acutis](docs/RUN.md): como subir a aplicação
+  - [Local](docs/LOCAL.md): o processo Nitro direto no host
+  - [Testes](docs/TESTS.md): testes unitários, de integração e E2E
+  - [Publicar](docs/DEPLOY.md): distribuir o CLI pelo npm
+  - [Publicar beta](docs/BETA.md): preparar a branch, publicar e validar `@acutis/cli@beta`

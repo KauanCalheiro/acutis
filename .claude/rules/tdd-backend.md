@@ -1,7 +1,9 @@
 ---
 paths:
-  - "backend/src/modules/**/*"
-  - "backend/src/common/**/*"
+  - "core/modules/**/*"
+  - "core/common/**/*"
+  - "server/**/*"
+  - "shared/contracts/**/*"
 ---
 
-**Invariant:** write the failing test **before** any code in `backend/src/modules/` or `backend/src/common/`. The test lives in the `__tests__/` folder of the package it covers. Never delete or disable a test without explicit user request.
+**Invariant:** write the failing test **before** changing API or core behavior. The test lives in the nearest `__tests__/` folder or in `tests/server/`. Never delete or disable a test without explicit user request.

@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "paths": { "@/*": ["./core/*"] }
+  },
+  "include": ["core/webdriver/pill/**/*", "core/common/types/**/*", "test/setup/**/*", "vite.recorder.config.ts"]
+}

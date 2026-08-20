@@ -1,6 +1,21 @@
 import { test, expect } from '@playwright/test'
+import { rmSync } from 'node:fs'
+import { isolatedProjects, startBackend } from '../support/backend'
 
 test.describe('app navbar', { tag: ['@read', '@navbar'] }, () => {
+    let stopBackend: () => Promise<void>
+    let projects: string
+
+    test.beforeAll(async () => {
+        projects = isolatedProjects()
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: projects })
+    })
+
+    test.afterAll(async () => {
+        await stopBackend()
+        rmSync(projects, { recursive: true, force: true })
+    })
+
     test.beforeEach(async ({ page }) => {
         await test.step('open the projects page and wait for hydration', async () => {
             await page.goto('/')

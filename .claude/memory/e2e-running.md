@@ -22,17 +22,17 @@ pnpm exec playwright test --grep "project settings" # só um describe
 
 ## O build está no `pretest`, não no `playwright test`
 
-`pnpm test` dispara `pretest`: **build do frontend** + `build:ui` e `build` do backend, todos via `pnpm --filter`. `pnpm exec playwright test` **pula tudo isso** — e o `webServer` do Playwright é `pnpm preview`, que serve o `.output` da última build.
+`pnpm test` dentro de `e2e/` dispara `pretest`, que compila o recorder e a aplicação Nitro da raiz. `pnpm exec playwright test` **pula esse build** e roda contra o `.output` existente.
 
-**How to apply:** editou `frontend/app/**` ou `backend/src/**`? Rodar o build daquele serviço (`pnpm --filter @acutis/frontend build`) antes de escopar com `pnpm exec` — senão os testes rodam contra um bundle velho e passam/falham por motivo errado. Mesma armadilha do `pnpm dev` não ser watch mode (ver [execution](execution.md)).
+**How to apply:** editou `app/**`, `server/**` ou `core/**`? Rodar `pnpm build` antes de escopar com `pnpm exec` para não testar um bundle antigo.
 
 **Why:** quatro testes de mudanças no frontend falharam em bloco, todos com "element(s) not found", como se o código não tivesse sido escrito. Estava escrito; o `preview` servia a build anterior. Falha em bloco logo depois de mexer no frontend = build velha, não regressão.
 
 ## Portas: E2E e dev convivem
 
-O E2E sobe os três serviços na faixa **42xx** (backend 4200, frontend 4300, webdriver 4400), separada das portas de desenvolvimento (8000/3000/4000). **Não é preciso derrubar a stack local para rodar a suíte** — verificado rodando as duas juntas.
+O E2E sobe a aplicação Nitro na porta 4400, separada da porta de desenvolvimento 3000. **Não é preciso derrubar a aplicação local para rodar a suíte**.
 
-Fonte única em `e2e/support/ports.ts`: mudar lá muda o Playwright, os dois starters e os scripts.
+Fonte única em `e2e/support/ports.ts`: mudar lá atualiza o Playwright, o starter e os scripts.
 
 Ao checar porta ocupada, cuidado: `lsof -ti tcp:3000` também casa **conexões** do navegador, não só quem escuta. Para saber se há servidor de verdade: `lsof -nP -iTCP:3000 -sTCP:LISTEN`.
 

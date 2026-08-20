@@ -1,11 +1,11 @@
 ---
 name: backend-conventions
-description: Escrever TypeScript no backend NestJS — estilo do repo, imports .js, erros de domínio em pt-BR, status HTTP, config em src/config, restrições
+description: Escrever TypeScript na API Nitro e no núcleo — estilo, erros em pt-BR e configuração
 metadata:
   type: feedback
 ---
 
-Convenções para qualquer mudança em `backend/src`. Ver [backend](backend.md).
+Convenções para mudanças em `server/`, `core/` e `shared/contracts/`. Ver [backend](backend.md).
 
 ## Estilo
 

@@ -1,6 +1,6 @@
 ---
 name: backend-module
-description: Anatomia de um módulo da API — controller magro, service com a regra, providers de domínio, entities; um módulo por domínio em backend/src/modules
+description: Anatomia de um domínio da API — handler magro, caso de uso, service, providers e entities
 metadata:
   type: feedback
 ---

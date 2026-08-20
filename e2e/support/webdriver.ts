@@ -1,8 +1,8 @@
 import { spawn } from 'node:child_process'
-import { resolve } from 'node:path'
 import { FRONTEND_URL, PORTS, WEBDRIVER_URL } from './ports'
+import { PROJECT_ROOT } from './project-root'
 
-const WEBDRIVER_DIR = resolve(import.meta.dirname, '../../backend')
+const NITRO_DIR = PROJECT_ROOT
 
 export { WEBDRIVER_URL }
 
@@ -31,16 +31,15 @@ async function waitHealthy(): Promise<void> {
     throw new Error('webdriver did not become healthy in time')
 }
 
-/** Sobe o webdriver em modo teste na porta do E2E e devolve o stop que espera a porta liberar. */
+/** Sobe o webdriver na porta do E2E e devolve o stop que espera a porta liberar. */
 export async function startWebdriver(env: Record<string, string> = {}): Promise<() => Promise<void>> {
     await waitPortFree()
 
-    const proc = spawn('node', ['dist/main.js'], {
-        cwd: WEBDRIVER_DIR,
-        stdio: 'ignore',
+    const proc = spawn('node', ['.output/server/index.mjs'], {
+        cwd: NITRO_DIR,
+        stdio: process.env.ACUTIS_E2E_STDIO === '1' ? 'inherit' : 'ignore',
         env: {
             ...process.env,
-            WEBDRIVER_TEST_MODE: '1',
             PORT: String(PORTS.webdriver),
             CORS_ORIGIN: FRONTEND_URL,
             // Sem janela por padrão; RECORDER_HEADLESS=0 para ver o navegador.

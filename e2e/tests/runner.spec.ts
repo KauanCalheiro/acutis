@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test'
 import { spawn, type ChildProcess } from 'node:child_process'
-import { resolve } from 'node:path'
+import { PROJECT_ROOT } from '../support/project-root'
 
-const WEBDRIVER_DIR = resolve(import.meta.dirname, '../../backend')
+const WEBDRIVER_DIR = PROJECT_ROOT
 const RUNNER_URL = 'http://localhost:4100'
 
 const PASSING_SPEC = `
@@ -63,10 +63,10 @@ let webdriverProcess: ChildProcess
 
 test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
     test.beforeAll(async () => {
-        webdriverProcess = spawn('node', ['dist/main.js'], {
+        webdriverProcess = spawn('node', ['.output/server/index.mjs'], {
             cwd: WEBDRIVER_DIR,
             stdio: 'ignore',
-            env: { ...process.env, WEBDRIVER_TEST_MODE: '1', PORT: '4100' },
+            env: { ...process.env, PORT: '4100' },
         })
         await waitForWebdriver()
     })
@@ -269,6 +269,31 @@ test.describe('spec runner', { tag: ['@write', '@runner'] }, () => {
 
         const losing = await run({ grep: '@env', env: { PROJECT_SECRET: 'do-ambiente' } })
         expect(losing.passed).toBe(false)
+    })
+
+    test('replaces a dangling node_modules link left by the old backend layout', async ({ request }) => {
+        test.setTimeout(120_000)
+
+        const { mkdtemp, mkdir, readlink, symlink, writeFile } = await import('node:fs/promises')
+        const { tmpdir } = await import('node:os')
+        const { join } = await import('node:path')
+
+        const dir = await mkdtemp(join(tmpdir(), 'acutis-old-node-modules-'))
+        await mkdir(join(dir, 'tests'), { recursive: true })
+        await symlink(join(dir, 'backend', 'node_modules'), join(dir, 'node_modules'), 'dir')
+        await writeFile(join(dir, 'playwright.config.ts'),
+            "import { defineConfig } from '@playwright/test'\nexport default defineConfig({ testDir: './tests' })\n")
+        await writeFile(join(dir, 'tests', 'ok.spec.ts'),
+            "import { test, expect } from '@playwright/test'\ntest('passa', () => { expect(1).toBe(1) })\n")
+
+        const res = await request.post(`${RUNNER_URL}/runner/project`, {
+            data: { path: dir },
+            timeout: 90_000,
+        })
+
+        expect(res.ok()).toBe(true)
+        expect((await res.json()).passed).toBe(true)
+        expect(await readlink(join(dir, 'node_modules'))).toBe(join(PROJECT_ROOT, 'node_modules'))
     })
 
     test('streams run progress as ndjson over http', async ({ request }) => {
