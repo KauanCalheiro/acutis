@@ -12,6 +12,21 @@ it('publica no latest, com versão semver limpa', () => {
   expect(manifest.scripts.release).toBe('npm publish --access public')
 })
 
+/** `postinstall` roda na máquina de quem instala e o pnpm o bloqueia até alguém aprovar. */
+it('não roda script nenhum na instalação de quem usa o CLI', () => {
+  expect(manifest.scripts.postinstall).toBeUndefined()
+  expect(manifest.scripts.install).toBeUndefined()
+  expect(manifest.scripts.prepare).toBe('nuxt prepare')
+})
+
+/** Nuxt e Nuxt UI constroem o `.output`; na máquina de quem usa só arrastariam scripts de build. */
+it('não instala o que só serve para construir o pacote', () => {
+  for (const build of ['nuxt', '@nuxt/ui', '@iconify-json/ic', '@medv/finder']) {
+    expect(manifest.dependencies[build]).toBeUndefined()
+    expect(manifest.devDependencies[build]).toBeDefined()
+  }
+})
+
 it('instala o Playwright na máquina de quem usa: o spec do projeto importa @playwright/test', () => {
   expect(manifest.dependencies['@playwright/test']).toBeDefined()
   expect(manifest.devDependencies['@playwright/test']).toBeUndefined()
