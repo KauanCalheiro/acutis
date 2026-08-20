@@ -5,11 +5,10 @@ O pacote publicável é a raiz. Ela contém o servidor Nitro autocontido, o bund
 ## Gerar o pacote
 
 ```sh
-pnpm cli:build
-pnpm pack
+npm pack
 ```
 
-O build produz:
+O `prepack` builda antes de empacotar, então não precisa de passo separado. O build produz:
 
 - `.output/`: interface e servidor Nitro
 - `dist-ui/driver-entry.js`: script injetado pelo gravador
@@ -19,33 +18,53 @@ O build produz:
 
 ## Testar o tarball
 
+Instale o tarball num diretório vazio **fora do workspace** e exercite o caminho de verdade — gravar ou executar um cenário:
+
 ```sh
-npm exec --package ./acutis-cli-1.0.0-beta.1.tgz acutis
+mkdir /tmp/acutis-limpo && cd /tmp/acutis-limpo
+npm init -y
+npm install <caminho>/acutis-cli-0.1.0.tgz
+./node_modules/.bin/acutis
 ```
 
 O CLI escolhe uma porta livre, garante o Chromium do Playwright, inicia um único processo Nitro e abre a interface. `Ctrl+C` encerra o processo inteiro.
 
-## Publicar o beta
+Rodar do repositório não substitui esse teste: o pacote instalado não guarda as próprias dependências, e caminho resolvido a partir do `.output` cai nos stubs que o Nitro deixa no lugar das dependências externas.
 
-O passo a passo completo, incluindo preparação da branch, avisos esperados e diagnóstico de erros, está em [Publicação beta do CLI](BETA.md).
+## Publicar
 
-O manifesto fixa o dist-tag `beta`, então a publicação não altera `latest`:
+Quem publica é o GitHub Actions, por OIDC, sem token no repositório:
+
+| Gatilho | Versão | Dist-tag |
+|---------|--------|----------|
+| tag `v<versão>` | a do `package.json`, que precisa casar com a tag | `latest`; pré-lançamento (com hífen) vai para `beta` |
+| push na `main` | `<versão>-dev.<run>` | `dev`, descartável |
+
+O fluxo de uma release:
+
+```sh
+npm version 0.1.1 --no-git-tag-version   # entra num commit chore: release
+# abra o PR e faça o merge na main
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+Versões seguem semver limpo — `0.1.0`, `0.1.1` — e `tests/package.spec.ts` recusa qualquer outro formato.
+
+Depois da publicação, qualquer pessoa inicia a versão nova com:
+
+```sh
+pnpm dlx @acutis/cli
+```
+
+O `pnpm dlx` guarda o cache pela chave do especificador, não pela versão resolvida. Para conferir uma publicação recém-saída, peça a versão exata (`pnpm dlx @acutis/cli@0.1.1`).
+
+## Publicação manual
+
+Só quando o Actions não serve. A conta tem 2FA sem gerador de TOTP, então o publish precisa ser o do npm, que autoriza pelo navegador — `pnpm publish` só sabe pedir código e falha com 403:
 
 ```sh
 npm login
 npm whoami
-pnpm release:beta
-```
-
-Cada nova publicação precisa de uma versão inédita. Para avançar de `beta.1` para `beta.2`:
-
-```sh
-pnpm version prerelease --preid beta --no-git-tag-version
-pnpm release:beta
-```
-
-Depois da publicação, qualquer pessoa pode iniciar essa versão com:
-
-```sh
-pnpm dlx @acutis/cli@beta
+pnpm release
 ```
