@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import PillIcon from './PillIcon.vue'
+import type { PillIconName } from './pillIcon'
+
 defineProps<{
-  icon: string
+  icon: PillIconName
   tooltip: string
   active?: boolean
   extraClass?: string
@@ -29,8 +32,12 @@ function handleClick(e: MouseEvent) {
   >
     <span
       class="icon"
-      v-html="icon"
-    />
+    >
+      <PillIcon
+        :name="icon"
+        :size="14"
+      />
+    </span>
     <span class="tooltip">{{ tooltip }}</span>
   </button>
 </template>
