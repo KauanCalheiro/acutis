@@ -4,12 +4,12 @@ import { expect, it } from 'vitest'
 
 const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 
-it('publica somente como beta enquanto o pacote está em pré-lançamento', () => {
+it('publica no latest, com versão semver limpa', () => {
   expect(manifest.name).toBe('@acutis/cli')
   expect(manifest.private).toBe(false)
-  expect(manifest.version).toMatch(/^\d+\.\d+\.\d+-beta\.\d+$/)
-  expect(manifest.publishConfig).toEqual({ access: 'public', tag: 'beta' })
-  expect(manifest.scripts['release:beta']).toContain('publish --tag beta')
+  expect(manifest.version).toMatch(/^\d+\.\d+\.\d+$/)
+  expect(manifest.publishConfig).toEqual({ access: 'public', tag: 'latest' })
+  expect(manifest.scripts.release).toBe('npm publish --access public')
 })
 
 it('instala o Playwright na máquina de quem usa: o spec do projeto importa @playwright/test', () => {
