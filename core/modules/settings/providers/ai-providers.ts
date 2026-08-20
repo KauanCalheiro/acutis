@@ -56,9 +56,15 @@ export const PROVIDERS: Record<string, ProviderDefaults> = {
 
 export const PROVIDER_NAMES = Object.keys(PROVIDERS)
 
-/** O provedor que vale antes de alguém abrir a tela; vazio é "sem IA". */
+/**
+ * O provedor que vale antes de alguém abrir a tela; vazio é "sem IA".
+ *
+ * Instalação nova nasce sem IA: eleger um provedor aqui diria "configurado" sobre um cadastro que
+ * não existe, e a primeira chamada morreria por falta de chave. Quem quer a IA pronta desde o
+ * primeiro boot nomeia o provedor em `AI_PROVIDER`.
+ */
 export function providerFromEnvironment(): string {
-  return processEnvironment().AI_PROVIDER ?? 'gemini'
+  return processEnvironment().AI_PROVIDER ?? ''
 }
 
 /** Os provedores que não pedem chave: o formulário não marca o campo como obrigatório neles. */

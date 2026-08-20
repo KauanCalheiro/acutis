@@ -34,13 +34,13 @@ function request(path: string, init?: RequestInit) {
 }
 
 describe('settings Nitro API', () => {
-  it('migrates a fresh database and exposes every provider', async () => {
+  it('migrates a fresh database and exposes every provider, with no ai picked yet', async () => {
     const response = await request('/api/settings/ai')
 
     expect(response.status).toBe(200)
     expect(await response.json()).toMatchObject({
-      provider: 'gemini',
-      configured: true,
+      provider: '',
+      configured: false,
       providers: expect.arrayContaining(['ollama', 'openai'])
     })
     expect(existsSync(join(root, 'runtime/database.sqlite'))).toBe(true)

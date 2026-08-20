@@ -151,6 +151,17 @@ describe('SettingsModal', () => {
     expect(field('config-ia-modelo')).toBeDefined()
   })
 
+  // Quem acaba de instalar abre a tela nesse estado e escolhe o provedor na mão.
+  it('abre em "Sem IA" na instalação que ainda não escolheu provedor', async () => {
+    api.settings.provider = ''
+
+    await open()
+
+    expect(api.requests).toEqual(['load'])
+    expect(field('config-ia-modelo')).toBeUndefined()
+    expect(field('config-ia-chave')).toBeUndefined()
+  })
+
   it('avisa quando a configuração não carrega', async () => {
     api.loadStatus = 500
 

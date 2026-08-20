@@ -48,7 +48,8 @@ it('oferece todos os provedores suportados, com nada configurado ainda', async (
   const response = await api.http.get('/api/v1/settings/ai')
 
   expect(response.status).toBe(200)
-  expect(response.body.provider).toBe('gemini')
+  expect(response.body.provider).toBe('')
+  expect(response.body.configured).toBe(false)
   expect(response.body.providers).toEqual(['anthropic', 'claude-code', 'codex', 'gemini', 'ollama', 'openai', 'openrouter'])
 })
 
@@ -188,7 +189,7 @@ it('recusa cadastrar um provedor sem escolher o modelo', async () => {
 it('deixa a configuração em paz quando nada foi salvo, para o ambiente continuar valendo', async () => {
   await api.http.get('/api/v1/settings/ai').expect(200)
 
-  expect((await settings().resolved()).provider).toBe('gemini')
+  expect((await settings().resolved()).provider).toBe('')
 })
 
 it('continua respondendo antes de o banco existir, caindo no ambiente', async () => {
@@ -200,8 +201,8 @@ it('continua respondendo antes de o banco existir, caindo no ambiente', async ()
   const response = await api.http.get('/api/v1/settings/ai')
 
   expect(response.status).toBe(200)
-  expect(response.body.provider).toBe('gemini')
-  expect((await settings().resolved()).provider).toBe('gemini')
+  expect(response.body.provider).toBe('')
+  expect((await settings().resolved()).provider).toBe('')
 })
 
 /** A tela mostra este endereço como placeholder: campo vazio deixa de ser adivinhação. */
@@ -302,6 +303,17 @@ it('mantém todas as credenciais depois de a ia ser desligada', async () => {
 
   expect(response.status).toBe(200)
   expect(response.body.credentials.openai.key).toBe('sk-secreta')
+})
+
+/** Quem quer a IA pronta antes da primeira tela nomeia o provedor no ambiente. */
+it('respeita o provedor que o ambiente nomeia', async () => {
+  process.env.AI_PROVIDER = 'openai'
+
+  const response = await api.http.get('/api/v1/settings/ai')
+
+  expect(response.status).toBe(200)
+  expect(response.body.provider).toBe('openai')
+  expect(response.body.configured).toBe(true)
 })
 
 /** Instalação nova, antes de alguém abrir a tela: sem AI_PROVIDER no ambiente, a IA nasce desligada. */
