@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import type { Dirent } from 'node:fs'
-import { access, lstat, mkdir, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import type { Dirent, Stats } from 'node:fs'
+import { lstat, mkdir, readdir, readFile, readlink, rm, symlink, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { dirname, join, relative } from 'node:path'
 import { PACKAGE_ROOT, RUNNER_DIR, STREAM_REPORTER_PATH } from '../../config/paths.js'
@@ -66,6 +66,33 @@ export const PLAYWRIGHT_CLI = join(dirname(require.resolve('playwright/package.j
  * pnpm, o pacote não guarda as próprias dependências dentro de si.
  */
 export const BORROWED_NODE_MODULES = dirname(dirname(dirname(require.resolve('@playwright/test/package.json'))))
+
+/**
+ * O `node_modules` do projeto sob teste, apontado para o nosso.
+ *
+ * Um link para outra árvore — o repositório de quem desenvolve, por exemplo — faz o cli e o spec
+ * carregarem cópias distintas do `@playwright/test`, e aí o Playwright se recusa a rodar:
+ * "did not expect test() to be called here". `node_modules` de verdade é do projeto e fica como está.
+ */
+export async function borrowNodeModules(dir: string): Promise<void> {
+  const link = join(dir, 'node_modules')
+  let entry: Stats | undefined
+
+  try {
+    entry = await lstat(link)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+  }
+
+  if (entry !== undefined) {
+    if (!entry.isSymbolicLink()) return
+    if (await readlink(link) === BORROWED_NODE_MODULES) return
+
+    await rm(link)
+  }
+
+  await symlink(BORROWED_NODE_MODULES, link, 'dir')
+}
 const RUN_TAIL_MS = 1500
 const RUN_TAIL_ENV = 'ACUTIS_RUN_TAIL_MS'
 const FAILURE_HTML_FILE = 'failure.html'
@@ -165,8 +192,7 @@ export class RunnerService {
           ...env,
           PLAYWRIGHT_HTML_OPEN: 'never',
           PLAYWRIGHT_HTML_OUTPUT_DIR: REPORT_DIR,
-          [RUN_TAIL_ENV]: String(RUN_TAIL_MS),
-          NODE_PATH: BORROWED_NODE_MODULES
+          [RUN_TAIL_ENV]: String(RUN_TAIL_MS)
         }
       })
 
@@ -229,22 +255,7 @@ export class RunnerService {
   }
 
   private async ensureNodeModules(dir: string): Promise<void> {
-    const link = join(dir, 'node_modules')
-
-    try {
-      await access(link)
-      return
-    } catch {
-      try {
-        const entry = await lstat(link)
-        if (!entry.isSymbolicLink()) return
-        await rm(link)
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-      }
-    }
-
-    await symlink(BORROWED_NODE_MODULES, link, 'dir')
+    await borrowNodeModules(dir)
   }
 
   private async ensureWatchableRun(dir: string): Promise<void> {
@@ -331,8 +342,7 @@ export class RunnerService {
         env: {
           ...processEnvironment(),
           ...env,
-          PLAYWRIGHT_HTML_OPEN: 'never',
-          NODE_PATH: BORROWED_NODE_MODULES
+          PLAYWRIGHT_HTML_OPEN: 'never'
         }
       })
 
