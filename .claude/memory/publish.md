@@ -46,4 +46,14 @@ npx -y npm@11.19.0 publish --tag <tag> --access public
 
 A atestação de proveniência vai para um log público de transparência e exige repositório público. O `acutis` é privado, então a flag falha. Se o repositório abrir, é só voltar com ela.
 
+## O pacote instalado não é o repositório
+
+Três coisas que valem no repo e não valem na máquina de quem instala, e que só aparecem testando o artefato:
+
+- **`<pacote>/node_modules` só tem `.bin` e `.cache`.** npm e pnpm guardam as dependências na árvore de quem instalou. Caminho para dependência sai de `require.resolve('<dep>/package.json')`, nunca de `PACKAGE_ROOT/node_modules`.
+- **Shim do `.bin` não sobrevive a symlink de diretório.** O do pnpm alcança o store por caminho relativo e estoura na raiz. Binário de dependência se chama por `spawn(process.execPath, [cliJs, ...])`, como `bin/ensure-chromium.js` faz.
+- **Dentro do `.output`, o Nitro deixa stubs de uma linha no lugar das dependências externas.** `createRequire(import.meta.url)` de um chunk resolve o stub, não o pacote: a resolução precisa partir do manifesto da raiz (`createRequire(join(PACKAGE_ROOT, 'package.json'))`).
+
+Nada disso reproduz rodando do repositório. Antes de publicar mudança que toque em caminho ou dependência: `npm pack`, instalar o tarball num diretório limpo **fora do workspace** e exercitar o caminho de verdade.
+
 Limpeza de versão `dev` é manual e sob demanda, nunca automatizada: `npm unpublish @acutis/cli@<versão>` funciona enquanto valerem as três condições do npm (mantenedor único, zero dependentes, menos de 300 downloads na semana), o que dispensa a janela de 72h. Versão despublicada não pode ser republicada com o mesmo número.
