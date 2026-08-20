@@ -42,5 +42,12 @@ export default defineNuxtConfig({
         braceStyle: '1tbs'
       }
     }
+  },
+
+  icon: {
+    // Varre o código e embarca os ícones usados: o SSR não busca nada na rede.
+    clientBundle: {
+      scan: true
+    }
   }
 })
