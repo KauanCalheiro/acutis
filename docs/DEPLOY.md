@@ -54,10 +54,10 @@ Versões seguem semver limpo — `0.1.0`, `0.1.1` — e `tests/package.spec.ts` 
 Depois da publicação, qualquer pessoa inicia a versão nova com:
 
 ```sh
-pnpm dlx @acutis/cli
+npx @acutis/cli
 ```
 
-O `pnpm dlx` guarda o cache pela chave do especificador, não pela versão resolvida. Para conferir uma publicação recém-saída, peça a versão exata (`pnpm dlx @acutis/cli@0.1.1`).
+`npx` não pede nada a quem instala, e é o único comando que a documentação oferece. Para conferir uma publicação recém-saída, peça a versão exata (`npx @acutis/cli@0.1.1`), que o cache guarda por especificador.
 
 ## Publicação manual
 

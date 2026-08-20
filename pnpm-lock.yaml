@@ -11,18 +11,6 @@ importers:
       '@anthropic-ai/claude-agent-sdk':
         specifier: ^0.3.233
         version: 0.3.233(@anthropic-ai/sdk@0.115.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(zod@4.4.3)
-      '@iconify-json/ic':
-        specifier: ^1.2.4
-        version: 1.2.4
-      '@iconify-json/line-md':
-        specifier: ^1.2.16
-        version: 1.2.16
-      '@iconify-json/lucide':
-        specifier: ^1.2.114
-        version: 1.2.123
-      '@iconify-json/simple-icons':
-        specifier: ^1.2.87
-        version: 1.2.93
       '@langchain/anthropic':
         specifier: ^1.5.5
         version: 1.5.6(@langchain/core@1.2.8(openai@6.49.0(ws@8.21.3)(zod@4.4.3))(ws@8.21.3))
@@ -44,12 +32,6 @@ importers:
       '@langchain/openrouter':
         specifier: ^0.4.7
         version: 0.4.8(@langchain/core@1.2.8(openai@6.49.0(ws@8.21.3)(zod@4.4.3))(ws@8.21.3))(ws@8.21.3)(zod@4.4.3)
-      '@medv/finder':
-        specifier: ^3.1.0
-        version: 3.2.0
-      '@nuxt/ui':
-        specifier: ^4.9.0
-        version: 4.10.0(250a96140fc8b7523156f40a2ef5e33e)
       '@openai/codex-sdk':
         specifier: ^0.147.0
         version: 0.147.0
@@ -62,9 +44,6 @@ importers:
       langchain:
         specifier: ^1.5.8
         version: 1.5.9(@langchain/core@1.2.8(openai@6.49.0(ws@8.21.3)(zod@4.4.3))(ws@8.21.3))(openai@6.49.0(ws@8.21.3)(zod@4.4.3))(vue@3.5.41(typescript@6.0.3))(ws@8.21.3)
-      nuxt:
-        specifier: ^4.4.8
-        version: 4.5.2(@babel/plugin-syntax-jsx@7.29.7(@babel/core@7.29.7))(@babel/plugin-syntax-typescript@7.29.7(@babel/core@7.29.7))(@oxc-project/types@0.144.0)(@types/node@26.2.0)(@vue/compiler-sfc@3.5.41)(better-sqlite3@13.0.3)(cac@7.0.0)(db0@0.3.4(better-sqlite3@13.0.3))(esbuild@0.28.2)(eslint@10.8.1(jiti@2.7.0))(ioredis@5.11.1)(lightningcss@1.33.0)(magicast@0.5.4)(optionator@0.9.4)(rolldown@1.2.4)(rollup-plugin-visualizer@7.1.1(rolldown@1.2.4)(rollup@4.62.4))(rollup@4.62.4)(srvx@0.11.22)(terser@5.50.0)(typescript@6.0.3)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(yaml@2.9.0))(vue-tsc@3.3.10(typescript@6.0.3))(yaml@2.9.0)
       playwright:
         specifier: ^1.61.1
         version: 1.62.1
@@ -90,12 +69,30 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@iconify-json/ic':
+        specifier: ^1.2.4
+        version: 1.2.4
+      '@iconify-json/line-md':
+        specifier: ^1.2.16
+        version: 1.2.16
+      '@iconify-json/lucide':
+        specifier: ^1.2.114
+        version: 1.2.123
+      '@iconify-json/simple-icons':
+        specifier: ^1.2.87
+        version: 1.2.93
+      '@medv/finder':
+        specifier: ^3.1.0
+        version: 3.2.0
       '@nuxt/eslint':
         specifier: ^1.16.0
         version: 1.17.0(@typescript-eslint/utils@8.67.0(eslint@10.8.1(jiti@2.7.0))(typescript@6.0.3))(@vue/compiler-sfc@3.5.41)(esbuild@0.28.2)(eslint@10.8.1(jiti@2.7.0))(magic-string@1.2.0)(magicast@0.5.4)(rolldown@1.2.4)(rollup@4.62.4)(srvx@0.11.22)(typescript@6.0.3)(unplugin@3.3.0(esbuild@0.28.2)(rolldown@1.2.4)(rollup@4.62.4)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(yaml@2.9.0)))(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(yaml@2.9.0))
       '@nuxt/test-utils':
         specifier: ^4.0.3
         version: 4.1.0(@playwright/test@1.62.1)(@vue/test-utils@2.4.11(@vue/compiler-dom@3.5.41)(@vue/server-renderer@3.5.41)(vue@3.5.41(typescript@6.0.3)))(esbuild@0.28.2)(happy-dom@20.11.2)(jsdom@29.1.1(@noble/hashes@1.8.0))(magicast@0.5.4)(playwright-core@1.62.1)(rolldown@1.2.4)(rollup@4.62.4)(typescript@6.0.3)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(yaml@2.9.0))(vitest@4.1.10)
+      '@nuxt/ui':
+        specifier: ^4.9.0
+        version: 4.10.0(250a96140fc8b7523156f40a2ef5e33e)
       '@types/better-sqlite3':
         specifier: ^9.6.0
         version: 9.6.0
@@ -129,6 +126,9 @@ importers:
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1(@noble/hashes@1.8.0)
+      nuxt:
+        specifier: ^4.4.8
+        version: 4.5.2(@babel/plugin-syntax-jsx@7.29.7(@babel/core@7.29.7))(@babel/plugin-syntax-typescript@7.29.7(@babel/core@7.29.7))(@oxc-project/types@0.144.0)(@types/node@26.2.0)(@vue/compiler-sfc@3.5.41)(better-sqlite3@13.0.3)(cac@7.0.0)(db0@0.3.4(better-sqlite3@13.0.3))(esbuild@0.28.2)(eslint@10.8.1(jiti@2.7.0))(ioredis@5.11.1)(lightningcss@1.33.0)(magicast@0.5.4)(optionator@0.9.4)(rolldown@1.2.4)(rollup-plugin-visualizer@7.1.1(rolldown@1.2.4)(rollup@4.62.4))(rollup@4.62.4)(srvx@0.11.22)(terser@5.50.0)(typescript@6.0.3)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(yaml@2.9.0))(vue-tsc@3.3.10(typescript@6.0.3))(yaml@2.9.0)
       supertest:
         specifier: ^7.2.2
         version: 7.2.2
