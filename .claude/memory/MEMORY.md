@@ -12,6 +12,7 @@ Instruções persistentes ficam em `./.claude/memory/`. Antes de qualquer ação
 | [ai-claude-agent.md](ai-claude-agent.md) | reference | mexer no provedor "Claude Agent" (id `claude-code`) — Agent SDK, nome e ícone travados por diretriz de marca, setup e armadilhas do JSON Schema |
 | [ai-codex.md](ai-codex.md) | reference | mexer no provedor "Codex" (id `codex`): codex-sdk, binário fora do node_modules, modelos que a assinatura aceita |
 | [environments.md](environments.md) | reference | mexer em variável, segredo ou sessão do projeto testado — `environments/*.json` versionado, `.env` como cofre |
+| [publish.md](publish.md) | reference | publicar `@acutis/cli` no npm — 2FA pelo navegador exige `npm publish`, `pnpm publish` dá 403; release por OIDC no Actions |
 | [commit.md](commit.md) | feedback | fazer git commit/branch/PR/merge — só quando pedido explicitamente, nunca na main, squash merge com descrição detalhada |
 | [specs.md](specs.md) | feedback | escrever spec de brainstorming — vai em `docs/superpowers/`, nunca commitada |
 | [dashes.md](dashes.md) | feedback | escrever qualquer texto (código, memória, commit, resposta) — nunca `" - "` entre espaços |
