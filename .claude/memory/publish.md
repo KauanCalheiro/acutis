@@ -5,7 +5,13 @@ metadata:
   type: reference
 ---
 
-O pacote é `@acutis/cli`, escopo da org `acutis` (conta `kauan_calheiro`, owner). O `publishConfig` fixa `access: public` e o dist-tag `beta`.
+O pacote é `@acutis/cli`, escopo da org `acutis` (conta `kauan_calheiro`, owner). O `publishConfig` fixa `access: public` e o dist-tag `latest`.
+
+## Versão limpa, sem pré-lançamento
+
+A numeração recomeçou em `0.0.0` (20/08/2026) e segue `0.1.0`, `0.1.1`, e assim por diante — semver simples no `latest`, sem `-beta.N`. As `1.0.0-beta.*` e `1.0.0-dev.*` foram despublicadas: 1.0.0 vinha antes de a ferramenta conseguir rodar um teste na máquina de quem instala, e número despublicado não volta.
+
+Para trocar de numeração ou limpar versão antiga, **publicar a nova primeiro e só então despublicar as velhas**. Despublicar tudo antes deixa o nome bloqueado por 24h no npm, e nem a nova sobe. `tests/package.spec.ts` trava o formato da versão e o dist-tag.
 
 ## 2FA: usar `npm publish`, nunca `pnpm publish`
 
@@ -14,10 +20,10 @@ A conta tem 2FA em `auth-and-writes` e **não tem gerador de TOTP** — a chave 
 O `npm publish` resolve isso: ele imprime uma URL de autorização, você confirma no navegador já logado e o publish segue. O `pnpm publish` não tem esse fluxo — ele só sabe pedir OTP, e falha com `E403 Two-factor authentication ... is required`.
 
 ```sh
-npm publish --tag beta --access public
+npm publish --access public
 ```
 
-Vale para o `pnpm release:beta` também: ele chama `pnpm publish` por baixo, então cai no mesmo 403. Publicação manual é sempre pelo `npm`.
+É o que o script `release` faz. Nunca chamar `pnpm publish` por baixo: cai no mesmo 403. Publicação manual é sempre pelo `npm`.
 
 ## Primeiro publish moveu o `latest`
 
@@ -53,6 +59,8 @@ Três coisas que valem no repo e não valem na máquina de quem instala, e que s
 - **`<pacote>/node_modules` só tem `.bin` e `.cache`.** npm e pnpm guardam as dependências na árvore de quem instalou. Caminho para dependência sai de `require.resolve('<dep>/package.json')`, nunca de `PACKAGE_ROOT/node_modules`.
 - **Shim do `.bin` não sobrevive a symlink de diretório.** O do pnpm alcança o store por caminho relativo e estoura na raiz. Binário de dependência se chama por `spawn(process.execPath, [cliJs, ...])`, como `bin/ensure-chromium.js` faz.
 - **Dentro do `.output`, o Nitro deixa stubs de uma linha no lugar das dependências externas.** `createRequire(import.meta.url)` de um chunk resolve o stub, não o pacote: a resolução precisa partir do manifesto da raiz (`createRequire(join(PACKAGE_ROOT, 'package.json'))`).
+- **Uma execução, uma cópia do `@playwright/test`.** Duas e o Playwright para antes do primeiro teste: "did not expect test() to be called here". Por isso o runner não passa `NODE_PATH` (era a segunda fonte) e `borrowNodeModules` reaponta link do projeto que caia em outra árvore — o `node_modules` de um projeto que já rodou em modo dev aponta para o repositório.
+- **`pnpm dlx <pkg>@<tag>` cacheia pela chave do especificador, não pela versão resolvida.** Rodar `@beta` de novo reaproveita o diretório antigo e nem baixa a versão nova. Para testar publicação recém-saída, usar a versão exata (`@0.1.0`).
 
 Nada disso reproduz rodando do repositório. Antes de publicar mudança que toque em caminho ou dependência: `npm pack`, instalar o tarball num diretório limpo **fora do workspace** e exercitar o caminho de verdade.
 
