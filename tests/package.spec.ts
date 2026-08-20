@@ -11,3 +11,8 @@ it('publica somente como beta enquanto o pacote está em pré-lançamento', () =
   expect(manifest.publishConfig).toEqual({ access: 'public', tag: 'beta' })
   expect(manifest.scripts['release:beta']).toContain('publish --tag beta')
 })
+
+it('instala o Playwright na máquina de quem usa: o spec do projeto importa @playwright/test', () => {
+  expect(manifest.dependencies['@playwright/test']).toBeDefined()
+  expect(manifest.devDependencies['@playwright/test']).toBeUndefined()
+})

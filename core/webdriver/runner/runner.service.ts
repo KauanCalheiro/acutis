@@ -2,7 +2,8 @@ import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import type { Dirent } from 'node:fs'
 import { access, lstat, mkdir, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
-import { join, relative } from 'node:path'
+import { createRequire } from 'node:module'
+import { dirname, join, relative } from 'node:path'
 import { PACKAGE_ROOT, RUNNER_DIR, STREAM_REPORTER_PATH } from '../../config/paths.js'
 import { REPORT_DIR } from '../../common/playwright/report.js'
 import { processEnvironment } from '../../config/env.js'
@@ -49,8 +50,22 @@ const WATCHABLE_RUN_SETTINGS = [
   { present: /\bvideo\s*:/, setting: ANNOTATED_VIDEO },
   { present: /\blaunchOptions\s*:/, setting: 'launchOptions: { slowMo: 500 },' }
 ]
-/** A raiz do app, de onde saem os `node_modules` que o projeto sob teste empresta. */
-const WEBDRIVER_ROOT = PACKAGE_ROOT
+/**
+ * A resolução parte do manifesto do pacote, nunca deste arquivo: no build, este arquivo virou um
+ * chunk dentro de `.output/server`, onde o Nitro deixa stubs de uma linha no lugar das dependências
+ * externas. Da raiz do pacote a busca sobe para a árvore de quem instalou e acha o Playwright real.
+ */
+const require = createRequire(join(PACKAGE_ROOT, 'package.json'))
+/** O cli do Playwright pelo módulo: o shim do `.bin` alcança o store por caminho relativo e quebra
+ * quando o `node_modules` do projeto sob teste é um link para o do pacote. */
+export const PLAYWRIGHT_CLI = join(dirname(require.resolve('playwright/package.json')), 'cli.js')
+/**
+ * Os `node_modules` que o projeto sob teste empresta, para o spec resolver `@playwright/test`.
+ *
+ * Sai de onde o `@playwright/test` realmente está, e não da raiz do pacote: instalado pelo npm ou
+ * pnpm, o pacote não guarda as próprias dependências dentro de si.
+ */
+export const BORROWED_NODE_MODULES = dirname(dirname(dirname(require.resolve('@playwright/test/package.json'))))
 const RUN_TAIL_MS = 1500
 const RUN_TAIL_ENV = 'ACUTIS_RUN_TAIL_MS'
 const FAILURE_HTML_FILE = 'failure.html'
@@ -143,7 +158,7 @@ export class RunnerService {
     if (options.grep) args.push('--grep', options.grep)
 
     return new Promise((resolvePromise) => {
-      const child = spawn('npx', ['playwright', 'test', ...args], {
+      const child = spawn(process.execPath, [PLAYWRIGHT_CLI, 'test', ...args], {
         cwd: dir,
         env: {
           ...processEnvironment(),
@@ -151,7 +166,7 @@ export class RunnerService {
           PLAYWRIGHT_HTML_OPEN: 'never',
           PLAYWRIGHT_HTML_OUTPUT_DIR: REPORT_DIR,
           [RUN_TAIL_ENV]: String(RUN_TAIL_MS),
-          NODE_PATH: join(WEBDRIVER_ROOT, 'node_modules')
+          NODE_PATH: BORROWED_NODE_MODULES
         }
       })
 
@@ -229,7 +244,7 @@ export class RunnerService {
       }
     }
 
-    await symlink(join(WEBDRIVER_ROOT, 'node_modules'), link, 'dir')
+    await symlink(BORROWED_NODE_MODULES, link, 'dir')
   }
 
   private async ensureWatchableRun(dir: string): Promise<void> {
@@ -311,13 +326,13 @@ export class RunnerService {
 
   private execPlaywright(dir: string, args: string[] = [], env?: Record<string, string>): Promise<RunResult> {
     return new Promise((resolvePromise) => {
-      const child = spawn('npx', ['playwright', 'test', ...args], {
+      const child = spawn(process.execPath, [PLAYWRIGHT_CLI, 'test', ...args], {
         cwd: dir,
         env: {
           ...processEnvironment(),
           ...env,
           PLAYWRIGHT_HTML_OPEN: 'never',
-          NODE_PATH: join(WEBDRIVER_ROOT, 'node_modules')
+          NODE_PATH: BORROWED_NODE_MODULES
         }
       })
 
