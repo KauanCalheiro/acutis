@@ -1,6 +1,6 @@
 {
   "name": "@acutis/cli",
-  "version": "1.0.0-beta.3",
+  "version": "0.0.0",
   "description": "Grava, gera e roda testes Playwright a partir do navegador",
   "private": false,
   "license": "MIT",
@@ -14,7 +14,7 @@
   },
   "publishConfig": {
     "access": "public",
-    "tag": "beta"
+    "tag": "latest"
   },
   "bin": {
     "acutis": "bin/acutis.js"
@@ -39,11 +39,11 @@
     "postinstall": "nuxt prepare",
     "prepack": "pnpm build",
     "preview": "node bin/ensure-chromium.js && nuxt preview",
-    "release:beta": "pnpm publish --tag beta --access public",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "pnpm --filter @acutis/e2e test",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "release": "npm publish --access public"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.233",
