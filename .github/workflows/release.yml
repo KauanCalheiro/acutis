@@ -1,0 +1,51 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/setup@v2
+        with:
+          runtime: node@26
+          install: false
+          cache: true
+          cache-dependency-path: pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      # Git tag publica a versão do package.json: pré-lançamento vai pro beta, versão limpa pro latest.
+      # Push na main publica 1.0.0-dev.<run> no dist-tag dev, descartável e sempre inédito.
+      - name: Resolve version
+        id: resolve
+        run: |
+          version=$(npm pkg get version --workspaces=false | tr -d '"')
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            test "v$version" = "$GITHUB_REF_NAME"
+            case "$version" in
+              *-*) tag=beta ;;
+              *) tag=latest ;;
+            esac
+          else
+            npm version "${version%%-*}-dev.${{ github.run_number }}" --no-git-tag-version
+            tag=dev
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      # ponytail: sem lint/typecheck/test aqui, o ci.yml já roda em todo push
+      - name: Publish
+        run: npm publish --tag ${{ steps.resolve.outputs.tag }} --access public --provenance
