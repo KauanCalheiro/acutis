@@ -30,6 +30,20 @@ O npm aponta `latest` para a primeira versão de um pacote, ignorando o `--tag`.
 - **git tag `v*`** publica a versão do `package.json`: pré-lançamento vai para `beta`, versão limpa para `latest`. Um passo aborta se a tag divergir da versão.
 - **push na `main`** publica `1.0.0-dev.<run_number>` no dist-tag `dev`, descartável.
 
-O trusted publisher precisa estar configurado na página do pacote (Settings → Trusted publisher → repo e nome do workflow). Antes disso o workflow falha por falta de autenticação.
+O trusted publisher já está configurado na página do pacote (`KauanCalheiro` / `acutis` / `release.yml`, sem environment), então o workflow publica sem token.
+
+### O npm do runner precisa ser >= 11.5.1
+
+Trusted publishing exige npm 11.5.1 ou mais novo. O runtime de Node do `pnpm/setup` entrega **npm 10.9.8**, que não tem o caminho de troca de token OIDC: o publish morre em `ENEEDAUTH` sem sequer imprimir uma linha de OIDC no log, como se faltasse login.
+
+`npm install -g npm@latest` **não** resolve — instala o pacote, mas o runtime do pnpm mantém o próprio binário à frente no PATH e `npm -v` continua 10.9.8. A versão vem fixa pelo `npx`:
+
+```sh
+npx -y npm@11.19.0 publish --tag <tag> --access public
+```
+
+### Sem `--provenance` enquanto o repositório for privado
+
+A atestação de proveniência vai para um log público de transparência e exige repositório público. O `acutis` é privado, então a flag falha. Se o repositório abrir, é só voltar com ela.
 
 Limpeza de versão `dev` é manual e sob demanda, nunca automatizada: `npm unpublish @acutis/cli@<versão>` funciona enquanto valerem as três condições do npm (mantenedor único, zero dependentes, menos de 300 downloads na semana), o que dispensa a janela de 72h. Versão despublicada não pode ser republicada com o mesmo número.
