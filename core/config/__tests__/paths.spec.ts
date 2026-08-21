@@ -3,8 +3,12 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { expect, it } from 'vitest'
-import { packageRoot } from '../paths.js'
+import { afterEach, expect, it } from 'vitest'
+import { PACKAGE_ROOT_ENV, packageRoot } from '../paths.js'
+
+afterEach(() => {
+  process.env[PACKAGE_ROOT_ENV] = ''
+})
 
 function packaged(name: string): { root: string, chunk: string } {
   const root = mkdtempSync(join(tmpdir(), 'acutis-root-'))
@@ -25,6 +29,15 @@ it('acha a raiz do repositório a partir do arquivo que a pediu', () => {
 
 it('acha a raiz do pacote publicado, cujo manifesto é @acutis/cli', () => {
   const { root, chunk } = packaged('@acutis/cli')
+
+  expect(packageRoot([chunk])).toBe(root)
+})
+
+/** No pacote publicado o bundle não sabe onde está: quem sabe é o `bin`, e ele diz pela env. */
+it('prefere a raiz que o bin declarou', () => {
+  const { root, chunk } = packaged('n8n')
+
+  process.env[PACKAGE_ROOT_ENV] = root
 
   expect(packageRoot([chunk])).toBe(root)
 })
