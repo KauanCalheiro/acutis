@@ -79,6 +79,8 @@ async function main() {
   process.env.NITRO_PORT = String(webPort)
   process.env.HOST = '127.0.0.1'
   process.env.NITRO_HOST = '127.0.0.1'
+  // Só aqui a raiz do pacote é medível: dentro do bundle do Nitro `import.meta.url` é placeholder.
+  process.env.ACUTIS_PACKAGE_ROOT = PACKAGE_ROOT
   await import(SERVER_ENTRY)
 
   if (!await waitFor(webUrl)) fail('a aplicação não respondeu em 60s')

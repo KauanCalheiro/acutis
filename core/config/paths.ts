@@ -1,9 +1,18 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, parse, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { processEnvironment } from './env.js'
 
 /** Os nomes de manifesto que marcam a raiz: o repositório e o pacote publicado. */
 const ROOT_NAMES = ['acutis', '@acutis/cli']
+
+/**
+ * A raiz medida pelo `bin` antes de subir o servidor.
+ *
+ * Dentro do bundle do Nitro `import.meta.url` vira um placeholder (`file:///_entry.js`), então a
+ * busca começaria na raiz do sistema de arquivos e terminaria no `cwd` de quem chamou o CLI.
+ */
+export const PACKAGE_ROOT_ENV = 'ACUTIS_PACKAGE_ROOT'
 
 /**
  * A raiz de onde saem reporter, gravador, vídeos e runner.
@@ -16,6 +25,10 @@ export function packageRoot(starts: string[] = [
   process.argv[1] ? dirname(resolve(process.argv[1])) : '',
   process.cwd()
 ]): string {
+  const declared = processEnvironment()[PACKAGE_ROOT_ENV]
+
+  if (declared !== undefined && declared !== '') return declared
+
   for (const start of starts) {
     let current = start
     const filesystemRoot = parse(current).root
