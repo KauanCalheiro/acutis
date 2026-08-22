@@ -44,7 +44,7 @@ describe('ReplayCurtain', () => {
 
     expect(wrapper.get('.curtain').text()).toContain('Refazendo seus passos')
     expect(wrapper.get('.curtain').text()).toContain('Clica em "Financeiro"')
-    expect(wrapper.find('.curtain-action').exists()).toBe(false)
+    expect(wrapper.find('.surface-action').exists()).toBe(false)
   })
 
   it('mostra o passo que falhou e deixa o usuário assumir dali', async () => {

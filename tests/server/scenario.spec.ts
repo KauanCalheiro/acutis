@@ -97,6 +97,23 @@ describe('scenario Nitro API', () => {
     expect(JSON.parse(readFileSync(join(project, 'tests/login.dom.json'), 'utf8'))).toEqual({ 0: '<form></form>' })
   })
 
+  it('drops the captured dom when the resumed recording has none, so it cannot point at gone events', async () => {
+    writeFileSync(join(project, 'tests/login.dom.json'), JSON.stringify({ 0: '<form></form>' }))
+
+    const response = await request('/api/projects/minha-loja/scenarios/login', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Login', path: 'login',
+        playwright: 'test.describe(\'Login\', () => {})',
+        events: [{ type: 'click', url: 'http://loja.test/login', timestamp: 1000 }]
+      })
+    })
+
+    expect(response.status).toBe(200)
+    expect(existsSync(join(project, 'tests/login.dom.json'))).toBe(false)
+  })
+
   it('validates the editable fields', async () => {
     const response = await request('/api/projects/minha-loja/scenarios/login', {
       method: 'PATCH',

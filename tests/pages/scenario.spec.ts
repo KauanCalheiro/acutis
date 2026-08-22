@@ -363,7 +363,6 @@ describe('ScenarioPage', () => {
 
     expect(api.drafted).toMatchObject({ baseUrl: 'http://loja.test' })
     expect((api.drafted as { events: unknown[] }).events).toHaveLength(3)
-    // O arquivo e o título são os do cenário, não os que a IA rebatizou no rascunho.
     expect((field('contexto-titulo') as HTMLInputElement).value).toBe('Login do cliente')
 
     field('cenario-editar-salvar')!.click()

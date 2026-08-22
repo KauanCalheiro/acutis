@@ -127,6 +127,25 @@ describe('recorder WebSocket', () => {
     }))
   })
 
+  it('discards a recording the user cancelled from the pill, so no review opens for it', async () => {
+    const service = recorder()
+    service.start.mockImplementationOnce(async (...args: unknown[]) => {
+      await (args[7] as { onCancelRequested: () => Promise<void> }).onCancelRequested()
+    })
+    const hooks = createRecorderWebSocketHooks(service)
+    const socket = peer()
+
+    await hooks.message(socket, message({ type: 'START_RECORDING' }))
+
+    expect(service.stop).toHaveBeenCalled()
+    expect(socket.send).toHaveBeenCalledWith(JSON.stringify({
+      event: 'recorder:stop',
+      sessionId: null,
+      storageState: null
+    }))
+    expect(socket.send).not.toHaveBeenCalledWith(expect.stringContaining('recorder:error'))
+  })
+
   it('stops the recording and returns its video session and browser state', async () => {
     const service = recorder()
     const hooks = createRecorderWebSocketHooks(service)

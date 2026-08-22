@@ -173,15 +173,26 @@ describe('useWebdriver', () => {
     })
   })
 
+  it('apara da gravação os passos que o navegador não conseguiu refazer', () => {
+    const anteriores = [
+      { url: 'http://loja.test' },
+      { url: 'http://loja.test/carrinho' },
+      { url: 'http://loja.test/pagamento' }
+    ] as RecorderEvent[]
+
+    useWebdriver().startRecording('scenario', { replay: anteriores })
+
+    expect(event({ event: 'recorder:replayed', kept: 1 }).events).toEqual([anteriores[0]])
+  })
+
   it('avisa qual passo travou a retomada, que a decisão é na janela gravada', () => {
     useWebdriver().startRecording('scenario', { replay: [{ url: 'http://loja.test' }] as RecorderEvent[] })
 
     expect(event({ event: 'recorder:replay-failed', step: 'Clica em "Entrar"' })).toMatchObject({
-      replaying: true,
+      replaying: false,
       replayFailedStep: 'Clica em "Entrar"'
     })
 
-    // Assumiu na janela: a retomada segue e a tela volta ao normal.
     expect(event({ event: 'recorder:replayed' })).toMatchObject({
       replaying: false,
       replayFailedStep: null

@@ -51,6 +51,25 @@ describe('describeRecorderEvent', () => {
     expect(describeRecorderEvent(event({ type: 'assert', label: 'Bem-vindo' }))).toBe('Confere "Bem-vindo"')
   })
 
+  it('diz que o assert de URL é sobre a tela, e não sobre um elemento dela', () => {
+    const naTela = event({
+      type: 'assert',
+      label: 'Plataforma Univates',
+      url: 'http://loja.test/financeiro',
+      assert: { assertType: 'url', expectedValue: 'http://loja.test/financeiro' }
+    })
+
+    expect(describeRecorderEvent(naTela)).toBe('Confere que a tela é "/financeiro"')
+
+    const naRaiz = event({
+      type: 'assert',
+      url: 'http://loja.test/',
+      assert: { assertType: 'url', expectedValue: 'http://loja.test/' }
+    })
+
+    expect(describeRecorderEvent(naRaiz)).toBe('Confere que a tela é a página inicial')
+  })
+
   it('cai no que sobrou quando o tipo é desconhecido', () => {
     expect(describeRecorderEvent(event({ type: 'wheel', label: 'Rolagem' }))).toBe('Rolagem')
     expect(describeRecorderEvent(event({ type: 'wheel', url: 'http://loja.test' }))).toBe('http://loja.test')

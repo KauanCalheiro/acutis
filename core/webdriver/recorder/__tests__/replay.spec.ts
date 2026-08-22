@@ -35,10 +35,20 @@ describe('replaySteps', () => {
     ])
 
     expect(steps).toEqual([
-      { action: 'goto', url: 'http://loja.test/login', label: 'Abre /login' },
-      { action: 'fill', selector: '[id="email"]', value: 'ana@loja.test', label: 'Preenche o campo' },
-      { action: 'click', selector: '[data-testid="entrar"]', label: 'Clica no elemento' }
+      { action: 'goto', url: 'http://loja.test/login', label: 'Abre /login', at: 0 },
+      { action: 'fill', selector: '[id="email"]', value: 'ana@loja.test', label: 'Preenche o campo', at: 1 },
+      { action: 'click', selector: '[data-testid="entrar"]', label: 'Clica no elemento', at: 2 }
     ])
+  })
+
+  it('guarda de qual evento o passo veio, que é onde a gravação é cortada quando ele falha', () => {
+    const steps = replaySteps([
+      event({ type: 'navigate', url: 'http://loja.test' }),
+      event({ type: 'submit', selectors: selectors({ id: 'form' }) }),
+      event({ type: 'click', selectors: selectors({ id: 'btn' }) })
+    ])
+
+    expect(steps.map(step => step.at)).toEqual([0, 2])
   })
 
   it('nomeia o passo pelo que a gravação sabe do elemento, para o aviso de falha', () => {
@@ -54,6 +64,18 @@ describe('replaySteps', () => {
       'Clica em "Entrar"',
       'Clica em "Sair"',
       'Abre /'
+    ])
+  })
+
+  it('nomeia pelo placeholder e corta o nome comprido, como o spec emitido', () => {
+    const steps = replaySteps([
+      event({ type: 'fill', value: 'ana', selectors: selectors({ id: 'email', placeholder: 'E-mail' }) }),
+      event({ type: 'click', innerText: 'Cursando 2026B Cidades Inteligentes Edson Moacir Ahlert e mais', selectors: selectors({ id: 'card' }) })
+    ])
+
+    expect(steps.map(step => step.label)).toEqual([
+      'Preenche "E-mail"',
+      'Clica em "Cursando 2026B Cidades Inteligentes Edson Moacir Ahlert e ma"'
     ])
   })
 
@@ -97,7 +119,7 @@ describe('replaySteps', () => {
     ])
 
     expect(steps).toEqual([
-      { action: 'click', selector: '[data-testid="diz \\"oi\\""]', label: 'Clica no elemento' }
+      { action: 'click', selector: '[data-testid="diz \\"oi\\""]', label: 'Clica no elemento', at: 0 }
     ])
   })
 })

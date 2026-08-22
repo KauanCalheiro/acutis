@@ -9,6 +9,7 @@ const names = [
   'assert',
   'hover',
   'stop',
+  'cancel',
   'exists',
   'visible',
   'hidden',
