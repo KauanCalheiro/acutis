@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TestDraft } from '~/types/project'
+import type { RecorderEvent } from '~/composables/webdriver'
 
 interface ScenarioReviewModal {
   slug: string
@@ -15,6 +16,7 @@ const open = defineModel<boolean>('open', {
 const emit = defineEmits<{
   generated: []
   rerecord: []
+  resume: [events: RecorderEvent[]]
 }>()
 
 const { state, url } = useWebdriver()
@@ -115,6 +117,12 @@ function rerecord() {
   open.value = false
   emit('rerecord')
 }
+
+/** Retomar do passo escolhido mantém o que veio antes dele e descarta ele e os seguintes. */
+function resume(index: number) {
+  open.value = false
+  emit('resume', timeline.value.slice(0, index))
+}
 </script>
 
 <template>
@@ -146,6 +154,8 @@ function rerecord() {
         :events="timeline"
         :video-src="state.videoSessionId ? `${url}/recording/${state.videoSessionId}` : null"
         :recording-started-at="state.recordingStartedAt"
+        resumable
+        @resume="resume"
       />
 
       <UAlert

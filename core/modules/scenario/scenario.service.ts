@@ -8,7 +8,8 @@ import { slug as toSlug } from '../../common/utils/slug.js'
 import { AUTH_FEATURE, AUTH_ID, AUTH_SPEC } from '../auth/providers/auth.js'
 import type { ProjectService } from '../project/project.service.js'
 import { HISTORY, Runs, VIDEO } from './providers/runs.js'
-import { eventsPathOf, Scenario, sourceOf } from './providers/scenario.js'
+import { Recording } from '../recording/recording.js'
+import { eventsPathOf, htmlPathOf, Scenario, sourceOf } from './providers/scenario.js'
 import { stampGherkinTags, stampPlaywrightTags, stampPlaywrightTitle, stampTitle } from './providers/test-artifact.js'
 import type {
   ScenarioRunStep as RunStep,
@@ -16,7 +17,7 @@ import type {
   ScenarioRun as ScenarioRunResponse,
   UpdateScenarioRequest as UpdateScenarioDto
 } from '#shared/contracts/scenario'
-import type { RecorderEvent } from '#shared/contracts/recording'
+import type { RecordedEvent, RecorderEvent } from '#shared/contracts/recording'
 
 /** O evento do reporter visto como dado, e não como união fechada. */
 export type RunEventRecord = Record<string, unknown>
@@ -118,16 +119,32 @@ export class ScenarioService {
         rmSync(join(path, data.feature), { force: true })
       }
 
-      const oldEvents = join(path, eventsPathOf(data.spec))
+      // A gravação e o DOM que ela capturou seguem o spec; ficar para trás é lixo no projeto.
+      for (const pathOf of [eventsPathOf, htmlPathOf]) {
+        const old = join(path, pathOf(data.spec))
 
-      if (existsSync(oldEvents)) {
-        renameSync(oldEvents, join(path, eventsPathOf(specRelative)))
+        if (existsSync(old)) renameSync(old, join(path, pathOf(specRelative)))
       }
     }
+
+    if (dto.events) this.replaceRecording(path, specRelative, dto.events)
 
     const newId = auth ? AUTH_ID : `${domain === null ? '' : `${domain}/`}${name}`
 
     return this.show(path, Scenario.make(path, newId))
+  }
+
+  /** A gravação retomada substitui a anterior, com os sensíveis já trocados por marcador. */
+  private replaceRecording(path: string, spec: string, events: RecordedEvent[]): void {
+    const recording = Recording.make(events)
+
+    put(join(path, eventsPathOf(spec)), JSON.stringify(recording.redacted()))
+
+    const html = recording.html()
+
+    if (Object.keys(html).length > 0) {
+      put(join(path, htmlPathOf(spec)), JSON.stringify(html))
+    }
   }
 
   /**

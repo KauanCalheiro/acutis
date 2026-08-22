@@ -17,7 +17,13 @@ interface RecorderPort {
     onRequestStop: () => void,
     mode?: 'scenario' | 'auth',
     storageStatePath?: string,
-    url?: string
+    url?: string,
+    replay?: RecordingEvent[],
+    hooks?: {
+      onReplayed?: () => void
+      onFailed?: (step: string) => void
+      onCancelled?: (step: string) => void
+    }
   ): Promise<void>
   stop(): Promise<StopResult>
 }
@@ -27,6 +33,8 @@ interface RecorderCommand {
   mode?: 'scenario' | 'auth'
   storageState?: string
   url?: string
+  /** Os passos já gravados que o navegador refaz antes de o usuário continuar. */
+  replay?: RecordingEvent[]
 }
 
 function send(peer: RecorderPeer, payload: Record<string, unknown>) {
@@ -66,7 +74,22 @@ export function createRecorderWebSocketHooks(recorder: RecorderPort) {
           () => { void stop(peer) },
           body.mode ?? 'scenario',
           body.storageState,
-          body.url
+          body.url,
+          body.replay,
+          {
+            onReplayed: () => send(peer, { event: 'recorder:replayed' }),
+            onFailed: step => send(peer, { event: 'recorder:replay-failed', step }),
+            // Cancelou: encerra sem sessão de vídeo, para a tela não abrir revisão de uma
+            // gravação que o usuário jogou fora.
+            onCancelled: async (step) => {
+              send(peer, {
+                event: 'recorder:error',
+                error: `Retomada cancelada: não consegui refazer o passo — ${step}.`
+              })
+              await recorder.stop()
+              send(peer, { event: 'recorder:stop', sessionId: null, storageState: null })
+            }
+          }
         )
       } catch (error) {
         send(peer, {

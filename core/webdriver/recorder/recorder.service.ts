@@ -7,6 +7,7 @@ import { RECORDER_CDP_URL, RECORDER_HEADLESS } from '../../config/env.js'
 import { RECORDER_BUNDLE_PATH } from '../../config/paths.js'
 import type { VideoService } from '../video/video.service.js'
 import type { RecordingEvent } from '../../common/types/recording.js'
+import { replaySteps, type ReplayState, type ReplayStep } from './replay.js'
 
 export interface StorageState {
   cookies: unknown[]
@@ -18,10 +19,24 @@ export interface StopResult {
   storageState: StorageState | null
 }
 
+/** O que a retomada avisa enquanto refaz os passos gravados. */
+export interface ReplayHooks {
+  /** Os passos acabaram (ou o usuário assumiu no meio): daqui para frente a gravação é dele. */
+  onReplayed?: () => void
+  /** Um passo não repetiu nem na segunda tentativa; a decisão está com o usuário, na janela. */
+  onFailed?: (step: string) => void
+  /** Ele preferiu cancelar a retomada em vez de assumir a partir de onde travou. */
+  onCancelled?: (step: string) => void
+}
+
 const RECORDING_VIEWPORT = { width: 1280, height: 720 }
 const STORAGE_STATE_TIMEOUT_MS = 1500
 const SCREENCAST_STOP_TIMEOUT_MS = 2500
 const CDP_CLOSE_TIMEOUT_MS = 1500
+const REPLAY_STEP_TIMEOUT_MS = 2500
+const REPLAY_RETRY_TIMEOUT_MS = 4000
+const REPLAY_SETTLE_MS = 1500
+const DECISION_POLL_MS = 200
 
 const BLANK = 'about:blank'
 
@@ -37,6 +52,9 @@ export class RecorderService {
   private sessionId: string | null = null
   private screencastStarted = false
   private ready = false
+  private replaying = false
+  private replayState: ReplayState = { status: 'idle', step: null }
+  private replayDecision: 'resume' | 'cancel' | null = null
   private bundlePath: string | null = null
   private bundleLoader: (() => Promise<string>) | null = null
 
@@ -60,11 +78,14 @@ export class RecorderService {
     onRequestStop: () => void,
     mode: 'scenario' | 'auth' = 'scenario',
     storageStatePath?: string,
-    url?: string
+    url?: string,
+    replay?: RecordingEvent[],
+    hooks: ReplayHooks = {}
   ): Promise<void> {
     this.sessionId = randomUUID()
     this.screencastStarted = false
     this.ready = false
+    this.replaying = false
     await this.videoService.ensureDir()
 
     if (RECORDER_CDP_URL) {
@@ -99,6 +120,9 @@ export class RecorderService {
     // about:blank aparece ao abrir e ao fechar a janela, e não é passo de teste nenhum.
     this.lastUrl = null
     this.report = (event: RecordingEvent) => {
+      // O que a reprodução dos passos anteriores provoca na página já está na gravação.
+      if (this.replaying) return
+
       if (event.type === 'navigate') {
         if (event.url === BLANK) {
           return
@@ -112,6 +136,12 @@ export class RecorderService {
 
     await this.page.exposeFunction('__acutisReportEvent', this.report)
     await this.page.exposeFunction('__acutisRequestStop', onRequestStop)
+    // A cortina da pill pergunta o estado em vez de recebê-lo: cada navegação do replay recarrega a
+    // página, e um valor posto no window não sobreviveria a ela.
+    await this.page.exposeFunction('__acutisReplayState', () => this.replayState)
+    await this.page.exposeFunction('__acutisReplayDecision', (decision: string) => {
+      this.decideReplay(decision === 'resume' ? 'resume' : 'cancel')
+    })
 
     await this.context.addInitScript((recorderMode) => {
       (globalThis as unknown as { __acutisRecorderMode?: string }).__acutisRecorderMode = recorderMode
@@ -135,10 +165,98 @@ export class RecorderService {
       void this.page.screencast.start({ path: videoPath, size: RECORDING_VIEWPORT }).then(() => onStarted(recordingStartedAt))
     })
 
-    if (url) {
+    const steps = replay?.length ? replaySteps(replay) : []
+
+    // Na retomada é o primeiro passo refeito que abre a página; abrir a URL antes disso gravaria
+    // essa navegação como passo do usuário.
+    if (url && !steps.some(step => step.action === 'goto')) {
       await this.page.goto(url, { waitUntil: 'domcontentloaded' })
         .catch(() => { /* site fora do ar: o usuário navega à mão */ })
     }
+
+    if (!steps.length) return
+
+    const cancelledAt = await this.replay(steps, hooks)
+
+    if (cancelledAt !== null) {
+      hooks.onCancelled?.(cancelledAt)
+      return
+    }
+
+    hooks.onReplayed?.()
+  }
+
+  /**
+     * Refaz os passos já gravados para o usuário continuar do ponto que escolheu. Passo que não
+     * repete nem na segunda tentativa para a retomada e devolve a decisão para ele, na janela: nada
+     * é gravado em cima de uma página que ficou no lugar errado. Devolve o passo em que ele
+     * cancelou, ou null quando a retomada chegou ao fim.
+     */
+  private async replay(steps: ReplayStep[], hooks: ReplayHooks): Promise<string | null> {
+    if (!this.page) return null
+
+    const page = this.page
+    this.replaying = true
+    this.replayState = { status: 'running', step: steps[0]!.label }
+
+    try {
+      for (const step of steps) {
+        this.replayState = { status: 'running', step: step.label }
+
+        if (await this.attempt(page, step, REPLAY_STEP_TIMEOUT_MS)) continue
+        // Uma segunda tentativa, mais paciente, cobre o passo que só chegou cedo demais.
+        if (await this.attempt(page, step, REPLAY_RETRY_TIMEOUT_MS)) continue
+
+        this.replayState = { status: 'failed', step: step.label }
+        hooks.onFailed?.(step.label)
+
+        if (await this.awaitDecision(page) === 'cancel') return step.label
+
+        break
+      }
+
+      // O último passo ainda pode disparar navegação de SPA depois de o clique retornar, e ela
+      // entraria na gravação como passo do usuário.
+      // ponytail: espera fixa; aplicação que demore mais que isso traz o passo fantasma de volta,
+      // e aí o caminho é esperar a rede assentar em vez do relógio.
+      await page.waitForTimeout(REPLAY_SETTLE_MS)
+
+      return null
+    } finally {
+      this.replaying = false
+      this.replayState = { status: 'idle', step: null }
+      this.lastUrl = page.url()
+    }
+  }
+
+  /** Um passo refeito. O clique é despachado no elemento, porque a cortina cobre a página. */
+  private async attempt(page: Page, step: ReplayStep, timeout: number): Promise<boolean> {
+    try {
+      if (step.action === 'goto') {
+        await page.goto(step.url, { waitUntil: 'domcontentloaded' })
+      } else if (step.action === 'fill') {
+        await page.fill(step.selector, step.value, { timeout, force: true })
+        await page.locator(step.selector).blur({ timeout })
+      } else {
+        await page.locator(step.selector).dispatchEvent('click', {}, { timeout })
+      }
+
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /** Espera a escolha que o usuário faz na cortina; a janela fechada vale por cancelar. */
+  private async awaitDecision(page: Page): Promise<'resume' | 'cancel'> {
+    this.replayDecision = null
+
+    while (this.replayDecision === null) {
+      if (page.isClosed()) return 'cancel'
+      await new Promise(resolve => setTimeout(resolve, DECISION_POLL_MS))
+    }
+
+    return this.replayDecision
   }
 
   async stop(): Promise<StopResult> {
@@ -262,6 +380,11 @@ export class RecorderService {
       await new Promise(r => setTimeout(r, 50))
     }
     return this.page
+  }
+
+  /** A mesma decisão que a cortina manda; o shadow fechado dela não é alcançável de fora. */
+  decideReplay(decision: 'resume' | 'cancel'): void {
+    this.replayDecision = decision
   }
 
   async debugGoto(url: string): Promise<void> {

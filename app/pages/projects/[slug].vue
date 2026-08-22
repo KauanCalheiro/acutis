@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ProjectDetail } from '~/types/project'
+import type { RecorderEvent } from '~/composables/webdriver'
 import { navigateTo } from '#app'
 import { reportUrlFor } from '~/composables/run-stream'
 import { tagColor } from '~/utils/tags'
@@ -130,18 +131,18 @@ const recordingOptions = computed(() => [[
 /** URL base configurada no projeto. É onde o navegador abre ao gravar. */
 const projectUrl = computed(() => project.value!.base_url ?? undefined)
 
-function recordPlain() {
+function recordPlain(replay?: RecorderEvent[]) {
   recordingMode.value = 'plain'
-  startRecording('scenario', { url: projectUrl.value })
+  startRecording('scenario', { url: projectUrl.value, replay })
 }
 
-function recordPublic() {
+function recordPublic(replay?: RecorderEvent[]) {
   recordingMode.value = 'public'
-  startRecording('scenario', { url: projectUrl.value })
+  startRecording('scenario', { url: projectUrl.value, replay })
 }
 
 /** Roda o auth.setup.ts antes de abrir o navegador; falhou o login, não abre. */
-function recordAuthenticated() {
+function recordAuthenticated(replay?: RecorderEvent[]) {
   recordingMode.value = 'authenticated'
   authRunOpen.value = true
   authRun.start({ spec: AUTH_SPEC }, () => {
@@ -152,7 +153,8 @@ function recordAuthenticated() {
     authRunOpen.value = false
     startRecording('scenario', {
       storageState: project.value!.storage_state,
-      url: projectUrl.value
+      url: projectUrl.value,
+      replay
     })
   })
 }
@@ -162,18 +164,29 @@ function recordDefault() {
   return hasAuth.value ? recordAuthenticated() : recordPlain()
 }
 
-/** Regravar mantém o tipo escolhido, porque trocar de autenticado pra público no meio seria surpresa. */
-function recordAgain() {
-  if (recordingMode.value === 'authenticated') return recordAuthenticated()
-  if (recordingMode.value === 'public') return recordPublic()
+/**
+ * Regravar mantém o tipo escolhido, porque trocar de autenticado pra público no meio seria surpresa.
+ * Com passos anteriores, o navegador refaz esses e a gravação continua de onde o usuário parou.
+ */
+function recordAgain(replay?: RecorderEvent[]) {
+  if (recordingMode.value === 'authenticated') return recordAuthenticated(replay)
+  if (recordingMode.value === 'public') return recordPublic(replay)
 
-  recordPlain()
+  recordPlain(replay)
 }
 
 watch(() => webdriver.value.videoSessionId, (sessionId) => {
   if (!sessionId) return
 
   reviewOpen.value = true
+})
+
+/** Enquanto a ferramenta refaz os passos, quem manda é a cortina na janela gravada. */
+const recordingLabel = computed(() => {
+  if (webdriver.value.replayFailedStep) return 'Aguardando você na janela'
+  if (webdriver.value.replaying) return 'Refazendo os passos'
+
+  return 'Parar gravação'
 })
 
 function stopAndReview() {
@@ -380,15 +393,16 @@ async function remove() {
         label="Novo cenário"
         trailing-icon="i-ic-round-add"
         :disabled="!webdriver.connected"
-        @click="recordPlain"
+        @click="recordPlain()"
       />
       <UButton
         v-else
         data-testid="cenario-parar"
-        label="Parar gravação"
+        :label="recordingLabel"
         trailing-icon="i-ic-round-stop"
         color="error"
         class="animate-pulse"
+        :disabled="webdriver.replaying"
         @click="stopAndReview"
       />
     </div>
@@ -412,6 +426,7 @@ async function remove() {
       :is-public="recordingPublic"
       @generated="refresh()"
       @rerecord="recordAgain"
+      @resume="recordAgain"
     />
 
     <div

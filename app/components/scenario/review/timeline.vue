@@ -6,9 +6,15 @@ interface ScenarioReviewTimeline {
   events: RecorderEvent[]
   videoSrc?: string | null
   recordingStartedAt?: number | null
+  /** Deixa retomar a gravação de qualquer passo, descartando ele e os seguintes. */
+  resumable?: boolean
 }
 
-const { events, videoSrc = null, recordingStartedAt = null } = defineProps<ScenarioReviewTimeline>()
+const { events, videoSrc = null, recordingStartedAt = null, resumable = false } = defineProps<ScenarioReviewTimeline>()
+
+const emit = defineEmits<{
+  resume: [index: number]
+}>()
 
 const videoEl = ref<HTMLVideoElement | null>(null)
 const currentTime = ref(0)
@@ -80,7 +86,7 @@ function seekTo(event: RecorderEvent) {
               :class="i < currentIndex ? 'bg-primary' : 'bg-accented'"
             />
           </div>
-          <div class="pb-4 min-w-0">
+          <div class="pb-4 min-w-0 flex-1">
             <p
               class="truncate text-sm transition-colors group-hover:text-highlighted"
               :class="i === currentIndex ? 'font-semibold text-primary' : 'text-default'"
@@ -95,6 +101,17 @@ function seekTo(event: RecorderEvent) {
               {{ offsetSeconds(event).toFixed(1) }}s
             </p>
           </div>
+          <UButton
+            v-if="resumable"
+            label="Retomar"
+            icon="i-ic-round-fiber-manual-record"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            class="shrink-0"
+            data-testid="revisao-retomar"
+            @click.stop="emit('resume', i)"
+          />
         </li>
       </ol>
     </div>

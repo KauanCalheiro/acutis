@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import type { ScenarioDetail, TestDraft } from '~/types/project'
+import type { RecorderEvent } from '~/composables/webdriver'
 
 interface ScenarioEditModal {
   slug: string
   scenario: ScenarioDetail
+  /** O que uma gravação retomada gerou: entra no lugar do que está em disco. */
+  resumed?: { draft: TestDraft, events: RecorderEvent[] } | null
 }
 
-const { slug, scenario } = defineProps<ScenarioEditModal>()
+const { slug, scenario, resumed = null } = defineProps<ScenarioEditModal>()
 
 const open = defineModel<boolean>('open', {
   default: false
@@ -16,13 +19,13 @@ const emit = defineEmits<{
   updated: [scenario: ScenarioDetail]
 }>()
 
-const draft = ref<TestDraft>(draftFromScenario(scenario))
+const draft = ref<TestDraft>(resumed?.draft ?? draftFromScenario(scenario))
 const saving = ref(false)
 const error = ref<string | null>(null)
 
 watch(open, (isOpen) => {
   if (isOpen) {
-    draft.value = draftFromScenario(scenario)
+    draft.value = resumed?.draft ?? draftFromScenario(scenario)
     error.value = null
   }
 })
@@ -36,7 +39,7 @@ async function save() {
   try {
     const updated = await $fetch<ScenarioDetail>(`/api/projects/${slug}/scenarios/${scenarioId.value}`, {
       method: 'PATCH',
-      body: draft.value
+      body: { ...draft.value, events: resumed?.events }
     })
     open.value = false
     emit('updated', updated)

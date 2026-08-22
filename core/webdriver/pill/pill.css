@@ -325,3 +325,88 @@
 }
 .popover-btn-confirm:not(:disabled):hover { background: var(--popover-btn-confirm-hover); }
 .popover-btn-confirm:disabled { opacity: 0.35; cursor: default; }
+
+/* A cortina da retomada: cobre a página e recebe o ponteiro, para o clique do usuário não se
+   perder enquanto a ferramenta refaz os passos gravados. */
+.curtain {
+  position: fixed;
+  inset: 0;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 10, 14, 0.72);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  font-family: 'Poppins', system-ui, sans-serif;
+  cursor: progress;
+}
+.curtain-failed { cursor: default; }
+
+.curtain-card {
+  max-width: 420px;
+  padding: 28px 32px;
+  border-radius: 16px;
+  text-align: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.curtain-spinner {
+  display: block;
+  width: 26px;
+  height: 26px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  animation: curtain-spin 0.9s linear infinite;
+}
+
+@keyframes curtain-spin {
+  to { transform: rotate(360deg); }
+}
+
+.curtain-title {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.curtain-step {
+  margin-top: 6px;
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.curtain-hint {
+  margin-top: 12px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.curtain-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.curtain-action {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Poppins', system-ui, sans-serif;
+  cursor: pointer;
+  border: 1.5px solid #fff;
+  background: #fff;
+  color: #111;
+}
+
+.curtain-action-ghost {
+  background: transparent;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.35);
+}

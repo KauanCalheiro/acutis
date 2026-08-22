@@ -1,5 +1,5 @@
 import * as z from 'zod'
-import { recorderEventSchema } from './recording'
+import { recordedEventSchema, recorderEventSchema } from './recording'
 
 export const scenarioSchema = z.object({
   title: z.string(),
@@ -50,7 +50,9 @@ export const updateScenarioRequestSchema = z.object({
   domain: z.string().max(80).nullable().optional(),
   gherkin: z.string().nullable().optional(),
   playwright: z.string().min(1, 'O teste Playwright é obrigatório.'),
-  tags: z.array(z.string()).optional()
+  tags: z.array(z.string()).optional(),
+  /** A gravação que originou este teste. Vem quando ela foi retomada e agora tem outros passos. */
+  events: z.array(recordedEventSchema).optional()
 })
 
 export type UpdateScenarioRequest = z.input<typeof updateScenarioRequestSchema>
