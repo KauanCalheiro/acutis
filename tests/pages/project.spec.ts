@@ -261,8 +261,11 @@ describe('ProjectPage', () => {
     useWebdriver().state.value.videoSessionId = 'sessao-1'
     await settle()
 
-    const retomar = [...document.body.querySelectorAll<HTMLElement>('[data-testid="revisao-retomar"]')]
-    retomar[1]!.click()
+    const corte = document.body.querySelector<HTMLElement>('[data-testid="revisao-retomar"]')!
+    corte.click()
+    await settle()
+    await new Promise(resolve => setTimeout(resolve, 700))
+    corte.click()
     await settle()
 
     expect(useWebdriver().state.value.recording).toBe(true)

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import ScenarioReviewTimeline from '~/components/scenario/review/timeline.vue'
 import type { RecorderEvent } from '~/composables/webdriver'
@@ -12,6 +12,10 @@ const events = [
 function mount(props: Record<string, unknown> = {}) {
   return mountSuspended(ScenarioReviewTimeline, { props: { events, ...props } })
 }
+
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 describe('ScenarioReviewTimeline', () => {
   it('descreve cada evento gravado, sem vídeo nem instantes', async () => {
@@ -52,18 +56,80 @@ describe('ScenarioReviewTimeline', () => {
     expect(wrapper.findAll('[data-testid="revisao-evento"]')[2]!.attributes('data-current')).toBe('true')
   })
 
-  it('não oferece retomar quando a timeline é só de leitura', async () => {
+  it('não oferece retomada quando a timeline é só de leitura', async () => {
     const wrapper = await mount()
 
     expect(wrapper.find('[data-testid="revisao-retomar"]').exists()).toBe(false)
   })
 
-  it('pede a retomada no índice do passo escolhido', async () => {
+  it('só oferece o corte entre dois passos, porque antes do primeiro não há o que manter', async () => {
     const wrapper = await mount({ resumable: true })
 
-    await wrapper.findAll('[data-testid="revisao-retomar"]')[2]!.trigger('click')
+    expect(wrapper.findAll('[data-testid="revisao-retomar"]')).toHaveLength(events.length - 1)
+  })
+
+  it('o primeiro clique arma o corte sem retomar nada', async () => {
+    vi.useFakeTimers()
+    const wrapper = await mount({ resumable: true })
+    const corte = wrapper.findAll('[data-testid="revisao-retomar"]')[1]!
+
+    await corte.trigger('click')
+
+    expect(wrapper.emitted('resume')).toBeUndefined()
+    expect(corte.attributes('data-armed')).toBe('true')
+    expect(wrapper.findAll('[data-testid="revisao-evento"]')[2]!.attributes('data-dropped')).toBe('true')
+  })
+
+  it('o clique que chega antes da trava de tempo não retoma', async () => {
+    vi.useFakeTimers()
+    const wrapper = await mount({ resumable: true })
+    const corte = wrapper.findAll('[data-testid="revisao-retomar"]')[1]!
+
+    await corte.trigger('click')
+    await vi.advanceTimersByTimeAsync(200)
+    await corte.trigger('click')
+
+    expect(wrapper.emitted('resume')).toBeUndefined()
+  })
+
+  it('retoma no segundo clique, depois de a trava completar', async () => {
+    vi.useFakeTimers()
+    const wrapper = await mount({ resumable: true })
+    const corte = wrapper.findAll('[data-testid="revisao-retomar"]')[1]!
+
+    await corte.trigger('click')
+    await vi.advanceTimersByTimeAsync(700)
+    await corte.trigger('click')
 
     expect(wrapper.emitted('resume')).toEqual([[2]])
+  })
+
+  it('desarma sozinho quando o corte fica armado sem confirmação', async () => {
+    vi.useFakeTimers()
+    const wrapper = await mount({ resumable: true })
+    const corte = wrapper.findAll('[data-testid="revisao-retomar"]')[1]!
+
+    await corte.trigger('click')
+    await vi.advanceTimersByTimeAsync(6000)
+
+    expect(corte.attributes('data-armed')).toBe('false')
+
+    await corte.trigger('click')
+    expect(wrapper.emitted('resume')).toBeUndefined()
+  })
+
+  it('armar outro corte desarma o anterior', async () => {
+    vi.useFakeTimers()
+    const wrapper = await mount({ resumable: true })
+    const cortes = wrapper.findAll('[data-testid="revisao-retomar"]')
+
+    await cortes[0]!.trigger('click')
+    await vi.advanceTimersByTimeAsync(700)
+    await cortes[1]!.trigger('click')
+
+    expect(cortes[0]!.attributes('data-armed')).toBe('false')
+    expect(cortes[1]!.attributes('data-armed')).toBe('true')
+    expect(wrapper.emitted('resume')).toBeUndefined()
   })
 
   it('não quebra ao clicar num evento sem vídeo na tela', async () => {

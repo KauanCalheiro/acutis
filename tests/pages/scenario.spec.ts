@@ -347,7 +347,10 @@ describe('ScenarioPage', () => {
     })
     const wrapper = await mount()
 
-    await wrapper.findAll('[data-testid="revisao-retomar"]')[2]!.trigger('click')
+    const corte = wrapper.findAll('[data-testid="revisao-retomar"]')[1]!
+    await corte.trigger('click')
+    await new Promise(resolve => setTimeout(resolve, 700))
+    await corte.trigger('click')
     await settle()
 
     expect(useWebdriver().state.value.recording).toBe(true)
