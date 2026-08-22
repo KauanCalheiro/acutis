@@ -22,11 +22,13 @@ export interface StopResult {
 /** O que a retomada avisa enquanto refaz os passos gravados. */
 export interface ReplayHooks {
   /** Os passos acabaram (ou o usuário assumiu no meio): daqui para frente a gravação é dele. */
-  onReplayed?: () => void
+  onReplayed?: (keptEvents: number | null) => void | Promise<void>
   /** Um passo não repetiu nem na segunda tentativa; a decisão está com o usuário, na janela. */
   onFailed?: (step: string) => void
   /** Ele preferiu cancelar a retomada em vez de assumir a partir de onde travou. */
-  onCancelled?: (step: string) => void
+  onCancelled?: (step: string) => void | Promise<void>
+  /** O botão de cancelar da pill: descartar a gravação em vez de encerrar com revisão. */
+  onCancelRequested?: () => void | Promise<void>
 }
 
 const RECORDING_VIEWPORT = { width: 1280, height: 720 }
@@ -57,6 +59,7 @@ export class RecorderService {
   private replayDecision: 'resume' | 'cancel' | null = null
   private bundlePath: string | null = null
   private bundleLoader: (() => Promise<string>) | null = null
+  private stopping = false
 
   constructor(private readonly videoService: VideoService) { }
 
@@ -86,6 +89,7 @@ export class RecorderService {
     this.screencastStarted = false
     this.ready = false
     this.replaying = false
+    this.stopping = false
     await this.videoService.ensureDir()
 
     if (RECORDER_CDP_URL) {
@@ -120,7 +124,6 @@ export class RecorderService {
     // about:blank aparece ao abrir e ao fechar a janela, e não é passo de teste nenhum.
     this.lastUrl = null
     this.report = (event: RecordingEvent) => {
-      // O que a reprodução dos passos anteriores provoca na página já está na gravação.
       if (this.replaying) return
 
       if (event.type === 'navigate') {
@@ -136,8 +139,7 @@ export class RecorderService {
 
     await this.page.exposeFunction('__acutisReportEvent', this.report)
     await this.page.exposeFunction('__acutisRequestStop', onRequestStop)
-    // A cortina da pill pergunta o estado em vez de recebê-lo: cada navegação do replay recarrega a
-    // página, e um valor posto no window não sobreviveria a ela.
+    await this.page.exposeFunction('__acutisCancelRecording', () => hooks.onCancelRequested?.())
     await this.page.exposeFunction('__acutisReplayState', () => this.replayState)
     await this.page.exposeFunction('__acutisReplayDecision', (decision: string) => {
       this.decideReplay(decision === 'resume' ? 'resume' : 'cancel')
@@ -154,6 +156,9 @@ export class RecorderService {
 
     this.ready = true
 
+    this.page.on('close', () => this.handleExternalClose(onRequestStop, hooks))
+    this.browser.on('disconnected', () => this.handleExternalClose(onRequestStop, hooks))
+
     const sessionId = this.sessionId
     const videoPath = this.videoService.path(sessionId)
 
@@ -167,8 +172,8 @@ export class RecorderService {
 
     const steps = replay?.length ? replaySteps(replay) : []
 
-    // Na retomada é o primeiro passo refeito que abre a página; abrir a URL antes disso gravaria
-    // essa navegação como passo do usuário.
+    if (steps.length) this.replayState = { status: 'running', step: steps[0]!.label }
+
     if (url && !steps.some(step => step.action === 'goto')) {
       await this.page.goto(url, { waitUntil: 'domcontentloaded' })
         .catch(() => { /* site fora do ar: o usuário navega à mão */ })
@@ -176,52 +181,55 @@ export class RecorderService {
 
     if (!steps.length) return
 
-    const cancelledAt = await this.replay(steps, hooks)
+    const { cancelledAt, keptEvents } = await this.replay(steps, hooks)
 
     if (cancelledAt !== null) {
-      hooks.onCancelled?.(cancelledAt)
+      await hooks.onCancelled?.(cancelledAt)
       return
     }
 
-    hooks.onReplayed?.()
+    await hooks.onReplayed?.(keptEvents)
   }
 
   /**
      * Refaz os passos já gravados para o usuário continuar do ponto que escolheu. Passo que não
-     * repete nem na segunda tentativa para a retomada e devolve a decisão para ele, na janela: nada
-     * é gravado em cima de uma página que ficou no lugar errado. Devolve o passo em que ele
-     * cancelou, ou null quando a retomada chegou ao fim.
+     * repete nem na segunda tentativa para a retomada e devolve a decisão para ele, na janela.
+     * Devolve o passo em que ele cancelou e, quando assumiu no meio, quantos eventos foram refeitos.
      */
-  private async replay(steps: ReplayStep[], hooks: ReplayHooks): Promise<string | null> {
-    if (!this.page) return null
+  private async replay(
+    steps: ReplayStep[],
+    hooks: ReplayHooks
+  ): Promise<{ cancelledAt: string | null, keptEvents: number | null }> {
+    if (!this.page) return { cancelledAt: null, keptEvents: null }
 
     const page = this.page
     this.replaying = true
     this.replayState = { status: 'running', step: steps[0]!.label }
+
+    let keptEvents: number | null = null
 
     try {
       for (const step of steps) {
         this.replayState = { status: 'running', step: step.label }
 
         if (await this.attempt(page, step, REPLAY_STEP_TIMEOUT_MS)) continue
-        // Uma segunda tentativa, mais paciente, cobre o passo que só chegou cedo demais.
         if (await this.attempt(page, step, REPLAY_RETRY_TIMEOUT_MS)) continue
 
         this.replayState = { status: 'failed', step: step.label }
         hooks.onFailed?.(step.label)
 
-        if (await this.awaitDecision(page) === 'cancel') return step.label
+        const decision = await this.awaitDecision(page)
 
+        if (decision === 'cancel') return { cancelledAt: step.label, keptEvents: null }
+        if (decision === null) return { cancelledAt: null, keptEvents: null }
+
+        keptEvents = step.at
         break
       }
 
-      // O último passo ainda pode disparar navegação de SPA depois de o clique retornar, e ela
-      // entraria na gravação como passo do usuário.
-      // ponytail: espera fixa; aplicação que demore mais que isso traz o passo fantasma de volta,
-      // e aí o caminho é esperar a rede assentar em vez do relógio.
       await page.waitForTimeout(REPLAY_SETTLE_MS)
 
-      return null
+      return { cancelledAt: null, keptEvents }
     } finally {
       this.replaying = false
       this.replayState = { status: 'idle', step: null }
@@ -236,7 +244,7 @@ export class RecorderService {
         await page.goto(step.url, { waitUntil: 'domcontentloaded' })
       } else if (step.action === 'fill') {
         await page.fill(step.selector, step.value, { timeout, force: true })
-        await page.locator(step.selector).blur({ timeout })
+        await page.locator(step.selector).blur({ timeout }).catch(() => undefined)
       } else {
         await page.locator(step.selector).dispatchEvent('click', {}, { timeout })
       }
@@ -247,16 +255,30 @@ export class RecorderService {
     }
   }
 
-  /** Espera a escolha que o usuário faz na cortina; a janela fechada vale por cancelar. */
-  private async awaitDecision(page: Page): Promise<'resume' | 'cancel'> {
+  /** A escolha que o usuário faz na cortina, ou null quando a janela some antes de ele escolher. */
+  private async awaitDecision(page: Page): Promise<'resume' | 'cancel' | null> {
     this.replayDecision = null
 
     while (this.replayDecision === null) {
-      if (page.isClosed()) return 'cancel'
+      if (page.isClosed() || this.stopping) return null
       await new Promise(resolve => setTimeout(resolve, DECISION_POLL_MS))
     }
 
     return this.replayDecision
+  }
+
+  /** A janela fechada pelo usuário descarta a gravação, pelo mesmo caminho do cancelar da pill. */
+  private handleExternalClose(onRequestStop: () => void, hooks: ReplayHooks): void {
+    if (this.stopping || !this.context) return
+
+    const discard = hooks.onCancelRequested
+
+    if (!discard) {
+      onRequestStop()
+      return
+    }
+
+    Promise.resolve(discard()).catch(() => undefined)
   }
 
   async stop(): Promise<StopResult> {
@@ -264,6 +286,7 @@ export class RecorderService {
       return { sessionId: null, storageState: null }
     }
 
+    this.stopping = true
     const sessionId = this.sessionId
     const wasScreencasting = this.screencastStarted
     const storageState = await this.withTimeout(
@@ -401,6 +424,12 @@ export class RecorderService {
     const page = await this.waitForPage()
     await page.fill(selector, value)
     await page.locator(selector).blur()
+  }
+
+  /** Fecha a página gravada como se o usuário tivesse fechado a janela na mão. */
+  async debugClosePage(): Promise<void> {
+    const page = await this.waitForPage()
+    await page.close()
   }
 
   private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {

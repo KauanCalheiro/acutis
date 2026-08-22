@@ -11,6 +11,25 @@ export const MASK = '••••'
 /** Prefixo do marcador de valor sensível que ainda não tem variável. */
 export const SENSITIVE_PREFIX = 'SENSIVEL_'
 
+/** Onde o nome do elemento é cortado, para não inchar título de passo nem aviso na tela. */
+const NAME_LIMIT = 60
+
+/** O que a gravação sabe do elemento e serve para nomeá-lo. */
+interface NamedElement {
+  label?: string | null
+  innerText?: string | null
+  selectors?: { placeholder?: string | null, text?: string | null } | null
+}
+
+/** Como um passo chama o elemento que ele toca; null quando nada na gravação o descreve. */
+export function describeElement(event: NamedElement): string | null {
+  const selectors = event.selectors ?? null
+  const source = event.label ?? event.innerText ?? selectors?.placeholder ?? selectors?.text ?? ''
+  const clean = source.replace(/\s+/gu, ' ').trim()
+
+  return clean === '' ? null : clean.slice(0, NAME_LIMIT).trimEnd()
+}
+
 function marker(key: string): string {
   return `{{${key}}}`
 }

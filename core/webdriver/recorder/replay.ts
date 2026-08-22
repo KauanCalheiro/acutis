@@ -3,8 +3,9 @@
  * recoloca a página no mesmo estado entra: submit, hover e assert não mexem no estado, e valor
  * mascarado ou já virado marcador não existe mais para ser digitado.
  */
+import { pathOf } from '../../common/playwright/url.js'
 import type { RecordingEvent, RecordingSelectors } from '../../common/types/recording.js'
-import { MASK } from '../../modules/recording/recording.js'
+import { describeElement, MASK } from '../../modules/recording/recording.js'
 
 /** O que a cortina da pill pergunta: se a ferramenta ainda está agindo, e em que passo travou. */
 export interface ReplayState {
@@ -12,10 +13,11 @@ export interface ReplayState {
   step: string | null
 }
 
+/** `at` é o índice do evento que originou o passo: é onde a gravação é cortada se ele falhar. */
 export type ReplayStep
-  = | { action: 'goto', url: string, label: string }
-    | { action: 'fill', selector: string, value: string, label: string }
-    | { action: 'click', selector: string, label: string }
+  = | { action: 'goto', url: string, label: string, at: number }
+    | { action: 'fill', selector: string, value: string, label: string, at: number }
+    | { action: 'click', selector: string, label: string, at: number }
 
 function attribute(name: string, value: string): string {
   return `[${name}=${JSON.stringify(value)}]`
@@ -43,42 +45,29 @@ function typeable(value: string | null): value is string {
   return value !== null && value !== '' && value !== MASK && !/^\{\{.+\}\}$/.test(value)
 }
 
-/** Como o passo é chamado no aviso de falha: o que a gravação sabe do elemento, ou nada. */
-function named(event: RecordingEvent): string | null {
-  const source = event.label ?? event.innerText ?? event.selectors?.text ?? ''
-  const clean = source.replace(/\s+/gu, ' ').trim()
-
-  return clean === '' ? null : clean
-}
-
-function pathOf(url: string): string {
-  try {
-    return new URL(url).pathname
-  } catch {
-    return url
-  }
-}
-
 export function replaySteps(events: RecordingEvent[]): ReplayStep[] {
   const steps: ReplayStep[] = []
 
-  for (const event of events) {
+  events.forEach((event, at) => {
     if (event.type === 'navigate') {
-      if (event.url) steps.push({ action: 'goto', url: event.url, label: `Abre ${pathOf(event.url)}` })
-      continue
+      if (event.url) {
+        steps.push({ action: 'goto', url: event.url, label: `Abre ${pathOf(event.url, event.url)}`, at })
+      }
+      return
     }
 
     const selector = replaySelector(event.selectors)
 
-    if (!selector) continue
+    if (!selector) return
 
-    const name = named(event)
+    const name = describeElement(event)
 
     if (event.type === 'click') {
       steps.push({
         action: 'click',
         selector,
-        label: name === null ? 'Clica no elemento' : `Clica em "${name}"`
+        label: name === null ? 'Clica no elemento' : `Clica em "${name}"`,
+        at
       })
     }
 
@@ -87,10 +76,11 @@ export function replaySteps(events: RecordingEvent[]): ReplayStep[] {
         action: 'fill',
         selector,
         value: event.value,
-        label: name === null ? 'Preenche o campo' : `Preenche "${name}"`
+        label: name === null ? 'Preenche o campo' : `Preenche "${name}"`,
+        at
       })
     }
-  }
+  })
 
   return steps
 }

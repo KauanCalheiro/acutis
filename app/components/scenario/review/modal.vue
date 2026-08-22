@@ -57,16 +57,7 @@ const baseUrl = computed(() => {
   }
 })
 
-const mappedEvents = computed(() => timeline.value.map(event => ({
-  type: event.type,
-  timestamp: event.timestamp,
-  url: event.url ?? null,
-  selectors: event.selectors ?? null,
-  label: event.label ?? null,
-  value: event.value ?? null,
-  sensitive: event.sensitive ?? false,
-  html: event.html ?? null
-})))
+const mappedEvents = computed(() => toRecordedEvents(timeline.value))
 
 async function generate() {
   if (!baseUrl.value) {

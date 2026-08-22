@@ -5,10 +5,10 @@
 import { EnvKey } from '../environment/providers/env-key.js'
 import type { ActiveVars } from '../../common/playwright/active-vars.js'
 import { Playwright } from '../../common/playwright/playwright.js'
-import type { Url } from '../../common/playwright/url.js'
+import { pathOf, type Url } from '../../common/playwright/url.js'
 import type { RecordedEvent, Selectors } from './events.js'
 import type { Recording } from './recording.js'
-import { SENSITIVE_PREFIX } from './recording.js'
+import { describeElement, SENSITIVE_PREFIX } from './recording.js'
 
 /** A partir de quanto tempo entre dois eventos a pausa conta como espera pela página. */
 const NOTICEABLE_PAUSE_MS = 2000
@@ -28,19 +28,6 @@ function slugUpper(source: string): string {
     .replace(/[^A-Za-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
     .toUpperCase()
-}
-
-/** O texto cortado no limite, sem o espaço que sobra na ponta. */
-function limit(source: string, max = 60): string {
-  return source.length <= max ? source : source.slice(0, max).trimEnd()
-}
-
-function pathOf(url: string): string {
-  try {
-    return new URL(url).pathname
-  } catch {
-    return ''
-  }
 }
 
 function hostOf(url: string): string | null {
@@ -240,7 +227,7 @@ export class SpecEmitter {
 
     const verb = type === 'hover' ? 'hover' : 'click'
     const prefix = type === 'hover' ? 'Passa o mouse' : 'Clica'
-    const what = this.describe(event)
+    const what = describeElement(event)
 
     return {
       title: what === null ? `${prefix} no elemento` : `${prefix} em ${this.quoted(what)}`,
@@ -274,7 +261,7 @@ export class SpecEmitter {
         ? (checked ? 'check()' : 'uncheck()')
         : `fill(${this.value(value)})`
 
-    const what = this.describe(event)
+    const what = describeElement(event)
 
     return {
       field: locator,
@@ -299,21 +286,36 @@ export class SpecEmitter {
     }
   }
 
+  /** A tela afirmada pelo endereço: pelo segmento próprio dela, ou pelo caminho inteiro. */
+  private urlAssertion(target: string): Step | null {
+    const segment = this.segment(target)
+
+    if (segment !== null) {
+      return {
+        title: `Confere que a tela é ${this.quoted(segment)}`,
+        lines: [`await expect(page).toHaveURL(/${segment.replace(/\./g, '\\.')}/)`]
+      }
+    }
+
+    const path = pathOf(target).replace(/\/+$/, '')
+
+    if (path === '') return null
+
+    const pattern = path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\//g, '\\/')
+    const relative = this.relativePath(target)
+
+    return {
+      title: `Confere que a tela é ${relative === '' || relative === null ? 'a página inicial' : this.quoted(relative)}`,
+      lines: [`await expect(page).toHaveURL(/${pattern}\\/?$/)`]
+    }
+  }
+
   private assertion(event: RecordedEvent, slow: boolean): Step | null {
     const assert = event.assert ?? {}
     const expected = assert.expectedValue ?? null
     const type = assert.assertType ?? 'visible'
 
-    if (type === 'url') {
-      const segment = this.segment(expected ?? event.url ?? '')
-
-      return segment === null
-        ? null
-        : {
-            title: `Confere que a tela é ${this.quoted(segment)}`,
-            lines: [`await expect(page).toHaveURL(/${segment.replace(/\./g, '\\.')}/)`]
-          }
-    }
+    if (type === 'url') return this.urlAssertion(expected ?? event.url ?? '')
 
     const locator = this.locator(event)
 
@@ -329,7 +331,7 @@ export class SpecEmitter {
     }
 
     const matcher = matchers[type] ?? `toBeVisible(${this.timeout(slow)})`
-    const what = this.describe(event)
+    const what = describeElement(event)
 
     return {
       title: `Confere ${what === null ? 'o elemento' : this.quoted(what)}`,
@@ -352,21 +354,6 @@ export class SpecEmitter {
     if (selectors.xpath) return `page.locator(${this.literal(`xpath=${selectors.xpath}`)})`
 
     return null
-  }
-
-  /** Como o passo chama o elemento; null quando nada na gravação o descreve. */
-  private describe(event: RecordedEvent): string | null {
-    const selectors = event.selectors ?? null
-
-    const source = event.label
-      ?? event.innerText
-      ?? selectors?.placeholder
-      ?? selectors?.text
-      ?? ''
-
-    const clean = source.replace(/\s+/gu, ' ').trim()
-
-    return clean === '' ? null : limit(clean)
   }
 
   private timeout(slow: boolean): string {

@@ -82,14 +82,6 @@ const assertOptions: AssertOption[] = [
     icon: 'contains',
     needsValue: true,
     placeholder: 'Texto a conter…'
-  },
-  {
-    type: 'url',
-    label: 'URL atual é',
-    icon: 'url',
-    needsValue: true,
-    placeholder: 'URL esperada…',
-    prefill: () => window.location.href
   }
 ]
 
@@ -161,7 +153,7 @@ function handleConfirm() {
   <Transition name="popover">
     <div
       v-if="isPopoverVisible"
-      class="assert-popover"
+      class="surface assert-popover"
       :style="positionStyle"
       @click.stop
       @mousedown.stop
@@ -230,21 +222,21 @@ function handleConfirm() {
         >
       </div>
 
-      <div class="popover-footer">
+      <div class="surface-actions popover-footer">
         <button
-          class="popover-footer-btn popover-btn-cancel"
+          class="surface-action"
           @click.stop.prevent="deactivateAssertMode"
           @mousedown.stop.prevent
         >
           Cancelar
         </button>
         <button
-          class="popover-footer-btn popover-btn-confirm"
+          class="surface-action surface-action-primary"
           :disabled="!canConfirm"
           @click.stop.prevent="handleConfirm"
           @mousedown.stop.prevent
         >
-          Confirmar Assert
+          Confirmar
         </button>
       </div>
     </div>

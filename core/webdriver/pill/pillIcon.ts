@@ -4,6 +4,7 @@ export type PillIconName
     | 'assert'
     | 'hover'
     | 'stop'
+    | 'cancel'
     | 'exists'
     | 'visible'
     | 'hidden'

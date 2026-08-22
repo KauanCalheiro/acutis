@@ -246,16 +246,22 @@ const RESUME_PHRASES = [
 ]
 
 const resuming = ref(false)
+/** Só a tela que pediu a retomada reescreve o cenário; o gravador é um estado compartilhado. */
+const resumeStarted = ref(false)
 const resumed = ref<{ draft: TestDraft, events: RecorderEvent[] } | null>(null)
 const resumeError = ref<string | null>(null)
 
 /** Retomar do passo escolhido: o navegador refaz os anteriores e a gravação continua dali. */
+const isPublic = computed(() => scenario.value!.tags.includes('@publico'))
+
 function resumeFrom(index: number) {
   resumeError.value = null
   resumed.value = null
+  resuming.value = false
+  resumeStarted.value = true
   startRecording(isAuth.value ? 'auth' : 'scenario', {
     url: project.value!.base_url ?? undefined,
-    storageState: isAuth.value ? undefined : project.value!.storage_state ?? undefined,
+    storageState: isAuth.value ? undefined : sessionFor(project.value!, isPublic.value),
     replay: scenario.value!.events.slice(0, index)
   })
 }
@@ -275,16 +281,7 @@ function openEdit() {
 }
 
 function recordedEvents() {
-  return webdriver.value.events.map(event => ({
-    type: event.type,
-    timestamp: event.timestamp,
-    url: event.url ?? null,
-    selectors: event.selectors ?? null,
-    label: event.label ?? null,
-    value: event.value ?? null,
-    sensitive: event.sensitive ?? false,
-    html: event.html ?? null
-  })) as unknown as RecorderEvent[]
+  return toRecordedEvents(webdriver.value.events) as unknown as RecorderEvent[]
 }
 
 /** A gravação retomada vira rascunho e abre a edição, que é quem grava por cima do cenário. */
@@ -302,10 +299,9 @@ async function draftResumed(): Promise<void> {
   try {
     const draft = await $fetch<TestDraft>(`/api/projects/${slug.value}/tests/draft`, {
       method: 'POST',
-      body: { baseUrl, events, isPublic: scenario.value!.tags.includes('@publico') }
+      body: { baseUrl, events, isPublic: isPublic.value }
     })
 
-    // O cenário é o mesmo: nome de arquivo e título ficam como estão, a IA só reescreve o conteúdo.
     const atual = draftFromScenario(scenario.value!)
 
     resumed.value = {
@@ -317,13 +313,14 @@ async function draftResumed(): Promise<void> {
     resumeError.value = extractServerError(error, 'Não foi possível reescrever o cenário a partir da gravação.')
   } finally {
     resuming.value = false
+    resumeStarted.value = false
   }
 }
 
 watch(() => webdriver.value.videoSessionId, async (sessionId) => {
   if (!sessionId) return
 
-  if (!isAuth.value) return draftResumed()
+  if (!isAuth.value) return resumeStarted.value ? draftResumed() : undefined
 
   const baseUrl = eventsBaseUrl(webdriver.value.events)
 
@@ -339,16 +336,7 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
       method: 'POST',
       body: {
         baseUrl,
-        events: webdriver.value.events.map(event => ({
-          type: event.type,
-          timestamp: event.timestamp,
-          url: event.url ?? null,
-          selectors: event.selectors ?? null,
-          label: event.label ?? null,
-          value: event.value ?? null,
-          inputType: event.inputType ?? null,
-          html: event.html ?? null
-        }))
+        events: recordedEvents()
       }
     })
 
@@ -587,7 +575,7 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
         <ScenarioReviewTimeline
           v-else
           :events="scenario!.events"
-          :resumable="!webdriver.recording"
+          :resumable="webdriver.connected && !webdriver.recording"
           data-testid="cenario-eventos"
           @resume="resumeFrom"
         />

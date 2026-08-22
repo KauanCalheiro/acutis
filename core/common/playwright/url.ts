@@ -1,3 +1,12 @@
+/** O caminho de uma URL qualquer, ou o alternativo quando o endereço não é uma URL. */
+export function pathOf(url: string, fallback = ''): string {
+  try {
+    return new URL(url).pathname
+  } catch {
+    return fallback
+  }
+}
+
 /** A URL do sistema sob teste, com o host e o caminho lidos de um lugar só. */
 export class Url {
   private readonly parsed: URL

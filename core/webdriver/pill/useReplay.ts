@@ -36,7 +36,6 @@ export function useReplay() {
     try {
       _state.value = await ask()
     } catch {
-      // Gravador encerrando: a página está indo embora junto.
       _state.value = { status: 'idle', step: null }
     }
 

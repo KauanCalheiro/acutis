@@ -2,6 +2,7 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs'
 import { isAbsolute, join, relative } from 'node:path'
 import { Git } from '../git/providers/git.js'
+import { ActiveVars } from '../../common/playwright/active-vars.js'
 import { ValidationFailed } from '../../common/exceptions/errors.js'
 import { put } from '../../common/utils/file.js'
 import { slug as toSlug } from '../../common/utils/slug.js'
@@ -127,24 +128,32 @@ export class ScenarioService {
       }
     }
 
-    if (dto.events) this.replaceRecording(path, specRelative, dto.events)
+    if (dto.events) this.replaceRecording(slug, path, specRelative, dto.events)
 
     const newId = auth ? AUTH_ID : `${domain === null ? '' : `${domain}/`}${name}`
 
     return this.show(path, Scenario.make(path, newId))
   }
 
-  /** A gravação retomada substitui a anterior, com os sensíveis já trocados por marcador. */
-  private replaceRecording(path: string, spec: string, events: RecordedEvent[]): void {
+  /**
+     * A gravação retomada substitui a anterior: os sensíveis saem trocados pela variável do ambiente
+     * que os guarda, e o DOM antigo é removido quando a nova gravação não trouxe DOM.
+     */
+  private replaceRecording(slug: string, path: string, spec: string, events: RecordedEvent[]): void {
     const recording = Recording.make(events)
+    const environments = new ActiveVars(this.projects.environmentsOf(slug).activeVars())
 
-    put(join(path, eventsPathOf(spec)), JSON.stringify(recording.redacted()))
+    put(join(path, eventsPathOf(spec)), JSON.stringify(recording.redacted(environments)))
 
     const html = recording.html()
+    const htmlFile = join(path, htmlPathOf(spec))
 
     if (Object.keys(html).length > 0) {
-      put(join(path, htmlPathOf(spec)), JSON.stringify(html))
+      put(htmlFile, JSON.stringify(html))
+      return
     }
+
+    rmSync(htmlFile, { force: true })
   }
 
   /**

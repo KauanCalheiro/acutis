@@ -63,12 +63,18 @@ export function useWebdriver() {
         state.value.recording = true
         state.value.recordingStartedAt = data.recordingStartedAt ?? null
         break
-      case 'recorder:replayed':
+      case 'recorder:replayed': {
+        const kept = (data as { kept?: number | null }).kept
+
+        if (typeof kept === 'number') state.value.events = state.value.events.slice(0, kept)
+
         state.value.replaying = false
         state.value.replayFailedStep = null
         break
+      }
       case 'recorder:replay-failed':
         state.value.replayFailedStep = (data as { step?: string }).step ?? 'um dos passos'
+        state.value.replaying = false
         break
       case 'recorder:error':
         state.value.error = (data as { error?: string }).error ?? 'Erro na extensão.'

@@ -11,14 +11,12 @@ onUnmounted(() => stopWatching())
 </script>
 
 <template>
-  <!-- A cortina é o que segura o usuário: enquanto ela está no ar, o clique dele não chega na
-       página, e por isso não se perde. A ferramenta age por baixo, sem passar pelo ponteiro. -->
   <div
     v-if="state.status !== 'idle'"
     class="curtain"
     :class="{ 'curtain-failed': state.status === 'failed' }"
   >
-    <div class="curtain-card">
+    <div class="surface curtain-card">
       <template v-if="state.status === 'running'">
         <span class="curtain-spinner" />
         <p class="curtain-title">
@@ -42,16 +40,16 @@ onUnmounted(() => stopWatching())
         <p class="curtain-hint">
           A página pode não estar onde o teste esperava.
         </p>
-        <div class="curtain-actions">
+        <div class="surface-actions curtain-actions">
           <button
-            class="curtain-action"
+            class="surface-action surface-action-primary"
             data-acutis="retomada-assumir"
             @click="decide('resume')"
           >
             Assumir daqui
           </button>
           <button
-            class="curtain-action curtain-action-ghost"
+            class="surface-action"
             data-acutis="retomada-cancelar"
             @click="decide('cancel')"
           >
