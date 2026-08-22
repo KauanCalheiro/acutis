@@ -12,6 +12,7 @@ metadata:
 | Arquivo | Assunto |
 |---------|---------|
 | [webdriver-tdd](webdriver-tdd.md) | Teste SEMPRE antes da implementação — Vitest (UI/pill) + Playwright (E2E real, sem extensão de navegador) |
+| [webdriver-rede](webdriver-rede.md) | Antes de pensar em gravar a rede para gerar `waitForResponse`: já foi feito, medido e recusado |
 
 ## Gotchas
 
