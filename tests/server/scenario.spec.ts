@@ -53,6 +53,9 @@ describe('scenario Nitro API', () => {
   })
 
   it('updates and moves scenario artifacts', async () => {
+    writeFileSync(join(project, 'tests/login.events.json'), '[]')
+    writeFileSync(join(project, 'tests/login.dom.json'), '{}')
+
     const response = await request('/api/projects/minha-loja/scenarios/login', {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
@@ -67,6 +70,31 @@ describe('scenario Nitro API', () => {
     expect(await response.json()).toMatchObject({ title: 'Login atualizado', spec: 'tests/auth/entrar.spec.ts' })
     expect(existsSync(join(project, 'tests/login.spec.ts'))).toBe(false)
     expect(readFileSync(join(project, 'tests/auth/entrar.spec.ts'), 'utf8')).toContain('@smoke')
+    expect(existsSync(join(project, 'tests/auth/entrar.events.json'))).toBe(true)
+    expect(existsSync(join(project, 'tests/auth/entrar.dom.json'))).toBe(true)
+    expect(existsSync(join(project, 'tests/login.dom.json'))).toBe(false)
+  })
+
+  it('replaces the recording next to the spec when the resumed events come along', async () => {
+    const response = await request('/api/projects/minha-loja/scenarios/login', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Login', path: 'login',
+        playwright: 'test.describe(\'Login\', () => {})',
+        events: [
+          { type: 'navigate', url: 'http://loja.test/login', timestamp: 1000, html: '<form></form>' },
+          { type: 'fill', url: 'http://loja.test/login', value: 'segredo', sensitive: true, timestamp: 2000 }
+        ]
+      })
+    })
+
+    expect(response.status).toBe(200)
+    expect(JSON.parse(readFileSync(join(project, 'tests/login.events.json'), 'utf8'))).toEqual([
+      { type: 'navigate', url: 'http://loja.test/login', timestamp: 1000 },
+      { type: 'fill', url: 'http://loja.test/login', value: '{{SENSIVEL_1}}', sensitive: true, timestamp: 2000 }
+    ])
+    expect(JSON.parse(readFileSync(join(project, 'tests/login.dom.json'), 'utf8'))).toEqual({ 0: '<form></form>' })
   })
 
   it('validates the editable fields', async () => {

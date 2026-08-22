@@ -109,6 +109,120 @@ test.describe('recording gateway events', { tag: ['@write', '@recording'] }, () 
         }
     })
 
+    test('replays the steps it was given without recording them again', async ({ request }) => {
+        const gateway = await connectGateway()
+
+        try {
+            await test.step('start a recording that resumes after a click already recorded', async () => {
+                gateway.send('START_RECORDING', {
+                    // A URL do projeto vem junto, como na retomada de um cenário salvo: quem abre a
+                    // página é o primeiro passo refeito, e não este endereço.
+                    url: fixtureBaseUrl,
+                    replay: [
+                        { type: 'navigate', url: fixtureBaseUrl },
+                        { type: 'click', selectors: { id: 'btn' } },
+                    ],
+                })
+
+                await gateway.waitForMessage((m) => m.event === 'recorder:replayed')
+            })
+
+            await test.step('assert the replay left no step of its own in the recording', async () => {
+                expect(gateway.received().map((m) => m.event).filter((event) => event !== 'recorder:hello'))
+                    .toEqual(['recorder:started', 'recorder:replayed'])
+            })
+
+            await test.step('record a step of its own, now that the replay is over', async () => {
+                const res = await request.post(`${WEBDRIVER_URL}/debug/fill`, { data: { selector: '#name', value: 'Ana' } })
+                expect(res.ok()).toBe(true)
+
+                const message = await gateway.waitForMessage((m) => m.event === 'recorder:fill')
+                expect(message.value).toBe('Ana')
+            })
+
+            await test.step('assert the replayed click never came back as a recorded event', async () => {
+                expect(gateway.received().filter((m) => m.event === 'recorder:click')).toEqual([])
+            })
+
+            await test.step('assert the replayed click really ran, by the storage it left behind', async () => {
+                gateway.send('STOP_RECORDING')
+                const stop = await gateway.waitForMessage((m) => m.event === 'recorder:stop')
+
+                expect(JSON.stringify(stop.storageState)).toContain('abc')
+            })
+        } finally {
+            gateway.close()
+        }
+    })
+
+    test('stops on the step it cannot replay and waits for the decision in the window', async () => {
+        const gateway = await connectGateway()
+
+        try {
+            await test.step('resume through a step whose element is not on the page', async () => {
+                gateway.send('START_RECORDING', {
+                    replay: [
+                        { type: 'navigate', url: fixtureBaseUrl },
+                        { type: 'click', selectors: { id: 'nao-existe' }, label: 'Some' },
+                        { type: 'click', selectors: { id: 'btn' } },
+                    ],
+                })
+            })
+
+            await test.step('the gateway names the step, and the replay does not go on', async () => {
+                const failed = await gateway.waitForMessage((m) => m.event === 'recorder:replay-failed')
+                expect(failed.step).toBe('Clica em "Some"')
+
+                // O passo seguinte não roda: o token do #btn só existiria se ele tivesse rodado.
+                gateway.send('STOP_RECORDING')
+                const stop = await gateway.waitForMessage((m) => m.event === 'recorder:stop')
+                expect(JSON.stringify(stop.storageState)).not.toContain('abc')
+                expect(gateway.received().some((m) => m.event === 'recorder:replayed')).toBe(false)
+            })
+        } finally {
+            gateway.close()
+        }
+    })
+
+    test('closes the browser when the user cancels the resume from the curtain', async ({ request }) => {
+        const gateway = await connectGateway()
+
+        try {
+            await test.step('resume through a step that will not replay', async () => {
+                gateway.send('START_RECORDING', {
+                    replay: [
+                        { type: 'navigate', url: fixtureBaseUrl },
+                        { type: 'click', selectors: { id: 'nao-existe' }, label: 'Some' },
+                    ],
+                })
+                await gateway.waitForMessage((m) => m.event === 'recorder:replay-failed')
+            })
+
+            await test.step('cancel, which is what the curtain button does', async () => {
+                const res = await request.post(`${WEBDRIVER_URL}/debug/replay-decision`, { data: { decision: 'cancel' } })
+                expect(res.ok()).toBe(true)
+            })
+
+            await test.step('the recording ends with no video session, and the browser is gone', async () => {
+                const error = await gateway.waitForMessage((m) => m.event === 'recorder:error')
+                expect(error.error).toContain('Retomada cancelada')
+
+                const stop = await gateway.waitForMessage((m) => m.event === 'recorder:stop')
+                expect(stop.sessionId).toBeNull()
+
+                // O primeiro hello também diz recording:false, então conta-se o novo.
+                const hellos = () => gateway.received().filter((m) => m.event === 'recorder:hello')
+                const before = hellos().length
+
+                gateway.send('WHO')
+                await expect.poll(() => hellos().length).toBeGreaterThan(before)
+                expect(hellos().at(-1)!.recording).toBe(false)
+            })
+        } finally {
+            gateway.close()
+        }
+    })
+
     test('masks password fields by default (scenario recording)', async ({ request }) => {
         const gateway = await connectGateway()
 

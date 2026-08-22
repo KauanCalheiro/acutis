@@ -149,6 +149,19 @@ describe('ScenarioReviewModal', () => {
     expect(wrapper.findComponent(ScenarioReviewModal).emitted('rerecord')).toHaveLength(1)
   })
 
+  it('fecha e pede a retomada com os eventos anteriores ao passo escolhido', async () => {
+    const { state, wrapper } = await open()
+
+    const retomar = [...document.body.querySelectorAll<HTMLElement>('[data-testid="revisao-retomar"]')]
+    retomar[1]!.click()
+    await settle()
+
+    expect(state.value).toBe(false)
+    expect(wrapper.findComponent(ScenarioReviewModal).emitted('resume')).toEqual([[
+      [{ type: 'navigate', url: 'http://loja.test/login', timestamp: 1000 }]
+    ]])
+  })
+
   it('recusa gerar quando a navegação registrada não é um endereço válido', async () => {
     recorded({ type: 'navigate', url: 'http://[', timestamp: 1000 } as Partial<RecorderEvent>)
     await open()

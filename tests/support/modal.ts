@@ -62,7 +62,8 @@ export async function openModal(component: Component, props: Record<string, unkn
           'onConfirm': record('confirm'),
           'onGenerated': record('generated'),
           'onUpdated': record('updated'),
-          'onRerecord': record('rerecord')
+          'onRerecord': record('rerecord'),
+          'onResume': record('resume')
         })
       })
     }

@@ -43,6 +43,8 @@ beforeEach(async () => {
     connected: false,
     extensionReady: false,
     recording: false,
+    replaying: false,
+    replayFailedStep: null,
     error: null,
     events: [],
     videoSessionId: null,
@@ -152,6 +154,37 @@ describe('useWebdriver', () => {
       mode: 'auth',
       url: 'http://loja.test',
       storageState: '/tmp/state.json'
+    })
+  })
+
+  it('retoma de um passo mantendo os eventos anteriores e mandando o navegador refazê-los', () => {
+    const anteriores = [{ event: 'recorder:navigate', url: 'http://loja.test/login' }] as RecorderEvent[]
+
+    event({ event: 'recorder:click', label: 'Entrar' })
+    useWebdriver().startRecording('scenario', { url: 'http://loja.test', replay: anteriores })
+
+    expect(useWebdriver().state.value).toMatchObject({ events: anteriores, replaying: true })
+    expect(event({ event: 'recorder:replayed' })).toMatchObject({ replaying: false, events: anteriores })
+    expect(JSON.parse(socket().sent.at(-1)!)).toEqual({
+      type: 'START_RECORDING',
+      mode: 'scenario',
+      url: 'http://loja.test',
+      replay: anteriores
+    })
+  })
+
+  it('avisa qual passo travou a retomada, que a decisão é na janela gravada', () => {
+    useWebdriver().startRecording('scenario', { replay: [{ url: 'http://loja.test' }] as RecorderEvent[] })
+
+    expect(event({ event: 'recorder:replay-failed', step: 'Clica em "Entrar"' })).toMatchObject({
+      replaying: true,
+      replayFailedStep: 'Clica em "Entrar"'
+    })
+
+    // Assumiu na janela: a retomada segue e a tela volta ao normal.
+    expect(event({ event: 'recorder:replayed' })).toMatchObject({
+      replaying: false,
+      replayFailedStep: null
     })
   })
 

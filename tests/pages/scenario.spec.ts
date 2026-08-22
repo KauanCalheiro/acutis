@@ -94,6 +94,7 @@ const api = {
   authScenario: scenario({ spec: 'tests/auth.setup.ts', title: 'Autenticação', is_auth: true, gherkin: null, events: [] }),
   removed: false,
   patched: null as unknown,
+  drafted: null as unknown,
   suggestionsStatus: 200,
   fixStatus: 200,
   authSkipped: false,
@@ -131,6 +132,21 @@ registerEndpoint('/api/projects/alpha-store/scenarios/login', {
     api.patched = await readBody(event)
 
     return api.scenario
+  }
+})
+registerEndpoint('/api/projects/alpha-store/tests/draft', {
+  method: 'POST',
+  handler: async (event) => {
+    api.drafted = await readBody(event)
+
+    return {
+      title: 'Entrar na loja',
+      tags: ['@read'],
+      domain: 'acesso',
+      path: 'entrar-na-loja',
+      gherkin: '@read\nFuncionalidade: Entrar',
+      playwright: 'test("login refeito", async () => {})'
+    }
   }
 })
 registerEndpoint('/api/projects/alpha-store/scenario-suggestions', {
@@ -207,6 +223,7 @@ beforeEach(() => {
   api.authScenario = scenario({ spec: 'tests/auth.setup.ts', title: 'Autenticação', is_auth: true, gherkin: null, events: [] })
   api.removed = false
   api.patched = null
+  api.drafted = null
   api.suggestionsStatus = 200
   api.fixStatus = 200
   api.authSkipped = false
@@ -318,6 +335,48 @@ describe('ScenarioPage', () => {
 
     expect(api.removed).toBe(true)
     expect(navigate).toHaveBeenCalledWith('/projects/alpha-store')
+  })
+
+  it('retoma a gravação do passo escolhido e reescreve o cenário com os eventos novos', async () => {
+    api.scenario = scenario({
+      events: [
+        { type: 'navigate', url: 'http://loja.test/login', timestamp: 1000 },
+        { type: 'fill', label: 'E-mail', value: 'a@b.c', timestamp: 2000 },
+        { type: 'submit', timestamp: 3000 }
+      ] as unknown as RecorderEvent[]
+    })
+    const wrapper = await mount()
+
+    await wrapper.findAll('[data-testid="revisao-retomar"]')[2]!.trigger('click')
+    await settle()
+
+    expect(useWebdriver().state.value.recording).toBe(true)
+    expect(useWebdriver().state.value.events).toHaveLength(2)
+
+    await wrapper.get('[data-testid="cenario-parar"]').trigger('click')
+    useWebdriver().state.value.events = [
+      ...useWebdriver().state.value.events,
+      { type: 'click', label: 'Entrar', timestamp: 4000 } as RecorderEvent
+    ]
+    useWebdriver().state.value.videoSessionId = 'sessao-1'
+    await settle(8)
+
+    expect(api.drafted).toMatchObject({ baseUrl: 'http://loja.test' })
+    expect((api.drafted as { events: unknown[] }).events).toHaveLength(3)
+    // O arquivo e o título são os do cenário, não os que a IA rebatizou no rascunho.
+    expect((field('contexto-titulo') as HTMLInputElement).value).toBe('Login do cliente')
+
+    field('cenario-editar-salvar')!.click()
+    await settle(6)
+
+    expect(api.patched).toMatchObject({
+      title: 'Login do cliente',
+      path: 'login',
+      domain: '',
+      playwright: 'test("login refeito", async () => {})',
+      gherkin: '@read\nFuncionalidade: Entrar'
+    })
+    expect((api.patched as { events: unknown[] }).events).toHaveLength(3)
   })
 
   it('abre a edição e recarrega quando o cenário continua o mesmo', async () => {

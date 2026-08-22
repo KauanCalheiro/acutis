@@ -52,6 +52,20 @@ describe('ScenarioReviewTimeline', () => {
     expect(wrapper.findAll('[data-testid="revisao-evento"]')[2]!.attributes('data-current')).toBe('true')
   })
 
+  it('não oferece retomar quando a timeline é só de leitura', async () => {
+    const wrapper = await mount()
+
+    expect(wrapper.find('[data-testid="revisao-retomar"]').exists()).toBe(false)
+  })
+
+  it('pede a retomada no índice do passo escolhido', async () => {
+    const wrapper = await mount({ resumable: true })
+
+    await wrapper.findAll('[data-testid="revisao-retomar"]')[2]!.trigger('click')
+
+    expect(wrapper.emitted('resume')).toEqual([[2]])
+  })
+
   it('não quebra ao clicar num evento sem vídeo na tela', async () => {
     const wrapper = await mount()
 
