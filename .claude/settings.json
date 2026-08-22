@@ -13,6 +13,31 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-write.mjs\"",
+            "timeout": 180,
+            "statusMessage": "Lint, teste relacionado e travessão"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/finish-check.mjs\"",
+            "timeout": 300,
+            "statusMessage": "Typecheck, cobertura e duplicação"
+          }
+        ]
+      }
     ]
   }
 }
