@@ -263,7 +263,7 @@ test.describe('ai settings', { tag: ['@write', '@settings'] }, () => {
 
     /**
      * O Claude Agent roda o binário local já autenticado: o formulário dele não pede credencial
-     * nenhuma, só explica o que instalar. O nome na tela nunca é "Claude Code" — diretriz de marca
+     * nenhuma, só explica o que instalar. O nome na tela nunca é "Claude Code", por diretriz de marca
      * da Anthropic para produto de terceiro.
      */
     test('offers the local agent with no credential to fill in, only what to install', async ({ page }) => {

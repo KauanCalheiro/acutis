@@ -16,7 +16,7 @@ type CapturedEvent = { type: string } & Record<string, unknown>
 async function ensurePortIsFree(): Promise<void> {
     const alreadyListening = await fetch(`${WEBDRIVER_URL}/health`).then(() => true).catch(() => false)
     if (alreadyListening) {
-        throw new Error(`something is already listening on ${WEBDRIVER_URL} — stop it before capturing`)
+        throw new Error(`something is already listening on ${WEBDRIVER_URL}, stop it before capturing`)
     }
 }
 
@@ -161,7 +161,7 @@ async function capture(): Promise<void> {
         gateway.close()
 
         const sessionId = stop.sessionId as string | null
-        assert.ok(sessionId, 'recording stopped without a session id — no video was produced')
+        assert.ok(sessionId, 'recording stopped without a session id, so no video was produced')
 
         mkdirSync(OUTPUT_DIR, { recursive: true })
         const videoSource = resolve(WEBDRIVER_DIR, '.tmp/videos', `${sessionId}.webm`)

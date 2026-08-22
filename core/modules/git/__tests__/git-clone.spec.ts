@@ -34,7 +34,7 @@ function target(name: string): string {
   return join(workdir, name)
 }
 
-/** Quantas chaves SSH temporárias existem agora — o clone precisa apagar a que criou. */
+/** Quantas chaves SSH temporárias existem agora, porque o clone precisa apagar a que criou. */
 function sshKeyDirs(): string[] {
   return readdirSync(tmpdir()).filter(entry => entry.startsWith('acutis-ssh-'))
 }

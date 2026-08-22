@@ -118,7 +118,7 @@ describe('recorder WebSocket', () => {
     expect(service.stop).toHaveBeenCalled()
     expect(socket.send).toHaveBeenCalledWith(JSON.stringify({
       event: 'recorder:error',
-      error: 'Retomada cancelada: não consegui refazer o passo — Clica em "Entrar".'
+      error: 'Retomada cancelada. Não consegui refazer o passo: Clica em "Entrar".'
     }))
     expect(socket.send).toHaveBeenCalledWith(JSON.stringify({
       event: 'recorder:stop',
