@@ -6,6 +6,10 @@ interface WebdriverState {
   connected: boolean
   extensionReady: boolean
   recording: boolean
+  /** O navegador ainda está refazendo os passos anteriores; parar agora perderia a retomada. */
+  replaying: boolean
+  /** O passo que não repetiu: a retomada está parada esperando a decisão na janela gravada. */
+  replayFailedStep: string | null
   error: string | null
   events: RecorderEvent[]
   videoSessionId: string | null
@@ -24,6 +28,8 @@ export function useWebdriver() {
     connected: false,
     extensionReady: false,
     recording: false,
+    replaying: false,
+    replayFailedStep: null,
     error: null,
     events: [],
     videoSessionId: null,
@@ -57,12 +63,29 @@ export function useWebdriver() {
         state.value.recording = true
         state.value.recordingStartedAt = data.recordingStartedAt ?? null
         break
+      case 'recorder:replayed': {
+        const kept = (data as { kept?: number | null }).kept
+
+        if (typeof kept === 'number') state.value.events = state.value.events.slice(0, kept)
+
+        state.value.replaying = false
+        state.value.replayFailedStep = null
+        break
+      }
+      case 'recorder:replay-failed':
+        state.value.replayFailedStep = (data as { step?: string }).step ?? 'um dos passos'
+        state.value.replaying = false
+        break
       case 'recorder:error':
         state.value.error = (data as { error?: string }).error ?? 'Erro na extensão.'
         state.value.recording = false
+        state.value.replaying = false
+        state.value.replayFailedStep = null
         break
       case 'recorder:stop':
         state.value.recording = false
+        state.value.replaying = false
+        state.value.replayFailedStep = null
         state.value.videoSessionId = data.sessionId ?? null
         state.value.storageState = data.storageState ?? null
         break
@@ -99,14 +122,18 @@ export function useWebdriver() {
     storageState?: string
     /** URL do sistema (URL do projeto). Abre direto nela, sem o usuário digitar. */
     url?: string
+    /** Passos já gravados que o navegador refaz antes de o usuário continuar de onde parou. */
+    replay?: RecorderEvent[]
   }
 
   function startRecording(mode: 'scenario' | 'auth' = 'scenario', options: RecordingOptions = {}) {
     state.value.error = null
-    state.value.events = []
+    state.value.events = options.replay ?? []
     state.value.videoSessionId = null
     state.value.storageState = null
     state.value.recording = true
+    state.value.replaying = (options.replay?.length ?? 0) > 0
+    state.value.replayFailedStep = null
     send('START_RECORDING', { mode, ...options })
   }
 

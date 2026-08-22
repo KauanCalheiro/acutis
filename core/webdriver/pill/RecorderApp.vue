@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Pill from './Pill.vue'
 import AssertPopover from './AssertPopover.vue'
+import ReplayCurtain from './ReplayCurtain.vue'
 </script>
 
 <template>
@@ -8,4 +9,5 @@ import AssertPopover from './AssertPopover.vue'
     <Pill />
   </div>
   <AssertPopover />
+  <ReplayCurtain />
 </template>

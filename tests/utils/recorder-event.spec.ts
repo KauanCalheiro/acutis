@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { describeRecorderEvent } from '~/utils/recorder-event'
+import { describeRecorderEvent, toRecordedEvents } from '~/utils/recorder-event'
 import type { RecorderEvent } from '~/composables/webdriver'
 
 function event(partial: Record<string, unknown>): RecorderEvent {
@@ -49,6 +49,58 @@ describe('describeRecorderEvent', () => {
   it('descreve o envio do formulário e a conferência', () => {
     expect(describeRecorderEvent(event({ type: 'submit' }))).toBe('Envia o formulário')
     expect(describeRecorderEvent(event({ type: 'assert', label: 'Bem-vindo' }))).toBe('Confere "Bem-vindo"')
+  })
+
+  it('leva para o backend o que a asserção afirma, e não só que houve uma', () => {
+    const gravados = toRecordedEvents([
+      {
+        event: 'recorder:assert',
+        type: 'assert',
+        url: 'http://loja.test/carrinho',
+        selectors: { dataTestId: 'total' },
+        label: 'Total',
+        innerText: 'R$ 10,00',
+        tagName: 'span',
+        checked: null,
+        inputType: null,
+        assert: { assertType: 'text', expectedValue: 'R$ 10,00' }
+      }
+    ] as unknown as RecorderEvent[])
+
+    expect(gravados[0]).toMatchObject({
+      type: 'assert',
+      innerText: 'R$ 10,00',
+      tagName: 'span',
+      assert: { assertType: 'text', expectedValue: 'R$ 10,00' }
+    })
+  })
+
+  it('não manda o que é só do transporte do websocket', () => {
+    const gravados = toRecordedEvents([
+      { event: 'recorder:click', type: 'click', sessionId: 'abc', url: 'http://loja.test' }
+    ] as unknown as RecorderEvent[])
+
+    expect(gravados[0]).not.toHaveProperty('event')
+    expect(gravados[0]).not.toHaveProperty('sessionId')
+  })
+
+  it('diz que o assert de URL é sobre a tela, e não sobre um elemento dela', () => {
+    const naTela = event({
+      type: 'assert',
+      label: 'Plataforma Univates',
+      url: 'http://loja.test/financeiro',
+      assert: { assertType: 'url', expectedValue: 'http://loja.test/financeiro' }
+    })
+
+    expect(describeRecorderEvent(naTela)).toBe('Confere que a tela é "/financeiro"')
+
+    const naRaiz = event({
+      type: 'assert',
+      url: 'http://loja.test/',
+      assert: { assertType: 'url', expectedValue: 'http://loja.test/' }
+    })
+
+    expect(describeRecorderEvent(naRaiz)).toBe('Confere que a tela é a página inicial')
   })
 
   it('cai no que sobrou quando o tipo é desconhecido', () => {

@@ -149,6 +149,46 @@ describe('ScenarioReviewModal', () => {
     expect(wrapper.findComponent(ScenarioReviewModal).emitted('rerecord')).toHaveLength(1)
   })
 
+  it('manda a asserção gravada com o que ela afirma, e não só o tipo do evento', async () => {
+    recorded(
+      { type: 'navigate', url: 'http://loja.test/carrinho', timestamp: 1000 } as Partial<RecorderEvent>,
+      {
+        type: 'assert',
+        url: 'http://loja.test/carrinho',
+        timestamp: 2000,
+        assert: { assertType: 'url', expectedValue: 'http://loja.test/carrinho' }
+      } as Partial<RecorderEvent>
+    )
+    await open()
+
+    field('revisao-gerar')!.click()
+    await settle(6)
+
+    expect((api.drafted as { events: unknown[] }).events[1]).toMatchObject({
+      type: 'assert',
+      assert: { assertType: 'url', expectedValue: 'http://loja.test/carrinho' }
+    })
+  })
+
+  it('fecha e pede a retomada com os eventos anteriores ao corte confirmado', async () => {
+    const { state, wrapper } = await open()
+
+    const corte = document.body.querySelector<HTMLElement>('[data-testid="revisao-retomar"]')!
+
+    corte.click()
+    await settle()
+    expect(wrapper.findComponent(ScenarioReviewModal).emitted('resume')).toBeUndefined()
+
+    await new Promise(resolve => setTimeout(resolve, 700))
+    corte.click()
+    await settle()
+
+    expect(state.value).toBe(false)
+    expect(wrapper.findComponent(ScenarioReviewModal).emitted('resume')).toEqual([[
+      [{ type: 'navigate', url: 'http://loja.test/login', timestamp: 1000 }]
+    ]])
+  })
+
   it('recusa gerar quando a navegação registrada não é um endereço válido', async () => {
     recorded({ type: 'navigate', url: 'http://[', timestamp: 1000 } as Partial<RecorderEvent>)
     await open()

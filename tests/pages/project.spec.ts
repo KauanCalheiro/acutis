@@ -248,6 +248,32 @@ describe('ProjectPage', () => {
     expect(field('revisao-gerar')).toBeDefined()
   })
 
+  it('retoma a gravação do passo escolhido na revisão, mantendo os anteriores', async () => {
+    api.project = project({ auth_status: 'skipped' })
+    const wrapper = await mount()
+
+    await wrapper.get('[data-testid="cenario-novo"]').trigger('click')
+    useWebdriver().state.value.events = [
+      { type: 'navigate', url: 'http://loja.test/login', timestamp: 1000 },
+      { type: 'click', label: 'Entrar', timestamp: 2000 }
+    ] as ReturnType<typeof useWebdriver>['state']['value']['events']
+    await wrapper.get('[data-testid="cenario-parar"]').trigger('click')
+    useWebdriver().state.value.videoSessionId = 'sessao-1'
+    await settle()
+
+    const corte = document.body.querySelector<HTMLElement>('[data-testid="revisao-retomar"]')!
+    corte.click()
+    await settle()
+    await new Promise(resolve => setTimeout(resolve, 700))
+    corte.click()
+    await settle()
+
+    expect(useWebdriver().state.value.recording).toBe(true)
+    expect(useWebdriver().state.value.events).toEqual([
+      { type: 'navigate', url: 'http://loja.test/login', timestamp: 1000 }
+    ])
+  })
+
   it('roda o login antes de gravar um cenário autenticado', async () => {
     const wrapper = await mount()
 

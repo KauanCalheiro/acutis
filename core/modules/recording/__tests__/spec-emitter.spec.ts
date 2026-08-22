@@ -517,6 +517,19 @@ describe('interações e asserções', () => {
     expect(spec).toContain('await expect(page).toHaveURL(/novo/)')
   })
 
+  it('afirma a url da tela que não tem segmento próprio, em vez de não escrever passo nenhum', () => {
+    const spec = emit([
+      emitEvent('assert', {
+        url: `${EMIT_BASE}/`,
+        selectors: null,
+        assert: { assertType: 'url', expectedValue: `${EMIT_BASE}/` }
+      })
+    ])
+
+    expect(spec).toContain('Confere que a tela é a página inicial')
+    expect(spec).toContain('await expect(page).toHaveURL(/\\/intranet\\/?$/)')
+  })
+
   it('dá prazo maior à espera onde a gravação mostra que o usuário aguardou a página', () => {
     const spec = emit([
       emitEvent('navigate', { timestamp: 1000 }),

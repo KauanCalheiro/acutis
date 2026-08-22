@@ -6,6 +6,8 @@ defineProps<{
   icon: PillIconName
   tooltip: string
   active?: boolean
+  /** A ação deste botão acabou de virar passo: o ícone dá lugar ao check e depois volta. */
+  confirmed?: boolean
   extraClass?: string
 }>()
 
@@ -32,9 +34,10 @@ function handleClick(e: MouseEvent) {
   >
     <span
       class="icon"
+      :class="{ confirmed }"
     >
       <PillIcon
-        :name="icon"
+        :name="confirmed ? 'checked' : icon"
         :size="14"
       />
     </span>

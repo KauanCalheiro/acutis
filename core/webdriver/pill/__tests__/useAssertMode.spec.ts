@@ -118,3 +118,19 @@ it('não grava conferência sem elemento escolhido', async () => {
 
   expect(enviados).toEqual([])
 })
+
+it('grava o assert de URL sem escolher elemento', async () => {
+  const assertMode = useAssertMode()
+  const enviados = captured()
+
+  history.pushState({}, '', '/checkout')
+  assertMode.assertUrl()
+  await new Promise(resolve => setTimeout(resolve, 0))
+
+  expect(enviados.at(-1)).toMatchObject({
+    type: 'assert',
+    selectors: null,
+    label: null,
+    assert: { assertType: 'url', expectedValue: window.location.href }
+  })
+})

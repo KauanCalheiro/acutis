@@ -35,7 +35,7 @@ export const recordedEventSchema = z.object({
   innerText: z.string().nullable().optional(),
   inputType: z.string().nullable().optional(),
   html: z.string().nullable().optional(),
-  checked: z.boolean().optional(),
+  checked: z.boolean().nullable().optional(),
   assert: recordedAssertSchema.optional()
 })
 
@@ -65,7 +65,10 @@ export const recorderEventSchema = z.object({
   timestamp: z.number().optional(),
   recordingStartedAt: z.number().optional(),
   storageState: z.lazy(() => storageStateSchema).nullable().optional(),
-  inputType: z.string().nullable().optional()
+  inputType: z.string().nullable().optional(),
+  tagName: z.string().nullable().optional(),
+  checked: z.boolean().nullable().optional(),
+  assert: recordedAssertSchema.optional()
 }).passthrough()
 
 export type RecorderEvent = z.output<typeof recorderEventSchema>

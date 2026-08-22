@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TabsItem } from '@nuxt/ui'
-import type { ProjectDetail, ScenarioDetail, ScenarioRun, SelectorSuggestion } from '~/types/project'
+import type { ProjectDetail, ScenarioDetail, ScenarioRun, SelectorSuggestion, TestDraft } from '~/types/project'
+import type { RecorderEvent } from '~/composables/webdriver'
 import { AI_OFF_HINT } from '~/composables/ai'
 import { tagColor } from '~/utils/tags'
 
@@ -238,8 +239,88 @@ function recordLogin() {
   startRecording('auth', { url: project.value!.base_url ?? undefined })
 }
 
+const RESUME_PHRASES = [
+  'Lendo os eventos da gravação retomada',
+  'Reescrevendo os passos do cenário',
+  'Montando o teste Playwright'
+]
+
+const resuming = ref(false)
+/** Só a tela que pediu a retomada reescreve o cenário; o gravador é um estado compartilhado. */
+const resumeStarted = ref(false)
+const resumed = ref<{ draft: TestDraft, events: RecorderEvent[] } | null>(null)
+const resumeError = ref<string | null>(null)
+
+/** Retomar do passo escolhido: o navegador refaz os anteriores e a gravação continua dali. */
+const isPublic = computed(() => scenario.value!.tags.includes('@publico'))
+
+function resumeFrom(index: number) {
+  resumeError.value = null
+  resumed.value = null
+  resuming.value = false
+  resumeStarted.value = true
+  startRecording(isAuth.value ? 'auth' : 'scenario', {
+    url: project.value!.base_url ?? undefined,
+    storageState: isAuth.value ? undefined : sessionFor(project.value!, isPublic.value),
+    replay: scenario.value!.events.slice(0, index)
+  })
+}
+
+/** Enquanto a ferramenta refaz os passos, quem manda é a cortina na janela gravada. */
+const recordingLabel = computed(() => {
+  if (webdriver.value.replayFailedStep) return 'Aguardando você na janela'
+  if (webdriver.value.replaying) return 'Refazendo os passos'
+
+  return 'Parar gravação'
+})
+
+/** A edição comum revisa o que está em disco, e não o rascunho de uma retomada anterior. */
+function openEdit() {
+  resumed.value = null
+  editOpen.value = true
+}
+
+function recordedEvents() {
+  return toRecordedEvents(webdriver.value.events) as unknown as RecorderEvent[]
+}
+
+/** A gravação retomada vira rascunho e abre a edição, que é quem grava por cima do cenário. */
+async function draftResumed(): Promise<void> {
+  const events = recordedEvents()
+  const baseUrl = eventsBaseUrl(webdriver.value.events)
+
+  if (!baseUrl) {
+    resumeError.value = 'A gravação retomada não registrou nenhuma página. Tente de novo.'
+    return
+  }
+
+  resuming.value = true
+
+  try {
+    const draft = await $fetch<TestDraft>(`/api/projects/${slug.value}/tests/draft`, {
+      method: 'POST',
+      body: { baseUrl, events, isPublic: isPublic.value }
+    })
+
+    const atual = draftFromScenario(scenario.value!)
+
+    resumed.value = {
+      draft: { ...draft, title: atual.title, path: atual.path, domain: atual.domain },
+      events
+    }
+    editOpen.value = true
+  } catch (error) {
+    resumeError.value = extractServerError(error, 'Não foi possível reescrever o cenário a partir da gravação.')
+  } finally {
+    resuming.value = false
+    resumeStarted.value = false
+  }
+}
+
 watch(() => webdriver.value.videoSessionId, async (sessionId) => {
-  if (!sessionId || !isAuth.value) return
+  if (!sessionId) return
+
+  if (!isAuth.value) return resumeStarted.value ? draftResumed() : undefined
 
   const baseUrl = eventsBaseUrl(webdriver.value.events)
 
@@ -255,16 +336,7 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
       method: 'POST',
       body: {
         baseUrl,
-        events: webdriver.value.events.map(event => ({
-          type: event.type,
-          timestamp: event.timestamp,
-          url: event.url ?? null,
-          selectors: event.selectors ?? null,
-          label: event.label ?? null,
-          value: event.value ?? null,
-          inputType: event.inputType ?? null,
-          html: event.html ?? null
-        }))
+        events: recordedEvents()
       }
     })
 
@@ -344,7 +416,7 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
           color="neutral"
           variant="soft"
           data-testid="cenario-editar"
-          @click="editOpen = true"
+          @click="openEdit"
         />
         <UTooltip
           v-if="!isAuth"
@@ -368,11 +440,12 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
           </span>
         </UTooltip>
         <UButton
-          v-if="isAuth && webdriver.recording"
-          label="Parar gravação"
+          v-if="webdriver.recording"
+          :label="recordingLabel"
           trailing-icon="i-ic-round-stop"
           color="error"
-          class="animate-pulse"
+          :disabled="webdriver.replaying"
+          :class="webdriver.replayFailedStep ? '' : 'animate-pulse'"
           data-testid="cenario-parar"
           @click="stopRecording"
         />
@@ -502,7 +575,18 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
         <ScenarioReviewTimeline
           v-else
           :events="scenario!.events"
+          :resumable="webdriver.connected && !webdriver.recording"
           data-testid="cenario-eventos"
+          @resume="resumeFrom"
+        />
+
+        <UAlert
+          v-if="resumeError ?? webdriver.error"
+          color="error"
+          variant="soft"
+          :description="resumeError ?? webdriver.error!"
+          class="mt-4"
+          data-testid="cenario-retomar-erro"
         />
       </template>
 
@@ -558,6 +642,7 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
       v-model:open="editOpen"
       :slug="slug"
       :scenario="scenario!"
+      :resumed="resumed"
       @updated="onUpdated"
     />
 
@@ -593,6 +678,19 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
         <BaseLoadingPhrases
           :phrases="AUTH_PHRASES"
           data-testid="auth-carregando"
+        />
+      </template>
+    </BaseModal>
+
+    <BaseModal
+      v-model:open="resuming"
+      :dismissable="false"
+      loading
+    >
+      <template #body>
+        <BaseLoadingPhrases
+          :phrases="RESUME_PHRASES"
+          data-testid="cenario-retomar-carregando"
         />
       </template>
     </BaseModal>

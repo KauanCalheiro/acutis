@@ -60,6 +60,30 @@ describe('generation Nitro API', () => {
     expect(await response.json()).toMatchObject({ tags: ['@read'], playwright: expect.stringContaining('page.goto') })
   })
 
+  it('accepts the recording exactly as the recorder produces it, assertion and all', async () => {
+    const response = await request('/api/projects/minha-loja/tests/draft', {
+      baseUrl: 'https://store.test',
+      events: [
+        {
+          type: 'navigate', timestamp: 1, url: 'https://store.test/carrinho', selectors: null,
+          label: null, innerText: null, tagName: null, inputType: null, value: null,
+          sensitive: false, checked: null, html: null
+        },
+        {
+          type: 'assert', timestamp: 2, url: 'https://store.test/carrinho', selectors: null,
+          label: null, innerText: null, tagName: null, inputType: null, value: null,
+          sensitive: false, checked: null, html: null,
+          assert: { assertType: 'url', expectedValue: 'https://store.test/carrinho' }
+        }
+      ]
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      playwright: expect.stringContaining('toHaveURL')
+    })
+  })
+
   it('writes reviewed test artifacts directly to the project', async () => {
     const response = await request('/api/projects/minha-loja/tests', {
       title: 'Finalizar compra', path: 'finalizar-compra', domain: 'checkout',

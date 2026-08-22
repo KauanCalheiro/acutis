@@ -1,5 +1,24 @@
 import type { RecorderEvent } from '~/composables/webdriver'
 
+/** A gravação como o backend a guarda: os campos do evento, sem o que é do transporte. */
+export function toRecordedEvents(events: RecorderEvent[]) {
+  return events.map(event => ({
+    type: event.type,
+    timestamp: event.timestamp,
+    url: event.url ?? null,
+    selectors: event.selectors ?? null,
+    label: event.label ?? null,
+    innerText: event.innerText ?? null,
+    tagName: event.tagName ?? null,
+    inputType: event.inputType ?? null,
+    value: event.value ?? null,
+    sensitive: event.sensitive ?? false,
+    checked: event.checked ?? null,
+    html: event.html ?? null,
+    assert: event.assert
+  }))
+}
+
 /** Como o evento chama o elemento, na mesma ordem de fontes do `SpecEmitter` do backend. */
 function target(event: RecorderEvent): string | null {
   const selectors = event.selectors
@@ -51,6 +70,8 @@ export function describeRecorderEvent(event: RecorderEvent): string {
     case 'submit':
       return 'Envia o formulário'
     case 'assert':
+      if (event.assert?.assertType === 'url') return `Confere que a tela é ${page(event)}`
+
       return `Confere ${what ? quoted(what) : 'o elemento'}`
     default:
       return what ?? event.url ?? event.type ?? ''

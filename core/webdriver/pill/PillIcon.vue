@@ -8,7 +8,7 @@ const { name, size } = defineProps<{
 }>()
 
 const viewBox = computed(() =>
-  ['pause', 'resume', 'assert', 'hover', 'stop'].includes(name)
+  ['pause', 'resume', 'assert', 'hover', 'stop', 'cancel'].includes(name)
     ? '0 0 14 14'
     : '0 0 16 16'
 )
@@ -74,6 +74,13 @@ const viewBox = computed(() =>
       height="9"
       rx="1.5"
       fill="currentColor"
+    />
+    <path
+      v-else-if="name === 'cancel'"
+      d="M3 3L11 11M11 3L3 11"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linecap="round"
     />
     <template v-else-if="name === 'exists'">
       <ellipse

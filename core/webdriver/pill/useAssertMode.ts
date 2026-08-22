@@ -15,8 +15,8 @@ const isPopoverVisible = ref(false)
 const popoverPosition = ref<PopoverPosition>({ left: 0, vertical: 0, above: true, arrowLeft: 0 })
 
 export function useAssertMode() {
-  const { setCaptureMode } = usePillState()
-  const { dispatch, buildBaseEvent } = useRecorderEvents()
+  const { setCaptureMode, confirmAction } = usePillState()
+  const { dispatch, buildBaseEvent, buildNavigateEvent } = useRecorderEvents()
 
   function activateAssertMode() {
     setCaptureMode('assert')
@@ -69,7 +69,21 @@ export function useAssertMode() {
       assert: { assertType, expectedValue }
     }
     dispatch(event, true)
+    confirmAction('assert')
     deactivateAssertMode()
+  }
+
+  /** Grava o assert da URL atual, sem elemento envolvido. */
+  function assertUrl() {
+    const url = window.location.href
+    const event: RecordingEvent = {
+      ...buildNavigateEvent(),
+      type: 'assert',
+      label: null,
+      assert: { assertType: 'url', expectedValue: url }
+    }
+    dispatch(event, true)
+    confirmAction('url')
   }
 
   watch(isPopoverVisible, (visible) => {
@@ -87,6 +101,7 @@ export function useAssertMode() {
     activateAssertMode,
     deactivateAssertMode,
     handleElementClick,
-    confirmAssert
+    confirmAssert,
+    assertUrl
   }
 }

@@ -51,7 +51,58 @@ function ensureAttached(): void {
   if (!hostElement || typeof document === 'undefined') return
   const parent = document.body ?? document.documentElement
   if (!parent) return
-  if (hostElement.parentElement !== parent) parent.appendChild(hostElement)
+  if (hostElement.parentElement === parent) return
+
+  parent.appendChild(hostElement)
+  promoteToTopLayer(hostElement)
+}
+
+type PopoverHost = HTMLElement & { showPopover?: () => void, hidePopover?: () => void }
+
+/** Promove o host ao top layer via Popover API; sem suporte, mantém só o z-index de hoje. */
+function promoteToTopLayer(host: HTMLElement): void {
+  const popoverHost = host as PopoverHost
+  if (typeof popoverHost.showPopover !== 'function') return
+
+  host.setAttribute('popover', 'manual')
+  try {
+    popoverHost.showPopover()
+  } catch {
+    host.removeAttribute('popover')
+  }
+}
+
+/** Recoloca o host no topo da pilha do top layer, acima de um modal aberto depois dele. */
+function repromoteHost(): void {
+  if (!hostElement || !hostElement.hasAttribute('popover')) return
+  const popoverHost = hostElement as PopoverHost
+  try {
+    popoverHost.hidePopover?.()
+    popoverHost.showPopover?.()
+  } catch {
+    hostElement.removeAttribute('popover')
+  }
+}
+
+const MODAL_SELECTOR = 'dialog[open], [popover]'
+
+/** Se alguma mutação da leva indica modal novo, abrindo por atributo ou entrando pronto no DOM. */
+function opensModalContent(mutations: MutationRecord[]): boolean {
+  return mutations.some((mutation) => {
+    if (mutation.type === 'attributes') {
+      const target = mutation.target
+
+      if (!(target instanceof Element) || target === hostElement) return false
+
+      return mutation.attributeName === 'popover' || target.matches('dialog')
+    }
+
+    return [...mutation.addedNodes].some(node =>
+      node instanceof Element
+      && node !== hostElement
+      && (node.matches(MODAL_SELECTOR) || node.querySelector(MODAL_SELECTOR) !== null)
+    )
+  })
 }
 
 export function mountRecorder(onClick?: () => void): void {
@@ -69,7 +120,7 @@ export function mountRecorder(onClick?: () => void): void {
     return
   }
 
-  const { captureMode, setCaptureMode, isPaused } = usePillState()
+  const { captureMode, setCaptureMode, isPaused, confirmAction } = usePillState()
   const { setHostElement, activate, deactivate } = useOverlay()
   const { dispatch, buildBaseEvent, buildNavigateEvent } = useRecorderEvents()
   const { handleElementClick } = useAssertMode()
@@ -77,7 +128,9 @@ export function mountRecorder(onClick?: () => void): void {
   hostElement = document.createElement('div')
   hostElement.id = '__acutis_host'
   Object.assign(hostElement.style, {
-    position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+    position: 'fixed', top: '0', right: '0', bottom: '0', left: '0',
+    width: '100%', height: '100%', maxWidth: 'none', maxHeight: 'none',
+    margin: '0', border: 'none', padding: '0', background: 'transparent', color: 'inherit',
     zIndex: '2147483647', pointerEvents: 'none', overflow: 'visible'
   })
   setHostElement(hostElement)
@@ -98,8 +151,17 @@ export function mountRecorder(onClick?: () => void): void {
 
   createApp(RecorderApp).mount(mountPoint)
 
-  keepAliveObserver = new MutationObserver(() => ensureAttached())
-  keepAliveObserver.observe(document.documentElement, { childList: true, subtree: true })
+  document.addEventListener('beforetoggle', (event) => {
+    if (event.target !== hostElement) repromoteHost()
+  }, true)
+
+  keepAliveObserver = new MutationObserver((mutations) => {
+    ensureAttached()
+    if (opensModalContent(mutations)) repromoteHost()
+  })
+  keepAliveObserver.observe(document.documentElement, {
+    childList: true, subtree: true, attributes: true, attributeFilter: ['open', 'popover']
+  })
 
   watch(captureMode, (mode) => {
     if (mode === 'assert' || mode === 'hover') {
@@ -137,6 +199,7 @@ export function mountRecorder(onClick?: () => void): void {
       e.stopPropagation()
       e.preventDefault()
       dispatch({ ...buildBaseEvent('hover', e.target), value: null })
+      confirmAction('hover')
       setCaptureMode(null)
       return
     }

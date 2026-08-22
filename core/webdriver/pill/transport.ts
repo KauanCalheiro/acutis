@@ -2,6 +2,7 @@ declare global {
   interface Window {
     __acutisReportEvent?: (event: unknown) => void
     __acutisRequestStop?: () => void
+    __acutisCancelRecording?: () => void
   }
 }
 
@@ -12,4 +13,8 @@ export function reportEvent(event: unknown): Promise<void> {
 
 export function requestStop(): void {
   window.__acutisRequestStop?.()
+}
+
+export function cancelRecording(): void {
+  window.__acutisCancelRecording?.()
 }

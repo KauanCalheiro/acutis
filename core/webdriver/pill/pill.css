@@ -6,18 +6,90 @@
   padding: 0;
 }
 
+/* Os tokens de superfície da pill, do popover de assert, da confirmação e da cortina. */
+:host {
+  --surface-bg: rgba(18, 18, 18, 0.94);
+  --surface-border: rgba(255, 255, 255, 0.12);
+  --surface-divider: rgba(255, 255, 255, 0.08);
+  --surface-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --surface-radius: 14px;
+  --surface-text: #f2f2f2;
+  --surface-muted: rgba(255, 255, 255, 0.5);
+  --surface-hover: rgba(255, 255, 255, 0.08);
+  --action-bg: #ffffff;
+  --action-text: #111111;
+  --action-hover: #e8e8e8;
+  --action-ghost-border: rgba(255, 255, 255, 0.22);
+  --action-danger: #ef4444;
+  --action-danger-hover: #dc2626;
+  --confirmed: #4ade80;
+}
+
+/* O cartão de cada modal da pill. */
+.surface {
+  background: var(--surface-bg);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--surface-radius);
+  box-shadow: var(--surface-shadow);
+  color: var(--surface-text);
+  font-family: 'Poppins', system-ui, sans-serif;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* O par de botões que fecha cada modal. */
+.surface-action {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: 'Poppins', system-ui, sans-serif;
+  cursor: pointer;
+  border: 1.5px solid var(--action-ghost-border);
+  background: transparent;
+  color: var(--surface-text);
+  transition: background 0.14s, opacity 0.14s;
+}
+
+.surface-action:hover { background: var(--surface-hover); }
+
+.surface-action-primary {
+  background: var(--action-bg);
+  border-color: var(--action-bg);
+  color: var(--action-text);
+}
+
+.surface-action-primary:not(:disabled):hover { background: var(--action-hover); }
+.surface-action-primary:disabled { opacity: 0.35; cursor: default; }
+
+.surface-action-danger {
+  background: var(--action-danger);
+  border-color: var(--action-danger);
+  color: #fff;
+}
+
+.surface-action-danger:hover { background: var(--action-danger-hover); }
+
+.surface-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .pill {
+  position: relative;
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--surface-bg);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--surface-shadow);
+  color: var(--surface-text);
   border-radius: 999px;
   padding: 6px 10px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
   font-family: 'Poppins', system-ui, sans-serif;
   user-select: none;
   white-space: nowrap;
@@ -103,6 +175,22 @@
 
 .btn:hover .tooltip { opacity: 1; }
 
+.cancel-confirm {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  padding: 14px;
+  pointer-events: auto;
+}
+
+.cancel-confirm-text {
+  font-size: 13px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
 .pill-anchor {
   position: fixed;
   bottom: 24px;
@@ -113,57 +201,11 @@
 }
 
 .assert-popover {
-  --popover-bg: #ffffff;
-  --popover-border: rgba(0, 0, 0, 0.1);
-  --popover-divider: rgba(0, 0, 0, 0.07);
-  --popover-text: #111111;
-  --popover-muted: rgba(0, 0, 0, 0.45);
-  --popover-option-border: rgba(0, 0, 0, 0.1);
-  --popover-option-hover: rgba(0, 0, 0, 0.05);
-  --popover-option-selected-bg: #111111;
-  --popover-option-selected-text: #ffffff;
-  --popover-input-border: rgba(0, 0, 0, 0.15);
-  --popover-input-border-focus: #111111;
-  --popover-btn-cancel-border: rgba(0, 0, 0, 0.15);
-  --popover-btn-cancel-hover: rgba(0, 0, 0, 0.05);
-  --popover-btn-confirm-bg: #111111;
-  --popover-btn-confirm-text: #ffffff;
-  --popover-btn-confirm-hover: #333333;
-  --popover-tag-bg: rgba(0, 0, 0, 0.07);
-
   position: fixed;
   width: 320px;
-  background: var(--popover-bg);
-  border: 1px solid var(--popover-border);
-  border-radius: 14px;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.1);
-  font-family: 'Poppins', system-ui, sans-serif;
-  color: var(--popover-text);
   z-index: 2147483646;
   pointer-events: auto;
   transform-origin: bottom center;
-}
-
-@media (prefers-color-scheme: dark) {
-  .assert-popover {
-    --popover-bg: #1a1a1a;
-    --popover-border: rgba(255, 255, 255, 0.1);
-    --popover-divider: rgba(255, 255, 255, 0.07);
-    --popover-text: #f0f0f0;
-    --popover-muted: rgba(255, 255, 255, 0.45);
-    --popover-option-border: rgba(255, 255, 255, 0.1);
-    --popover-option-hover: rgba(255, 255, 255, 0.06);
-    --popover-option-selected-bg: #ffffff;
-    --popover-option-selected-text: #000000;
-    --popover-input-border: rgba(255, 255, 255, 0.15);
-    --popover-input-border-focus: #ffffff;
-    --popover-btn-cancel-border: rgba(255, 255, 255, 0.15);
-    --popover-btn-cancel-hover: rgba(255, 255, 255, 0.07);
-    --popover-btn-confirm-bg: #ffffff;
-    --popover-btn-confirm-text: #000000;
-    --popover-btn-confirm-hover: #e8e8e8;
-    --popover-tag-bg: rgba(255, 255, 255, 0.1);
-  }
 }
 
 .popover-enter-active { animation: popover-in 0.14s ease; }
@@ -183,13 +225,13 @@
   bottom: -11px;
   border-left: 11px solid transparent;
   border-right: 11px solid transparent;
-  border-top: 11px solid var(--popover-bg);
+  border-top: 11px solid var(--surface-bg);
 }
 .popover-arrow.place-below {
   top: -11px;
   border-left: 11px solid transparent;
   border-right: 11px solid transparent;
-  border-bottom: 11px solid var(--popover-bg);
+  border-bottom: 11px solid var(--surface-bg);
 }
 
 .popover-header {
@@ -197,13 +239,13 @@
   align-items: center;
   gap: 8px;
   padding: 12px 14px;
-  border-bottom: 1px solid var(--popover-divider);
+  border-bottom: 1px solid var(--surface-divider);
 }
 .popover-element-tag {
   font-size: 10px;
   font-weight: 600;
   padding: 2px 6px;
-  background: var(--popover-tag-bg);
+  background: var(--surface-hover);
   border-radius: 4px;
   flex-shrink: 0;
   font-family: monospace;
@@ -211,7 +253,7 @@
 .popover-element-label {
   flex: 1;
   font-size: 12px;
-  color: var(--popover-muted);
+  color: var(--surface-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -220,7 +262,7 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  color: var(--popover-text);
+  color: var(--surface-text);
   font-size: 18px;
   line-height: 1;
   padding: 0 2px;
@@ -242,11 +284,11 @@
   align-items: center;
   gap: 5px;
   padding: 9px 4px;
-  border: 1.5px solid var(--popover-option-border);
+  border: 1.5px solid var(--surface-border);
   border-radius: 8px;
   cursor: pointer;
   background: transparent;
-  color: var(--popover-text);
+  color: var(--surface-text);
   font-family: 'Poppins', system-ui, sans-serif;
   font-size: 10.5px;
   font-weight: 500;
@@ -254,11 +296,11 @@
   line-height: 1.3;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
-.popover-option:hover { background: var(--popover-option-hover); }
+.popover-option:hover { background: var(--surface-hover); }
 .popover-option.selected {
-  background: var(--popover-option-selected-bg);
-  color: var(--popover-option-selected-text);
-  border-color: var(--popover-option-selected-bg);
+  background: var(--action-bg);
+  color: var(--action-text);
+  border-color: var(--action-bg);
 }
 .popover-option-icon {
   display: flex;
@@ -282,46 +324,88 @@
 .popover-value-input {
   width: 100%;
   padding: 8px 12px;
-  border: 1.5px solid var(--popover-input-border);
+  border: 1.5px solid var(--surface-border);
   border-radius: 8px;
   font-size: 13px;
   font-family: 'Poppins', system-ui, sans-serif;
   outline: none;
   background: transparent;
-  color: var(--popover-text);
+  color: var(--surface-text);
   transition: border-color 0.14s;
   box-sizing: border-box;
 }
-.popover-value-input::placeholder { color: var(--popover-muted); }
-.popover-value-input:focus { border-color: var(--popover-input-border-focus); }
+.popover-value-input::placeholder { color: var(--surface-muted); }
+.popover-value-input:focus { border-color: var(--action-bg); }
 
 .popover-footer {
-  display: flex;
-  gap: 8px;
   padding: 12px 14px;
-  border-top: 1px solid var(--popover-divider);
+  border-top: 1px solid var(--surface-divider);
 }
-.popover-footer-btn {
-  flex: 1;
-  padding: 8px 0;
-  border-radius: 8px;
-  font-size: 12.5px;
-  font-weight: 500;
+
+/* A cortina da retomada: cobre a página e recebe o ponteiro enquanto os passos são refeitos. */
+.curtain {
+  position: fixed;
+  inset: 0;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 10, 14, 0.72);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   font-family: 'Poppins', system-ui, sans-serif;
-  cursor: pointer;
-  transition: background 0.14s, opacity 0.14s;
-  border: 1.5px solid transparent;
+  cursor: progress;
 }
-.popover-btn-cancel {
-  background: transparent;
-  border-color: var(--popover-btn-cancel-border);
-  color: var(--popover-text);
+.curtain-failed { cursor: default; }
+
+.curtain-card {
+  max-width: 420px;
+  padding: 28px 32px;
+  text-align: center;
 }
-.popover-btn-cancel:hover { background: var(--popover-btn-cancel-hover); }
-.popover-btn-confirm {
-  background: var(--popover-btn-confirm-bg);
-  color: var(--popover-btn-confirm-text);
-  border-color: var(--popover-btn-confirm-bg);
+
+.curtain-spinner {
+  display: block;
+  width: 26px;
+  height: 26px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  animation: curtain-spin 0.9s linear infinite;
 }
-.popover-btn-confirm:not(:disabled):hover { background: var(--popover-btn-confirm-hover); }
-.popover-btn-confirm:disabled { opacity: 0.35; cursor: default; }
+
+@keyframes curtain-spin {
+  to { transform: rotate(360deg); }
+}
+
+.curtain-title {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.curtain-step {
+  margin-top: 6px;
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.curtain-hint {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--surface-muted);
+}
+
+.curtain-actions { margin-top: 18px; }
+
+/* O check que aparece no lugar do ícone do botão quando a ação dele virou passo. */
+.icon.confirmed {
+  color: #4ade80;
+  animation: rec-check 0.28s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+@keyframes rec-check {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
