@@ -13,7 +13,7 @@ export type { EnvironmentList } from '#shared/contracts/environment'
 export class EnvironmentService {
   constructor(private readonly projects: ProjectService) {}
 
-  /** O ambiente pedido, ou 404 — quem chama sempre precisa de um que exista. */
+  /** O ambiente pedido, ou 404, porque quem chama sempre precisa de um que exista. */
   private found(environments: Environments, slug: string): Environment {
     const environment = environments.find(slug)
 

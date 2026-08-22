@@ -1,4 +1,4 @@
-/** `pnpm db:fresh` — apaga o banco de configurações e o refaz pelas migrations. */
+/** `pnpm db:fresh`: apaga o banco de configurações e o refaz pelas migrations. */
 import { fresh } from '../config/database-fresh.js'
 
 const path = await fresh()

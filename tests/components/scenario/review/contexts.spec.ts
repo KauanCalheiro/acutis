@@ -4,7 +4,7 @@ import { mountSuspended } from '@nuxt/test-utils/runtime'
 import ScenarioReviewContexts from '~/components/scenario/review/contexts.vue'
 import type { TestDraft } from '~/types/project'
 
-// ponytail: reactive() aqui espelha o ref<TestDraft>() do modal.vue real — um objeto
+// ponytail: reactive() aqui espelha o ref<TestDraft>() do modal.vue real, porque um objeto
 // plain como prop não propaga mutações internas do codefield (v-model aninhado)
 function draft(overrides: Partial<TestDraft> = {}): TestDraft {
   return reactive({

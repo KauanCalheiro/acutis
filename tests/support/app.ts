@@ -5,7 +5,7 @@ import { UApp } from '#components'
 
 /**
  * Monta o componente dentro do `UApp`, que é onde o Nuxt UI instala os provedores de tooltip,
- * toast e overlay — sem ele o tooltip quebra no mount.
+ * toast e overlay. Sem ele o tooltip quebra no mount.
  */
 export function mountInApp<T extends Component>(component: T, options: Record<string, unknown> = {}) {
   const { props = {}, attrs = {}, slots } = options as {

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { useRunStream } from '~/composables/run-stream'
 
-// ponytail: EventSource falso no lugar de servidor SSE — o teste empurra as mensagens
+// ponytail: EventSource falso no lugar de servidor SSE, porque o teste empurra as mensagens
 // na mão, que é a única coisa que a máquina de estados enxerga.
 class FakeEventSource {
   static last: FakeEventSource | undefined

@@ -2,7 +2,7 @@ const { readFileSync } = require('node:fs')
 
 const MARKER = '@@ACUTIS_RUN@@'
 const ANSI_ESCAPE = new RegExp(String.fromCharCode(27) + '\\[[0-9;]*m', 'g')
-// Casa test.step( e setup.step( — o arquivo de autenticação importa `test as setup`.
+// Casa test.step( e setup.step(, porque o arquivo de autenticação importa `test as setup`.
 const STEP_TITLE = /\w+\.step\(\s*(['"`])((?:\\.|(?!\1).)*)\1/g
 
 const AUTH_SETUP_FILE = /auth\.setup\.ts$/
@@ -184,7 +184,7 @@ class StreamReporter {
       status,
       durationMs: result.duration,
       error,
-      // O vídeo do login como dependência não é o do cenário — mostrá-lo faria a interface
+      // O vídeo do login como dependência não é o do cenário, e mostrá-lo faria a interface
       // trocar de vídeo no meio da execução e exibir uma gravação que não é a do teste.
       videoPath: video && !this.collapsesAuth(test) ? video.path : null
     })
@@ -192,7 +192,7 @@ class StreamReporter {
 
   /**
      * Erro global do Playwright (config inválido, "No tests found", import quebrado). Como este é
-     * o único reporter do run, o que ele não escrever some — e a execução chega ao usuário como
+     * o único reporter do run, o que ele não escrever some, e a execução chega ao usuário como
      * uma falha sem motivo nenhum. Vai para stderr, que o runner recolhe e entrega junto do
      * run:finished.
      */

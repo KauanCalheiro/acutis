@@ -105,7 +105,7 @@ function file(relative: string): string {
   return readFileSync(join(dir, relative), 'utf8')
 }
 
-/** O `.env` do projeto, que nasce inexistente — lê-lo direto quebraria antes da asserção. */
+/** O `.env` do projeto, que nasce inexistente, então lê-lo direto quebraria antes da asserção. */
 function dotenv(): string {
   return existsSync(join(dir, '.env')) ? file('.env') : ''
 }
@@ -127,7 +127,7 @@ it('escreve no projeto o setup gerado a partir da gravação', async () => {
   expect(existsSync(join(dir, '.gitignore'))).toBe(true)
 })
 
-it('nunca define a url base — ela vem só das configurações do projeto', async () => {
+it('nunca define a url base, que vem só das configurações do projeto', async () => {
   await recordProject()
 
   const config = file('playwright.config.ts')

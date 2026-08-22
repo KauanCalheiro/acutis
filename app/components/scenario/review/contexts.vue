@@ -77,7 +77,7 @@ const tagsText = computed({
   set: (value: string) => applyTags(tagsFromLine(value))
 })
 
-// Texto sem linha de tag não declara tag nenhuma — não declara lista vazia.
+// Texto sem linha de tag não declara tag nenhuma, e não declara lista vazia.
 watch(() => draft.value.gherkin, (gherkin) => {
   if (syncing) return
   const tags = tagsFromGherkin(gherkin)

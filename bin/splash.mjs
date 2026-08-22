@@ -8,7 +8,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-// Par, e metade disso é a altura em linhas — 18 dá 9 linhas. A célula do braille tem
+// Par, e metade disso é a altura em linhas, então 18 dá 9 linhas. A célula do braille tem
 // 2 pontos de largura por 4 de altura, então COLS/2 linhas sempre resulta num bitmap
 // quadrado (COLS*2 por COLS*2 pontos).
 const COLS = 20
@@ -94,7 +94,7 @@ function toBraille(px, w, h) {
 }
 
 // --- nome em letra grande, no mesmo braille ------------------------------------
-// glifos de 1 bit por caractere, 5x7 — escalados depois para virar pixels de braille
+// glifos de 1 bit por caractere, 5x7, escalados depois para virar pixels de braille
 const GLYPHS = {
   A: ['.###.', '#...#', '#...#', '#####', '#...#', '#...#', '#...#'],
   C: ['.###.', '#...#', '#....', '#....', '#....', '#...#', '.###.'],

@@ -448,7 +448,7 @@ export class SpecEmitter {
   }
 
   /**
-     * O último segmento do caminho que serve para reconhecer a tela — fora identificador e fora o
+     * O último segmento do caminho que serve para reconhecer a tela, fora identificador e fora o
      * que a URL base já carrega.
      */
   private segment(url: string): string | null {

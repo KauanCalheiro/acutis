@@ -364,7 +364,7 @@ it('rascunha o spec sem gherkin quando não há provedor de ia ativo', async () 
   expect(response.body.playwright).toContain('test.describe')
 })
 
-/** "Sem IA" é provedor em branco — a mesma escolha que a tela oferece. */
+/** "Sem IA" é provedor em branco, a mesma escolha que a tela oferece. */
 async function desligaIa(): Promise<void> {
   await api.http.put('/api/v1/settings/ai').send({ provider: '' }).expect(200)
 }

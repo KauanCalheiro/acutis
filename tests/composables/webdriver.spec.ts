@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { eventsBaseUrl, type RecorderEvent } from '~/composables/webdriver'
 
 // O plugin do cliente já conectou o módulo real ao subir o app de teste, então cada caso carrega
-// uma cópia nova do composable — com o socket falso no lugar — para observar a conexão do zero.
+// uma cópia nova do composable, com o socket falso no lugar, para observar a conexão do zero.
 let useWebdriver: typeof import('~/composables/webdriver')['useWebdriver']
 
-// ponytail: WebSocket falso — o composable só enxerga o que chega por onmessage/onclose.
+// ponytail: WebSocket falso, porque o composable só enxerga o que chega por onmessage/onclose.
 class FakeSocket {
   static last: FakeSocket | undefined
 

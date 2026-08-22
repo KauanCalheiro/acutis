@@ -4,7 +4,7 @@ import type { EnvironmentVar } from '../../core/modules/environment/providers/en
 import { Url } from '../../core/common/playwright/url.js'
 import type { RecordedEvent, Selectors } from '../../core/modules/recording/events.js'
 
-/** A URL base das fixtures, com caminho — para pegar o caso do segmento repetido. */
+/** A URL base das fixtures, com caminho, para pegar o caso do segmento repetido. */
 export const SPEC_BASE_URL = 'https://sistema.test/intranet'
 
 /** Um evento gravado com todos os campos preenchidos, para o teste sobrescrever só o que importa. */

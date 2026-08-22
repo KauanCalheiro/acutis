@@ -1,6 +1,6 @@
 /**
- * O retorno de interação da tela. Uma chamada por resultado, com a cor e o ícone já resolvidos —
- * ver `.claude/memory/frontend-feedback.md`.
+ * O retorno de interação da tela. Uma chamada por resultado, com a cor e o ícone já resolvidos.
+ * Ver `.claude/memory/frontend-feedback.md`.
  */
 export function useNotify() {
   const toast = useToast()

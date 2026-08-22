@@ -135,7 +135,7 @@ export class SettingsService {
     return { ok: result.ok, model: input.model, elapsed_ms: Date.now() - started }
   }
 
-  /** Se há provedor suportado e modelo informado — ou seja, se dá para chamar um modelo agora. */
+  /** Se há provedor suportado e modelo informado, ou seja, se dá para chamar um modelo agora. */
   async canUseAi(): Promise<boolean> {
     const config = await this.resolved()
 

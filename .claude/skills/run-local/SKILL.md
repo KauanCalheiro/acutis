@@ -34,14 +34,14 @@ O mesmo processo serve interface, API, WebSocket, gravador e runner.
 ```sh
 ./dev.sh              # sobe a aplicação e fica preso; Ctrl+C derruba tudo
 ./dev.sh --build      # instala dependências antes de subir
-./dev.sh --headless   # recorder sem janela — usar quando um agente dirige a ferramenta
+./dev.sh --headless   # recorder sem janela, para quando um agente dirige a ferramenta
 ```
 
 **`--headless` quando você não é a pessoa no micro.** O recorder abre Chromium visível por padrão, porque gravar é alguém usando o sistema. Dirigindo por API (`/debug/goto`, `/debug/click`), a janela só rouba o foco de quem está trabalhando na máquina.
 
 O script já checa os pré-requisitos, recusa subir se a porta estiver ocupada, passa o `WEBDRIVER_TEST_MODE=1` e imprime a URL.
 
-Rodando por um agente: lançar com `run_in_background` e derrubar depois com `kill -INT <pid>` — o `set -m` do script coloca cada serviço no próprio process group, então o SIGINT limpa a árvore inteira.
+Rodando por um agente: lançar com `run_in_background` e derrubar depois com `kill -INT <pid>`. O `set -m` do script coloca cada serviço no próprio process group, então o SIGINT limpa a árvore inteira.
 
 ## Subir diretamente
 
@@ -59,5 +59,5 @@ Lançar cada um com `run_in_background`, depois confirmar que respondem (curl na
 
 ## Notas
 
-- Sem `RECORDER_CDP_URL`, o recorder abre o próprio Chromium headed (não depende de Chrome externo). Com a variável, conecta num Chrome já aberto com porta de debug — é como se grava na sessão logada do usuário.
+- Sem `RECORDER_CDP_URL`, o recorder abre o próprio Chromium headed (não depende de Chrome externo). Com a variável, conecta num Chrome já aberto com porta de debug: é como se grava na sessão logada do usuário.
 - E2E: não precisa subir nada à mão. `pnpm test:e2e` compila e sobe a aplicação como processo filho.

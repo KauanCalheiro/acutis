@@ -35,7 +35,7 @@ export interface SelectorTarget {
   selector: string
 }
 
-/** Só os eventos cujo seletor é frágil viram alvo — os outros não têm o que melhorar. */
+/** Só os eventos cujo seletor é frágil viram alvo, porque os outros não têm o que melhorar. */
 export function fragileTargets(events: Record<string, unknown>[]): SelectorTarget[] {
   return events.flatMap((event, index) => {
     const selectors = (event.selectors ?? null) as Record<string, string | null> | null

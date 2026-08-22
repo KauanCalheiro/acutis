@@ -20,7 +20,7 @@ export interface ProviderDefaults {
 
 /**
  * Todo provedor listado na tela; o banco nasce com uma linha para cada um. Só entra aqui o que o
- * backend consegue chamar de verdade — ver `LANGCHAIN_PROVIDER` em `ai/providers/provider-model.ts`.
+ * backend consegue chamar de verdade, ver `LANGCHAIN_PROVIDER` em `ai/providers/provider-model.ts`.
  */
 export const PROVIDERS: Record<string, ProviderDefaults> = {
   'anthropic': { url: APP_CONFIG.providers.anthropicUrl },

@@ -13,7 +13,7 @@ const navigate = vi.hoisted(() => vi.fn())
 
 mockNuxtImport('navigateTo', () => navigate)
 
-// ponytail: EventSource falso no lugar do SSE do runner — o teste empurra os eventos na mão.
+// ponytail: EventSource falso no lugar do SSE do runner, com o teste empurrando os eventos na mão.
 class FakeEventSource {
   static last: FakeEventSource | undefined
 

@@ -17,7 +17,7 @@ export const PACKAGE_ROOT_ENV = 'ACUTIS_PACKAGE_ROOT'
 /**
  * A raiz de onde saem reporter, gravador, vídeos e runner.
  *
- * A busca começa neste arquivo — no pacote instalado, `process.argv[1]` e o `cwd` são o projeto de
+ * A busca começa neste arquivo. No pacote instalado, `process.argv[1]` e o `cwd` são o projeto de
  * quem chamou o CLI, e apontariam tudo para a pasta errada.
  */
 export function packageRoot(starts: string[] = [

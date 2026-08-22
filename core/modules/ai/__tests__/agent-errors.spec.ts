@@ -76,7 +76,7 @@ it('avisa que o modelo não existe naquele provedor', async () => {
 })
 
 /**
- * Falha sem status nenhum (provedor fora do ar, DNS) não pode virar 500 mudo — nem demorar. Com o
+ * Falha sem status nenhum (provedor fora do ar, DNS) não pode virar 500 mudo, nem demorar. Com o
  * retry padrão do LangChain eram 7 tentativas e 72s de espera antes de qualquer aviso na tela.
  */
 it('desiste do provedor fora do ar depressa, em vez de insistir por um minuto', async () => {

@@ -231,7 +231,7 @@ test.describe('auth scenario page', { tag: ['@read', '@scenario'] }, () => {
     })
 })
 
-/** Sem provedor de IA os botões que chamariam um modelo desabilitam — nunca somem. */
+/** Sem provedor de IA os botões que chamariam um modelo desabilitam, mas nunca somem. */
 test.describe('scenario page with no ai configured', { tag: ['@read', '@scenario'] }, () => {
     let stopBackend: () => Promise<void>
     let tmpProjects: string

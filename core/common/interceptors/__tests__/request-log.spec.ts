@@ -178,7 +178,7 @@ it('escreve uma linha por requisição, com rota, status, duração e os dois pa
   expect(entry!.response.body).toEqual({ recebido: 1 })
 })
 
-/** O identificador é como se fala de uma requisição específica depois — no jq, no relatório, aqui. */
+/** O identificador é como se fala de uma requisição específica depois: no jq, no relatório, aqui. */
 it('dá um identificador único a cada requisição', async () => {
   await http.post('/exemplo/quieto').send({ nome: 'um' }).expect(201)
   await http.post('/exemplo/quieto').send({ nome: 'dois' }).expect(201)

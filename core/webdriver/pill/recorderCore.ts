@@ -24,7 +24,7 @@ export function shouldMaskPasswords(): boolean {
 }
 
 /**
- * Chama de volta em toda mudança de URL — pushState, replaceState, histórico e hash. Devolve o
+ * Chama de volta em toda mudança de URL: pushState, replaceState, histórico e hash. Devolve o
  * desfazer.
  */
 export function watchNavigation(onNavigate: () => void): () => void {

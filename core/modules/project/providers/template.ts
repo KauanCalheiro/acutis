@@ -1,5 +1,5 @@
 /**
- * Os arquivos que um projeto novo recebe — o `playwright.config.ts` e o `package.json` —, guardados
+ * Os arquivos que um projeto novo recebe, o `playwright.config.ts` e o `package.json`, guardados
  * em `stubs/`.
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
