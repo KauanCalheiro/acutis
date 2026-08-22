@@ -26,7 +26,7 @@ onUnmounted(() => stopWatching())
           {{ state.step }}
         </p>
         <p class="curtain-hint">
-          Aguarde — a gravação é sua quando isto sair da frente.
+          Aguarde. A gravação é sua quando isto sair da frente.
         </p>
       </template>
 

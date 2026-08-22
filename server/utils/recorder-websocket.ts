@@ -83,7 +83,7 @@ export function createRecorderWebSocketHooks(recorder: RecorderPort) {
             onCancelled: async (step) => {
               send(peer, {
                 event: 'recorder:error',
-                error: `Retomada cancelada: não consegui refazer o passo — ${step}.`
+                error: `Retomada cancelada. Não consegui refazer o passo: ${step}.`
               })
               await recorder.stop()
               send(peer, { event: 'recorder:stop', sessionId: null, storageState: null })

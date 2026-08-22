@@ -18,7 +18,7 @@ O `prepack` builda antes de empacotar, então não precisa de passo separado. O 
 
 ## Testar o tarball
 
-Instale o tarball num diretório vazio **fora do workspace** e exercite o caminho de verdade — gravar ou executar um cenário:
+Instale o tarball num diretório vazio **fora do workspace** e exercite o caminho de verdade, gravando ou executando um cenário:
 
 ```sh
 mkdir /tmp/acutis-limpo && cd /tmp/acutis-limpo
@@ -49,7 +49,7 @@ git tag v0.1.1
 git push origin v0.1.1
 ```
 
-Versões seguem semver limpo — `0.1.0`, `0.1.1` — e `tests/package.spec.ts` recusa qualquer outro formato.
+Versões seguem semver limpo, como `0.1.0` e `0.1.1`. O `tests/package.spec.ts` recusa qualquer outro formato.
 
 Depois da publicação, qualquer pessoa inicia a versão nova com:
 
@@ -61,7 +61,7 @@ npx @acutis/cli
 
 ## Publicação manual
 
-Só quando o Actions não serve. A conta tem 2FA sem gerador de TOTP, então o publish precisa ser o do npm, que autoriza pelo navegador — `pnpm publish` só sabe pedir código e falha com 403:
+Só quando o Actions não serve. A conta tem 2FA sem gerador de TOTP, então o publish precisa ser o do npm, que autoriza pelo navegador. O `pnpm publish` só sabe pedir código e falha com 403:
 
 ```sh
 npm login

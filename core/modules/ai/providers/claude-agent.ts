@@ -2,7 +2,7 @@
  * O provedor que roda pelo Claude Code instalado na máquina do usuário: o SDK conversa com o binário
  * local, que já está autenticado, e a chamada sai pela assinatura dele em vez de uma chave de API.
  *
- * Na tela ele se chama **Claude Agent**, nunca "Claude Code" — diretriz de marca da Anthropic, ver a
+ * Na tela ele se chama **Claude Agent**, nunca "Claude Code", por diretriz de marca da Anthropic, ver a
  * memória [ai-claude-agent]. O id interno segue `claude-code` por já estar gravado no banco.
  */
 import { query } from '@anthropic-ai/claude-agent-sdk'

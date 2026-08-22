@@ -170,7 +170,7 @@ export class ProjectService {
     }
   }
 
-  /** Renomeia o projeto, movendo o diretório junto — o slug é o diretório. */
+  /** Renomeia o projeto, movendo o diretório junto, porque o slug é o diretório. */
   async update(slug: string, name: string): Promise<Project> {
     let path = this.pathOf(slug)
     const newSlug = toSlug(name)

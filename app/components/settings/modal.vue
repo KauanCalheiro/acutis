@@ -33,7 +33,7 @@ const NO_AI = 'no-ai'
 const PROVIDERS: Record<string, { label: string, icon: string }> = {
   'anthropic': { label: 'Anthropic', icon: 'i-simple-icons-anthropic' },
   // Nome e ícone travados pelas diretrizes de marca da Anthropic: "Claude Code" e o logo dele não
-  // são permitidos em produto de terceiro. Não renomear — ver a memória ai-claude-agent.
+  // são permitidos em produto de terceiro. Não renomear, ver a memória ai-claude-agent.
   'claude-code': { label: 'Claude Agent', icon: 'i-simple-icons-claude' },
   'codex': { label: 'Codex', icon: 'i-simple-icons-openai' },
   'gemini': { label: 'Google Gemini', icon: 'i-simple-icons-googlegemini' },

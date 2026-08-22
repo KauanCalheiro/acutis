@@ -177,8 +177,8 @@ Dois blocos concentram o mundo de fora:
 
 | Bloco | Único lugar que | Como é alcançado |
 |-------|-----------------|------------------|
-| `core/webdriver` | abre navegador — gravador, runner e vídeo | pela porta `ScenarioRunner`, declarada no módulo de cenário |
-| `core/modules/ai` | fala com modelo — os agentes e um adaptador por provedor | pelo provedor ativo nas configurações; sem IA, `providers/disabled.ts` responde no lugar |
+| `core/webdriver` | abre navegador: gravador, runner e vídeo | pela porta `ScenarioRunner`, declarada no módulo de cenário |
+| `core/modules/ai` | fala com modelo: os agentes e um adaptador por provedor | pelo provedor ativo nas configurações; sem IA, `providers/disabled.ts` responde no lugar |
 
 Cada agente é um pedido de forma fixa ao modelo: `gherkin`, `metadata`, `selector`, `spec-fixer`, `ping`. Provedor que roda binário na máquina (Claude Agent, Codex) tem laço próprio; o resto vai pelo LangChain.
 

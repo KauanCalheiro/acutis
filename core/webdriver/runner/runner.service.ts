@@ -70,7 +70,7 @@ export const BORROWED_NODE_MODULES = dirname(dirname(dirname(require.resolve('@p
 /**
  * O `node_modules` do projeto sob teste, apontado para o nosso.
  *
- * Um link para outra árvore — o repositório de quem desenvolve, por exemplo — faz o cli e o spec
+ * Um link para outra árvore, como o repositório de quem desenvolve, faz o cli e o spec
  * carregarem cópias distintas do `@playwright/test`, e aí o Playwright se recusa a rodar:
  * "did not expect test() to be called here". `node_modules` de verdade é do projeto e fica como está.
  */
