@@ -1,0 +1,27 @@
+---
+paths:
+  - "core/webdriver/**"
+  - "server/routes/**"
+---
+
+Convenções universais de TDD em [tdd](tdd.md). Nunca implementar o webdriver sem teste antes — sem exceção.
+
+**Why:** o webdriver controla o navegador direto via Playwright (`recordVideo`/`page.screencast`, UI/pill injetada via `context.addInitScript`). Já apareceram dois bugs reais de corrida (navegação dupla concorrente; `this.page` setado antes do `addInitScript` terminar) — nenhum dos dois aparecia numa única execução do E2E, só rodando a suíte várias vezes seguidas.
+
+## Setup
+
+- Unit (UI/pill): Vitest + jsdom → `pnpm test` (`backend/vitest.config.ts`, os specs em `src/webdriver/pill/__tests__/`)
+- Typecheck do server (NestJS): `pnpm typecheck` — Typecheck da UI: `pnpm typecheck:ui`
+- E2E: Playwright na pasta raiz `e2e/`, sobe o webdriver real como processo filho e usa os endpoints `/debug/goto` e `/debug/click` pra dirigir a página gravada. Nunca abrir uma segunda conexão CDP separada pro mesmo navegador, pois duas sessões CDP brigando pelo mesmo alvo já causaram fechamento de página em teste real.
+
+## Ciclo
+
+1. Escrever o teste — deve falhar **(red)**
+2. Implementar o mínimo para passar **(green)**
+3. Refatorar sem quebrar
+4. **Rodar a suíte várias vezes seguidas antes de considerar terminado** — corrida de estado só aparece estatisticamente, não numa única rodada
+
+## O que testar onde
+
+- Lógica pura (composables da pill, seletores) → Vitest, sem mockar nada de navegador quando dá pra extrair a lógica sem depender de DOM/API real
+- Fluxo que depende do Playwright real controlando o navegador (gateway WS, captura de vídeo, injeção da pill) → Playwright E2E subindo o webdriver de verdade, não mock

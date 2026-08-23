@@ -1,1 +1,1 @@
-../../.claude/rules/tdd-frontend.md
+../.claude/rules/tdd.md

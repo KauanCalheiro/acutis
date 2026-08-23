@@ -1,1 +1,1 @@
-../../../.claude/rules/tdd-backend.md
+../../.claude/rules/tdd.md
