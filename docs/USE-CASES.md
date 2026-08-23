@@ -26,6 +26,7 @@ flowchart LR
     R["Executar"]
     H["Ver relatório e vídeo"]
     F["Corrigir com IA"]
+    Y["Retomar de um passo"]
   end
 
   subgraph Configuração
@@ -38,6 +39,8 @@ flowchart LR
   P --> G --> W --> R --> H
   P --> F
   P --> I --> T
+  P --> Y --> W
+  H -.->|passo que quebrou| Y
 
   A -.->|storage-state.json| R
   E -.->|URL e variáveis| R
@@ -78,6 +81,39 @@ sequenceDiagram
   API->>PW: playwright test --reporter=stream
   PW-->>API: passo a passo, vídeo, html da falha
   API-->>App: timeline ao vivo e resultado
+```
+
+## Retomar a gravação de um passo
+
+```mermaid
+sequenceDiagram
+  actor Pessoa
+  participant App as Interface
+  participant API as Nitro
+  participant Nav as Gravador (webdriver)
+
+  Pessoa->>App: escolhe o passo na linha do tempo
+  App->>API: START_RECORDING com os eventos até ali
+  API->>Nav: refaz goto, click e fill, um a um
+  Nav-->>App: cortina na pill mostra o passo em andamento
+
+  alt todos os passos refeitos
+    Nav-->>App: recorder:replayed
+  else um passo não repetiu
+    Nav-->>App: recorder:replay-failed com o nome do passo
+    Pessoa->>Nav: decide na própria janela gravada
+    alt continuar daqui
+      Nav-->>App: recorder:replayed, gravação cortada nesse passo
+    else cancelar
+      Nav-->>App: recorder:stop, nada é alterado
+    end
+  end
+
+  Pessoa->>Nav: continua o fluxo de onde parou
+  Nav-->>API: eventos novos somados aos que sobraram
+  Pessoa->>App: revisa e salva
+  App->>API: PUT /api/projects/{slug}/scenarios/{...} com spec e events
+  API-->>App: spec e gravação substituídos
 ```
 
 ## Os casos de uso, um por um
@@ -122,9 +158,12 @@ Gravar o login escreve `tests/auth.setup.ts` e roda esse setup na hora. Deu cert
 | Rascunhar a partir da gravação | `POST /api/projects/{slug}/tests/draft` | `GenerationUseCases.draft` |
 | Salvar o rascunho revisado | `POST /api/projects/{slug}/tests` | `GenerationUseCases.write` |
 | Abrir, editar, apagar | `/api/projects/{slug}/scenarios/{...}` | `ScenarioUseCases` |
+| Retomar a gravação de um passo | `PUT /api/projects/{slug}/scenarios/{...}` com `events` | `ScenarioUseCases.update` |
 | Executar | `POST /api/projects/{slug}/run` | `RunScenario.execute` |
 | Acompanhar a execução ao vivo | `GET /api/projects/{slug}/run-stream` | `RunScenario.stream` |
 | Ver o relatório HTML do Playwright | `/api/projects/{slug}/report` | `ProjectUseCases.reportFile` |
+
+Retomar não é gravar de novo: escolhido um passo da linha do tempo, o navegador refaz sozinho os anteriores e devolve a gravação à pessoa dali para frente. Passo que não repetiu para a retomada e espera a decisão na própria janela gravada. Salvar manda os `events` junto do spec, e a gravação antiga (com o DOM que ela capturou) é substituída pela nova.
 
 O rascunho é um passo separado de propósito: o spec e os passos chegam à tela antes de existir arquivo, e é ali que se corrige nome, domínio e tags. Salvar escreve `tests/<domínio>/<nome>.spec.ts`.
 

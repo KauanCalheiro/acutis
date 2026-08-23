@@ -56,8 +56,10 @@ Lançar cada um com `run_in_background`, depois confirmar que respondem (curl na
 ## Reiniciar depois de editar
 
 - Nuxt aplica hot reload na interface e nos handlers. Se uma dependência carregada no bootstrap não atualizar, reinicie o processo.
+- Antes de investigar por que o comportamento não mudou, confirmar que o processo aplicou a alteração. O bootstrap é a causa mais comum de "editei e nada aconteceu".
 
 ## Notas
 
 - Sem `RECORDER_CDP_URL`, o recorder abre o próprio Chromium headed (não depende de Chrome externo). Com a variável, conecta num Chrome já aberto com porta de debug: é como se grava na sessão logada do usuário.
 - E2E: não precisa subir nada à mão. `pnpm test:e2e` compila e sobe a aplicação como processo filho.
+- **Este é o único modo de rodar que existe.** O Docker foi removido do projeto: o gravador precisa de navegador com janela no host e a entrega é um CLI npm que roda na máquina de quem instala. Referência a `docker compose`, `docker-compose.dev.yml` ou `ACUTIS_PROJECTS_HOST_PATH` em qualquer documento é resquício.

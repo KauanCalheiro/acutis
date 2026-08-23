@@ -1,1 +1,1 @@
-../../../.claude/rules/data-testid.md
+../../.claude/rules/data-testid.md
