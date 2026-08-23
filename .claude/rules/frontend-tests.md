@@ -29,5 +29,5 @@ A aplicação tem suíte unitária em `tests/` (Vitest, `environment: 'nuxt'`), 
 ## Cobertura
 
 - Piso configurado nos dois pacotes: 95% de linhas/statements/funções e 90–92% de branches. Medido hoje: backend 98,9% e frontend 98,7%.
-- Ficam **fora** da conta: `app/pages/dev/**` (bancada, 404 em produção), bootstrap (`main.ts`, `app.module.ts`, `src/scripts/**`), arquivos só de tipo e o que só existe com Playwright/socket real (`src/webdriver/recorder/**`, `gateway/**`, `runner.service.ts`) — a cobertura desses é o E2E, ver [webdriver-tdd](webdriver-tdd.md).
+- Ficam **fora** da conta: bootstrap (`main.ts`, `app.module.ts`, `src/scripts/**`), arquivos só de tipo e o que só existe com Playwright/socket real (`src/webdriver/recorder/**`, `gateway/**`, `runner.service.ts`) — a cobertura desses é o E2E, ver [webdriver-tdd](webdriver-tdd.md).
 - `pnpm test:coverage` roda os dois pacotes **em sequência**: em paralelo, a máquina saturava e a suíte falhava de forma intermitente (socket hang up, 201 virando 200).
