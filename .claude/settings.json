@@ -7,7 +7,7 @@
           {
             "type": "command",
             "if": "Bash(*git commit*)",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/commit-guard.mjs\"",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/commit-guard/index.mjs\"",
             "timeout": 10,
             "statusMessage": "Checking the commit standard"
           }
@@ -20,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-write.mjs\"",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-write/index.mjs\"",
             "timeout": 180,
             "statusMessage": "Lint, teste relacionado e travessão"
           }
@@ -32,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/finish-check.mjs\"",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/finish-check/index.mjs\"",
             "timeout": 300,
             "statusMessage": "Typecheck, cobertura e duplicação"
           }

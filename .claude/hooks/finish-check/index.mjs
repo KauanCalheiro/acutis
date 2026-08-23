@@ -1,28 +1,16 @@
 #!/usr/bin/env node
-import { execFileSync } from 'node:child_process'
 import { strict as assert } from 'node:assert'
 import { existsSync, rmSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-const ROOT = process.env.CLAUDE_PROJECT_DIR ?? process.cwd()
+import { ROOT, test as projectTest } from '../project.mjs'
+import * as typecheck from './typecheck.mjs'
+import * as coverage from './coverage.mjs'
+import * as duplication from './duplication.mjs'
+
 const STAMP = resolve(ROOT, '.git/acutis-check-pending')
 
-const GATES = [
-    { name: 'typecheck', script: 'typecheck' },
-    { name: 'suíte com cobertura', script: 'test:coverage' },
-    { name: 'código duplicado', script: 'dup' }
-]
-
-/** Fim da saída do script quando ele falha; null quando passa. */
-export function runGate(script) {
-    try {
-        execFileSync('pnpm', [script], { cwd: ROOT, stdio: 'pipe', encoding: 'utf8' })
-
-        return null
-    } catch (error) {
-        return `${error.stdout ?? ''}${error.stderr ?? ''}`.trim().split('\n').slice(-40).join('\n')
-    }
-}
+const GATES = [typecheck, coverage, duplication]
 
 /** Mensagem para o modelo quando algum gate reprova; null quando tudo passa. */
 export function report(failures) {
@@ -34,9 +22,8 @@ export function report(failures) {
 function main(payload) {
     if (!existsSync(STAMP)) return
 
-    // ponytail: repete o gate que falha, pela mesma flakiness de ordem da suíte.
     const failures = GATES
-        .map(({ name, script }) => ({ name, output: runGate(script) && runGate(script) }))
+        .map(({ name, check }) => ({ name, output: check() }))
         .filter(({ output }) => output !== null)
 
     const problems = report(failures)
@@ -61,7 +48,9 @@ function main(payload) {
 function test() {
     assert.equal(report([]), null)
     assert.equal(report([{ name: 'typecheck', output: 'erro x' }]), 'typecheck reprovou:\nerro x')
-    assert.equal(runGate('lint'), null)
+    assert.deepEqual(GATES.map(({ name }) => name), ['typecheck', 'suíte com cobertura', 'código duplicado'])
+
+    projectTest()
 
     console.log('ok')
 }
