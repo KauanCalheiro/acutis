@@ -708,8 +708,10 @@ test.describe('recording authentication from the auth scenario page', { tag: ['@
             expect(click.ok()).toBe(true)
         })
 
-        await test.step('stopping the recording writes the setup and executes it', async () => {
+        await test.step('stopping the recording opens the review, and generating writes the setup', async () => {
             await page.getByTestId('cenario-parar').click()
+            await expect(page.getByRole('dialog').getByTestId('revisao-video'), 'a gravação do login é revisada antes de virar setup').toBeVisible({ timeout: 15_000 })
+            await page.getByTestId('revisao-gerar').click()
             await expect(page.getByRole('dialog').getByTestId('auth-carregando'), 'a escrita carrega dentro de uma modal').toBeVisible({ timeout: 15_000 })
             await expect(page.getByTestId('execucao-status')).toBeVisible({ timeout: 15_000 })
         })
@@ -762,7 +764,7 @@ test.describe('recording authentication from the auth scenario page', { tag: ['@
             await expect(page.getByTestId('auth-gravar-vazio')).toBeEnabled({ timeout: 10_000 })
         })
 
-        await test.step('record a login and stop', async () => {
+        await test.step('record a login, stop, and generate from the review', async () => {
             await page.getByTestId('auth-gravar-vazio').click()
             await expect(page.getByTestId('cenario-parar')).toBeVisible({ timeout: 10_000 })
 
@@ -772,6 +774,8 @@ test.describe('recording authentication from the auth scenario page', { tag: ['@
             expect(click.ok()).toBe(true)
 
             await page.getByTestId('cenario-parar').click()
+            await expect(page.getByTestId('revisao-gerar')).toBeVisible({ timeout: 15_000 })
+            await page.getByTestId('revisao-gerar').click()
         })
 
         await test.step('the page asks for the credentials instead of running', async () => {
@@ -805,7 +809,7 @@ test.describe('recording authentication from the auth scenario page', { tag: ['@
             await expect(page.getByTestId('auth-gravar-vazio')).toBeEnabled({ timeout: 10_000 })
         })
 
-        await test.step('record a login and stop', async () => {
+        await test.step('record a login, stop, and generate from the review', async () => {
             await page.getByTestId('auth-gravar-vazio').click()
             await expect(page.getByTestId('cenario-parar')).toBeVisible({ timeout: 10_000 })
 
@@ -815,6 +819,8 @@ test.describe('recording authentication from the auth scenario page', { tag: ['@
             expect(click.ok()).toBe(true)
 
             await page.getByTestId('cenario-parar').click()
+            await expect(page.getByTestId('revisao-gerar')).toBeVisible({ timeout: 15_000 })
+            await page.getByTestId('revisao-gerar').click()
         })
 
         await test.step('the warning survives next to the credentials the generation could not extract', async () => {
@@ -844,7 +850,7 @@ test.describe('recording authentication from the auth scenario page', { tag: ['@
             await expect(page.getByTestId('auth-gravar-vazio')).toBeEnabled({ timeout: 10_000 })
         })
 
-        await test.step('record a login and stop', async () => {
+        await test.step('record a login, stop, and generate from the review', async () => {
             await page.getByTestId('auth-gravar-vazio').click()
             await expect(page.getByTestId('cenario-parar')).toBeVisible({ timeout: 10_000 })
 
@@ -854,10 +860,12 @@ test.describe('recording authentication from the auth scenario page', { tag: ['@
             expect(click.ok()).toBe(true)
 
             await page.getByTestId('cenario-parar').click()
+            await expect(page.getByTestId('revisao-gerar')).toBeVisible({ timeout: 15_000 })
+            await page.getByTestId('revisao-gerar').click()
         })
 
-        await test.step('the page warns the user and the console carries the failed request', async () => {
-            await expect(page.getByTestId('webdriver-erro')).toBeVisible({ timeout: 15_000 })
+        await test.step('the review warns the user and the console carries the failed request', async () => {
+            await expect(page.getByTestId('revisao-erro')).toBeVisible({ timeout: 15_000 })
             await expect.poll(
                 () => consoleErrors.find((text) => text.includes('Falha ao gravar a autenticação')) ?? '',
                 { timeout: 10_000 },

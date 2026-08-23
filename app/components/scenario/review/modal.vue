@@ -1,23 +1,29 @@
 <script setup lang="ts">
-import type { TestDraft } from '~/types/project'
+import type { GeneratedAuthSetup } from '#shared/contracts/auth'
+import type { ScenarioDetail, TestDraft } from '~/types/project'
 import type { RecorderEvent } from '~/composables/webdriver'
 
 interface ScenarioReviewModal {
   slug: string
   isPublic?: boolean
+  /** O cenário que a gravação sobrescreve; ausente, a revisão cria um cenário novo. */
+  scenario?: ScenarioDetail | null
 }
 
-const { slug, isPublic = false } = defineProps<ScenarioReviewModal>()
+const { slug, isPublic = false, scenario = null } = defineProps<ScenarioReviewModal>()
 
 const open = defineModel<boolean>('open', {
   default: false
 })
 
 const emit = defineEmits<{
-  generated: []
+  generated: [result?: ScenarioDetail | GeneratedAuthSetup]
   rerecord: []
   resume: [events: RecorderEvent[]]
 }>()
+
+const isAuth = computed(() => scenario?.is_auth === true)
+const scenarioId = computed(() => scenario!.spec.replace(/^tests\//, '').replace(/\.(spec|setup)\.ts$/, ''))
 
 const { state, url } = useWebdriver()
 
@@ -37,7 +43,14 @@ watch(open, (isOpen) => {
   }
 })
 
-const modalTitle = computed(() => step.value === 'edit' ? 'Revise os contextos' : 'Revise seus eventos')
+const modalTitle = computed(() => {
+  if (step.value === 'edit') return 'Revise os contextos'
+  if (isAuth.value) return 'Revise a gravação do login'
+
+  return scenario ? 'Revise a gravação retomada' : 'Revise seus eventos'
+})
+
+const generateLabel = computed(() => isAuth.value ? 'Gerar autenticação' : 'Gerar cenário')
 
 const timeline = computed(() =>
   state.value.events
@@ -59,6 +72,22 @@ const baseUrl = computed(() => {
 
 const mappedEvents = computed(() => toRecordedEvents(timeline.value))
 
+/** A autenticação não tem contexto para revisar: sai da revisão direto para o auth.setup.ts. */
+async function recordAuth() {
+  try {
+    const generated = await $fetch<GeneratedAuthSetup>(`/api/projects/${slug}/auth/record`, {
+      method: 'POST',
+      body: { baseUrl: baseUrl.value, events: mappedEvents.value }
+    })
+    open.value = false
+    emit('generated', generated)
+  } catch (err) {
+    console.error('Falha ao gravar a autenticação:', err)
+    error.value = extractServerError(err, 'Não foi possível gerar a autenticação a partir da gravação.')
+    step.value = 'review'
+  }
+}
+
 async function generate() {
   if (!baseUrl.value) {
     error.value = 'Nenhuma navegação registrada na gravação.'
@@ -68,8 +97,10 @@ async function generate() {
   error.value = null
   step.value = 'loading'
 
+  if (isAuth.value) return recordAuth()
+
   try {
-    draft.value = await $fetch<TestDraft>(`/api/projects/${slug}/tests/draft`, {
+    const generated = await $fetch<TestDraft>(`/api/projects/${slug}/tests/draft`, {
       method: 'POST',
       body: {
         baseUrl: baseUrl.value,
@@ -77,6 +108,10 @@ async function generate() {
         isPublic
       }
     })
+
+    draft.value = scenario
+      ? { ...generated, title: scenario.title, path: scenarioId.value, domain: scenario.domain ?? '' }
+      : generated
     step.value = 'edit'
   } catch (err) {
     error.value = extractServerError(err, 'Não foi possível gerar o cenário. Tente novamente.')
@@ -91,12 +126,15 @@ async function commit() {
   error.value = null
 
   try {
-    await $fetch(`/api/projects/${slug}/tests`, {
-      method: 'POST',
-      body: { ...draft.value, events: mappedEvents.value }
-    })
+    const saved = await $fetch<ScenarioDetail>(
+      scenario ? `/api/projects/${slug}/scenarios/${scenarioId.value}` : `/api/projects/${slug}/tests`,
+      {
+        method: scenario ? 'PATCH' : 'POST',
+        body: { ...draft.value, events: mappedEvents.value }
+      }
+    )
     open.value = false
-    emit('generated')
+    emit('generated', saved)
   } catch (err) {
     error.value = extractServerError(err, 'Não foi possível salvar o cenário. Tente novamente.')
   } finally {
@@ -125,7 +163,10 @@ function resume(index: number) {
     wide
   >
     <template #body>
-      <ScenarioReviewLoading v-if="step === 'loading'" />
+      <ScenarioReviewLoading
+        v-if="step === 'loading'"
+        :auth="isAuth"
+      />
 
       <template v-else-if="step === 'edit'">
         <ScenarioWarnings
@@ -193,7 +234,7 @@ function resume(index: number) {
           @click="open = false"
         />
         <UButton
-          label="Gerar cenário"
+          :label="generateLabel"
           data-testid="revisao-gerar"
           @click="generate"
         />

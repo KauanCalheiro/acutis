@@ -364,11 +364,14 @@ describe('ScenarioPage', () => {
     useWebdriver().state.value.videoSessionId = 'sessao-1'
     await settle(8)
 
+    field('revisao-gerar')!.click()
+    await settle(8)
+
     expect(api.drafted).toMatchObject({ baseUrl: 'http://loja.test' })
     expect((api.drafted as { events: unknown[] }).events).toHaveLength(3)
     expect((field('contexto-titulo') as HTMLInputElement).value).toBe('Login do cliente')
 
-    field('cenario-editar-salvar')!.click()
+    field('contexto-enviar')!.click()
     await settle(6)
 
     expect(api.patched).toMatchObject({
@@ -589,6 +592,10 @@ describe('ScenarioPage: autenticação', () => {
     useWebdriver().state.value.videoSessionId = 'sessao-1'
     await settle(8)
 
+    expect(document.body.textContent).toContain('Revise a gravação do login')
+    field('revisao-gerar')!.click()
+    await settle(8)
+
     expect(api.authRecorded).toMatchObject({ baseUrl: 'http://loja.test' })
     // Sem credencial pendente, o login já é executado para confirmar que funciona.
     expect(FakeEventSource.last!.url).toContain('spec=tests%2Fauth.setup.ts')
@@ -606,6 +613,9 @@ describe('ScenarioPage: autenticação', () => {
     useWebdriver().state.value.videoSessionId = 'sessao-2'
     await settle(8)
 
+    field('revisao-gerar')!.click()
+    await settle(8)
+
     expect(field('auth-credenciais')).toBeDefined()
     expect(wrapper.get('[data-testid="geracao-ressalvas"]').text()).toContain('SENHA está vazia')
   })
@@ -617,7 +627,10 @@ describe('ScenarioPage: autenticação', () => {
     useWebdriver().state.value.videoSessionId = 'sessao-3'
     await settle(4)
 
-    expect(wrapper.get('[data-testid="webdriver-erro"]').text()).toContain('não registrou nenhuma página')
+    field('revisao-gerar')!.click()
+    await settle(4)
+
+    expect(field('revisao-erro')!.textContent).toContain('Nenhuma navegação registrada')
     expect(api.authRecorded).toBeNull()
   })
 
@@ -632,6 +645,9 @@ describe('ScenarioPage: autenticação', () => {
     useWebdriver().state.value.videoSessionId = 'sessao-4'
     await settle(8)
 
-    expect(wrapper.get('[data-testid="webdriver-erro"]').text()).toContain('Não foi possível gerar a autenticação')
+    field('revisao-gerar')!.click()
+    await settle(8)
+
+    expect(field('revisao-erro')!.textContent).toContain('Não foi possível gerar a autenticação')
   })
 })

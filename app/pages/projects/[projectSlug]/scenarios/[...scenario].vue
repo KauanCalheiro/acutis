@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TabsItem } from '@nuxt/ui'
-import type { ProjectDetail, ScenarioDetail, ScenarioRun, SelectorSuggestion, TestDraft } from '~/types/project'
+import type { GeneratedAuthSetup } from '#shared/contracts/auth'
+import type { ProjectDetail, ScenarioDetail, ScenarioRun, SelectorSuggestion } from '~/types/project'
 import type { RecorderEvent } from '~/composables/webdriver'
 import { AI_OFF_HINT } from '~/composables/ai'
 import { tagColor } from '~/utils/tags'
@@ -208,8 +209,7 @@ const written = computed(() => !isAuth.value || scenario.value!.playwright.trim(
 
 const { state: webdriver, startRecording, stopRecording } = useWebdriver()
 const credentialsOpen = ref(false)
-const writingAuth = ref(false)
-const authError = ref<string | null>(null)
+const reviewOpen = ref(false)
 const authWarnings = ref<string[]>([])
 const dismissingAuth = ref(false)
 
@@ -226,44 +226,35 @@ async function dismissAuth() {
   }
 }
 
-const AUTH_PHRASES = [
-  'Analisando os eventos gravados',
-  'Identificando os campos de usuário e senha',
-  'Escrevendo o fluxo de autenticação'
-]
+/** Só a tela que pediu a gravação revisa o resultado; o gravador é um estado compartilhado. */
+const recordStarted = ref(false)
 
 /** Gravar o login abre no sistema sem sessão, porque é justamente o login que vamos capturar. */
 function recordLogin() {
-  authError.value = null
   authWarnings.value = []
+  recordStarted.value = true
   startRecording('auth', { url: project.value!.base_url ?? undefined })
 }
-
-const RESUME_PHRASES = [
-  'Lendo os eventos da gravação retomada',
-  'Reescrevendo os passos do cenário',
-  'Montando o teste Playwright'
-]
-
-const resuming = ref(false)
-/** Só a tela que pediu a retomada reescreve o cenário; o gravador é um estado compartilhado. */
-const resumeStarted = ref(false)
-const resumed = ref<{ draft: TestDraft, events: RecorderEvent[] } | null>(null)
-const resumeError = ref<string | null>(null)
 
 /** Retomar do passo escolhido: o navegador refaz os anteriores e a gravação continua dali. */
 const isPublic = computed(() => scenario.value!.tags.includes('@publico'))
 
-function resumeFrom(index: number) {
-  resumeError.value = null
-  resumed.value = null
-  resuming.value = false
-  resumeStarted.value = true
+function resumeWith(events: RecorderEvent[]) {
+  recordStarted.value = true
   startRecording(isAuth.value ? 'auth' : 'scenario', {
     url: project.value!.base_url ?? undefined,
     storageState: isAuth.value ? undefined : sessionFor(project.value!, isPublic.value),
-    replay: scenario.value!.events.slice(0, index)
+    replay: events
   })
+}
+
+function resumeFrom(index: number) {
+  resumeWith(scenario.value!.events.slice(0, index))
+}
+
+/** Gravar de novo do zero mantém o tipo do cenário, só descarta os passos que já existiam. */
+function rerecord() {
+  return isAuth.value ? recordLogin() : resumeWith([])
 }
 
 /** Enquanto a ferramenta refaz os passos, quem manda é a cortina na janela gravada. */
@@ -274,89 +265,37 @@ const recordingLabel = computed(() => {
   return 'Parar gravação'
 })
 
-/** A edição comum revisa o que está em disco, e não o rascunho de uma retomada anterior. */
 function openEdit() {
-  resumed.value = null
   editOpen.value = true
 }
 
-function recordedEvents() {
-  return toRecordedEvents(webdriver.value.events) as unknown as RecorderEvent[]
-}
+/** Toda gravação que sai desta tela passa pela revisão antes de virar cenário ou autenticação. */
+watch(() => webdriver.value.videoSessionId, (sessionId) => {
+  if (!sessionId || !recordStarted.value) return
 
-/** A gravação retomada vira rascunho e abre a edição, que é quem grava por cima do cenário. */
-async function draftResumed(): Promise<void> {
-  const events = recordedEvents()
-  const baseUrl = eventsBaseUrl(webdriver.value.events)
-
-  if (!baseUrl) {
-    resumeError.value = 'A gravação retomada não registrou nenhuma página. Tente de novo.'
-    return
-  }
-
-  resuming.value = true
-
-  try {
-    const draft = await $fetch<TestDraft>(`/api/projects/${slug.value}/tests/draft`, {
-      method: 'POST',
-      body: { baseUrl, events, isPublic: isPublic.value }
-    })
-
-    const atual = draftFromScenario(scenario.value!)
-
-    resumed.value = {
-      draft: { ...draft, title: atual.title, path: atual.path, domain: atual.domain },
-      events
-    }
-    editOpen.value = true
-  } catch (error) {
-    resumeError.value = extractServerError(error, 'Não foi possível reescrever o cenário a partir da gravação.')
-  } finally {
-    resuming.value = false
-    resumeStarted.value = false
-  }
-}
-
-watch(() => webdriver.value.videoSessionId, async (sessionId) => {
-  if (!sessionId) return
-
-  if (!isAuth.value) return resumeStarted.value ? draftResumed() : undefined
-
-  const baseUrl = eventsBaseUrl(webdriver.value.events)
-
-  if (!baseUrl) {
-    authError.value = 'A gravação não registrou nenhuma página. Tente gravar novamente.'
-    return
-  }
-
-  writingAuth.value = true
-
-  try {
-    const response = await $fetch<{ authSetup: string, credentialsNeeded: boolean, warnings?: string[] }>(`/api/projects/${slug.value}/auth/record`, {
-      method: 'POST',
-      body: {
-        baseUrl,
-        events: recordedEvents()
-      }
-    })
-
-    authWarnings.value = response.warnings ?? []
-
-    await refreshScenario()
-
-    if (response.credentialsNeeded) {
-      credentialsOpen.value = true
-      return
-    }
-
-    runTest()
-  } catch (error) {
-    console.error('Falha ao gravar a autenticação:', error)
-    authError.value = 'Não foi possível gerar a autenticação a partir da gravação. Tente novamente.'
-  } finally {
-    writingAuth.value = false
-  }
+  recordStarted.value = false
+  reviewOpen.value = true
 })
+
+/** O que a revisão gerou: a autenticação segue para as credenciais ou para o teste. */
+async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
+  if (!result) return
+
+  if (!isAuth.value) return onUpdated(result as ScenarioDetail)
+
+  const generated = result as GeneratedAuthSetup
+
+  authWarnings.value = generated.warnings ?? []
+
+  await refreshScenario()
+
+  if (generated.credentialsNeeded) {
+    credentialsOpen.value = true
+    return
+  }
+
+  runTest()
+}
 </script>
 
 <template>
@@ -456,7 +395,6 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
           color="neutral"
           variant="soft"
           :disabled="!webdriver.connected"
-          :loading="writingAuth"
           data-testid="auth-gravar"
           @click="recordLogin"
         />
@@ -497,14 +435,14 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
     />
 
     <div
-      v-if="authError || webdriver.error"
+      v-if="webdriver.error"
       class="mt-6 flex flex-col gap-3"
     >
       <UAlert
         color="error"
         variant="soft"
         data-testid="webdriver-erro"
-        :description="authError ?? webdriver.error!"
+        :description="webdriver.error"
       />
       <WebdriverSetup v-if="webdriver.error?.includes('Chrome')" />
     </div>
@@ -581,10 +519,10 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
         />
 
         <UAlert
-          v-if="resumeError ?? webdriver.error"
+          v-if="webdriver.error"
           color="error"
           variant="soft"
-          :description="resumeError ?? webdriver.error!"
+          :description="webdriver.error"
           class="mt-4"
           data-testid="cenario-retomar-erro"
         />
@@ -642,8 +580,17 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
       v-model:open="editOpen"
       :slug="slug"
       :scenario="scenario!"
-      :resumed="resumed"
       @updated="onUpdated"
+    />
+
+    <ScenarioReviewModal
+      v-model:open="reviewOpen"
+      :slug="slug"
+      :scenario="scenario!"
+      :is-public="isPublic"
+      @generated="onReviewed"
+      @rerecord="rerecord"
+      @resume="resumeWith"
     />
 
     <ScenarioSuggestionsModal
@@ -668,32 +615,6 @@ watch(() => webdriver.value.videoSessionId, async (sessionId) => {
       :output="runOutput"
       @fix="requestFix"
     />
-
-    <BaseModal
-      v-model:open="writingAuth"
-      :dismissable="false"
-      loading
-    >
-      <template #body>
-        <BaseLoadingPhrases
-          :phrases="AUTH_PHRASES"
-          data-testid="auth-carregando"
-        />
-      </template>
-    </BaseModal>
-
-    <BaseModal
-      v-model:open="resuming"
-      :dismissable="false"
-      loading
-    >
-      <template #body>
-        <BaseLoadingPhrases
-          :phrases="RESUME_PHRASES"
-          data-testid="cenario-retomar-carregando"
-        />
-      </template>
-    </BaseModal>
 
     <ProjectAuthCredentials
       v-model:open="credentialsOpen"

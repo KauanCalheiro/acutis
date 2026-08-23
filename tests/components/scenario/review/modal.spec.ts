@@ -3,13 +3,35 @@ import { registerEndpoint } from '@nuxt/test-utils/runtime'
 import { createError, readBody } from 'h3'
 import ScenarioReviewModal from '~/components/scenario/review/modal.vue'
 import { useWebdriver, type RecorderEvent } from '~/composables/webdriver'
+import type { ScenarioDetail } from '~/types/project'
 import { field, openModal, settle, type } from '../../../support/modal'
 
 const api = {
   draftStatus: 200,
   commitStatus: 200,
+  patchStatus: 200,
+  authRecordStatus: 200,
   drafted: null as unknown,
-  committed: null as unknown
+  committed: null as unknown,
+  patched: null as unknown,
+  authRecorded: null as unknown
+}
+
+function cenario(overrides: Partial<ScenarioDetail> = {}): ScenarioDetail {
+  return {
+    title: 'Login do cliente',
+    spec: 'tests/login.spec.ts',
+    feature: null,
+    tags: ['@read'],
+    domain: null,
+    playwright: 'test("login", async () => {})',
+    gherkin: '@read\nFuncionalidade: Login',
+    events: [],
+    updated_at: '2026-01-02T10:00:00+00:00',
+    is_auth: false,
+    runs: [],
+    ...overrides
+  } as ScenarioDetail
 }
 
 registerEndpoint('/api/projects/alpha-store/tests/draft', {
@@ -40,6 +62,26 @@ registerEndpoint('/api/projects/alpha-store/tests', {
   }
 })
 
+registerEndpoint('/api/projects/alpha-store/scenarios/login', {
+  method: 'PATCH',
+  handler: async (event) => {
+    api.patched = await readBody(event)
+    if (api.patchStatus !== 200) throw createError({ statusCode: api.patchStatus, data: { message: 'Arquivo já existe' } })
+
+    return { title: 'Login do cliente', spec: 'tests/login.spec.ts' }
+  }
+})
+
+registerEndpoint('/api/projects/alpha-store/auth/record', {
+  method: 'POST',
+  handler: async (event) => {
+    api.authRecorded = await readBody(event)
+    if (api.authRecordStatus !== 200) throw createError({ statusCode: api.authRecordStatus, data: { message: 'O modelo caiu' } })
+
+    return { authSetup: 'tests/auth.setup.ts', credentialsNeeded: false, warnings: [] }
+  }
+})
+
 function recorded(...events: Partial<RecorderEvent>[]) {
   useWebdriver().state.value = {
     connected: true,
@@ -56,8 +98,12 @@ function recorded(...events: Partial<RecorderEvent>[]) {
 beforeEach(() => {
   api.draftStatus = 200
   api.commitStatus = 200
+  api.patchStatus = 200
+  api.authRecordStatus = 200
   api.drafted = null
   api.committed = null
+  api.patched = null
+  api.authRecorded = null
   recorded(
     { type: 'fill', label: 'E-mail', value: 'a@b.c', timestamp: 3000 } as Partial<RecorderEvent>,
     { type: 'navigate', url: 'http://loja.test/login', timestamp: 1000 } as Partial<RecorderEvent>,
@@ -255,5 +301,109 @@ describe('ScenarioReviewModal', () => {
     await settle()
 
     expect(state.value).toBe(false)
+  })
+})
+
+describe('ScenarioReviewModal: gravação retomada', () => {
+  it('anuncia que a revisão é da retomada, e não de um cenário novo', async () => {
+    await open({ scenario: cenario() })
+
+    expect(document.body.textContent).toContain('Revise a gravação retomada')
+  })
+
+  it('gera o rascunho mantendo o título, o caminho e o domínio do cenário retomado', async () => {
+    await open({ scenario: cenario({ title: 'Entrar no sistema', domain: 'acesso' }) })
+
+    field('revisao-gerar')!.click()
+    await settle(6)
+
+    expect((field('contexto-titulo') as HTMLInputElement).value).toBe('Entrar no sistema')
+    expect((field('contexto-dominio') as HTMLInputElement).value).toBe('acesso')
+  })
+
+  it('sobrescreve o cenário retomado com os eventos novos, em vez de criar outro', async () => {
+    const { state, wrapper } = await open({ scenario: cenario() })
+
+    field('revisao-gerar')!.click()
+    await settle(6)
+    field('contexto-enviar')!.click()
+    await settle(6)
+
+    expect(api.committed).toBeNull()
+    expect(api.patched).toMatchObject({ title: 'Login do cliente', gherkin: '@read\nFuncionalidade: Login' })
+    expect((api.patched as { events: unknown[] }).events).toHaveLength(2)
+    expect(state.value).toBe(false)
+    expect(wrapper.findComponent(ScenarioReviewModal).emitted('generated')).toHaveLength(1)
+  })
+
+  it('mostra o erro de quem não conseguiu sobrescrever', async () => {
+    api.patchStatus = 422
+    const { state } = await open({ scenario: cenario() })
+
+    field('revisao-gerar')!.click()
+    await settle(6)
+    field('contexto-enviar')!.click()
+    await settle(6)
+
+    expect(field('revisao-erro')!.textContent).toContain('Arquivo já existe')
+    expect(state.value).toBe(true)
+  })
+})
+
+describe('ScenarioReviewModal: gravação de autenticação', () => {
+  const auth = () => cenario({ spec: 'tests/auth.setup.ts', is_auth: true })
+
+  it('anuncia que a revisão é do login gravado', async () => {
+    await open({ scenario: auth() })
+
+    expect(document.body.textContent).toContain('Revise a gravação do login')
+    expect(field('revisao-gerar')!.textContent).toContain('Gerar autenticação')
+  })
+
+  it('escreve a autenticação direto da revisão, sem passar pelos contextos', async () => {
+    const { state, wrapper } = await open({ scenario: auth() })
+
+    field('revisao-gerar')!.click()
+    await settle(8)
+
+    expect(api.authRecorded).toMatchObject({ baseUrl: 'http://loja.test' })
+    expect((api.authRecorded as { events: unknown[] }).events).toHaveLength(2)
+    expect(field('contexto-titulo')).toBeUndefined()
+    expect(state.value).toBe(false)
+    expect(wrapper.findComponent(ScenarioReviewModal).emitted('generated')).toEqual([[
+      { authSetup: 'tests/auth.setup.ts', credentialsNeeded: false, warnings: [] }
+    ]])
+  })
+
+  it('recusa escrever a autenticação sem navegação registrada', async () => {
+    recorded({ type: 'click', label: 'Entrar', timestamp: 2000 } as Partial<RecorderEvent>)
+    await open({ scenario: auth() })
+
+    field('revisao-gerar')!.click()
+    await settle(4)
+
+    expect(field('revisao-erro')!.textContent).toContain('Nenhuma navegação registrada')
+    expect(api.authRecorded).toBeNull()
+  })
+
+  it('volta para a revisão quando a autenticação não sai', async () => {
+    api.authRecordStatus = 500
+    const { state } = await open({ scenario: auth() })
+
+    field('revisao-gerar')!.click()
+    await settle(8)
+
+    expect(field('revisao-erro')!.textContent).toContain('O modelo caiu')
+    expect(field('revisao-gerar')).toBeDefined()
+    expect(state.value).toBe(true)
+  })
+
+  it('oferece regravar e retomar também na revisão do login', async () => {
+    const { wrapper } = await open({ scenario: auth() })
+
+    field('revisao-regravar')!.click()
+    await settle()
+
+    expect(wrapper.findComponent(ScenarioReviewModal).emitted('rerecord')).toHaveLength(1)
   })
 })
