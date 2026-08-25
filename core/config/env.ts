@@ -1,4 +1,5 @@
 import * as z from 'zod'
+import { DEFAULT_TELEMETRY_KEY, DEFAULT_TELEMETRY_URL } from './telemetry-endpoint.js'
 
 export type LogLevel = 'log' | 'error' | 'warn' | 'debug' | 'verbose' | 'fatal'
 
@@ -21,6 +22,8 @@ const environmentSchema = z.object({
   ]).default('0'),
   LOG_LEVEL: z.string().default('log,error,warn,debug,verbose,fatal'),
   ACUTIS_APP_KEY: z.string().optional(),
+  TELEMETRY_URL: z.string().default(DEFAULT_TELEMETRY_URL),
+  TELEMETRY_KEY: z.string().default(DEFAULT_TELEMETRY_KEY),
   ANTHROPIC_URL: z.string().optional(),
   CLAUDE_AGENT_MODEL: z.string().optional(),
   CODEX_MODEL: z.string().optional(),
@@ -40,6 +43,10 @@ export interface AppConfig {
   recorderHeadless: boolean
   logLevels: LogLevel[]
   appKey?: string
+  telemetry: {
+    url: string
+    key: string
+  }
   providers: {
     anthropicUrl: string
     claudeAgentModel?: string
@@ -75,6 +82,10 @@ export function readAppConfig(environment: Record<string, string | undefined>): 
     recorderHeadless: env.RECORDER_HEADLESS === '1',
     logLevels,
     appKey: env.ACUTIS_APP_KEY,
+    telemetry: {
+      url: env.TELEMETRY_URL,
+      key: env.TELEMETRY_KEY
+    },
     providers: {
       anthropicUrl: env.ANTHROPIC_URL ?? 'https://api.anthropic.com/v1',
       claudeAgentModel: env.CLAUDE_AGENT_MODEL,
