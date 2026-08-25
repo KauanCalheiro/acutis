@@ -2,7 +2,7 @@ import { createError, defineEventHandler } from 'h3'
 
 /** A falha fabricada: mensagem de servidor, stack de verdade e uma chave para o redator limpar. */
 export function erroDeTeste() {
-  const causa = new Error('O provedor de IA recusou a chamada com apiKey: sk-proj-EXEMPLO-9fZk2LmQ7xR4')
+  const causa = new Error('O provedor de IA recusou a chamada com apiKey: VALOR-FALSO-SO-PARA-O-REDATOR-LIMPAR')
 
   return createError({
     statusCode: 500,

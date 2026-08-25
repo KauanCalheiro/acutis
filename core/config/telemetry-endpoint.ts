@@ -1,6 +1,7 @@
 /**
- * Para onde vão os relatos de erro no pacote publicado. Trocar aqui liga a telemetria para todo
- * mundo que instalar; `TELEMETRY_URL` e `TELEMETRY_KEY` no ambiente sobrescrevem.
+ * Para onde vão os relatos de erro no pacote publicado. Ficam vazios no repositório: o workflow de
+ * release escreve os dois a partir dos secrets antes de empacotar, e `TELEMETRY_URL` e
+ * `TELEMETRY_KEY` no ambiente sobrescrevem em qualquer caso.
  */
-export const DEFAULT_TELEMETRY_URL = 'http://177.44.248.9:8787/reports'
-export const DEFAULT_TELEMETRY_KEY = '960d1f63381419e69aee7f0d78b587ca'
+export const DEFAULT_TELEMETRY_URL = ''
+export const DEFAULT_TELEMETRY_KEY = ''

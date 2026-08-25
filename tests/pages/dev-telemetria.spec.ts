@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { mountSuspended, mockNuxtImport, registerEndpoint } from '@nuxt/test-utils/runtime'
+import { DEFAULT_TELEMETRY_URL } from '@acutis/core/config/telemetry-endpoint'
 import DevTelemetria from '~/pages/dev/telemetria.vue'
 
 const failure = vi.fn()
@@ -31,9 +32,9 @@ describe('página de dev da telemetria', () => {
     expect(contexto).toBe('Página de dev da telemetria')
   })
 
-  it('mostra para onde o relato vai', async () => {
+  it('mostra para onde o relato vai, ou avisa que não há servidor', async () => {
     const page = await mountSuspended(DevTelemetria)
 
-    expect(page.text()).toContain('177.44.248.9')
+    expect(page.text()).toContain(DEFAULT_TELEMETRY_URL || 'nenhum servidor configurado')
   })
 })

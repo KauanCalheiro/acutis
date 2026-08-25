@@ -46,6 +46,21 @@ jobs:
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
+      # A URL e a chave de ingest não vivem no git: entram aqui, antes de o prepack empacotar.
+      - name: Inject telemetry endpoint
+        env:
+          TELEMETRY_URL: ${{ secrets.TELEMETRY_URL }}
+          TELEMETRY_KEY: ${{ secrets.TELEMETRY_KEY }}
+        run: |
+          if [ -z "$TELEMETRY_URL" ] || [ -z "$TELEMETRY_KEY" ]; then
+            echo "::warning::sem TELEMETRY_URL ou TELEMETRY_KEY, o pacote sai sem telemetria"
+            exit 0
+          fi
+          endpoint=core/config/telemetry-endpoint.ts
+          sed -i "s|^export const DEFAULT_TELEMETRY_URL = ''|export const DEFAULT_TELEMETRY_URL = '$TELEMETRY_URL'|" $endpoint
+          sed -i "s|^export const DEFAULT_TELEMETRY_KEY = ''|export const DEFAULT_TELEMETRY_KEY = '$TELEMETRY_KEY'|" $endpoint
+          grep -q "DEFAULT_TELEMETRY_URL = '$TELEMETRY_URL'" $endpoint
+
       # ponytail: sem lint/typecheck/test aqui, o ci.yml já roda em todo push
       # O npm do runtime do pnpm é 10.9.8 e trusted publishing exige >= 11.5.1, então a versão
       # vem fixa pelo npx em vez de depender do PATH. Sem --provenance: a atestação vai para um

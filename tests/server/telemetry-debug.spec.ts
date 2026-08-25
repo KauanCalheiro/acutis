@@ -21,6 +21,6 @@ describe('rota de dev que provoca erro', () => {
   })
 
   it('deixa uma chave no erro para o redator ter o que limpar', () => {
-    expect(erroDeTeste().data.stack).toContain('apiKey: sk-proj-EXEMPLO')
+    expect(erroDeTeste().data.stack).toContain('apiKey: VALOR-FALSO')
   })
 })
