@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url'
+import { DEFAULT_TELEMETRY_URL } from './core/config/telemetry-endpoint'
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -12,6 +13,14 @@ export default defineNuxtConfig({
   },
 
   css: ['~/assets/css/main.css'],
+
+  runtimeConfig: {
+    public: {
+      telemetry: {
+        enabled: (process.env.TELEMETRY_URL ?? DEFAULT_TELEMETRY_URL) !== ''
+      }
+    }
+  },
 
   alias: {
     '@acutis/core': fileURLToPath(new URL('./core', import.meta.url))
