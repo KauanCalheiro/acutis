@@ -9,6 +9,25 @@ function isUnique(selector: string): boolean {
   }
 }
 
+const HIDDEN_ANCESTOR = '[hidden], [aria-hidden="true"], dialog:not([open])'
+
+function isVisible(el: Element): boolean {
+  if (el.closest(HIDDEN_ANCESTOR)) return false
+
+  const style = getComputedStyle(el)
+
+  return style.display !== 'none' && style.visibility !== 'hidden'
+}
+
+/** Único na página, ou o único visível entre gêmeos que ficaram escondidos num modal fechado. */
+function uniqueAmongVisible(selector: string): boolean {
+  try {
+    return Array.from(document.querySelectorAll(selector)).filter(isVisible).length === 1
+  } catch {
+    return false
+  }
+}
+
 function isXPathUnique(xpath: string): boolean {
   try {
     const result = document.evaluate(`count(${xpath})`, document, null, XPathResult.NUMBER_TYPE, null)
@@ -102,8 +121,11 @@ export function useSelectorCapture() {
     const ariaLabelSel = ariaLabel ? `[aria-label="${ariaLabel}"]` : null
     const placeholderSel = placeholder ? `[placeholder="${placeholder}"]` : null
 
+    const testIdTwins = !!testIdSel && !isUnique(testIdSel) && uniqueAmongVisible(testIdSel)
+
     return {
-      dataTestId: testIdSel && isUnique(testIdSel) ? dataTestId : null,
+      dataTestId: testIdSel && (isUnique(testIdSel) || testIdTwins) ? dataTestId : null,
+      hiddenTwins: testIdTwins,
       dataCy: dataCySel && isUnique(dataCySel) ? dataCy : null,
       ariaLabel: ariaLabelSel && isUnique(ariaLabelSel) ? ariaLabel : null,
       ariaRole: el.getAttribute('role'),

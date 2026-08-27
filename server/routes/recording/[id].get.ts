@@ -1,5 +1,6 @@
-import { defineEventHandler, getRouterParam, setHeader, sendStream, createError } from 'h3'
+import { defineEventHandler, getRouterParam, createError } from 'h3'
 import { videoService } from '../../utils/composition/recorder'
+import { sendVideoFile } from '../../utils/video-file'
 
 export default defineEventHandler((event) => {
   const id = getRouterParam(event, 'id')!
@@ -7,6 +8,5 @@ export default defineEventHandler((event) => {
 
   if (!videoService.exists(id)) throw createError({ statusCode: 404 })
 
-  setHeader(event, 'Content-Type', 'video/webm')
-  return sendStream(event, videoService.openStream(id))
+  return sendVideoFile(event, videoService.path(id))
 })

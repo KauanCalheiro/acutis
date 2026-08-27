@@ -27,7 +27,9 @@ function attribute(name: string, value: string): string {
 export function replaySelector(selectors: RecordingSelectors | null): string | null {
   if (!selectors) return null
 
-  if (selectors.dataTestId) return attribute('data-testid', selectors.dataTestId)
+  if (selectors.dataTestId) {
+    return attribute('data-testid', selectors.dataTestId) + (selectors.hiddenTwins ? ':visible' : '')
+  }
   if (selectors.dataCy) return attribute('data-cy', selectors.dataCy)
   if (selectors.id) return attribute('id', selectors.id)
   if (selectors.cssStable) return selectors.cssStable

@@ -499,6 +499,7 @@ async function remove() {
       :video-url="authRun.videoUrl.value"
       :project-name="project!.name"
       kind="autenticacao"
+      running-title="Autenticando"
       :scenario-name="AUTH_SPEC"
       :branch="project!.branch"
       :tested-at="authRun.testedAt.value"

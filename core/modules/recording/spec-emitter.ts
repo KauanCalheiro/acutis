@@ -344,7 +344,11 @@ export class SpecEmitter {
 
     if (!selectors) return null
 
-    if (selectors.dataTestId) return `page.getByTestId(${this.literal(selectors.dataTestId)})`
+    if (selectors.dataTestId) {
+      const visible = selectors.hiddenTwins ? '.filter({ visible: true })' : ''
+
+      return `page.getByTestId(${this.literal(selectors.dataTestId)})${visible}`
+    }
     if (selectors.dataCy) return `page.locator(${this.literal(`[data-cy="${selectors.dataCy}"]`)})`
     if (selectors.cssStable) return `page.locator(${this.literal(selectors.cssStable)})`
     if (selectors.ariaLabel) return `page.locator(${this.literal(`[aria-label="${selectors.ariaLabel}"]`)})`

@@ -7,6 +7,8 @@ import { reportEvent } from './transport'
 const { isPaused, incrementEventCount } = usePillState()
 const { extractSelectors } = useSelectorCapture()
 
+const ACTIONABLE = 'button, a, input, textarea, select, label, [role], [onclick], [data-testid], [data-cy]'
+
 let lastNavigateUrl: string | null = null
 let lastFillKey: string | null = null
 let lastClickKey: string | null = null
@@ -96,6 +98,13 @@ export function useRecorderEvents() {
     incrementEventCount()
   }
 
+  /** O clique cai no filho que só desenha; quem carrega o seletor é o elemento acionável em volta. */
+  function actionTarget(el: Element): Element {
+    if (el.matches(ACTIONABLE)) return el
+
+    return el.closest(ACTIONABLE) ?? el
+  }
+
   function resolveLabel(el: Element): string | null {
     const ariaLabel = el.getAttribute('aria-label')
 
@@ -112,7 +121,9 @@ export function useRecorderEvents() {
     return (el as HTMLElement).innerText?.trim().slice(0, 200) || null
   }
 
-  function buildBaseEvent(type: RecordingEventType, el: Element): RecordingEvent {
+  function buildBaseEvent(type: RecordingEventType, target: Element): RecordingEvent {
+    const el = actionTarget(target)
+
     return {
       type,
       timestamp: Date.now(),
