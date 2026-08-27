@@ -57,6 +57,7 @@ export class ScenarioService {
       feature: data.feature,
       tags: data.tags,
       domain: data.domain,
+      skipped: data.skipped,
       playwright: written ? sourceOf(spec) : '',
       gherkin: feature && existsSync(feature) ? readFileSync(feature, 'utf8') : null,
       events: existsSync(eventsFile) ? JSON.parse(readFileSync(eventsFile, 'utf8')) as RecorderEvent[] : [],
@@ -76,6 +77,21 @@ export class ScenarioService {
     if (data.feature !== null) {
       rmSync(join(path, data.feature), { force: true })
     }
+  }
+
+  /** Pula ou volta a rodar o cenário, marcando o describe do próprio spec. */
+  skip(slug: string, id: string, skipped: boolean): ScenarioResponse {
+    const { path, scenario } = this.scenarioIn(slug, id)
+    const file = join(path, scenario.data().spec)
+    const source = readFileSync(file, 'utf8')
+
+    const marked = skipped
+      ? source.replace(/test\.describe\(/, 'test.describe.skip(')
+      : source.replace(/test\.describe\.skip\(/, 'test.describe(')
+
+    if (marked !== source) put(file, marked)
+
+    return this.show(path, scenario)
   }
 
   /** Reescreve o cenário, movendo os arquivos quando o nome muda; o setup de auth fica no caminho fixo. */

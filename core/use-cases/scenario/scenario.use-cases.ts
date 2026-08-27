@@ -6,4 +6,5 @@ export class ScenarioUseCases {
   findOne(slug: string, id: string) { return this.service.findOne(slug, id) }
   update(slug: string, id: string, dto: UpdateScenarioDto) { return this.service.update(slug, id, dto) }
   remove(slug: string, id: string) { return this.service.remove(slug, id) }
+  skip(slug: string, id: string, skipped: boolean) { return this.service.skip(slug, id, skipped) }
 }

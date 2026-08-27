@@ -55,6 +55,7 @@ import scenarioShow from '../../server/api/projects/[slug]/scenarios/[...scenari
 import scenarioUpdate from '../../server/api/projects/[slug]/scenarios/[...scenario].patch.js'
 import scenarioDestroy from '../../server/api/projects/[slug]/scenarios/[...scenario].delete.js'
 import scenarioFix from '../../server/api/projects/[slug]/scenario-fix.post.js'
+import scenarioSkip from '../../server/api/projects/[slug]/scenario-skip.patch.js'
 import scenarioSuggestions from '../../server/api/projects/[slug]/scenario-suggestions.post.js'
 import testsGenerate from '../../server/api/projects/[slug]/tests.post.js'
 import testsDraft from '../../server/api/projects/[slug]/tests/draft.post.js'
@@ -166,6 +167,7 @@ function mountRoutes() {
   router.delete('/api/v1/projects/:slug/scenarios/**:scenario', scenarioDestroy)
   router.post('/api/v1/projects/:slug/scenarios/:scenario/fix', legacyScenarioFix)
   router.post('/api/v1/projects/:slug/scenarios/:scenario/suggestions', legacyScenarioSuggestions)
+  router.patch('/api/v1/projects/:slug/scenario-skip', scenarioSkip)
   router.post('/api/v1/projects/:slug/scenario-fix', scenarioFix)
   router.post('/api/v1/projects/:slug/scenario-suggestions', scenarioSuggestions)
   router.post('/api/v1/projects/:slug/tests', testsGenerate)

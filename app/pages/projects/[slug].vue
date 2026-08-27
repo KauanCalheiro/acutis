@@ -41,6 +41,9 @@ const scenarios = computed(() => {
   )
 })
 
+/** O cenário pulado fica na listagem, mas fora da execução: o Playwright não roda ele. */
+const runnable = computed(() => scenarios.value.filter(scenario => !scenario.skipped))
+
 const filteredRun = useRunStream(() => slug.value)
 const filteredRunOpen = ref(false)
 
@@ -48,7 +51,7 @@ const filteredRunOpen = ref(false)
 function runFiltered() {
   filteredRunOpen.value = true
   filteredRun.start({
-    grep: scenarios.value.map(scenario => scenario.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
+    grep: runnable.value.map(scenario => scenario.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
   })
 }
 
@@ -364,11 +367,11 @@ async function remove() {
         class="flex-1 min-w-48"
       />
       <UButton
-        :label="`Rodar ${scenarios.length} filtrados`"
+        :label="`Rodar ${runnable.length} filtrados`"
         trailing-icon="i-ic-round-play-arrow"
         color="neutral"
         variant="soft"
-        :disabled="!scenarios.length"
+        :disabled="!runnable.length"
         :loading="filteredRun.running.value"
         data-testid="projeto-rodar-filtrados"
         @click="runFiltered"
@@ -448,6 +451,15 @@ async function remove() {
             {{ scenario.spec }}
           </p>
           <div class="flex flex-wrap gap-1">
+            <UBadge
+              v-if="scenario.skipped"
+              color="warning"
+              variant="soft"
+              size="md"
+              icon="i-ic-round-pause-circle"
+              label="Pulado"
+              data-testid="cenario-card-pulado"
+            />
             <UBadge
               v-for="tag in scenario.tags"
               :key="tag"

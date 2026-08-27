@@ -19,7 +19,11 @@ export interface ScenarioData {
   tags: string[]
   /** A subpasta dentro de `tests/`, quando existe. */
   domain: string | null
+  /** O spec está como `test.describe.skip`, então o Playwright não roda este cenário. */
+  skipped: boolean
 }
+
+const SKIPPED = /test\.describe\.skip\(/
 
 export function idFor(spec: string): string {
   return spec.replace(/^tests\//, '').replace(/\.(spec|setup)\.ts$/, '')
@@ -50,7 +54,7 @@ function titleOf(featureFile: string, source: string, fallback: string): string 
     if (match) return match[1]!.trim()
   }
 
-  const describe = source.match(/test\.describe\(\s*['"](.+?)['"]/u)
+  const describe = source.match(/test\.describe(?:\.skip)?\(\s*['"](.+?)['"]/u)
 
   return describe ? describe[1]! : fallback
 }
@@ -82,12 +86,15 @@ export function listScenarios(projectPath: string): ScenarioData[] {
     const featureRelative = domain === null ? `${name}.feature` : `${domain}/${name}.feature`
     const featureFile = join(projectPath, 'features', featureRelative)
 
+    const source = readFileSync(spec, 'utf8')
+
     return {
-      title: titleOf(featureFile, readFileSync(spec, 'utf8'), name),
+      title: titleOf(featureFile, source, name),
       spec: `tests/${specRelative}`,
       feature: existsSync(featureFile) ? `features/${featureRelative}` : null,
-      tags: tagsOf(readFileSync(spec, 'utf8')),
-      domain
+      tags: tagsOf(source),
+      domain,
+      skipped: SKIPPED.test(source)
     }
   })
 }
@@ -163,7 +170,8 @@ export class Scenario {
       spec: AUTH_SPEC,
       feature: written ? AUTH_FEATURE : null,
       tags: [],
-      domain: null
+      domain: null,
+      skipped: false
     }
   }
 }

@@ -43,6 +43,26 @@ async function remove() {
   }
 }
 
+const skipping = ref(false)
+
+/** Pulado, o cenário continua no projeto e fora da execução, porque o describe dele virou skip. */
+async function toggleSkip() {
+  skipping.value = true
+
+  try {
+    await $fetch(`/api/projects/${slug.value}/scenario-skip`, {
+      method: 'PATCH',
+      body: {
+        scenarioId: scenarioId.value,
+        skipped: !scenario.value!.skipped
+      }
+    })
+    await refreshScenario()
+  } finally {
+    skipping.value = false
+  }
+}
+
 const updatedAt = computed(() => new Date(scenario.value!.updated_at).toLocaleString('pt-BR', {
   dateStyle: 'short',
   timeStyle: 'short'
@@ -323,6 +343,14 @@ async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
             v-if="isAuth"
             :status="project!.auth_status"
           />
+          <UBadge
+            v-if="scenario!.skipped"
+            color="warning"
+            variant="soft"
+            icon="i-ic-round-pause-circle"
+            label="Pulado"
+            data-testid="cenario-pulado"
+          />
         </div>
         <h1
           class="text-2xl font-bold truncate"
@@ -356,6 +384,16 @@ async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
           variant="soft"
           data-testid="cenario-editar"
           @click="openEdit"
+        />
+        <BaseButtonIcon
+          v-if="!isAuth && written"
+          :icon="scenario!.skipped ? 'i-ic-round-play-circle' : 'i-ic-round-pause-circle'"
+          :label="scenario!.skipped ? 'Voltar a rodar' : 'Pular'"
+          :color="scenario!.skipped ? 'warning' : 'neutral'"
+          variant="soft"
+          :loading="skipping"
+          data-testid="cenario-pular"
+          @click="toggleSkip"
         />
         <UTooltip
           v-if="!isAuth"
@@ -398,14 +436,22 @@ async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
           data-testid="auth-gravar"
           @click="recordLogin"
         />
-        <UButton
+        <UTooltip
           v-if="written"
-          label="Testar"
-          trailing-icon="i-ic-round-play-arrow"
-          :loading="running"
-          data-testid="cenario-testar"
-          @click="runTest"
-        />
+          text="Cenário pulado: o Playwright não roda ele."
+          :disabled="!scenario!.skipped"
+          :delay-duration="0"
+          arrow
+        >
+          <UButton
+            label="Testar"
+            trailing-icon="i-ic-round-play-arrow"
+            :loading="running"
+            :disabled="scenario!.skipped"
+            data-testid="cenario-testar"
+            @click="runTest"
+          />
+        </UTooltip>
       </div>
     </div>
 

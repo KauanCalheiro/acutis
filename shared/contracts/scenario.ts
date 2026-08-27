@@ -6,7 +6,8 @@ export const scenarioSchema = z.object({
   spec: z.string(),
   feature: z.string().nullable(),
   tags: z.array(z.string()),
-  domain: z.string().nullable()
+  domain: z.string().nullable(),
+  skipped: z.boolean()
 })
 
 export type Scenario = z.output<typeof scenarioSchema>
@@ -56,6 +57,13 @@ export const updateScenarioRequestSchema = z.object({
 })
 
 export type UpdateScenarioRequest = z.input<typeof updateScenarioRequestSchema>
+
+export const scenarioSkipRequestSchema = z.object({
+  scenarioId: z.string().min(1),
+  skipped: z.boolean()
+})
+
+export type ScenarioSkipRequest = z.input<typeof scenarioSkipRequestSchema>
 
 export const scenarioFixRequestSchema = z.object({
   step: z.string().min(1, 'O passo que falhou é obrigatório.'),
