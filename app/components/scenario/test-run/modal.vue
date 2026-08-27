@@ -16,6 +16,8 @@ interface ScenarioTestRunModal {
   output?: string | null
   /** Autenticação não é cenário: muda o título e o rótulo, o resto do modal é igual. */
   kind?: 'cenario' | 'autenticacao'
+  /** Substitui o título padrão de execução e liga os pontinhos animados. */
+  runningTitle?: string | null
 }
 
 const {
@@ -29,7 +31,8 @@ const {
   testedAt = null,
   playwright = null,
   output = null,
-  kind = 'cenario'
+  kind = 'cenario',
+  runningTitle = null
 } = defineProps<ScenarioTestRunModal>()
 
 const emit = defineEmits<{
@@ -44,7 +47,7 @@ const { configured: aiConfigured } = useAi()
 
 const isAuth = computed(() => kind === 'autenticacao')
 const label = computed(() => isAuth.value ? 'Autenticação' : 'Cenário')
-const runningTitle = computed(() => isAuth.value ? 'Testando autenticação...' : 'Testando cenário...')
+const title = computed(() => runningTitle ?? (isAuth.value ? 'Testando autenticação...' : 'Testando cenário...'))
 const resultTitle = computed(() => isAuth.value ? 'Resultado da autenticação' : 'Resultado do teste')
 
 const failedStep = computed(() => steps.findIndex(step => step.status === 'failed'))
@@ -69,7 +72,10 @@ function seekToPreviewFrame(event: Event) {
             v-if="running"
             class="text-xl font-bold"
           >
-            {{ runningTitle }}
+            {{ title }}<span
+              v-if="runningTitle"
+              class="dots"
+            />
           </p>
 
           <template v-else>
@@ -193,3 +199,16 @@ function seekToPreviewFrame(event: Event) {
     </template>
   </BaseModal>
 </template>
+
+<style scoped>
+@keyframes dots {
+  0% { content: '.' }
+  33% { content: '..' }
+  66% { content: '...' }
+}
+
+.dots::after {
+  content: '.';
+  animation: dots 1.2s steps(1) infinite;
+}
+</style>

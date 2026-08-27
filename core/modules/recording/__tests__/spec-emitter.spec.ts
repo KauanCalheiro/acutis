@@ -120,6 +120,14 @@ describe('escolha do seletor', () => {
     expect(spec).toContain('await alvo.click()')
   })
 
+  it('filtra pelo visível quando o test id se repete em elemento escondido', () => {
+    const spec = emit([
+      emitEvent('click', { selectors: selectors({ dataTestId: 'salvar', hiddenTwins: true }), label: 'Salvar' })
+    ])
+
+    expect(spec).toContain('page.getByTestId(\'salvar\').filter({ visible: true })')
+  })
+
   it('escolhe o css estável quando o elemento não tem test id', () => {
     const spec = emit([emitEvent('click', { selectors: selectors({ cssStable: '#salvar' }) })])
 

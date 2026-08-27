@@ -21,6 +21,8 @@ export interface RecordingSelectors {
   xpath: string | null
   text: string | null
   finder: string | null
+  /** O data-testid se repete em elemento escondido: o seletor precisa filtrar pelo visível. */
+  hiddenTwins: boolean
 }
 
 export interface RecordingEvent {

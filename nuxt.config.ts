@@ -56,7 +56,18 @@ export default defineNuxtConfig({
   icon: {
     // Varre o código e embarca os ícones usados: o SSR não busca nada na rede.
     clientBundle: {
-      scan: true
+      scan: true,
+      // A varredura só enxerga template; ícone declarado em .ts entra pelo nome.
+      icons: [
+        'ic:round-computer',
+        'ic:round-check-circle',
+        'ic:round-error',
+        'ic:round-warning',
+        'ic:round-cloud-upload',
+        'simple-icons:github',
+        'simple-icons:gitlab',
+        'simple-icons:git'
+      ]
     }
   }
 })

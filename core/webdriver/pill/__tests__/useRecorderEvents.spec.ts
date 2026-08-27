@@ -33,6 +33,26 @@ describe('useRecorderEvents', () => {
     expect(buildBaseEvent('fill', el).checked).toBeNull()
   })
 
+  it('sobe até o elemento interativo quando o clique cai num filho dele', () => {
+    setBody('<button data-testid="agenda-adicionar"><span>Adicionar evento</span></button>')
+    const span = document.querySelector('span')!
+
+    const event = buildBaseEvent('click', span)
+
+    expect(event.selectors?.dataTestId).toBe('agenda-adicionar')
+    expect(event.tagName).toBe('button')
+  })
+
+  it('mantém o campo preenchido como alvo, sem subir para o wrapper', () => {
+    setBody('<div data-testid="formulario"><input id="titulo" /></div>')
+    const input = document.querySelector('input')!
+
+    const event = buildBaseEvent('fill', input)
+
+    expect(event.tagName).toBe('input')
+    expect(event.selectors?.id).toBe('titulo')
+  })
+
   it('sends each event once when two are queued in the same tick', async () => {
     setBody('<a id="ensino">Ensino</a><a id="curso">Curso</a>')
     const enviados: RecordingEvent[] = []
