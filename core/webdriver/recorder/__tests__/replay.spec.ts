@@ -41,6 +41,14 @@ describe('replaySteps', () => {
     ])
   })
 
+  it('refaz o clique no visível quando o test id se repete em elemento escondido', () => {
+    const steps = replaySteps([
+      event({ type: 'click', selectors: selectors({ dataTestId: 'salvar', hiddenTwins: true }) })
+    ])
+
+    expect(steps[0]).toMatchObject({ selector: '[data-testid="salvar"]:visible' })
+  })
+
   it('guarda de qual evento o passo veio, que é onde a gravação é cortada quando ele falha', () => {
     const steps = replaySteps([
       event({ type: 'navigate', url: 'http://loja.test' }),

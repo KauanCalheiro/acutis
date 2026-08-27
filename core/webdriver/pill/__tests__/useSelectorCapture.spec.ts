@@ -23,6 +23,22 @@ describe('useSelectorCapture', () => {
     expect(selectors.dataTestId).toBeNull()
   })
 
+  it('aceita o data-testid quando o gêmeo está num modal fechado', () => {
+    setBody('<dialog><button data-testid="calendar-event-save">salvar</button></dialog><dialog open><button data-testid="calendar-event-save">salvar</button></dialog>')
+    const el = document.querySelectorAll('button')[1]!
+    const selectors = extractSelectors(el)
+
+    expect(selectors.dataTestId).toBe('calendar-event-save')
+    expect(selectors.hiddenTwins).toBe(true)
+  })
+
+  it('não marca gêmeo escondido quando o data-testid já é único', () => {
+    setBody('<button data-testid="submit">Send</button>')
+    const el = document.querySelector('button')!
+
+    expect(extractSelectors(el).hiddenTwins).toBe(false)
+  })
+
   it('falls back to id-based css selector', () => {
     setBody('<input id="email" />')
     const el = document.querySelector('input')!
