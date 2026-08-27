@@ -40,6 +40,7 @@ function scenario(title: string, spec: string, tags: string[] = ['@read'], skipp
 
 const api = {
   project: {} as ProjectDetail,
+  vars: [] as { key: string, value: string, secret: boolean, pending: boolean }[],
   skipped: false,
   removed: false,
   missing: false
@@ -75,7 +76,7 @@ registerEndpoint('/api/projects/alpha-store', () => {
 registerEndpoint('/api/projects/alpha-store/environments', () => ({
   active: 'homologacao',
   known_keys: [],
-  environments: [{ slug: 'homologacao', name: 'Homologação', vars: [] }]
+  environments: [{ slug: 'homologacao', name: 'Homologação', vars: api.vars }]
 }))
 
 registerEndpoint('/api/projects/alpha-store/auth/skip', {
@@ -116,6 +117,7 @@ beforeEach(() => {
   FakeEventSource.last = undefined
   vi.stubGlobal('EventSource', FakeEventSource)
   api.project = project()
+  api.vars = []
   api.skipped = false
   api.removed = false
   api.missing = false
@@ -175,6 +177,28 @@ describe('ProjectPage', () => {
 
     expect(cards[0]!.find('[data-testid="cenario-card-pulado"]').exists()).toBe(false)
     expect(cards[1]!.get('[data-testid="cenario-card-pulado"]').text()).toContain('Pulado')
+  })
+
+  it('avisa quais variáveis do ambiente ativo ainda estão sem valor', async () => {
+    api.vars = [
+      { key: 'URL', value: 'https://loja.test', secret: false, pending: false },
+      { key: 'CUPOM_TESTE', value: '', secret: false, pending: true },
+      { key: 'API_TOKEN', value: '', secret: true, pending: true }
+    ]
+    const wrapper = await mount()
+
+    const aviso = wrapper.get('[data-testid="projeto-variaveis-aviso"]')
+
+    expect(aviso.text()).toContain('CUPOM_TESTE')
+    expect(aviso.text()).toContain('API_TOKEN')
+    expect(aviso.text()).not.toContain('URL')
+  })
+
+  it('não avisa nada quando o ambiente ativo está preenchido', async () => {
+    api.vars = [{ key: 'URL', value: 'https://loja.test', secret: false, pending: false }]
+    const wrapper = await mount()
+
+    expect(wrapper.find('[data-testid="projeto-variaveis-aviso"]').exists()).toBe(false)
   })
 
   it('filtra os cenários por título e por tag', async () => {
