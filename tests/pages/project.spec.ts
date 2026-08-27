@@ -34,8 +34,8 @@ class FakeEventSource {
   }
 }
 
-function scenario(title: string, spec: string, tags: string[] = ['@read']): Scenario {
-  return { title, spec, feature: null, tags, domain: null }
+function scenario(title: string, spec: string, tags: string[] = ['@read'], skipped = false): Scenario {
+  return { title, spec, feature: null, tags, domain: null, skipped }
 }
 
 const api = {
@@ -162,6 +162,21 @@ describe('ProjectPage', () => {
     expect(wrapper.get('[data-testid="projeto-vscode"]').attributes('href')).toContain('vscode://')
   })
 
+  it('marca no card o cenário que está pulado', async () => {
+    api.project = project({
+      scenarios: [
+        scenario('Login do cliente', 'tests/login.spec.ts'),
+        scenario('Mensagens de falha', 'tests/diagnostico/falhas.spec.ts', ['@read'], true)
+      ]
+    })
+    const wrapper = await mount()
+
+    const cards = wrapper.findAll('[data-testid="cenario-card"]')
+
+    expect(cards[0]!.find('[data-testid="cenario-card-pulado"]').exists()).toBe(false)
+    expect(cards[1]!.get('[data-testid="cenario-card-pulado"]').text()).toContain('Pulado')
+  })
+
   it('filtra os cenários por título e por tag', async () => {
     const wrapper = await mount()
 
@@ -192,6 +207,34 @@ describe('ProjectPage', () => {
 
     expect(FakeEventSource.last!.url).toContain('grep=Login+do+cliente')
     expect(field('execucao-iniciando')).toBeDefined()
+  })
+
+  it('deixa o cenário pulado fora da execução filtrada, e da contagem dela', async () => {
+    api.project = project({
+      scenarios: [
+        scenario('Login do cliente', 'tests/login.spec.ts'),
+        scenario('Mensagens de falha', 'tests/diagnostico/falhas.spec.ts', ['@read'], true)
+      ]
+    })
+    const wrapper = await mount()
+
+    expect(wrapper.get('[data-testid="projeto-rodar-filtrados"]').text()).toContain('Rodar 1 filtrados')
+    expect(wrapper.findAll('[data-testid="cenario-card"]'), 'o pulado continua na listagem').toHaveLength(2)
+
+    await wrapper.get('[data-testid="projeto-rodar-filtrados"]').trigger('click')
+    await settle()
+
+    expect(FakeEventSource.last!.url).toContain('grep=Login+do+cliente')
+    expect(FakeEventSource.last!.url).not.toContain('Mensagens')
+  })
+
+  it('não deixa rodar quando só sobraram cenários pulados', async () => {
+    api.project = project({
+      scenarios: [scenario('Mensagens de falha', 'tests/diagnostico/falhas.spec.ts', ['@read'], true)]
+    })
+    const wrapper = await mount()
+
+    expect(wrapper.get('[data-testid="projeto-rodar-filtrados"]').attributes('disabled')).toBeDefined()
   })
 
   it('oferece dispensar o login quando a autenticação nunca foi configurada', async () => {

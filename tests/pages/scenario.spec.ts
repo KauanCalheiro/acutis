@@ -97,6 +97,7 @@ const api = {
   drafted: null as unknown,
   suggestionsStatus: 200,
   fixStatus: 200,
+  skipRequest: null as unknown,
   authSkipped: false,
   authRecorded: null as unknown,
   credentialsNeeded: false,
@@ -130,6 +131,16 @@ registerEndpoint('/api/projects/alpha-store/scenarios/login', {
   method: 'PATCH',
   handler: async (event) => {
     api.patched = await readBody(event)
+
+    return api.scenario
+  }
+})
+registerEndpoint('/api/projects/alpha-store/scenario-skip', {
+  method: 'PATCH',
+  handler: async (event) => {
+    const body = await readBody(event) as { skipped: boolean }
+    api.skipRequest = body
+    api.scenario = scenario({ skipped: body.skipped })
 
     return api.scenario
   }
@@ -547,6 +558,24 @@ describe('ScenarioPage: fechaduras e ausências', () => {
 
     expect(wrapper.find('[data-testid="cenario-eventos"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="cenario-tab-gherkin"]').exists()).toBe(false)
+  })
+
+  it('pula o cenário e passa a oferecer o caminho de volta', async () => {
+    const wrapper = await mount()
+
+    await wrapper.get('[data-testid="cenario-pular"]').trigger('click')
+    await settle(4)
+
+    expect(api.skipRequest).toEqual({ scenarioId: 'login', skipped: true })
+    expect(wrapper.get('[data-testid="cenario-pulado"]').text()).toContain('Pulado')
+    expect(wrapper.get('[data-testid="cenario-pular"]').attributes('aria-label')).toBe('Voltar a rodar')
+  })
+
+  it('não deixa testar o cenário que está pulado', async () => {
+    api.scenario = scenario({ skipped: true })
+    const wrapper = await mount()
+
+    expect(wrapper.get('[data-testid="cenario-testar"]').attributes('disabled')).toBeDefined()
   })
 
   // O 404 do cenário que não existe é verificado no E2E: montar a página sem cenário deixa o Vue
