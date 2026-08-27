@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ProjectDetail } from '~/types/project'
+import type { EnvironmentList, ProjectDetail } from '~/types/project'
 import type { RecorderEvent } from '~/composables/webdriver'
 import { navigateTo } from '#app'
 import { reportUrlFor } from '~/composables/run-stream'
@@ -63,6 +63,19 @@ onMounted(() => {
 })
 
 const environmentsOpen = ref(false)
+
+const { data: environmentList } = await useFetch<EnvironmentList>(
+  () => `/api/projects/${slug.value}/environments`,
+  { key: `environments-${slug.value}` }
+)
+
+/** Variável sem valor no ambiente ativo derruba a execução, e a falha não diz que o motivo é este. */
+const pendingVars = computed(() => {
+  const list = environmentList.value
+  const active = list?.environments.find(environment => environment.slug === list.active)
+
+  return (active?.vars ?? []).filter(variable => variable.pending).map(variable => variable.key)
+})
 
 /** `?environment` abre o modal, que é para onde a ressalva de variável sem valor aponta. */
 onMounted(() => {
@@ -304,6 +317,29 @@ async function remove() {
         />
       </div>
     </div>
+
+    <UAlert
+      v-if="pendingVars.length"
+      color="warning"
+      variant="soft"
+      icon="i-ic-round-warning"
+      class="mt-6"
+      title="Variáveis do ambiente sem valor"
+      :description="`A execução vai falhar até ${pendingVars.join(', ')} receber valor no ambiente ativo.`"
+      data-testid="projeto-variaveis-aviso"
+      :ui="{ actions: 'justify-end' }"
+    >
+      <template #actions>
+        <UButton
+          label="Preencher"
+          size="md"
+          color="neutral"
+          variant="link"
+          data-testid="projeto-variaveis-preencher"
+          @click="environmentsOpen = true"
+        />
+      </template>
+    </UAlert>
 
     <UAlert
       v-if="project!.auth_status === 'unset'"

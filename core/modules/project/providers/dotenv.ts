@@ -96,6 +96,19 @@ export class Dotenv {
     removeFrom(this.example(), keys)
   }
 
+  /**
+     * As chaves que o projeto espera, anunciadas no exemplo sem valor nenhum. Quem clona não recebe
+     * `environments/`, então é por aqui que ele descobre o que precisa preencher.
+     */
+  announce(keys: string[]): void {
+    const declared = keys.filter(key => key !== EnvKey.ACTIVE_ENVIRONMENT)
+
+    if (declared.length === 0) return
+
+    mergeFile(this.example(), Object.fromEntries(declared.map(key => [key, ''])))
+    ensureGitignore(this.path)
+  }
+
   merge(values: Record<string, string>): void {
     mergeFile(this.file(), values)
 
