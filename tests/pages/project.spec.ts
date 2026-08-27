@@ -282,6 +282,7 @@ describe('ProjectPage', () => {
     await settle()
 
     expect(FakeEventSource.last!.url).toContain('spec=tests%2Fauth.setup.ts')
+    expect(document.body.textContent).toContain('Autenticando')
 
     FakeEventSource.last!.send({ event: 'run:finished', passed: true, output: 'ok' })
     await settle()

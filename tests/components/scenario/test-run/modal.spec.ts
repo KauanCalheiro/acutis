@@ -33,6 +33,13 @@ describe('ScenarioTestRunModal', () => {
     expect(document.body.textContent).toContain('Testando autenticação...')
   })
 
+  it('troca o título de execução pelo que quem chama pediu', async () => {
+    await open({ running: true, kind: 'autenticacao', runningTitle: 'Autenticando' })
+
+    expect(document.body.textContent).toContain('Autenticando')
+    expect(document.body.textContent).not.toContain('Testando autenticação...')
+  })
+
   it('resume a execução que passou, com vídeo e código', async () => {
     await open({
       passed: true,
