@@ -551,7 +551,8 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         await page.getByTestId('cenario-testar').click()
 
         await expect(page.getByTestId('execucao-status')).toContainText('Falha')
-        await expect(page.getByTestId('execucao-step').nth(1).getByTestId('execucao-step-erro')).toContainText('Test timeout of 30000ms exceeded.')
+        await expect(page.getByTestId('execucao-step').nth(1).getByTestId('execucao-step-erro')).toContainText('O cenário passou de 30s no total')
+        await expect(page.getByTestId('execucao-step').nth(1).getByTestId('execucao-step-erro-cru')).toContainText('Test timeout of 30000ms exceeded.')
         await expect(page.getByTestId('execucao-corrigir')).toBeVisible()
     })
 
@@ -585,7 +586,7 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         const steps = page.getByTestId('execucao-step')
         await expect(steps, 'a correção corrige a linha, não empilha outra').toHaveCount(2)
         await expect(steps.nth(1)).toHaveAttribute('data-status', 'failed')
-        await expect(steps.nth(1).getByTestId('execucao-step-erro')).toContainText('Test timeout of 10000ms exceeded.')
+        await expect(steps.nth(1).getByTestId('execucao-step-erro')).toContainText('O cenário passou de 10s no total')
         await expect(page.getByTestId('execucao-corrigir')).toBeVisible()
     })
 

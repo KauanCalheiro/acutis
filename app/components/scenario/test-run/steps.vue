@@ -51,13 +51,10 @@ const stepColors: Record<RunStep['status'], string> = {
         >
           {{ step.title }}
         </p>
-        <p
+        <ScenarioTestRunFailure
           v-if="step.status === 'failed' && step.error"
-          class="text-sm text-dimmed mt-1"
-          data-testid="execucao-step-erro"
-        >
-          <span class="font-semibold text-error">Erro:</span> {{ step.error }}
-        </p>
+          :error="step.error"
+        />
       </div>
     </li>
   </ol>
