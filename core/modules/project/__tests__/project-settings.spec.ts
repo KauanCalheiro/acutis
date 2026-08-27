@@ -44,6 +44,13 @@ it('salva a url base que o usuário digitou', async () => {
   expect(readFileSync(join(dir, '.gitignore'), 'utf8')).toContain('environments')
 })
 
+/** O `failure.html` é a página no instante da falha, reescrita a cada execução: é artefato, não fonte. */
+it('ignora o retrato de falha que a execução deixa no projeto', async () => {
+  await api.http.put(`/api/v1/projects/${SLUG}/settings`).send({ baseUrl: 'https://app.test' }).expect(200)
+
+  expect(readFileSync(join(dir, '.gitignore'), 'utf8')).toContain('failure.html')
+})
+
 it('mostra a url base salva no projeto', async () => {
   await api.http.put(`/api/v1/projects/${SLUG}/settings`).send({ baseUrl: 'https://app.test' }).expect(200)
 

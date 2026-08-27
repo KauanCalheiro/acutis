@@ -64,7 +64,10 @@ export function stampTitle(gherkin: string, newTitle: string): string {
 export function stampPlaywrightTitle(playwright: string, newTitle: string): string {
   const literal = `'${newTitle.replace(/\\/g, '\\\\').replace(/'/g, '\\\'')}'`
 
-  return playwright.replace(/test\.describe\(\s*(["']).+?\1/u, `test.describe(${literal}`)
+  return playwright.replace(
+    /test\.describe(\.skip)?\(\s*(["']).+?\2/u,
+    (_match, skip: string | undefined) => `test.describe${skip ?? ''}(${literal}`
+  )
 }
 
 export function stampGherkinTags(gherkin: string, list: string[]): string {
@@ -91,7 +94,7 @@ export function stampPlaywrightTags(playwright: string, list: string[]): string 
   }
 
   return playwright.replace(
-    /test\.describe\(\s*((["']).+?\2)\s*,\s*(?=\(|async)/,
-    `test.describe($1, {${tagList}}, `
+    /test\.describe(\.skip)?\(\s*((["']).+?\3)\s*,\s*(?=\(|async)/,
+    (_match, skip: string | undefined, title: string) => `test.describe${skip ?? ''}(${title}, {${tagList}}, `
   )
 }

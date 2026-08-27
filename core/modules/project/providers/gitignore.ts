@@ -11,7 +11,8 @@ const ENTRIES = [
   'results',
   'playwright-report',
   'test-results',
-  '*.dom.json'
+  '*.dom.json',
+  'failure.html'
 ]
 
 function file(projectPath: string): string {

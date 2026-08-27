@@ -35,6 +35,18 @@ function clone(body: Record<string, unknown>) {
   return api.http.post('/api/v1/projects/create/clone').send(body)
 }
 
+/** O manifesto nasce no clone, então é o clone que precisa versioná-lo. */
+it('versiona o que o acutis acrescentou ao repositório clonado', async () => {
+  await clone({ url: sourceRepo, name: 'Cloned App' })
+
+  const dir = api.projectPath('cloned-app')
+  const log = execFileSync('git', ['-C', dir, 'log', '-1', '--name-only', '--pretty=format:%s'], { encoding: 'utf8' })
+
+  expect(execFileSync('git', ['-C', dir, 'status', '--porcelain'], { encoding: 'utf8' }).trim()).toBe('')
+  expect(log).toContain('registrar o projeto no acutis')
+  expect(log).toContain('acutis.json')
+})
+
 it('clona um repositório público', async () => {
   const response = await clone({ url: sourceRepo, name: 'Cloned App' })
 

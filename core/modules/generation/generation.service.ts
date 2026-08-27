@@ -18,6 +18,7 @@ import { environmentVar } from '../environment/providers/environment-var.js'
 import { Environments } from '../environment/providers/environments.js'
 import type { ProjectService } from '../project/project.service.js'
 import { eventsPathOf, htmlPathOf } from '../scenario/providers/scenario.js'
+import { Git } from '../git/providers/git.js'
 import {
   scenario as scenarioOf,
   stampGherkinTags,
@@ -116,7 +117,7 @@ export class GenerationService {
   }
 
   /** O rascunho revisado vira os arquivos do projeto. */
-  write(slug: string, data: WriteTestDto): WrittenTest {
+  async write(slug: string, data: WriteTestDto): Promise<WrittenTest> {
     const path = this.projects.pathOf(slug)
     const domain = toSlug(data.domain) || 'outros'
     const tags = data.tags ?? []
@@ -141,6 +142,11 @@ export class GenerationService {
     if (data.events) this.writeRecording(path, slug, spec, data.events, data.envVars ?? [])
 
     void this.events.publish(new ScenarioRecorded(slug, spec))
+
+    await Git.in(path).save(
+      `test: adicionar cenário ${domain}/${name}`,
+      [spec, feature, eventsPathOf(spec), htmlPathOf(spec)].filter((file): file is string => file !== null)
+    )
 
     return { gherkin, playwright, spec, feature }
   }

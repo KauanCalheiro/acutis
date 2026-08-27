@@ -18,8 +18,9 @@ import { EnvKey } from '../environment/providers/env-key.js'
 import { environmentVar } from '../environment/providers/environment-var.js'
 import type { Environments } from '../environment/providers/environments.js'
 import { patchManifest } from '../project/providers/manifest.js'
-import type { ProjectService } from '../project/project.service.js'
+import { Git } from '../git/providers/git.js'
 import { eventsPathOf, htmlPathOf } from '../scenario/providers/scenario.js'
+import type { ProjectService } from '../project/project.service.js'
 import { AUTH_FEATURE, AUTH_SPEC, ensureAuthConfig } from './providers/auth.js'
 import type { AuthRecordingRequest as AuthRecordingDto, GeneratedAuthSetup } from '#shared/contracts/auth'
 import type { DomainEventBus } from '../../common/events/domain-event-bus.js'
@@ -98,16 +99,35 @@ export class AuthService {
     return readFileSync(file, 'utf8')
   }
 
-  update(slug: string, authSetup: string): string {
-    put(join(this.projects.pathOf(slug), AUTH_SPEC), authSetup)
+  async update(slug: string, authSetup: string): Promise<string> {
+    const path = this.projects.pathOf(slug)
+
+    put(join(path, AUTH_SPEC), authSetup)
     void this.events.publish(new AuthConfigured(slug, 'editor'))
+
+    await this.sync(path)
 
     return authSetup
   }
 
+  /** O que a autenticação versiona; o `storage-state.json` fica de fora, é sessão. */
+  private async sync(path: string): Promise<void> {
+    await Git.in(path).save('test: atualizar a autenticação', [
+      AUTH_SPEC,
+      AUTH_FEATURE,
+      eventsPathOf(AUTH_SPEC),
+      htmlPathOf(AUTH_SPEC),
+      'playwright.config.ts'
+    ])
+  }
+
   /** O usuário disse que este projeto não tem login; a tela para de oferecer a gravação. */
-  skip(slug: string): void {
-    patchManifest(this.projects.pathOf(slug), { auth_skipped: true })
+  async skip(slug: string): Promise<void> {
+    const path = this.projects.pathOf(slug)
+
+    patchManifest(path, { auth_skipped: true })
+
+    await Git.in(path).save('chore: dispensar a autenticação do projeto', ['acutis.json'])
   }
 
   /** Converte o login gravado num `auth.setup.ts` e deixa o projeto pronto para executá-lo. */
@@ -133,6 +153,8 @@ export class AuthService {
 
     environments.ensure()
     void this.events.publish(new AuthConfigured(slug, 'recording'))
+
+    await this.sync(path)
 
     if (credentials === null) return generated
 

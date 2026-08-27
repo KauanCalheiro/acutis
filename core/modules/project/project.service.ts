@@ -210,16 +210,36 @@ export class ProjectService {
     rmSync(this.pathOf(slug), { recursive: true, force: true })
   }
 
+  /**
+     * O que a configuração do projeto versiona. O `.env` e a pasta `environments` ficam de fora
+     * pelo `.gitignore`: os valores são de cada máquina, e alguns são segredo.
+     */
+  private async syncSettings(path: string): Promise<void> {
+    await Git.in(path).save('chore: atualizar configurações do projeto', [
+      'acutis.json',
+      '.gitignore',
+      '.env.example'
+    ])
+  }
+
   /** Grava a URL base do sistema sob teste. */
-  setBaseUrl(slug: string, baseUrl: string): string {
-    new Environments(this.pathOf(slug)).set(EnvKey.URL, baseUrl)
+  async setBaseUrl(slug: string, baseUrl: string): Promise<string> {
+    const path = this.pathOf(slug)
+
+    new Environments(path).set(EnvKey.URL, baseUrl)
+
+    await this.syncSettings(path)
 
     return baseUrl
   }
 
   /** Marca no manifesto que a URL foi dispensada. */
-  skipUrl(slug: string): void {
-    patchManifest(this.pathOf(slug), { url_skipped: true })
+  async skipUrl(slug: string): Promise<void> {
+    const path = this.pathOf(slug)
+
+    patchManifest(path, { url_skipped: true })
+
+    await this.syncSettings(path)
   }
 
   saveCredentials(slug: string, username: string, password: string): void {

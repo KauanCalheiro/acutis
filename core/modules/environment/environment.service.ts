@@ -54,7 +54,7 @@ export class EnvironmentService {
   update(slug: string, environmentSlug: string, data: EnvironmentRequest): Environment {
     const environments = this.projects.environmentsOf(slug)
 
-    this.found(environments, environmentSlug)
+    const current = this.found(environments, environmentSlug)
 
     const vars = (data.vars ?? []).map(
       (variable: EnvironmentVarRequest) => environmentVar(variable.key, variable.value ?? '', variable.secret ?? false)
@@ -70,7 +70,16 @@ export class EnvironmentService {
       })
     }
 
-    environments.put(environmentSlug, data.name, vars).ensure().alignTo(environmentSlug)
+    // Só desanuncia a chave que existia de fato. A que veio vazia do `.env.example` continua sendo
+    // o que o projeto espera, mesmo que este ambiente não a tenha preenchido.
+    const gone = current.vars
+      .filter(variable => Boolean(variable.value))
+      .map(variable => variable.key)
+      .filter(key => !vars.some(variable => variable.key === key))
+
+    // A ordem importa: alinhar propaga a remoção para os outros ambientes, esquecer tira a chave do
+    // `.env.example`, e só então o `ensure` semeia de volta o que continua declarado.
+    environments.put(environmentSlug, data.name, vars).alignTo(environmentSlug).forgetKeys(gone).ensure()
 
     return this.displayed(environments, environmentSlug)
   }

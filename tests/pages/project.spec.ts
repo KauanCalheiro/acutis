@@ -34,12 +34,13 @@ class FakeEventSource {
   }
 }
 
-function scenario(title: string, spec: string, tags: string[] = ['@read']): Scenario {
-  return { title, spec, feature: null, tags, domain: null }
+function scenario(title: string, spec: string, tags: string[] = ['@read'], skipped = false): Scenario {
+  return { title, spec, feature: null, tags, domain: null, skipped }
 }
 
 const api = {
   project: {} as ProjectDetail,
+  vars: [] as { key: string, value: string, secret: boolean, pending: boolean }[],
   skipped: false,
   removed: false,
   missing: false
@@ -75,7 +76,7 @@ registerEndpoint('/api/projects/alpha-store', () => {
 registerEndpoint('/api/projects/alpha-store/environments', () => ({
   active: 'homologacao',
   known_keys: [],
-  environments: [{ slug: 'homologacao', name: 'Homologação', vars: [] }]
+  environments: [{ slug: 'homologacao', name: 'Homologação', vars: api.vars }]
 }))
 
 registerEndpoint('/api/projects/alpha-store/auth/skip', {
@@ -116,6 +117,7 @@ beforeEach(() => {
   FakeEventSource.last = undefined
   vi.stubGlobal('EventSource', FakeEventSource)
   api.project = project()
+  api.vars = []
   api.skipped = false
   api.removed = false
   api.missing = false
@@ -162,6 +164,43 @@ describe('ProjectPage', () => {
     expect(wrapper.get('[data-testid="projeto-vscode"]').attributes('href')).toContain('vscode://')
   })
 
+  it('marca no card o cenário que está pulado', async () => {
+    api.project = project({
+      scenarios: [
+        scenario('Login do cliente', 'tests/login.spec.ts'),
+        scenario('Mensagens de falha', 'tests/diagnostico/falhas.spec.ts', ['@read'], true)
+      ]
+    })
+    const wrapper = await mount()
+
+    const cards = wrapper.findAll('[data-testid="cenario-card"]')
+
+    expect(cards[0]!.find('[data-testid="cenario-card-pulado"]').exists()).toBe(false)
+    expect(cards[1]!.get('[data-testid="cenario-card-pulado"]').text()).toContain('Pulado')
+  })
+
+  it('avisa quais variáveis do ambiente ativo ainda estão sem valor', async () => {
+    api.vars = [
+      { key: 'URL', value: 'https://loja.test', secret: false, pending: false },
+      { key: 'CUPOM_TESTE', value: '', secret: false, pending: true },
+      { key: 'API_TOKEN', value: '', secret: true, pending: true }
+    ]
+    const wrapper = await mount()
+
+    const aviso = wrapper.get('[data-testid="projeto-variaveis-aviso"]')
+
+    expect(aviso.text()).toContain('CUPOM_TESTE')
+    expect(aviso.text()).toContain('API_TOKEN')
+    expect(aviso.text()).not.toContain('URL')
+  })
+
+  it('não avisa nada quando o ambiente ativo está preenchido', async () => {
+    api.vars = [{ key: 'URL', value: 'https://loja.test', secret: false, pending: false }]
+    const wrapper = await mount()
+
+    expect(wrapper.find('[data-testid="projeto-variaveis-aviso"]').exists()).toBe(false)
+  })
+
   it('filtra os cenários por título e por tag', async () => {
     const wrapper = await mount()
 
@@ -192,6 +231,34 @@ describe('ProjectPage', () => {
 
     expect(FakeEventSource.last!.url).toContain('grep=Login+do+cliente')
     expect(field('execucao-iniciando')).toBeDefined()
+  })
+
+  it('deixa o cenário pulado fora da execução filtrada, e da contagem dela', async () => {
+    api.project = project({
+      scenarios: [
+        scenario('Login do cliente', 'tests/login.spec.ts'),
+        scenario('Mensagens de falha', 'tests/diagnostico/falhas.spec.ts', ['@read'], true)
+      ]
+    })
+    const wrapper = await mount()
+
+    expect(wrapper.get('[data-testid="projeto-rodar-filtrados"]').text()).toContain('Rodar 1 filtrados')
+    expect(wrapper.findAll('[data-testid="cenario-card"]'), 'o pulado continua na listagem').toHaveLength(2)
+
+    await wrapper.get('[data-testid="projeto-rodar-filtrados"]').trigger('click')
+    await settle()
+
+    expect(FakeEventSource.last!.url).toContain('grep=Login+do+cliente')
+    expect(FakeEventSource.last!.url).not.toContain('Mensagens')
+  })
+
+  it('não deixa rodar quando só sobraram cenários pulados', async () => {
+    api.project = project({
+      scenarios: [scenario('Mensagens de falha', 'tests/diagnostico/falhas.spec.ts', ['@read'], true)]
+    })
+    const wrapper = await mount()
+
+    expect(wrapper.get('[data-testid="projeto-rodar-filtrados"]').attributes('disabled')).toBeDefined()
   })
 
   it('oferece dispensar o login quando a autenticação nunca foi configurada', async () => {

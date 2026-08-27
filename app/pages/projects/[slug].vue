@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ProjectDetail } from '~/types/project'
+import type { EnvironmentList, ProjectDetail } from '~/types/project'
 import type { RecorderEvent } from '~/composables/webdriver'
 import { navigateTo } from '#app'
 import { reportUrlFor } from '~/composables/run-stream'
@@ -41,6 +41,9 @@ const scenarios = computed(() => {
   )
 })
 
+/** O cenário pulado fica na listagem, mas fora da execução: o Playwright não roda ele. */
+const runnable = computed(() => scenarios.value.filter(scenario => !scenario.skipped))
+
 const filteredRun = useRunStream(() => slug.value)
 const filteredRunOpen = ref(false)
 
@@ -48,7 +51,7 @@ const filteredRunOpen = ref(false)
 function runFiltered() {
   filteredRunOpen.value = true
   filteredRun.start({
-    grep: scenarios.value.map(scenario => scenario.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
+    grep: runnable.value.map(scenario => scenario.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
   })
 }
 
@@ -60,6 +63,19 @@ onMounted(() => {
 })
 
 const environmentsOpen = ref(false)
+
+const { data: environmentList } = await useFetch<EnvironmentList>(
+  () => `/api/projects/${slug.value}/environments`,
+  { key: `environments-${slug.value}` }
+)
+
+/** Variável sem valor no ambiente ativo derruba a execução, e a falha não diz que o motivo é este. */
+const pendingVars = computed(() => {
+  const list = environmentList.value
+  const active = list?.environments.find(environment => environment.slug === list.active)
+
+  return (active?.vars ?? []).filter(variable => variable.pending).map(variable => variable.key)
+})
 
 /** `?environment` abre o modal, que é para onde a ressalva de variável sem valor aponta. */
 onMounted(() => {
@@ -303,6 +319,29 @@ async function remove() {
     </div>
 
     <UAlert
+      v-if="pendingVars.length"
+      color="warning"
+      variant="soft"
+      icon="i-ic-round-warning"
+      class="mt-6"
+      title="Variáveis do ambiente sem valor"
+      :description="`A execução vai falhar até ${pendingVars.join(', ')} receber valor no ambiente ativo.`"
+      data-testid="projeto-variaveis-aviso"
+      :ui="{ actions: 'justify-end' }"
+    >
+      <template #actions>
+        <UButton
+          label="Preencher"
+          size="md"
+          color="neutral"
+          variant="link"
+          data-testid="projeto-variaveis-preencher"
+          @click="environmentsOpen = true"
+        />
+      </template>
+    </UAlert>
+
+    <UAlert
       v-if="project!.auth_status === 'unset'"
       color="warning"
       variant="soft"
@@ -364,11 +403,11 @@ async function remove() {
         class="flex-1 min-w-48"
       />
       <UButton
-        :label="`Rodar ${scenarios.length} filtrados`"
+        :label="`Rodar ${runnable.length} filtrados`"
         trailing-icon="i-ic-round-play-arrow"
         color="neutral"
         variant="soft"
-        :disabled="!scenarios.length"
+        :disabled="!runnable.length"
         :loading="filteredRun.running.value"
         data-testid="projeto-rodar-filtrados"
         @click="runFiltered"
@@ -448,6 +487,15 @@ async function remove() {
             {{ scenario.spec }}
           </p>
           <div class="flex flex-wrap gap-1">
+            <UBadge
+              v-if="scenario.skipped"
+              color="warning"
+              variant="soft"
+              size="md"
+              icon="i-ic-round-pause-circle"
+              label="Pulado"
+              data-testid="cenario-card-pulado"
+            />
             <UBadge
               v-for="tag in scenario.tags"
               :key="tag"

@@ -90,6 +90,7 @@ export class Environments {
 
     writeFileSync(this.fileOf(slug), `${JSON.stringify(body, null, 4)}\n`)
     ensureGitignore(this.path)
+    this.env().announce(vars.map(variable => variable.key))
 
     return this
   }
@@ -165,13 +166,30 @@ export class Environments {
 
   /** As chaves que todo ambiente precisa ter, que dependem de o projeto ter login ou não. */
   private requiredKeys(): { key: string, secret: boolean }[] {
-    return authExists(this.path)
+    const own = authExists(this.path)
       ? [
           { key: EnvKey.URL, secret: false },
           { key: EnvKey.USER, secret: false },
           { key: EnvKey.PASSWORD, secret: true }
         ]
       : [{ key: EnvKey.URL, secret: false }]
+
+    // O `.env.example` é o que sobrevive ao clone: as chaves dele viram campos esperando valor.
+    const announced = this.env().exampleKeys()
+      .filter(key => !own.some(required => required.key === key))
+      .map(key => ({ key, secret: key === EnvKey.PASSWORD }))
+
+    return [...own, ...announced]
+  }
+
+  /**
+     * As chaves que a edição tirou saem do `.env` e do exemplo. Sem isso o `ensure` as semearia de
+     * volta na mesma requisição, porque o exemplo continuaria anunciando cada uma.
+     */
+  forgetKeys(keys: string[]): this {
+    if (keys.length > 0) this.env().remove(keys)
+
+    return this
   }
 
   /** O primeiro ambiente nasce com o que o `.env` do projeto já tiver. */

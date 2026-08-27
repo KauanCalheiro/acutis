@@ -171,13 +171,11 @@ function ownError(test: RunTest) {
 
             <template #content>
               <div class="mt-1 rounded-md bg-elevated py-3 pl-3.5 pr-3">
-                <p
+                <ScenarioTestRunFailure
                   v-if="ownError(test)"
-                  class="text-sm text-dimmed"
+                  :error="ownError(test)!"
                   data-testid="execucao-teste-erro"
-                >
-                  <span class="font-semibold text-error">Erro:</span> {{ ownError(test) }}
-                </p>
+                />
                 <p
                   v-else-if="test.steps.length === 0"
                   class="text-sm text-dimmed"

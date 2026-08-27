@@ -178,6 +178,74 @@ it('salva as variáveis comuns no arquivo versionado', async () => {
   ])
 })
 
+/**
+ * Quem clona o projeto não recebe `environments/`, então o `.env.example` é o único lugar onde as
+ * chaves esperadas sobrevivem ao clone.
+ */
+it('anuncia no .env.example as chaves que o ambiente declarou', async () => {
+  await api.http.post(BASE).send({ name: 'Homolog' }).expect(201)
+
+  await api.http.put(`${BASE}/homolog`).send({
+    name: 'Homolog',
+    vars: [
+      { key: EnvKey.URL, value: 'https://homolog.loja.test' },
+      { key: 'CUPOM_TESTE', value: 'BLACK50' },
+      { key: 'API_TOKEN', value: 'segredo', secret: true }
+    ]
+  }).expect(200)
+
+  const example = readFileSync(join(dir, '.env.example'), 'utf8')
+
+  expect(example).toContain('CUPOM_TESTE=')
+  expect(example).toContain('API_TOKEN=')
+  expect(example).toContain(`${EnvKey.URL}=`)
+})
+
+it('não deixa valor nenhum escapar para o .env.example', async () => {
+  await api.http.post(BASE).send({ name: 'Homolog' }).expect(201)
+
+  await api.http.put(`${BASE}/homolog`).send({
+    name: 'Homolog',
+    vars: [{ key: 'API_TOKEN', value: 'segredo', secret: true }]
+  }).expect(200)
+
+  expect(readFileSync(join(dir, '.env.example'), 'utf8')).not.toContain('segredo')
+})
+
+/** O caso do clone: o projeto chega com as chaves anunciadas e nenhum valor. */
+it('semeia o ambiente com as chaves que o .env.example anuncia', async () => {
+  writeFileSync(join(dir, '.env.example'), 'URL=\nCUPOM_TESTE=\nAPI_TOKEN=\n')
+
+  const response = await api.http.get(BASE)
+
+  expect(response.status).toBe(200)
+  expect(keys(response.body.environments[0].vars)).toContain('CUPOM_TESTE')
+  expect(keys(response.body.environments[0].vars)).toContain('API_TOKEN')
+  expect(response.body.environments[0].vars.every((variable: StoredVar) => variable.key === 'URL' || variable.value === ''))
+    .toBe(true)
+})
+
+it('não traz de volta a variável que o editor apagou', async () => {
+  await api.http.get(BASE).expect(200)
+
+  await api.http.put(`${BASE}/ambiente`).send({
+    name: 'Ambiente',
+    vars: [
+      { key: EnvKey.URL, value: 'https://loja.test' },
+      { key: 'CUPOM_TESTE', value: 'BLACK50' }
+    ]
+  }).expect(200)
+
+  const response = await api.http.put(`${BASE}/ambiente`).send({
+    name: 'Ambiente',
+    vars: [{ key: EnvKey.URL, value: 'https://loja.test' }]
+  })
+
+  expect(response.status).toBe(200)
+  expect(keys(response.body.vars)).not.toContain('CUPOM_TESTE')
+  expect(readFileSync(join(dir, '.env.example'), 'utf8')).not.toContain('CUPOM_TESTE')
+})
+
 it('guarda o segredo no arquivo do ambiente, que nunca vai para o git', async () => {
   await api.http.post(BASE).send({ name: 'Homolog' }).expect(201)
 

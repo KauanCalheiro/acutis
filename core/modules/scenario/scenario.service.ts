@@ -57,6 +57,7 @@ export class ScenarioService {
       feature: data.feature,
       tags: data.tags,
       domain: data.domain,
+      skipped: data.skipped,
       playwright: written ? sourceOf(spec) : '',
       gherkin: feature && existsSync(feature) ? readFileSync(feature, 'utf8') : null,
       events: existsSync(eventsFile) ? JSON.parse(readFileSync(eventsFile, 'utf8')) as RecorderEvent[] : [],
@@ -66,20 +67,43 @@ export class ScenarioService {
     }
   }
 
-  remove(slug: string, id: string): void {
+  async remove(slug: string, id: string): Promise<void> {
     const { path, scenario } = this.scenarioIn(slug, id)
     const data = scenario.data()
+    const removed = [data.spec, eventsPathOf(data.spec), htmlPathOf(data.spec), data.feature]
+      .filter((file): file is string => file !== null && existsSync(join(path, file)))
 
-    rmSync(join(path, data.spec), { force: true })
-    rmSync(join(path, eventsPathOf(data.spec)), { force: true })
-
-    if (data.feature !== null) {
-      rmSync(join(path, data.feature), { force: true })
+    for (const file of removed) {
+      rmSync(join(path, file), { force: true })
     }
+
+    await Git.in(path).save(`test: remover cenário ${id}`, removed)
+  }
+
+  /** Pula ou volta a rodar o cenário, marcando o describe do próprio spec. */
+  async skip(slug: string, id: string, skipped: boolean): Promise<ScenarioResponse> {
+    const { path, scenario } = this.scenarioIn(slug, id)
+    const spec = scenario.data().spec
+    const file = join(path, spec)
+    const source = readFileSync(file, 'utf8')
+
+    const marked = skipped
+      ? source.replace(/test\.describe\(/, 'test.describe.skip(')
+      : source.replace(/test\.describe\.skip\(/, 'test.describe(')
+
+    if (marked !== source) {
+      put(file, marked)
+
+      const what = skipped ? 'pular' : 'voltar a rodar'
+
+      await Git.in(path).save(`test: ${what} cenário ${id}`, [spec])
+    }
+
+    return this.show(path, scenario)
   }
 
   /** Reescreve o cenário, movendo os arquivos quando o nome muda; o setup de auth fica no caminho fixo. */
-  update(slug: string, id: string, dto: UpdateScenarioDto): ScenarioResponse {
+  async update(slug: string, id: string, dto: UpdateScenarioDto): Promise<ScenarioResponse> {
     const { path, scenario } = this.scenarioIn(slug, id)
     const auth = scenario.isAuth()
     const data = scenario.data()
@@ -105,6 +129,8 @@ export class ScenarioService {
       : stampGherkinTags(stampTitle(dto.gherkin!, dto.title), [])
     const playwright = stampPlaywrightTags(stampPlaywrightTitle(dto.playwright, dto.title), tags)
 
+    const touched = [specRelative, featureRelative]
+
     put(join(path, specRelative), `${playwright}\n`)
 
     if (gherkin === null) {
@@ -115,9 +141,11 @@ export class ScenarioService {
 
     if (specRelative !== data.spec) {
       rmSync(join(path, data.spec), { force: true })
+      touched.push(data.spec)
 
       if (data.feature !== null) {
         rmSync(join(path, data.feature), { force: true })
+        touched.push(data.feature)
       }
 
       // A gravação e o DOM que ela capturou seguem o spec; ficar para trás é lixo no projeto.
@@ -125,12 +153,16 @@ export class ScenarioService {
         const old = join(path, pathOf(data.spec))
 
         if (existsSync(old)) renameSync(old, join(path, pathOf(specRelative)))
+
+        touched.push(pathOf(data.spec), pathOf(specRelative))
       }
     }
 
     if (dto.events) this.replaceRecording(slug, path, specRelative, dto.events)
 
     const newId = auth ? AUTH_ID : `${domain === null ? '' : `${domain}/`}${name}`
+
+    await Git.in(path).save(`test: atualizar cenário ${newId}`, touched)
 
     return this.show(path, Scenario.make(path, newId))
   }

@@ -77,17 +77,46 @@ export class Git {
     return this.output(git => git.raw(['config', 'user.name']))
   }
 
+  /**
+     * Um `add` por arquivo: o caminho que nunca existiu (o DOM que a gravação não capturou) faz o
+     * git recusar a lista inteira, e aí a ação toda ficava pendente.
+     */
+  private async stage(files: string[]): Promise<string[]> {
+    const staged: string[] = []
+
+    for (const file of new Set(files)) {
+      try {
+        await this.client().add(file)
+        staged.push(file)
+      } catch {
+        // Caminho que não existe no disco nem no índice.
+      }
+    }
+
+    return staged
+  }
+
   async commit(message: string, files: string[]): Promise<this> {
     if (!this.isRepository()) return this
 
+    const staged = await this.stage(files)
+
+    if (staged.length === 0) return this
+
     try {
-      await this.client().add(files)
-      await this.client().commit(message, files)
+      await this.client().commit(message, staged)
     } catch {
       // Nada a commitar, ou o commit foi recusado.
     }
 
     return this
+  }
+
+  /** O que uma ação escreveu, versionado e enviado: é assim que o repositório acompanha a tela. */
+  async save(message: string, files: string[]): Promise<void> {
+    if (files.length === 0) return
+
+    await (await this.commit(message, files)).push()
   }
 
   async push(): Promise<this> {
