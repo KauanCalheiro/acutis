@@ -1,6 +1,6 @@
 {
   "name": "@acutis/cli",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Grava, gera e roda testes Playwright a partir do navegador",
   "private": false,
   "license": "MIT",
