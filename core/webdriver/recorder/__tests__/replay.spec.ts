@@ -107,6 +107,14 @@ describe('replaySteps', () => {
     ])
   })
 
+  it('prefere atributos semânticos ao id que pode ter sido gerado pelo framework', () => {
+    const steps = replaySteps([
+      event({ selectors: selectors({ id: 'v-0', cssStable: '#v-0', ariaLabel: 'Fechar' }) })
+    ])
+
+    expect(steps[0]).toMatchObject({ selector: '[aria-label="Fechar"]' })
+  })
+
   it('deixa de fora o que não se refaz sem inventar estado', () => {
     const steps = replaySteps([
       event({ type: 'submit', selectors: selectors({ id: 'form' }) }),
