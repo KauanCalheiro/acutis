@@ -41,6 +41,9 @@ function scenario(title: string, spec: string, tags: string[] = ['@read'], skipp
 const api = {
   project: {} as ProjectDetail,
   vars: [] as { key: string, value: string, secret: boolean, pending: boolean }[],
+  synced: false,
+  conflict: false,
+  unavailable: false,
   skipped: false,
   removed: false,
   missing: false
@@ -79,10 +82,25 @@ registerEndpoint('/api/projects/alpha-store/environments', () => ({
   environments: [{ slug: 'homologacao', name: 'Homologação', vars: api.vars }]
 }))
 
+registerEndpoint('/api/projects/alpha-store/git/sync', {
+  method: 'POST',
+  handler: () => {
+    api.synced = true
+
+    if (api.unavailable) return { status: 'unavailable', changed: false, reason: 'network' }
+
+    return api.conflict
+      ? { status: 'conflict', changed: false }
+      : { status: 'synced', changed: false }
+  }
+})
+
 registerEndpoint('/api/projects/alpha-store/auth/skip', {
   method: 'POST',
   handler: () => {
     api.skipped = true
+    // A ação mexeu no projeto, então a próxima leitura traz outra data de modificação.
+    api.project = project({ auth_status: 'skipped', updated_at: '2026-01-02T11:00:00+00:00' })
 
     return { ok: true }
   }
@@ -118,6 +136,9 @@ beforeEach(() => {
   vi.stubGlobal('EventSource', FakeEventSource)
   api.project = project()
   api.vars = []
+  api.synced = false
+  api.conflict = false
+  api.unavailable = false
   api.skipped = false
   api.removed = false
   api.missing = false
@@ -199,6 +220,54 @@ describe('ProjectPage', () => {
     const wrapper = await mount()
 
     expect(wrapper.find('[data-testid="projeto-variaveis-aviso"]').exists()).toBe(false)
+  })
+
+  it('sincroniza com o repositório assim que a tela abre', async () => {
+    await mount()
+    await settle(4)
+
+    expect(api.synced).toBe(true)
+  })
+
+  it('sincroniza de novo depois de uma ação, sem a ação esperar por isso', async () => {
+    api.project = project({ auth_status: 'unset' })
+    const wrapper = await mount()
+    await settle(4)
+    api.synced = false
+
+    await wrapper.get('[data-testid="projeto-auth-dispensar"]').trigger('click')
+    await settle(6)
+
+    expect(api.synced, 'a ação dispara a sincronização por conta própria').toBe(true)
+  })
+
+  it('marca o atalho do editor quando sobrou conflito, e explica no tooltip', async () => {
+    api.conflict = true
+    const wrapper = await mount()
+    await settle(4)
+
+    expect(wrapper.findComponent({ name: 'UChip' }).props('show'), 'a marca aparece no atalho').toBe(true)
+    expect(wrapper.get('[data-testid="projeto-vscode"]').attributes('aria-label'))
+      .toContain('resolva pelo console do git')
+  })
+
+  it('não marca nada quando a sincronização deu certo', async () => {
+    const wrapper = await mount()
+    await settle(4)
+
+    expect(wrapper.findComponent({ name: 'UChip' }).props('show')).toBe(false)
+    expect(wrapper.get('[data-testid="projeto-vscode"]').attributes('aria-label')).toBe('Abrir no VS Code')
+  })
+
+  it('avisa que o remoto está indisponível sem bloquear o projeto', async () => {
+    api.unavailable = true
+    const wrapper = await mount()
+    await settle(4)
+
+    expect(wrapper.findComponent({ name: 'UChip' }).props('show')).toBe(true)
+    expect(wrapper.findComponent({ name: 'UChip' }).props('color')).toBe('warning')
+    expect(wrapper.get('[data-testid="projeto-vscode"]').attributes('aria-label'))
+      .toContain('repositório remoto não respondeu')
   })
 
   it('filtra os cenários por título e por tag', async () => {

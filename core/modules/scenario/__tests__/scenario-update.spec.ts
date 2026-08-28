@@ -36,6 +36,7 @@ function read(relative: string): string {
 
 function payload(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
+    revision: 'revisao-desconhecida',
     title: 'Login atualizado',
     path: 'login',
     domain: '',
@@ -46,8 +47,11 @@ function payload(overrides: Record<string, unknown> = {}): Record<string, unknow
   }
 }
 
-function update(id: string, body: Record<string, unknown>) {
-  return api.http.patch(`/api/v1/projects/minha-loja/scenarios/${id}`).send(body)
+async function update(id: string, body: Record<string, unknown>) {
+  const current = await api.http.get(`/api/v1/projects/minha-loja/scenarios/${id}`)
+  const revision = current.body.revision ?? body.revision
+
+  return api.http.patch(`/api/v1/projects/minha-loja/scenarios/${id}`).send({ ...body, revision })
 }
 
 it('atualiza o cenário no lugar quando domínio e caminho não mudam', async () => {
@@ -63,6 +67,22 @@ it('atualiza o cenário no lugar quando domínio e caminho não mudam', async ()
 
   expect(read('features/login.feature')).toContain('Funcionalidade: Login atualizado')
   expect(read('tests/login.spec.ts')).toContain('@read')
+})
+
+it('preserva o arquivo atual quando a tela tenta salvar uma revisão antiga', async () => {
+  write('tests/login.spec.ts', 'test.describe(\'Login antigo\', () => {})')
+  const loaded = await api.http.get('/api/v1/projects/minha-loja/scenarios/login')
+
+  write('tests/login.spec.ts', 'test.describe(\'Login trazido do remoto\', () => {})')
+
+  const response = await api.http.patch('/api/v1/projects/minha-loja/scenarios/login').send({
+    ...payload(),
+    revision: loaded.body.revision
+  })
+
+  expect(response.status).toBe(409)
+  expect(response.body.message).toContain('rascunho foi preservado')
+  expect(read('tests/login.spec.ts')).toContain('Login trazido do remoto')
 })
 
 it('renomeia os arquivos do cenário e leva a gravação junto', async () => {

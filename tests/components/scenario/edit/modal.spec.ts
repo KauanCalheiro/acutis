@@ -34,6 +34,7 @@ function scenario(overrides: Partial<ScenarioDetail> = {}): ScenarioDetail {
     tags: ['@read'],
     gherkin: '@read\nFuncionalidade: Login',
     playwright: 'test("login", async () => {})',
+    revision: 'revision-1',
     is_auth: false,
     ...overrides
   } as ScenarioDetail
@@ -64,7 +65,7 @@ describe('ScenarioEditModal', () => {
     field('cenario-editar-salvar')!.click()
     await settle()
 
-    expect(api.saved).toMatchObject({ domain: 'checkout', title: 'Login do cliente' })
+    expect(api.saved).toMatchObject({ domain: 'checkout', title: 'Login do cliente', revision: 'revision-1' })
     expect(state.value).toBe(false)
     expect(events.updated).toHaveLength(1)
   })

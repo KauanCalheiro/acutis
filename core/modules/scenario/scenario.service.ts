@@ -1,9 +1,10 @@
 /** As operações de cenário: ler, editar, remover e guardar o que cada execução deixou. */
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { isAbsolute, join, relative } from 'node:path'
 import { Git } from '../git/providers/git.js'
 import { ActiveVars } from '../../common/playwright/active-vars.js'
-import { ValidationFailed } from '../../common/exceptions/errors.js'
+import { Conflict, ValidationFailed } from '../../common/exceptions/errors.js'
 import { put } from '../../common/utils/file.js'
 import { slug as toSlug } from '../../common/utils/slug.js'
 import { AUTH_FEATURE, AUTH_ID, AUTH_SPEC } from '../auth/providers/auth.js'
@@ -63,8 +64,21 @@ export class ScenarioService {
       events: existsSync(eventsFile) ? JSON.parse(readFileSync(eventsFile, 'utf8')) as RecorderEvent[] : [],
       updated_at: (written ? statSync(spec).mtime : new Date()).toISOString(),
       is_auth: scenario.isAuth(),
-      runs: this.listRuns(path, scenario.id)
+      runs: this.listRuns(path, scenario.id),
+      revision: this.revision(path, data.spec, data.feature)
     }
+  }
+
+  /** Hash do que a tela pode substituir ao editar ou retomar uma gravação. */
+  private revision(path: string, spec: string, feature: string | null): string {
+    const hash = createHash('sha256')
+
+    for (const relative of [spec, feature, eventsPathOf(spec), htmlPathOf(spec)]) {
+      hash.update(relative ?? '<ausente>')
+      if (relative !== null && existsSync(join(path, relative))) hash.update(readFileSync(join(path, relative)))
+    }
+
+    return hash.digest('hex')
   }
 
   async remove(slug: string, id: string): Promise<void> {
@@ -107,6 +121,11 @@ export class ScenarioService {
     const { path, scenario } = this.scenarioIn(slug, id)
     const auth = scenario.isAuth()
     const data = scenario.data()
+
+    if (dto.revision !== this.revision(path, data.spec, data.feature)) {
+      throw new Conflict('Este cenário mudou no repositório enquanto estava aberto. '
+        + 'Seu rascunho foi preservado; recarregue o cenário e revise as mudanças antes de salvar.')
+    }
 
     const domain = toSlug(dto.domain ?? '') || null
     const name = toSlug(dto.path) || 'teste'
@@ -216,7 +235,7 @@ export class ScenarioService {
     const git = Git.in(path)
     const committed = await this.record(path, scenario.id, spec, events, startedAt, git)
 
-    await (await git.commit(`chore: registrar execução de ${scenario.id}`, committed)).push()
+    await git.save(`chore: registrar execução de ${scenario.id}`, committed)
   }
 
   /**
@@ -238,7 +257,7 @@ export class ScenarioService {
 
     if (ids.length === 0) return
 
-    await (await git.commit(`chore: registrar execução de ${ids.length} cenário(s)`, committed)).push()
+    await git.save(`chore: registrar execução de ${ids.length} cenário(s)`, committed)
   }
 
   /** Grava a execução do cenário e devolve o que ela escreveu, para quem for commitar. */

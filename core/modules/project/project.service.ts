@@ -4,7 +4,7 @@
  */
 import { existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { Git, providerFromUrl } from '../git/providers/git.js'
+import { Git, providerFromUrl, type GitSync } from '../git/providers/git.js'
 import { acutis } from '../../common/utils/acutis.js'
 import { NotFound, ValidationFailed } from '../../common/exceptions/errors.js'
 import { slug as toSlug } from '../../common/utils/slug.js'
@@ -170,6 +170,14 @@ export class ProjectService {
     }
   }
 
+  /**
+     * Junta os dois lados sozinho e informa mudança, conflito ou indisponibilidade sem impedir que
+     * o projeto continue sendo usado localmente.
+     */
+  async sync(slug: string): Promise<GitSync> {
+    return Git.in(this.pathOf(slug)).sync()
+  }
+
   /** Renomeia o projeto, movendo o diretório junto, porque o slug é o diretório. */
   async update(slug: string, name: string): Promise<Project> {
     let path = this.pathOf(slug)
@@ -218,6 +226,7 @@ export class ProjectService {
     await Git.in(path).save('chore: atualizar configurações do projeto', [
       'acutis.json',
       '.gitignore',
+      '.gitattributes',
       '.env.example'
     ])
   }

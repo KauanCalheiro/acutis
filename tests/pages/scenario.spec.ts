@@ -84,6 +84,7 @@ function scenario(overrides: Partial<ScenarioDetail> = {}): ScenarioDetail {
     updated_at: '2026-01-02T10:00:00+00:00',
     is_auth: false,
     runs: [],
+    revision: 'local-1',
     ...overrides
   } as ScenarioDetail
 }
@@ -98,6 +99,9 @@ const api = {
   suggestionsStatus: 200,
   fixStatus: 200,
   skipRequest: null as unknown,
+  gitConflict: false,
+  gitChanged: false,
+  gitSynced: false,
   authSkipped: false,
   authRecorded: null as unknown,
   credentialsNeeded: false,
@@ -135,6 +139,23 @@ registerEndpoint('/api/projects/alpha-store/scenarios/login', {
     return api.scenario
   }
 })
+registerEndpoint('/api/projects/alpha-store/git/sync', {
+  method: 'POST',
+  handler: () => {
+    api.gitSynced = true
+
+    if (api.gitChanged) {
+      api.gitChanged = false
+      api.scenario = scenario({ title: 'Cenário trazido do remoto', revision: 'remote-2' })
+      return { status: 'synced', changed: true }
+    }
+
+    return api.gitConflict
+      ? { status: 'conflict', changed: false }
+      : { status: 'synced', changed: false }
+  }
+})
+
 registerEndpoint('/api/projects/alpha-store/scenario-skip', {
   method: 'PATCH',
   handler: async (event) => {
@@ -237,6 +258,9 @@ beforeEach(() => {
   api.drafted = null
   api.suggestionsStatus = 200
   api.fixStatus = 200
+  api.gitChanged = false
+  api.gitConflict = false
+  api.gitSynced = false
   api.authSkipped = false
   api.authRecorded = null
   api.credentialsNeeded = false
@@ -558,6 +582,23 @@ describe('ScenarioPage: fechaduras e ausências', () => {
 
     expect(wrapper.find('[data-testid="cenario-eventos"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="cenario-tab-gherkin"]').exists()).toBe(false)
+  })
+
+  /** Aqui a sincronização é muda: o atalho do editor, que é onde a marca aparece, vive na tela do projeto. */
+  it('sincroniza com o repositório assim que a tela abre', async () => {
+    api.gitSynced = false
+    await mount()
+    await settle(4)
+
+    expect(api.gitSynced).toBe(true)
+  })
+
+  it('recarrega o cenário quando a sincronização trouxe mudanças', async () => {
+    api.gitChanged = true
+    const wrapper = await mount()
+    await settle(8)
+
+    expect(wrapper.text()).toContain('Cenário trazido do remoto')
   })
 
   it('pula o cenário e passa a oferecer o caminho de volta', async () => {

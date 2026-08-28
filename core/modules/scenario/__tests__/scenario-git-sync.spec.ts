@@ -68,7 +68,9 @@ it('versiona a edição de um cenário, com o arquivo que saiu e o que entrou', 
   commit('tests/login.spec.ts', 'test.describe(\'Login\', () => {})')
   commit('features/login.feature', 'Funcionalidade: Login')
 
+  const current = await api.http.get('/api/v1/projects/minha-loja/scenarios/login')
   const response = await api.http.patch('/api/v1/projects/minha-loja/scenarios/login').send({
+    revision: current.body.revision,
     title: 'Entrar no sistema',
     path: 'entrar',
     domain: 'auth',

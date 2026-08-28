@@ -89,7 +89,9 @@ it('recusa pular um cenário que não existe', async () => {
 it('mantém o cenário pulado depois de editar título e tags pela tela', async () => {
   write('tests/login.spec.ts', 'test.describe.skip(\'Login\', () => {})')
 
+  const current = await api.http.get('/api/v1/projects/minha-loja/scenarios/login')
   const response = await api.http.patch('/api/v1/projects/minha-loja/scenarios/login').send({
+    revision: current.body.revision,
     title: 'Login do cliente',
     path: 'login',
     domain: '',

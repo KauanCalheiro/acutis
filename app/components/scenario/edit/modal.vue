@@ -39,7 +39,7 @@ async function save() {
   try {
     const updated = await $fetch<ScenarioDetail>(`/api/projects/${slug}/scenarios/${scenarioId.value}`, {
       method: 'PATCH',
-      body: { ...draft.value, events: resumed?.events }
+      body: { ...draft.value, revision: scenario.revision, events: resumed?.events }
     })
     open.value = false
     emit('updated', updated)

@@ -63,6 +63,25 @@ export const projectDetailSchema = projectSchema.extend({
 
 export type ProjectDetail = z.output<typeof projectDetailSchema>
 
+export const projectSyncSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('synced'),
+    /** O pull mudou o checkout e a tela precisa reler o que está no disco. */
+    changed: z.boolean()
+  }),
+  z.object({
+    status: z.literal('conflict'),
+    changed: z.boolean()
+  }),
+  z.object({
+    status: z.literal('unavailable'),
+    changed: z.boolean(),
+    reason: z.enum(['network', 'authentication', 'remote'])
+  })
+])
+
+export type ProjectSync = z.output<typeof projectSyncSchema>
+
 export const paginationMetaSchema = z.object({
   current_page: z.number().int().nonnegative(),
   per_page: z.number().int().nonnegative(),

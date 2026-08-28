@@ -40,12 +40,15 @@ export const scenarioDetailSchema = scenarioSchema.extend({
   events: z.array(recorderEventSchema),
   updated_at: z.string(),
   is_auth: z.boolean(),
-  runs: z.array(scenarioRunSchema)
+  runs: z.array(scenarioRunSchema),
+  /** Revisão dos artefatos que a edição reescreve; evita salvar sobre uma leitura antiga. */
+  revision: z.string()
 })
 
 export type ScenarioDetail = z.output<typeof scenarioDetailSchema>
 
 export const updateScenarioRequestSchema = z.object({
+  revision: z.string().min(1),
   title: z.string().min(1, 'O título do cenário é obrigatório.').max(120),
   path: z.string().min(1, 'O caminho do arquivo é obrigatório.').max(80),
   domain: z.string().max(80).nullable().optional(),

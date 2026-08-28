@@ -27,6 +27,24 @@ if (!project.value || !scenario.value) {
 
 const origin = computed(() => projectOrigin(project.value!))
 
+const { sync: syncGit } = useGitSync(slug.value)
+
+async function syncLatest() {
+  const result = await syncGit()
+  if (!result?.changed) return
+
+  await Promise.all([refreshProject(), refreshScenario()])
+}
+
+onMounted(() => {
+  void syncLatest()
+})
+
+// O cenário é reescrito a cada ação da tela; a sincronização segue atrás, sem a tela esperar.
+watch(scenario, () => {
+  void syncLatest()
+})
+
 const removeOpen = ref(false)
 const removing = ref(false)
 
@@ -174,7 +192,11 @@ async function applyFix() {
   try {
     await $fetch(`/api/projects/${slug.value}/scenarios/${scenarioId.value}`, {
       method: 'PATCH',
-      body: { ...draftFromScenario(scenario.value!), playwright: fix.value.playwright }
+      body: {
+        ...draftFromScenario(scenario.value!),
+        revision: scenario.value!.revision,
+        playwright: fix.value.playwright
+      }
     })
 
     fix.value = null
