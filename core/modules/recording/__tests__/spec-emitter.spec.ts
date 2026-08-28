@@ -134,6 +134,17 @@ describe('escolha do seletor', () => {
     expect(spec).toContain('page.locator(\'#salvar\')')
   })
 
+  it('prefere atributos semânticos ao id que pode ter sido gerado pelo framework', () => {
+    const spec = emit([
+      emitEvent('click', {
+        selectors: selectors({ id: 'v-0', cssStable: '#v-0', ariaLabel: 'Fechar' })
+      })
+    ])
+
+    expect(spec).toContain('page.locator(\'[aria-label="Fechar"]\')')
+    expect(spec).not.toContain('page.locator(\'#v-0\')')
+  })
+
   it('prefere o texto que o gravador validou como único ao css gerado', () => {
     const spec = emit([
       emitEvent('click', {
