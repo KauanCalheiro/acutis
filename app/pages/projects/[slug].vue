@@ -201,6 +201,14 @@ function recordDefault() {
   return hasAuth.value ? recordAuthenticated() : recordPlain()
 }
 
+/** `?gravar` já abre gravando, que é por onde o menu do card entra na tela. */
+onMounted(() => {
+  const gravar = route.query.gravar
+
+  if (gravar === 'publico') recordPublic()
+  if (gravar === 'autenticado') recordAuthenticated()
+})
+
 /**
  * Regravar mantém o tipo escolhido, porque trocar de autenticado pra público no meio seria surpresa.
  * Com passos anteriores, o navegador refaz esses e a gravação continua de onde o usuário parou.

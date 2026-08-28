@@ -39,7 +39,7 @@ const query = computed(() => ({
   'page[size]': pageSize.value
 }))
 
-const { data, status } = await useFetch<ProjectsResponse>('/api/projects', {
+const { data, status, refresh } = await useFetch<ProjectsResponse>('/api/projects', {
   query
 })
 
@@ -219,6 +219,7 @@ onBeforeUnmount(() => {
           v-for="project in projects"
           :key="project.slug"
           :project="project"
+          @removed="refresh"
         />
       </div>
 
