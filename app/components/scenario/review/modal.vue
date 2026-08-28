@@ -130,7 +130,7 @@ async function commit() {
       scenario ? `/api/projects/${slug}/scenarios/${scenarioId.value}` : `/api/projects/${slug}/tests`,
       {
         method: scenario ? 'PATCH' : 'POST',
-        body: { ...draft.value, events: mappedEvents.value }
+        body: { ...draft.value, revision: scenario?.revision, events: mappedEvents.value }
       }
     )
     open.value = false

@@ -42,6 +42,11 @@ function request(path: string, init?: RequestInit) {
   return fetchApp(new Request(`http://acutis.test${path}`, init))
 }
 
+async function revision(): Promise<string> {
+  const response = await request('/api/projects/minha-loja/scenarios/login')
+  return (await response.json() as { revision: string }).revision
+}
+
 describe('scenario Nitro API', () => {
   it('shows a scenario directly from disk', async () => {
     const response = await request('/api/projects/minha-loja/scenarios/login')
@@ -56,10 +61,12 @@ describe('scenario Nitro API', () => {
     writeFileSync(join(project, 'tests/login.events.json'), '[]')
     writeFileSync(join(project, 'tests/login.dom.json'), '{}')
 
+    const currentRevision = await revision()
     const response = await request('/api/projects/minha-loja/scenarios/login', {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
+        revision: currentRevision,
         title: 'Login atualizado', path: 'entrar', domain: 'auth',
         gherkin: 'Funcionalidade: Login\n  Cenário: entra',
         playwright: 'test.describe(\'Login\', () => {})', tags: ['@smoke']
@@ -76,10 +83,12 @@ describe('scenario Nitro API', () => {
   })
 
   it('replaces the recording next to the spec when the resumed events come along', async () => {
+    const currentRevision = await revision()
     const response = await request('/api/projects/minha-loja/scenarios/login', {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
+        revision: currentRevision,
         title: 'Login', path: 'login',
         playwright: 'test.describe(\'Login\', () => {})',
         events: [
@@ -99,11 +108,13 @@ describe('scenario Nitro API', () => {
 
   it('drops the captured dom when the resumed recording has none, so it cannot point at gone events', async () => {
     writeFileSync(join(project, 'tests/login.dom.json'), JSON.stringify({ 0: '<form></form>' }))
+    const currentRevision = await revision()
 
     const response = await request('/api/projects/minha-loja/scenarios/login', {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
+        revision: currentRevision,
         title: 'Login', path: 'login',
         playwright: 'test.describe(\'Login\', () => {})',
         events: [{ type: 'click', url: 'http://loja.test/login', timestamp: 1000 }]

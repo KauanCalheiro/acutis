@@ -18,6 +18,12 @@ export class BadRequest extends HttpError {
   }
 }
 
+export class Conflict extends HttpError {
+  constructor(message: string) {
+    super(409, message)
+  }
+}
+
 /** O provedor de IA recusou a chamada; a mensagem já vem pronta para o usuário. */
 export class ProviderFailed extends HttpError {
   constructor(message: string, status = 502) {

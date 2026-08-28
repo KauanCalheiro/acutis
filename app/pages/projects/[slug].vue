@@ -4,6 +4,7 @@ import type { RecorderEvent } from '~/composables/webdriver'
 import { navigateTo } from '#app'
 import { reportUrlFor } from '~/composables/run-stream'
 import { tagColor } from '~/utils/tags'
+import { GIT_CONFLICT_HINT, GIT_UNAVAILABLE_HINT } from '~/composables/git-sync'
 
 const route = useRoute()
 const slug = computed(() => route.params.slug as string)
@@ -54,6 +55,26 @@ function runFiltered() {
     grep: runnable.value.map(scenario => scenario.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
   })
 }
+
+const { conflict: gitConflict, unavailable: gitUnavailable, sync: syncGit } = useGitSync(slug.value)
+
+async function syncLatest() {
+  const result = await syncGit()
+  if (result?.changed) await refresh()
+}
+
+onMounted(() => {
+  void syncLatest()
+})
+
+// O refresh troca o objeto mesmo quando só reescreveu um arquivo existente, ao contrário do mtime
+// do diretório. A ação continua sem esperar pela rede.
+watch(project, () => {
+  void syncLatest()
+})
+
+const gitAttention = computed(() => gitConflict.value || gitUnavailable.value)
+const gitHint = computed(() => gitConflict.value ? GIT_CONFLICT_HINT : GIT_UNAVAILABLE_HINT)
 
 const settingsOpen = ref(false)
 
@@ -298,15 +319,21 @@ async function remove() {
           external
           data-testid="projeto-relatorio"
         />
-        <BaseButtonIcon
-          icon="i-ic-round-code"
-          label="Abrir no VS Code"
-          color="neutral"
-          variant="soft"
-          :to="project!.vscode_url"
-          target="_blank"
-          data-testid="projeto-vscode"
-        />
+        <UChip
+          :show="gitAttention"
+          :color="gitConflict ? 'error' : 'warning'"
+          size="lg"
+        >
+          <BaseButtonIcon
+            icon="i-simple-icons-visualstudiocode"
+            :label="gitAttention ? gitHint : 'Abrir no VS Code'"
+            color="neutral"
+            variant="soft"
+            :to="project!.vscode_url"
+            target="_blank"
+            data-testid="projeto-vscode"
+          />
+        </UChip>
         <BaseButtonIcon
           icon="i-ic-round-delete"
           label="Remover projeto"

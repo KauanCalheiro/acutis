@@ -74,7 +74,10 @@ export class FileSystemProjectWriter implements ProjectWriter {
     const repository = await git.remoteUrl()
 
     // O manifesto e o `.gitignore` nascem aqui, no repositório de outra pessoa: é o clone que versiona.
-    await git.save('chore: registrar o projeto no acutis', ['acutis.json', '.gitignore', '.env.example'])
+    await git.save(
+      'chore: registrar o projeto no acutis',
+      ['acutis.json', '.gitignore', '.gitattributes', '.env.example']
+    )
 
     return new Project(name, slug, path, createdAt, repository, providerFromUrl(repository))
   }

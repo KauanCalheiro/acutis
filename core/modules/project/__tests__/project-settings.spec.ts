@@ -44,6 +44,21 @@ it('salva a url base que o usuário digitou', async () => {
   expect(readFileSync(join(dir, '.gitignore'), 'utf8')).toContain('environments')
 })
 
+/**
+ * O `.gitattributes` é versionado, então ele resolve conflito para todo mundo que clonar, sem
+ * depender de configuração de máquina.
+ */
+it('ensina o git a lidar com os arquivos que o acutis escreve', async () => {
+  await api.http.put(`/api/v1/projects/${SLUG}/settings`).send({ baseUrl: 'https://app.test' }).expect(200)
+
+  const attributes = readFileSync(join(dir, '.gitattributes'), 'utf8')
+
+  expect(attributes, 'histórico de execução é append-only: junta os dois lados em vez de conflitar')
+    .toContain('runs/**/history.ndjson merge=union')
+  expect(attributes, 'vídeo não se resolve por merge de texto').toContain('*.webm binary')
+  expect(attributes, 'Windows não pode reescrever o spec inteiro').toContain('text=auto eol=lf')
+})
+
 /** O `failure.html` é a página no instante da falha, reescrita a cada execução: é artefato, não fonte. */
 it('ignora o retrato de falha que a execução deixa no projeto', async () => {
   await api.http.put(`/api/v1/projects/${SLUG}/settings`).send({ baseUrl: 'https://app.test' }).expect(200)

@@ -1,6 +1,7 @@
 /** O `.gitignore` do projeto, escrito por acréscimo e nunca por substituição. */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { ensureGitattributes } from './gitattributes.js'
 
 const ENTRIES = [
   'node_modules',
@@ -24,6 +25,8 @@ export function gitignoreExists(projectPath: string): boolean {
 }
 
 export function ensureGitignore(projectPath: string): void {
+  ensureGitattributes(projectPath)
+
   const target = file(projectPath)
   const existing = existsSync(target) ? readFileSync(target, 'utf8') : ''
   const missing = ENTRIES.filter(entry => !existing.includes(entry))
