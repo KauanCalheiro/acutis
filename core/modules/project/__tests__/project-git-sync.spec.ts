@@ -41,6 +41,7 @@ beforeEach(async () => {
   git(dir, ['add', '.'])
   git(dir, ['commit', '-qm', 'chore: início'])
   git(dir, ['push', '-q', '-u', 'origin', 'main'])
+  git(origin, ['symbolic-ref', 'HEAD', 'refs/heads/main'])
 })
 
 afterEach(async () => {
