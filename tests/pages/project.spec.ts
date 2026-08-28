@@ -590,4 +590,18 @@ describe('ProjectPage', () => {
     expect(useWebdriver().state.value.recording).toBe(true)
     expect(wrapper.findComponent({ name: 'ScenarioReviewModal' }).props('isPublic')).toBe(false)
   })
+
+  it('começa a gravar um cenário público quando a rota pede', async () => {
+    await mount('/projects/alpha-store?gravar=publico')
+    await settle()
+
+    expect(useWebdriver().state.value.recording).toBe(true)
+  })
+
+  it('roda o login antes de gravar quando a rota pede um cenário autenticado', async () => {
+    await mount('/projects/alpha-store?gravar=autenticado')
+    await settle()
+
+    expect(FakeEventSource.last!.url).toContain('spec=tests%2Fauth.setup.ts')
+  })
 })
