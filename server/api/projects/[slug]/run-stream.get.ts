@@ -17,7 +17,11 @@ export default defineEventHandler(async (event) => {
     let writes = Promise.resolve()
 
     try {
-      await execution.run.stream(slug, string('spec'), string('grep'), (message) => {
+      await execution.run.stream(slug, {
+        spec: string('spec'),
+        grep: string('grep'),
+        filter: string('filter')
+      }, (message) => {
         if (message.event === 'run:finished') {
           finished = message
           return

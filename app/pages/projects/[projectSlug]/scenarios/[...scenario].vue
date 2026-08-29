@@ -63,7 +63,7 @@ async function remove() {
 
 const skipping = ref(false)
 
-/** Pulado, o cenário continua no projeto e fora da execução, porque o describe dele virou skip. */
+/** Pausado, o cenário continua no projeto e fora da execução, porque o describe dele virou skip. */
 async function toggleSkip() {
   skipping.value = true
 
@@ -155,6 +155,41 @@ function openRun(run: ScenarioRun) {
   running.value = false
   runOpen.value = true
 }
+
+/**
+ * `?tab=execucoes&run=` é como o relatório e o card do cenário apontam para uma execução;
+ * `run=ultima` é o atalho para a mais recente, que o card não conhece pela data.
+ */
+const fromReport = computed(() => {
+  const asked = route.query.run
+
+  if (typeof asked !== 'string') return undefined
+  if (asked === 'ultima') return scenario.value!.runs[0]
+
+  return scenario.value!.runs.find(previous => previous.started_at === asked)
+})
+
+const backTo = computed(() => fromReport.value
+  ? `/projects/${slug.value}/report`
+  : `/projects/${slug.value}`)
+
+/** A busca do histórico já chega no minuto daquela execução, para o link não cair numa lista. */
+const historyFilter = computed(() => fromReport.value
+  ? formatTestedAt(new Date(fromReport.value.started_at))
+  : '')
+
+/** `?tab=` e `?editar` são os atalhos que o menu do card do cenário usa. */
+onMounted(() => {
+  const asked = route.query.tab
+
+  if (typeof asked === 'string' && tabs.value.some(item => item.value === asked)) tab.value = asked
+  if (route.query.editar !== undefined) editOpen.value = true
+
+  if (!fromReport.value) return
+
+  tab.value = 'execucoes'
+  openRun(fromReport.value)
+})
 
 const fixOpen = ref(false)
 const fixing = ref(false)
@@ -353,7 +388,7 @@ async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
             label="Voltar"
             variant="ghost"
             color="neutral"
-            :to="`/projects/${slug}`"
+            :to="backTo"
             data-testid="cenario-voltar"
           />
           <UBadge
@@ -370,7 +405,7 @@ async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
             color="warning"
             variant="soft"
             icon="i-ic-round-pause-circle"
-            label="Pulado"
+            label="Pausado"
             data-testid="cenario-pulado"
           />
         </div>
@@ -410,7 +445,7 @@ async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
         <BaseButtonIcon
           v-if="!isAuth && written"
           :icon="scenario!.skipped ? 'i-ic-round-play-circle' : 'i-ic-round-pause-circle'"
-          :label="scenario!.skipped ? 'Voltar a rodar' : 'Pular'"
+          :label="scenario!.skipped ? 'Voltar a rodar' : 'Pausar'"
           :color="scenario!.skipped ? 'warning' : 'neutral'"
           variant="soft"
           :loading="skipping"
@@ -460,7 +495,7 @@ async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
         />
         <UTooltip
           v-if="written"
-          text="Cenário pulado: o Playwright não roda ele."
+          text="Cenário pausado: o Playwright não roda ele."
           :disabled="!scenario!.skipped"
           :delay-duration="0"
           arrow
@@ -625,6 +660,7 @@ async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
       <template v-else>
         <ScenarioTestRunHistory
           :runs="scenario!.runs"
+          :filter="historyFilter"
           @open="openRun"
         />
       </template>

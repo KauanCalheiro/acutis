@@ -27,6 +27,12 @@ const actions = computed(() => [
       onSelect: () => navigateTo(`/projects/${project.slug}`)
     },
     {
+      label: 'Ver o relatório',
+      icon: 'i-ic-round-assessment',
+      testid: 'projeto-menu-relatorio',
+      onSelect: () => navigateTo(`/projects/${project.slug}/report`)
+    },
+    {
       label: 'Gravar cenário público',
       icon: 'i-ic-round-public',
       testid: 'projeto-menu-gravar-publico',

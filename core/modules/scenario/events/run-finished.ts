@@ -5,6 +5,7 @@ export class RunFinished {
     readonly projectPath: string,
     readonly spec: string | undefined,
     readonly events: RunEventRecord[],
-    readonly startedAt: Date
+    readonly startedAt: Date,
+    readonly filter?: string
   ) {}
 }

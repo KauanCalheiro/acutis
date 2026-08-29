@@ -10,6 +10,8 @@ import { slug as toSlug } from '../../common/utils/slug.js'
 import { AUTH_FEATURE, AUTH_ID, AUTH_SPEC } from '../auth/providers/auth.js'
 import type { ProjectService } from '../project/project.service.js'
 import { HISTORY, Runs, VIDEO } from './providers/runs.js'
+import { SUITE, SuiteRuns } from './providers/suite-runs.js'
+import { ensureGitattributes } from '../project/providers/gitattributes.js'
 import { Recording } from '../recording/recording.js'
 import { eventsPathOf, htmlPathOf, Scenario, sourceOf } from './providers/scenario.js'
 import { stampGherkinTags, stampPlaywrightTags, stampPlaywrightTitle, stampTitle } from './providers/test-artifact.js'
@@ -20,6 +22,7 @@ import type {
   UpdateScenarioRequest as UpdateScenarioDto
 } from '#shared/contracts/scenario'
 import type { RecordedEvent, RecorderEvent } from '#shared/contracts/recording'
+import type { SuiteRun, SuiteRunTest } from '#shared/contracts/report'
 
 /** O evento do reporter visto como dado, e não como união fechada. */
 export type RunEventRecord = Record<string, unknown>
@@ -242,22 +245,75 @@ export class ScenarioService {
      * Guarda uma execução por teste que reportou, que é o que a execução do projeto inteiro (ou do
      * filtro) deixa para trás, num commit só.
      */
-  async persistRuns(path: string, events: RunEventRecord[], startedAt: Date): Promise<void> {
+  async persistRuns(path: string, events: RunEventRecord[], startedAt: Date, filter?: string): Promise<void> {
     const git = Git.in(path)
     const committed: string[] = []
     const ids: string[] = []
+    const ran: SuiteRunTest[] = []
 
     for (const [spec, own] of this.byScenario(path, events)) {
       const id = Scenario.fromSpec(path, spec).id
       const announced = own.find(event => Array.isArray(event.steps))?.steps as string[] | undefined
+      const steps = this.steps(own, announced ?? [])
 
       committed.push(...await this.record(path, id, spec, own, startedAt, git, announced ?? []))
       ids.push(id)
+      ran.push({
+        id,
+        title: this.titleOf(own, id),
+        spec,
+        passed: this.passed(own.filter(event => event.event !== 'run:finished')),
+        duration_ms: this.durationMs(own),
+        steps: steps.length,
+        failed_step: steps.find(step => step.status === 'failed')?.title ?? null
+      })
     }
 
     if (ids.length === 0) return
 
+    committed.push(this.recordSuite(path, ran, startedAt, filter, await git.branch(), await git.author()))
+
     await git.save(`chore: registrar execução de ${ids.length} cenário(s)`, committed)
+  }
+
+  /** A rodada inteira como um registro só, que é o que o relatório do projeto lê. */
+  private recordSuite(
+    path: string,
+    tests: SuiteRunTest[],
+    startedAt: Date,
+    filter: string | undefined,
+    branch: string | null,
+    author: string | null
+  ): string {
+    // Quem escreve o histórico garante a regra de merge dele: sem ela, duas máquinas conflitam.
+    ensureGitattributes(path)
+
+    new SuiteRuns(path).append({
+      started_at: startedAt.toISOString(),
+      duration_ms: tests.reduce((total, test) => total + test.duration_ms, 0),
+      passed: tests.every(test => test.passed),
+      filter: filter ?? null,
+      branch,
+      author,
+      totals: {
+        tests: tests.length,
+        passed: tests.filter(test => test.passed).length,
+        failed: tests.filter(test => !test.passed).length,
+        steps: tests.reduce((total, test) => total + test.steps, 0)
+      },
+      tests
+    })
+
+    return `runs/${SUITE}/${HISTORY}`
+  }
+
+  /** As execuções agrupadas do projeto, da mais recente para a mais antiga. */
+  suiteRuns(slug: string): SuiteRun[] {
+    return new SuiteRuns(this.projects.pathOf(slug)).all()
+  }
+
+  private titleOf(events: RunEventRecord[], fallback: string): string {
+    return events.map(event => event.event === 'test' ? asString(event.title) : null).find(title => title !== null) ?? fallback
   }
 
   /** Grava a execução do cenário e devolve o que ela escreveu, para quem for commitar. */

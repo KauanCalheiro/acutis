@@ -3,9 +3,11 @@ import type { ScenarioRun } from '~/types/project'
 
 interface ScenarioTestRunHistory {
   runs?: ScenarioRun[]
+  /** Texto que a busca já começa filtrando, usado por quem chega de fora numa execução só. */
+  filter?: string
 }
 
-const { runs = [] } = defineProps<ScenarioTestRunHistory>()
+const { runs = [], filter = '' } = defineProps<ScenarioTestRunHistory>()
 
 const emit = defineEmits<{
   open: [run: ScenarioRun]
@@ -28,7 +30,7 @@ const statusItems = [
   }
 ]
 
-const search = ref('')
+const search = ref(filter)
 const status = ref('todos')
 const page = ref(1)
 

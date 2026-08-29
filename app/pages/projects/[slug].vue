@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import type { EnvironmentList, ProjectDetail } from '~/types/project'
+import type { EnvironmentList, ProjectDetail, Scenario } from '~/types/project'
 import type { RecorderEvent } from '~/composables/webdriver'
 import { navigateTo } from '#app'
-import { reportUrlFor } from '~/composables/run-stream'
-import { tagColor } from '~/utils/tags'
 import { GIT_CONFLICT_HINT, GIT_UNAVAILABLE_HINT } from '~/composables/git-sync'
 
 const route = useRoute()
@@ -42,8 +40,57 @@ const scenarios = computed(() => {
   )
 })
 
-/** O cenário pulado fica na listagem, mas fora da execução: o Playwright não roda ele. */
+/** O cenário pausado fica na listagem, mas fora da execução: o Playwright não roda ele. */
 const runnable = computed(() => scenarios.value.filter(scenario => !scenario.skipped))
+
+/** O que o SSR pede antes de medir a tela: três colunas por três linhas cabem na maioria. */
+const DEFAULT_PAGE_SIZE = 9
+
+const pageSize = ref(DEFAULT_PAGE_SIZE)
+const page = ref(1)
+const grid = ref<HTMLElement>()
+
+const paginated = computed(() => scenarios.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value))
+
+watch(scenarios, () => {
+  page.value = 1
+})
+
+/** Quantos cards cabem na altura que sobra da tela, medindo o card e a grade do DOM. */
+function fitPageSize() {
+  const gridEl = grid.value
+  const card = gridEl?.firstElementChild
+
+  if (!gridEl || !card) return
+
+  const style = getComputedStyle(gridEl)
+  const gap = Number.parseFloat(style.rowGap) || 0
+  const columns = style.gridTemplateColumns.split(' ').length
+  const cardHeight = card.getBoundingClientRect().height
+
+  // Card sem altura é card que ainda não pintou.
+  if (cardHeight <= 0) return
+
+  const free = window.innerHeight - gridEl.getBoundingClientRect().top - 96
+  const rows = Math.max(1, Math.floor((free + gap) / (cardHeight + gap)))
+  const fits = rows * columns
+
+  if (fits === pageSize.value) return
+
+  page.value = 1
+  pageSize.value = fits
+}
+
+watch(paginated, () => nextTick(fitPageSize))
+
+onMounted(() => {
+  fitPageSize()
+  window.addEventListener('resize', fitPageSize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', fitPageSize)
+})
 
 const filteredRun = useRunStream(() => slug.value)
 const filteredRunOpen = ref(false)
@@ -52,8 +99,64 @@ const filteredRunOpen = ref(false)
 function runFiltered() {
   filteredRunOpen.value = true
   filteredRun.start({
-    grep: runnable.value.map(scenario => scenario.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
+    grep: runnable.value.map(scenario => scenario.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'),
+    filter: search.value.trim() || undefined
   })
+}
+
+/** Rodar um cenário só, pelo menu do card: é a mesma tela de resultado da execução filtrada. */
+function runOne(scenario: Scenario) {
+  filteredRunOpen.value = true
+  filteredRun.start({ spec: scenario.spec })
+}
+
+const notify = useNotify()
+
+async function toggleSkip(scenario: Scenario) {
+  const id = scenarioIdOf(scenario)
+
+  try {
+    await $fetch(`/api/projects/${slug.value}/scenario-skip`, {
+      method: 'PATCH',
+      body: {
+        scenarioId: id,
+        skipped: !scenario.skipped
+      }
+    })
+    notify.success(scenario.skipped ? 'Cenário voltou a rodar.' : 'Cenário pausado.')
+    await refresh()
+  } catch (error) {
+    notify.failure(error, 'Não foi possível mudar o cenário.')
+  }
+}
+
+const removingScenario = ref<Scenario | null>(null)
+const removingScenarioBusy = ref(false)
+
+function askRemoval(scenario: Scenario) {
+  removingScenario.value = scenario
+}
+
+async function removeScenario() {
+  const scenario = removingScenario.value!
+  removingScenarioBusy.value = true
+
+  try {
+    await $fetch(`/api/projects/${slug.value}/scenarios/${scenarioIdOf(scenario)}`, {
+      method: 'DELETE'
+    })
+    removingScenario.value = null
+    notify.success('Cenário excluído.')
+    await refresh()
+  } catch (error) {
+    notify.failure(error, 'Não foi possível excluir o cenário.')
+  } finally {
+    removingScenarioBusy.value = false
+  }
+}
+
+function scenarioIdOf(scenario: Scenario) {
+  return scenario.spec.replace(/^tests\//, '').replace(/\.spec\.ts$/, '')
 }
 
 const { conflict: gitConflict, unavailable: gitUnavailable, sync: syncGit } = useGitSync(slug.value)
@@ -319,12 +422,10 @@ async function remove() {
         <BaseButtonIcon
           v-if="project!.has_report"
           icon="i-ic-round-assessment"
-          label="Relatório da última execução"
+          label="Relatório das execuções"
           color="neutral"
           variant="soft"
-          :to="reportUrlFor(slug)"
-          target="_blank"
-          external
+          :to="`/projects/${slug}/report`"
           data-testid="projeto-relatorio"
         />
         <UChip
@@ -505,42 +606,31 @@ async function remove() {
 
     <div
       v-if="scenarios.length"
+      ref="grid"
       class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
     >
-      <UCard
-        v-for="scenario in scenarios"
+      <ScenarioCard
+        v-for="scenario in paginated"
         :key="scenario.spec"
-        data-testid="cenario-card"
-        class="cursor-pointer"
-        @click="navigateTo(`/projects/${slug}/scenarios/${scenario.spec.replace(/^tests\//, '').replace(/\.spec\.ts$/, '')}`)"
-      >
-        <div class="flex flex-col gap-2">
-          <p class="font-semibold truncate">
-            {{ scenario.title }}
-          </p>
-          <p class="text-sm text-muted italic truncate">
-            {{ scenario.spec }}
-          </p>
-          <div class="flex flex-wrap gap-1">
-            <UBadge
-              v-if="scenario.skipped"
-              color="warning"
-              variant="soft"
-              size="md"
-              icon="i-ic-round-pause-circle"
-              label="Pulado"
-              data-testid="cenario-card-pulado"
-            />
-            <UBadge
-              v-for="tag in scenario.tags"
-              :key="tag"
-              :color="tagColor(tag)"
-              size="md"
-              :label="tag"
-            />
-          </div>
-        </div>
-      </UCard>
+        :scenario="scenario"
+        :slug="slug"
+        @run="runOne(scenario)"
+        @skip="toggleSkip(scenario)"
+        @remove="askRemoval(scenario)"
+      />
+    </div>
+
+    <div
+      v-if="scenarios.length > pageSize"
+      class="mt-6 flex justify-center"
+    >
+      <UPagination
+        v-model:page="page"
+        variant="soft"
+        :total="scenarios.length"
+        :items-per-page="pageSize"
+        data-testid="cenario-paginacao"
+      />
     </div>
 
     <ScenarioEmpty
@@ -588,6 +678,18 @@ async function remove() {
       :tested-at="authRun.testedAt.value"
       :output="authRun.output.value"
       @fix="navigateTo(authPage)"
+    />
+
+    <BaseConfirm
+      :open="removingScenario !== null"
+      title="Excluir cenário"
+      :description="`Isso apaga os arquivos de teste, feature e eventos de &quot;${removingScenario?.title}&quot;.`"
+      confirm-label="Excluir"
+      confirm-color="error"
+      confirm-testid="cenario-excluir-confirmar"
+      :loading="removingScenarioBusy"
+      @update:open="removingScenario = $event ? removingScenario : null"
+      @confirm="removeScenario"
     />
 
     <BaseConfirm

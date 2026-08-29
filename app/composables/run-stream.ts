@@ -75,13 +75,14 @@ export function useRunStream(slug: () => string) {
     steps.value = seeded
   }
 
-  function start({ spec, grep }: { spec?: string, grep?: string }, onFinish?: () => void) {
+  function start({ spec, grep, filter }: { spec?: string, grep?: string, filter?: string }, onFinish?: () => void) {
     reset()
     running.value = true
 
     const query = new URLSearchParams({
       ...(spec ? { spec } : {}),
-      ...(grep ? { grep } : {})
+      ...(grep ? { grep } : {}),
+      ...(filter ? { filter } : {})
     })
     const source = new EventSource(`/api/projects/${slug()}/run-stream?${query}`)
 

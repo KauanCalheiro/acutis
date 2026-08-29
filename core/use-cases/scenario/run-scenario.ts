@@ -19,10 +19,10 @@ export class RunScenario {
     return this.runner.runProject(path, { spec, grep, env })
   }
 
+  /** `filter` é a busca que o usuário digitou; `grep` é o que ela virou para o Playwright. */
   async stream(
     slug: string,
-    spec: string | undefined,
-    grep: string | undefined,
+    { spec, grep, filter }: { spec?: string, grep?: string, filter?: string },
     onEvent: (event: RunEvent) => void
   ): Promise<ScenarioRunResult> {
     const path = this.projects.pathOf(slug)
@@ -35,7 +35,7 @@ export class RunScenario {
       onEvent(event)
     })
 
-    await this.events.publish(new RunFinished(path, spec, recorded, startedAt))
+    await this.events.publish(new RunFinished(path, spec, recorded, startedAt, filter))
 
     return result
   }
