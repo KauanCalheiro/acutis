@@ -24,6 +24,6 @@ export class StoreRunHistory {
       return
     }
 
-    await this.scenarios.persistRuns(event.projectPath, event.events, event.startedAt)
+    await this.scenarios.persistRuns(event.projectPath, event.events, event.startedAt, event.filter)
   }
 }
