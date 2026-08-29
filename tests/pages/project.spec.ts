@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountSuspended, mockNuxtImport, registerEndpoint } from '@nuxt/test-utils/runtime'
 import { clearNuxtData } from 'nuxt/app'
 import { defineComponent, h } from 'vue'
-import { createError } from 'h3'
+import { createError, readBody } from 'h3'
 import { UApp } from '#components'
 import ProjectPage from '~/pages/projects/[slug].vue'
 import { useWebdriver } from '~/composables/webdriver'
@@ -46,7 +46,10 @@ const api = {
   unavailable: false,
   skipped: false,
   removed: false,
-  missing: false
+  missing: false,
+  skippedScenario: undefined as unknown,
+  removedScenario: undefined as string | undefined,
+  scenarioFails: false
 }
 
 function project(overrides: Partial<ProjectDetail> = {}): ProjectDetail {
@@ -115,6 +118,28 @@ registerEndpoint('/api/projects/alpha-store', {
   }
 })
 
+registerEndpoint('/api/projects/alpha-store/scenario-skip', {
+  method: 'PATCH',
+  handler: async (event) => {
+    if (api.scenarioFails) throw createError({ statusCode: 500 })
+
+    api.skippedScenario = await readBody(event)
+
+    return { ok: true }
+  }
+})
+
+registerEndpoint('/api/projects/alpha-store/scenarios/login', {
+  method: 'DELETE',
+  handler: () => {
+    if (api.scenarioFails) throw createError({ statusCode: 500 })
+
+    api.removedScenario = 'login'
+
+    return { ok: true }
+  }
+})
+
 function connected(overrides: Record<string, unknown> = {}) {
   useWebdriver().state.value = {
     connected: true,
@@ -142,6 +167,9 @@ beforeEach(() => {
   api.skipped = false
   api.removed = false
   api.missing = false
+  api.skippedScenario = undefined
+  api.removedScenario = undefined
+  api.scenarioFails = false
   connected()
 })
 
@@ -181,11 +209,11 @@ describe('ProjectPage', () => {
     expect(wrapper.get('[data-testid="projeto-caminho"]').text()).toBe('/home/user/.acutis/alpha-store')
     expect(wrapper.get('[data-testid="projeto-branch"]').text()).toContain('main')
     expect(wrapper.findAll('[data-testid="cenario-card"]')).toHaveLength(2)
-    expect(wrapper.get('[data-testid="projeto-relatorio"]').attributes('href')).toContain('alpha-store')
+    expect(wrapper.get('[data-testid="projeto-relatorio"]').attributes('href')).toBe('/projects/alpha-store/report')
     expect(wrapper.get('[data-testid="projeto-vscode"]').attributes('href')).toContain('vscode://')
   })
 
-  it('marca no card o cenário que está pulado', async () => {
+  it('marca no card o cenário que está pausado', async () => {
     api.project = project({
       scenarios: [
         scenario('Login do cliente', 'tests/login.spec.ts'),
@@ -197,7 +225,103 @@ describe('ProjectPage', () => {
     const cards = wrapper.findAll('[data-testid="cenario-card"]')
 
     expect(cards[0]!.find('[data-testid="cenario-card-pulado"]').exists()).toBe(false)
-    expect(cards[1]!.get('[data-testid="cenario-card-pulado"]').text()).toContain('Pulado')
+    expect(cards[1]!.get('[data-testid="cenario-card-pulado"]').text()).toContain('Pausado')
+  })
+
+  it('pagina os cenários quando eles não cabem na tela', async () => {
+    api.project = project({
+      scenarios: Array.from({ length: 14 }, (_value, index) =>
+        scenario(`Cenário ${index + 1}`, `tests/caso-${index + 1}.spec.ts`))
+    })
+    const wrapper = await mount()
+
+    expect(wrapper.findAll('[data-testid="cenario-card"]')).toHaveLength(9)
+    expect(wrapper.get('[data-testid="cenario-paginacao"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="projeto-rodar-filtrados"]').text()).toContain('14')
+  })
+
+  it('recalcula quantos cenários cabem quando a janela muda de tamanho', async () => {
+    api.project = project({
+      scenarios: Array.from({ length: 30 }, (_value, index) =>
+        scenario(`Cenário ${index + 1}`, `tests/caso-${index + 1}.spec.ts`))
+    })
+
+    // O jsdom não mede nada: o card ganha altura para a conta da tela ter o que dividir.
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ height: 120, top: 300 } as DOMRect)
+
+    const wrapper = await mount()
+
+    window.dispatchEvent(new Event('resize'))
+    await settle()
+
+    expect(wrapper.findAll('[data-testid="cenario-card"]')).toHaveLength(3)
+
+    vi.restoreAllMocks()
+  })
+
+  it('não pagina o projeto com poucos cenários', async () => {
+    const wrapper = await mount()
+
+    expect(wrapper.find('[data-testid="cenario-paginacao"]').exists()).toBe(false)
+  })
+
+  it('roda um cenário só pelo menu do card', async () => {
+    const wrapper = await mount()
+
+    wrapper.findAllComponents({ name: 'ScenarioCard' })[0]!.vm.$emit('run')
+    await settle()
+
+    expect(FakeEventSource.last!.url).toContain('spec=tests%2Flogin.spec.ts')
+    expect(field('execucao-iniciando')).toBeDefined()
+  })
+
+  it('pausa o cenário pelo menu do card', async () => {
+    const wrapper = await mount()
+
+    wrapper.findAllComponents({ name: 'ScenarioCard' })[0]!.vm.$emit('skip')
+    await settle()
+
+    expect(api.skippedScenario).toEqual({ scenarioId: 'login', skipped: true })
+  })
+
+  it('volta a rodar o cenário que estava pausado', async () => {
+    api.project = project({ scenarios: [scenario('Login do cliente', 'tests/login.spec.ts', ['@read'], true)] })
+    const wrapper = await mount()
+
+    wrapper.findAllComponents({ name: 'ScenarioCard' })[0]!.vm.$emit('skip')
+    await settle()
+
+    expect(api.skippedScenario).toEqual({ scenarioId: 'login', skipped: false })
+  })
+
+  it('exclui o cenário depois de confirmar pelo menu do card', async () => {
+    const wrapper = await mount()
+
+    wrapper.findAllComponents({ name: 'ScenarioCard' })[0]!.vm.$emit('remove')
+    await settle()
+
+    field('cenario-excluir-confirmar')!.click()
+    await settle()
+
+    expect(api.removedScenario).toBe('login')
+  })
+
+  it('avisa quando a API recusa pausar ou excluir o cenário', async () => {
+    api.scenarioFails = true
+    const wrapper = await mount()
+
+    wrapper.findAllComponents({ name: 'ScenarioCard' })[0]!.vm.$emit('skip')
+    await settle()
+
+    expect(field('execucao-status')).toBeUndefined()
+    expect(document.body.textContent).toContain('Não foi possível mudar o cenário.')
+
+    wrapper.findAllComponents({ name: 'ScenarioCard' })[0]!.vm.$emit('remove')
+    await settle()
+    field('cenario-excluir-confirmar')!.click()
+    await settle()
+
+    expect(document.body.textContent).toContain('Não foi possível excluir o cenário.')
   })
 
   it('avisa quais variáveis do ambiente ativo ainda estão sem valor', async () => {

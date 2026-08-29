@@ -360,6 +360,77 @@ describe('ScenarioPage', () => {
     expect((field('execucao-playwright') as HTMLTextAreaElement).value).toContain('test("login"')
   })
 
+  it('abre a execução que a url pediu, vinda do relatório do projeto', async () => {
+    api.scenario = scenario({ runs: [run({ started_at: '2026-01-03T08:00:00.000Z' }), run()] })
+    const wrapper = await mount('/projects/alpha-store/scenarios/login?tab=execucoes&run=2026-01-02T10%3A00%3A00.000Z')
+
+    await settle()
+
+    expect(wrapper.findComponent({ name: 'UTabs' }).props('modelValue')).toBe('execucoes')
+    expect(field('execucao-status')!.textContent).toContain('Falha')
+    expect(field('execucao-detalhes')!.textContent).toContain('02/01/2026')
+  })
+
+  it('abre a última execução quando o card pede pela url', async () => {
+    api.scenario = scenario({ runs: [run({ started_at: '2026-01-03T08:00:00.000Z' }), run()] })
+    const wrapper = await mount('/projects/alpha-store/scenarios/login?tab=execucoes&run=ultima')
+
+    await settle()
+
+    expect(wrapper.findComponent({ name: 'UTabs' }).props('modelValue')).toBe('execucoes')
+    expect(field('execucao-detalhes')!.textContent).toContain('03/01/2026')
+  })
+
+  it('abre a aba de execuções sem execução escolhida', async () => {
+    api.scenario = scenario({ runs: [run()] })
+    const wrapper = await mount('/projects/alpha-store/scenarios/login?tab=execucoes')
+
+    await settle()
+
+    expect(wrapper.findComponent({ name: 'UTabs' }).props('modelValue')).toBe('execucoes')
+    expect(field('execucao-status')).toBeUndefined()
+  })
+
+  it('ignora a aba que não existe e a execução que o cenário nunca teve', async () => {
+    api.scenario = scenario({ runs: [] })
+    const wrapper = await mount('/projects/alpha-store/scenarios/login?tab=inventada&run=ultima')
+
+    await settle()
+
+    expect(wrapper.findComponent({ name: 'UTabs' }).props('modelValue')).toBe('eventos')
+    expect(field('execucao-status')).toBeUndefined()
+  })
+
+  it('abre a edição quando a url pede', async () => {
+    const wrapper = await mount('/projects/alpha-store/scenarios/login?editar')
+
+    await settle()
+
+    expect(wrapper.findComponent({ name: 'ScenarioEditModal' }).props('open')).toBe(true)
+  })
+
+  it('deixa o histórico filtrado na execução que veio do relatório', async () => {
+    api.scenario = scenario({ runs: [run({ started_at: '2026-01-03T08:00:00.000Z' }), run()] })
+    const wrapper = await mount('/projects/alpha-store/scenarios/login?tab=execucoes&run=2026-01-02T10%3A00%3A00.000Z')
+
+    await settle()
+
+    const testedAt = new Date('2026-01-02T10:00:00.000Z').toLocaleString('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'short'
+    })
+
+    expect(wrapper.get('[data-testid="execucoes-busca"]').attributes('value')).toBe(testedAt)
+    expect(wrapper.findAll('[data-testid="cenario-execucao"]')).toHaveLength(1)
+  })
+
+  it('volta para o relatório quando o cenário foi aberto por ele', async () => {
+    api.scenario = scenario({ runs: [run()] })
+    const wrapper = await mount('/projects/alpha-store/scenarios/login?tab=execucoes&run=2026-01-02T10%3A00%3A00.000Z')
+
+    expect(wrapper.get('[data-testid="cenario-voltar"]').attributes('href')).toBe('/projects/alpha-store/report')
+  })
+
   it('exclui o cenário depois de confirmar', async () => {
     const wrapper = await mount()
 
@@ -601,18 +672,18 @@ describe('ScenarioPage: fechaduras e ausências', () => {
     expect(wrapper.text()).toContain('Cenário trazido do remoto')
   })
 
-  it('pula o cenário e passa a oferecer o caminho de volta', async () => {
+  it('pausa o cenário e passa a oferecer o caminho de volta', async () => {
     const wrapper = await mount()
 
     await wrapper.get('[data-testid="cenario-pular"]').trigger('click')
     await settle(4)
 
     expect(api.skipRequest).toEqual({ scenarioId: 'login', skipped: true })
-    expect(wrapper.get('[data-testid="cenario-pulado"]').text()).toContain('Pulado')
+    expect(wrapper.get('[data-testid="cenario-pulado"]').text()).toContain('Pausado')
     expect(wrapper.get('[data-testid="cenario-pular"]').attributes('aria-label')).toBe('Voltar a rodar')
   })
 
-  it('não deixa testar o cenário que está pulado', async () => {
+  it('não deixa testar o cenário que está pausado', async () => {
     api.scenario = scenario({ skipped: true })
     const wrapper = await mount()
 

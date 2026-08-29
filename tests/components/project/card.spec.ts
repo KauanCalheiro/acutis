@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mountSuspended, mockNuxtImport, registerEndpoint } from '@nuxt/test-utils/runtime'
+import { createError } from 'h3'
 import ProjectCard from '~/components/project/card.vue'
 import { mountInApp } from '../../support/app'
 import { field, settle } from '../../support/modal'
@@ -16,10 +17,13 @@ const navigate = vi.hoisted(() => vi.fn())
 mockNuxtImport('navigateTo', () => navigate)
 
 let removed = false
+let removalFails = false
 
 registerEndpoint('/api/projects/alpha-store', {
   method: 'DELETE',
   handler: () => {
+    if (removalFails) throw createError({ statusCode: 500 })
+
     removed = true
 
     return { ok: true }
@@ -90,6 +94,9 @@ describe('ProjectCard menu de contexto', () => {
     item(wrapper, 'projeto-menu-acessar').onSelect!()
     expect(navigate).toHaveBeenCalledWith('/projects/alpha-store')
 
+    item(wrapper, 'projeto-menu-relatorio').onSelect!()
+    expect(navigate).toHaveBeenCalledWith('/projects/alpha-store/report')
+
     item(wrapper, 'projeto-menu-gravar-publico').onSelect!()
     expect(navigate).toHaveBeenCalledWith('/projects/alpha-store?gravar=publico')
 
@@ -113,6 +120,22 @@ describe('ProjectCard menu de contexto', () => {
     expect(writeText).toHaveBeenCalledWith('/home/user/.acutis/alpha-store')
 
     vi.unstubAllGlobals()
+  })
+
+  it('avisa quando a API recusa remover o projeto', async () => {
+    removalFails = true
+    const wrapper = await mountInApp(ProjectCard, { props: { project } })
+
+    item(wrapper, 'projeto-menu-remover').onSelect!()
+    await settle()
+
+    field('projeto-remover-confirmar')!.click()
+    await settle()
+
+    expect(document.body.textContent).toContain('Não foi possível remover o projeto.')
+
+    removalFails = false
+    document.body.innerHTML = ''
   })
 
   it('remove o projeto depois da confirmação', async () => {

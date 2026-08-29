@@ -62,6 +62,7 @@ import testsGenerate from '../../server/api/projects/[slug]/tests.post.js'
 import testsDraft from '../../server/api/projects/[slug]/tests/draft.post.js'
 import projectRun from '../../server/api/projects/[slug]/run.post.js'
 import projectRunStream from '../../server/api/projects/[slug]/run-stream.get.js'
+import projectRuns from '../../server/api/projects/[slug]/runs.get.js'
 import settingsShow from '../../server/api/settings/ai.get.js'
 import settingsUpdate from '../../server/api/settings/ai.put.js'
 import settingsModels from '../../server/api/settings/ai/models.post.js'
@@ -177,6 +178,7 @@ function mountRoutes() {
 
   router.post('/api/v1/projects/:slug/run', projectRun)
   router.get('/api/v1/projects/:slug/run/stream', projectRunStream)
+  router.get('/api/v1/projects/:slug/runs', projectRuns)
 
   router.get('/api/v1/settings/ai', settingsShow)
   router.put('/api/v1/settings/ai', settingsUpdate)
