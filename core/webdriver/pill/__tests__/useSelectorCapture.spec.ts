@@ -47,6 +47,50 @@ describe('useSelectorCapture', () => {
     expect(selectors.cssStable).toBe('#email')
   })
 
+  it('prefere o name ao id gerado pelo framework no css estável', () => {
+    setBody('<input id="v-0-42" name="email" />')
+    const el = document.querySelector('input')!
+
+    expect(extractSelectors(el).cssStable).toBe('input[name="email"]')
+  })
+
+  it('escopa pelo ancestral semântico quando o name se repete na página', () => {
+    setBody(`
+      <form name="form_search"><input id="tentry_1" name="id" /></form>
+      <form name="form_Cliente"><input id="tentry_2" name="id" /></form>
+    `)
+    const el = document.querySelectorAll('input')[1]!
+
+    expect(extractSelectors(el).cssStable).toBe('form[name="form_Cliente"] input[name="id"]')
+  })
+
+  it('escopa pelo data-testid do ancestral quando ele existe', () => {
+    setBody(`
+      <div data-testid="painel-busca"><input id="tentry_1" name="id" /></div>
+      <div data-testid="painel-edicao"><input id="tentry_2" name="id" /></div>
+    `)
+    const el = document.querySelectorAll('input')[1]!
+
+    expect(extractSelectors(el).cssStable).toBe('[data-testid="painel-edicao"] input[name="id"]')
+  })
+
+  it('não escopa pelo ancestral cujo id o framework gera', () => {
+    setBody(`
+      <div id="wrap_1"><input name="id" /></div>
+      <div id="wrap_2"><input name="id" /></div>
+    `)
+    const el = document.querySelectorAll('input')[1]!
+
+    expect(extractSelectors(el).cssStable).toBeNull()
+  })
+
+  it('não usa o id no seletor estrutural, porque o framework o regenera', () => {
+    setBody('<div><input id="tentry_1" /><input id="tentry_2" /></div>')
+    const el = document.querySelectorAll('input')[1]!
+
+    expect(extractSelectors(el).finder).not.toContain('tentry_2')
+  })
+
   it('captures name, role, placeholder and trimmed text', () => {
     setBody('<input name="email" role="textbox" placeholder="you@example.com" />')
     const el = document.querySelector('input')!

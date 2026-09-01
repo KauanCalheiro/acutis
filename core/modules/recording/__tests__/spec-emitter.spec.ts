@@ -134,6 +134,18 @@ describe('escolha do seletor', () => {
     expect(spec).toContain('page.locator(\'#salvar\')')
   })
 
+  it('prefere o name do campo ao id que pode ter sido gerado pelo framework', () => {
+    const spec = emit([
+      emitEvent('fill', {
+        selectors: selectors({ id: 'v-0-42', name: 'email', cssStable: 'input[name="email"]' }),
+        value: 'ana@loja.test'
+      })
+    ])
+
+    expect(spec).toContain('page.locator(\'input[name="email"]\')')
+    expect(spec).not.toContain('[id="v-0-42"]')
+  })
+
   it('prefere atributos semânticos ao id que pode ter sido gerado pelo framework', () => {
     const spec = emit([
       emitEvent('click', {

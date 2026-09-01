@@ -69,8 +69,10 @@ function uniqueText(el: Element): string | null {
 }
 
 function buildFinderSelector(el: Element): string | null {
+  if (!el.isConnected) return null
+
   try {
-    const sel = finder(el)
+    const sel = finder(el, { idName: () => false })
     return uniqueOrNull(sel)
   } catch {
     return null
@@ -96,14 +98,50 @@ function buildXPath(el: Element): string | null {
   return isXPathUnique(xpath) ? xpath : null
 }
 
+const SEMANTIC_ATTRIBUTES = ['data-testid', 'data-cy', 'aria-label', 'name'] as const
+
+function nameSelector(el: Element): string | null {
+  const name = el.getAttribute('name')
+
+  return name ? `${el.tagName.toLowerCase()}[name="${name}"]` : null
+}
+
+/** O seletor do elemento por atributo que a aplicação escreveu; o id gerado não conta. */
+function semanticSelector(el: Element): string | null {
+  const attribute = SEMANTIC_ATTRIBUTES.find(candidate => el.getAttribute(candidate))
+
+  if (!attribute) return null
+
+  return attribute === 'name'
+    ? nameSelector(el)
+    : `[${attribute}="${el.getAttribute(attribute)}"]`
+}
+
+/** O ancestral semântico mais próximo que torna o seletor do elemento único. */
+function scopedSelector(el: Element, own: string): string | null {
+  for (let parent = el.parentElement; parent; parent = parent.parentElement) {
+    const scope = semanticSelector(parent)
+
+    if (!scope || !isUnique(scope)) continue
+
+    const scoped = `${scope} ${own}`
+
+    if (isUnique(scoped)) return scoped
+  }
+
+  return null
+}
+
 function buildCssStableSelector(el: Element): string | null {
+  const own = nameSelector(el)
+  if (own) {
+    if (isUnique(own)) return own
+
+    const scoped = scopedSelector(el, own)
+    if (scoped) return scoped
+  }
   if (el.id) {
     const sel = `#${CSS.escape(el.id)}`
-    if (isUnique(sel)) return sel
-  }
-  const name = el.getAttribute('name')
-  if (name) {
-    const sel = `${el.tagName.toLowerCase()}[name="${name}"]`
     if (isUnique(sel)) return sel
   }
   return null

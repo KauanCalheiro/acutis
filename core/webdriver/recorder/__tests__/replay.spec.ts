@@ -107,6 +107,14 @@ describe('replaySteps', () => {
     ])
   })
 
+  it('prefere o name do campo ao id que pode ter sido gerado pelo framework', () => {
+    const steps = replaySteps([
+      event({ selectors: selectors({ id: 'v-0-42', name: 'email', cssStable: 'input[name="email"]' }) })
+    ])
+
+    expect(steps[0]).toMatchObject({ selector: 'input[name="email"]' })
+  })
+
   it('prefere atributos semânticos ao id que pode ter sido gerado pelo framework', () => {
     const steps = replaySteps([
       event({ selectors: selectors({ id: 'v-0', cssStable: '#v-0', ariaLabel: 'Fechar' }) })

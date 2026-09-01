@@ -352,8 +352,8 @@ export class SpecEmitter {
     if (selectors.dataCy) return `page.locator(${this.literal(`[data-cy="${selectors.dataCy}"]`)})`
     if (selectors.ariaLabel) return `page.locator(${this.literal(`[aria-label="${selectors.ariaLabel}"]`)})`
     if (selectors.placeholder) return `page.getByPlaceholder(${this.literal(selectors.placeholder)})`
-    if (selectors.id) return `page.locator(${this.literal(`[id="${selectors.id}"]`)})`
     if (selectors.cssStable) return `page.locator(${this.literal(selectors.cssStable)})`
+    if (selectors.id) return `page.locator(${this.literal(`[id="${selectors.id}"]`)})`
     if (selectors.text) return `page.getByText(${this.literal(selectors.text)}, { exact: true })`
     if (selectors.finder) return `page.locator(${this.literal(selectors.finder)})`
     if (selectors.xpath) return `page.locator(${this.literal(`xpath=${selectors.xpath}`)})`
