@@ -33,8 +33,8 @@ export function replaySelector(selectors: RecordingSelectors | null): string | n
   if (selectors.dataCy) return attribute('data-cy', selectors.dataCy)
   if (selectors.ariaLabel) return attribute('aria-label', selectors.ariaLabel)
   if (selectors.placeholder) return attribute('placeholder', selectors.placeholder)
-  if (selectors.id) return attribute('id', selectors.id)
   if (selectors.cssStable) return selectors.cssStable
+  if (selectors.id) return attribute('id', selectors.id)
   if (selectors.text) return `text=${JSON.stringify(selectors.text)}`
   if (selectors.finder) return selectors.finder
   if (selectors.xpath) return `xpath=${selectors.xpath}`
