@@ -14,6 +14,12 @@ Sobe a interface numa porta livre e abre o navegador. Precisa de Node 22+; o Chr
 
 Os projetos ficam em `~/.acutis/<projeto>`: os specs em `tests/`, os cenários em Gherkin em `features/`, os ambientes em `environments/`, os segredos no `.env`.
 
+> ### 📖 [Guia rápido: do primeiro comando ao primeiro relatório](docs/QUICK-START.md)
+>
+> O manual do Acutis, passo a passo: subir a ferramenta, ligar a IA (ou não), criar o projeto, gravar o login, gravar e rodar o primeiro cenário, ler os relatórios e resolver o que costuma dar errado.
+>
+> **Comece por aqui.**
+
 ## O que ele faz
 
 - **Grava** um fluxo no navegador e emite o spec Playwright, com os passos nomeados como você os descreveu. Com IA ligada, escreve também o cenário em Gherkin.
@@ -33,8 +39,10 @@ Um único processo Nuxt/Nitro serve interface, API, gravador e runner.
 
 ## Documentação
 
-- [Casos de uso](docs/USE-CASES.md): o que a ferramenta faz, caso a caso
+- **[Guia rápido](docs/QUICK-START.md): o manual de quem usa, do primeiro comando ao primeiro relatório**
+- [Diagramas de casos de uso](docs/DIAGRAMS/USE-CASE-DIAGRAMS.md): o panorama por pacote, os estados e o que cada ação escreve
+- [Diagramas de sequência](docs/DIAGRAMS/SEQUENCE-DIAGRAMS.md): cada fluxo, do clique ao arquivo em disco
 - [Rodar o Acutis](docs/RUN.md): como subir a aplicação
-  - [Local](docs/LOCAL.md): o processo Nitro direto no host
+  - [Desenvolvimento](docs/DEVELOPMENT.md): o processo Nitro direto no host
   - [Testes](docs/TESTS.md): testes unitários, de integração e E2E
   - [Publicar](docs/DEPLOY.md): distribuir o CLI pelo npm
