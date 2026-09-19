@@ -27,7 +27,7 @@ npm install <caminho>/acutis-cli-0.1.0.tgz
 ./node_modules/.bin/acutis
 ```
 
-O CLI escolhe uma porta livre, garante o Chromium do Playwright, inicia um único processo Nitro e abre a interface. `Ctrl+C` encerra o processo inteiro.
+O CLI sobe na porta 1991, ou na próxima livre quando ela está ocupada, garante o Chromium do Playwright, inicia um único processo Nitro e abre a interface. `Ctrl+C` encerra o processo inteiro.
 
 Rodar do repositório não substitui esse teste: o pacote instalado não guarda as próprias dependências, e caminho resolvido a partir do `.output` cai nos stubs que o Nitro deixa no lugar das dependências externas.
 

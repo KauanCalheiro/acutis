@@ -9,12 +9,12 @@
  */
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { createServer } from 'node:net'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { splash } from './splash.mjs'
 import { ensureChromium } from './ensure-chromium.js'
+import { DEFAULT_PORT, resolvePort } from './port.js'
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SERVER_ENTRY = join(PACKAGE_ROOT, '.output/server/index.mjs')
@@ -22,20 +22,6 @@ const SERVER_ENTRY = join(PACKAGE_ROOT, '.output/server/index.mjs')
 function fail(message) {
   console.error(`\x1b[31m==>\x1b[0m ${message}`)
   process.exit(1)
-}
-
-/** Uma porta livre de verdade: pedir a 0 ao sistema é o único jeito que não corre com ninguém. */
-function freePort() {
-  return new Promise((resolve, reject) => {
-    const probe = createServer()
-
-    probe.once('error', reject)
-    probe.listen(0, '127.0.0.1', () => {
-      const { port } = probe.address()
-
-      probe.close(() => resolve(port))
-    })
-  })
 }
 
 async function waitFor(url, timeoutMs = 60_000) {
@@ -72,7 +58,7 @@ async function main() {
 
   await ensureChromium()
 
-  const webPort = await freePort()
+  const webPort = await resolvePort({ preferred: Number(process.env.PORT) || DEFAULT_PORT })
   const webUrl = `http://localhost:${webPort}`
 
   process.env.PORT = String(webPort)

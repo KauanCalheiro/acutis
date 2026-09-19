@@ -56,12 +56,12 @@ npx @acutis/cli@latest
 O `@latest` garante a versão mais nova mesmo que o `npx` já tenha uma em cache. O que acontece:
 
 1. O Chromium é conferido, e baixado se ainda não existir.
-2. Uma porta livre é escolhida pelo sistema, então o endereço muda a cada execução. É normal.
+2. A interface sobe em `http://localhost:1991`. Se a 1991 estiver ocupada, a próxima livre assume.
 3. O navegador abre sozinho na interface.
 
 Para encerrar, `Ctrl+C` no terminal. Tudo o que você produziu fica em disco: da próxima vez que subir, os projetos estão lá.
 
-O que sobe é um processo só, que serve a interface, a API, o gravador e o runner. Não há serviço em segundo plano, container nem porta fixa para liberar.
+O que sobe é um processo só, que serve a interface, a API, o gravador e o runner. Não há serviço em segundo plano nem container.
 
 ## 2. Configurar a IA (opcional)
 
@@ -336,7 +336,7 @@ Se a máquina não tem `git config user.name`, o Acutis assina os commits como `
 
 **O navegador não abre a página, ou todos os cenários falham na primeira navegação.** Se o alvo está atrás de VPN, confira se ela está conectada. A execução usa o navegador da sua máquina, então uma VPN que caiu deixa a URL base inalcançável para o teste, mesmo que a interface do Acutis continue funcionando normalmente.
 
-**A porta mudou desde a última vez.** É o esperado: o Acutis pede uma porta livre ao sistema a cada execução.
+**A porta não é a 1991.** Alguma outra coisa já estava na 1991, então o Acutis andou para a próxima livre e o endereço da vez está no terminal. Para fixar outra, suba com `PORT=8080 npx @acutis/cli@latest`.
 
 ## 14. Atalhos e detalhes da tela
 

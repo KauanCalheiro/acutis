@@ -10,7 +10,7 @@ Você navega pela aplicação que quer testar, o Acutis registra o que aconteceu
 npx @acutis/cli
 ```
 
-Sobe a interface numa porta livre e abre o navegador. Precisa de Node 22+; o Chromium do Playwright é baixado na primeira execução. Nada a aprovar, nada a configurar.
+Sobe a interface em `http://localhost:1991` e abre o navegador. Precisa de Node 22+; o Chromium do Playwright é baixado na primeira execução. Nada a aprovar, nada a configurar.
 
 Os projetos ficam em `~/.acutis/<projeto>`: os specs em `tests/`, os cenários em Gherkin em `features/`, os ambientes em `environments/`, os segredos no `.env`.
 
