@@ -41,6 +41,7 @@ function scenario(title: string, spec: string, tags: string[] = ['@read'], skipp
 const api = {
   project: {} as ProjectDetail,
   vars: [] as { key: string, value: string, secret: boolean, pending: boolean }[],
+  baseUrl: undefined as string | undefined,
   synced: false,
   conflict: false,
   unavailable: false,
@@ -84,6 +85,20 @@ registerEndpoint('/api/projects/alpha-store/environments', () => ({
   known_keys: [],
   environments: [{ slug: 'homologacao', name: 'Homologação', vars: api.vars }]
 }))
+
+registerEndpoint('/api/projects/alpha-store/settings', {
+  method: 'PUT',
+  handler: async (event) => {
+    const body = await readBody<{ baseUrl: string }>(event)
+
+    api.baseUrl = body.baseUrl
+    // A URL base é a variável URL do ambiente ativo, então salvar preenche o que estava pendente.
+    api.vars = [{ key: 'URL', value: body.baseUrl, secret: false, pending: false }]
+    api.project = project({ base_url: body.baseUrl, requires_url: false })
+
+    return { base_url: body.baseUrl }
+  }
+})
 
 registerEndpoint('/api/projects/alpha-store/git/sync', {
   method: 'POST',
@@ -337,6 +352,23 @@ describe('ProjectPage', () => {
     expect(aviso.text()).toContain('CUPOM_TESTE')
     expect(aviso.text()).toContain('API_TOKEN')
     expect(aviso.text()).not.toContain('URL')
+  })
+
+  it('tira o aviso de variável sem valor assim que a URL base é salva', async () => {
+    api.project = project({ requires_url: true, base_url: null })
+    api.vars = [{ key: 'URL', value: '', secret: false, pending: true }]
+    const wrapper = await mount()
+
+    const input = field('projeto-configuracoes-base-url') as HTMLInputElement
+
+    input.value = 'https://loja.test'
+    input.dispatchEvent(new Event('input'))
+    await settle()
+    field('projeto-configuracoes-salvar')!.click()
+    await settle(4)
+
+    expect(api.baseUrl).toBe('https://loja.test')
+    expect(wrapper.find('[data-testid="projeto-variaveis-aviso"]').exists()).toBe(false)
   })
 
   it('não avisa nada quando o ambiente ativo está preenchido', async () => {
