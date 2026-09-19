@@ -35,6 +35,35 @@ describe('ensureChromium', () => {
     expect(log).toHaveBeenCalledWith('baixando o Chromium do Playwright (só na primeira execução)')
   })
 
+  it('downloads Chromium when the headless shell of the build is missing', async () => {
+    const install = vi.fn().mockResolvedValue(0)
+    const missing = '/cache/chromium_headless_shell-1234/INSTALLATION_COMPLETE'
+
+    const installed = await ensureChromium({
+      executablePath: async () => '/cache/chromium-1234/chrome-linux64/chrome',
+      exists: path => path !== missing,
+      install,
+      log: () => {}
+    })
+
+    expect(installed).toBe(true)
+    expect(install).toHaveBeenCalledOnce()
+  })
+
+  it('keeps the browser cache untouched when both Chromium and the headless shell are installed', async () => {
+    const install = vi.fn()
+
+    const installed = await ensureChromium({
+      executablePath: async () => '/cache/chromium-1234/chrome-linux64/chrome',
+      exists: () => true,
+      install,
+      log: () => {}
+    })
+
+    expect(installed).toBe(false)
+    expect(install).not.toHaveBeenCalled()
+  })
+
   it('reports how to recover when the Chromium download fails', async () => {
     await expect(ensureChromium({
       executablePath: async () => '/cache/chromium',

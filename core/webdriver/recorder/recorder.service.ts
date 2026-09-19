@@ -41,6 +41,24 @@ const REPLAY_SETTLE_MS = 1500
 const DECISION_POLL_MS = 200
 
 const BLANK = 'about:blank'
+const MISSING_BROWSER = 'Executable doesn\'t exist'
+
+/** Abre o Chromium do Playwright, trocando a falha de navegador ausente por uma instrução de recuperação. */
+async function launchChromium(): Promise<Browser> {
+  try {
+    return await chromium.launch({ headless: RECORDER_HEADLESS })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+
+    if (!message.includes(MISSING_BROWSER)) throw error
+
+    throw new Error(
+      'O Chromium do Playwright não está instalado nesta máquina. '
+      + 'Rode `npx playwright install chromium` e abra o gravador de novo.',
+      { cause: error }
+    )
+  }
+}
 
 export class RecorderService {
   private browser: Browser | null = null
@@ -112,7 +130,7 @@ export class RecorderService {
         )
       }
 
-      this.browser = await chromium.launch({ headless: RECORDER_HEADLESS })
+      this.browser = await launchChromium()
       this.overCdp = false
       this.context = await this.browser.newContext(
         storageStatePath ? { storageState: storageStatePath } : {}
