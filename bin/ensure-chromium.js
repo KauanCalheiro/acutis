@@ -25,6 +25,15 @@ function installChromium() {
   })
 }
 
+/** O marcador de instalação completa do Chrome Headless Shell que acompanha aquele build do Chromium. */
+function headlessShellMarker(executablePath) {
+  const build = /^(.*)chromium-(\d+)(?=[/\\])/.exec(executablePath)
+
+  if (build === null) return ''
+
+  return join(`${build[1]}chromium_headless_shell-${build[2]}`, 'INSTALLATION_COMPLETE')
+}
+
 function info(message) {
   console.log(`\x1b[32m==>\x1b[0m ${message}`)
 }
@@ -37,8 +46,9 @@ export async function ensureChromium({
   log = info
 } = {}) {
   const browserPath = await Promise.resolve().then(executablePath).catch(() => '')
+  const shellMarker = headlessShellMarker(browserPath)
 
-  if (browserPath !== '' && exists(browserPath)) return false
+  if (browserPath !== '' && exists(browserPath) && (shellMarker === '' || exists(shellMarker))) return false
 
   log('baixando o Chromium do Playwright (só na primeira execução)')
 
