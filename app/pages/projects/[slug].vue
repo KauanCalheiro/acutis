@@ -206,7 +206,8 @@ onMounted(() => {
   if (useRoute().query.environment !== undefined) environmentsOpen.value = true
 })
 
-async function onEnvironmentsSaved() {
+/** A URL base é uma variável do ambiente ativo, então salvá-la também desatualiza a lista de ambientes. */
+async function reloadProjectAndEnvironments() {
   await refreshNuxtData(`environments-${slug.value}`)
   await refresh()
 }
@@ -642,14 +643,14 @@ async function remove() {
     <ProjectEnvironmentsModal
       v-model:open="environmentsOpen"
       :slug="slug"
-      @saved="onEnvironmentsSaved"
+      @saved="reloadProjectAndEnvironments"
     />
 
     <ProjectSettingsModal
       v-model:open="settingsOpen"
       :slug="slug"
       :base-url="project!.base_url"
-      @saved="refresh()"
+      @saved="reloadProjectAndEnvironments"
     />
 
     <ProjectRunFilteredModal
