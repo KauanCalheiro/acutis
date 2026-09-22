@@ -255,6 +255,14 @@ describe('ProjectPage', () => {
     expect(wrapper.get('[data-testid="projeto-rodar-filtrados"]').text()).toContain('14')
   })
 
+  it('esconde o convite de gravar quando o projeto já tem cenário, mesmo sem paginação', async () => {
+    api.project = project({ scenarios: [scenario('Login do cliente', 'tests/login.spec.ts')] })
+    const wrapper = await mount()
+
+    expect(wrapper.findAll('[data-testid="cenario-card"]')).toHaveLength(1)
+    expect(wrapper.find('[data-testid="cenario-vazio"]').exists()).toBe(false)
+  })
+
   it('recalcula quantos cenários cabem quando a janela muda de tamanho', async () => {
     api.project = project({
       scenarios: Array.from({ length: 30 }, (_value, index) =>

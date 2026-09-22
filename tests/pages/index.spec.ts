@@ -153,7 +153,25 @@ describe('IndexPage: busca e paginação', () => {
     expect(queries.at(-1)).toContain('search=alpha')
   })
 
+  it('não mostra a paginação quando todos os projetos cabem numa página', async () => {
+    response = listing(projects, 2)
+
+    const wrapper = await mountSuspended(IndexPage)
+
+    expect(wrapper.findAll('[data-testid="projeto-card"]')).toHaveLength(2)
+    expect(wrapper.find('[data-testid="projeto-paginacao"]').exists()).toBe(false)
+  })
+
+  it('mostra a paginação quando os projetos não cabem numa página', async () => {
+    response = listing(projects, 20)
+
+    const wrapper = await mountSuspended(IndexPage)
+
+    expect(wrapper.find('[data-testid="projeto-paginacao"]').exists()).toBe(true)
+  })
+
   it('pede a página escolhida', async () => {
+    response = listing(projects, 20)
     const wrapper = await mountSuspended(IndexPage)
     queries.length = 0
 
