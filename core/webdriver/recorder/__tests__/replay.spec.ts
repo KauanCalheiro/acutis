@@ -41,6 +41,16 @@ describe('replaySteps', () => {
     ])
   })
 
+  it('refaz o duplo clique como duplo clique, não como clique simples', () => {
+    const steps = replaySteps([
+      event({ type: 'dblclick', innerText: 'Linha', selectors: selectors({ dataTestId: 'linha' }) })
+    ])
+
+    expect(steps).toEqual([
+      { action: 'dblclick', selector: '[data-testid="linha"]', label: 'Clica duas vezes em "Linha"', at: 0 }
+    ])
+  })
+
   it('refaz o clique no visível quando o test id se repete em elemento escondido', () => {
     const steps = replaySteps([
       event({ type: 'click', selectors: selectors({ dataTestId: 'salvar', hiddenTwins: true }) })

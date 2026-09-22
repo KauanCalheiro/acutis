@@ -7,6 +7,7 @@ import { beforeEach, expect, it } from 'vitest'
 import { nextTick } from 'vue'
 import type { RecordingEvent } from '@/common/types/recording'
 import { mountRecorder } from '../recorderCore'
+import { DOUBLE_CLICK_WINDOW_MS } from '../useRecorderEvents'
 import { usePillState } from '../usePillState'
 import { useAssertMode } from '../useAssertMode'
 
@@ -29,8 +30,16 @@ function types(): string[] {
   return enviados.map(event => event.type)
 }
 
+/** Espera o envio, contando a janela em que o clique aguarda o par do duplo clique. */
 async function flush(): Promise<void> {
-  await new Promise(resolve => setTimeout(resolve, 0))
+  await new Promise(resolve => setTimeout(resolve, DOUBLE_CLICK_WINDOW_MS + 50))
+}
+
+/** O duplo clique real: os dois cliques do navegador e o evento que vem depois deles. */
+function doubleClick(el: HTMLElement): void {
+  el.click()
+  el.click()
+  el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, detail: 2 }))
 }
 
 beforeEach(() => {
@@ -82,6 +91,51 @@ it('grava o clique num elemento interativo, e ignora o resto da página', async 
 
   expect(types()).toEqual(['click'])
   expect(enviados[0]!.selectors?.id).toBe('entrar')
+})
+
+it('grava o duplo clique como um evento só, no lugar do clique simples', async () => {
+  mountRecorder()
+  page('<button id="linha">Linha</button>')
+
+  doubleClick(document.querySelector<HTMLElement>('#linha')!)
+  await flush()
+
+  expect(types()).toEqual(['dblclick'])
+  expect(enviados[0]!.selectors?.id).toBe('linha')
+})
+
+it('deixa a gravação encerrar sem perder o clique que esperava pelo par', async () => {
+  mountRecorder()
+  page('<button id="ultimo">Último</button>')
+
+  document.querySelector<HTMLElement>('#ultimo')!.click()
+  await window.__acutisFlushEvents!()
+
+  expect(types()).toEqual(['click'])
+})
+
+it('ignora o duplo clique em quem não é interativo', async () => {
+  mountRecorder()
+  page('<span id="texto">Só texto</span>')
+
+  doubleClick(document.querySelector<HTMLElement>('#texto')!)
+  await flush()
+
+  expect(types()).toEqual([])
+})
+
+it('não grava o duplo clique com a gravação pausada', async () => {
+  const { togglePause } = usePillState()
+
+  mountRecorder()
+  page('<button id="pausado">Pausado</button>')
+  togglePause()
+
+  doubleClick(document.querySelector<HTMLElement>('#pausado')!)
+  await flush()
+  togglePause()
+
+  expect(types()).toEqual([])
 })
 
 it('grava o clique em quem tem papel de botão', async () => {

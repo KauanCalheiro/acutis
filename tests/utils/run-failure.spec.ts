@@ -71,6 +71,16 @@ describe('describeRunFailure', () => {
     expect(failure.summary).toBe('Não consegui clicar em calendar-event-save: o elemento não ficou pronto em 15s.')
   })
 
+  it('diz que foi o duplo clique que não conseguiu acontecer', () => {
+    const failure = describeRunFailure([
+      'TimeoutError: locator.dblclick: Timeout 15000ms exceeded.',
+      callLog('waiting for getByTestId(\'agenda-linha\')')
+    ].join('\n'))
+
+    expect(failure.summary)
+      .toBe('Não consegui clicar duas vezes em agenda-linha: o elemento não ficou pronto em 15s.')
+  })
+
   it('mostra a diferença entre o texto esperado e o que a página trouxe', () => {
     const failure = describeRunFailure([
       'Error: expect(locator).toHaveText(expected) failed',

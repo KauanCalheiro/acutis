@@ -306,6 +306,55 @@ describe('preenchimento', () => {
   })
 })
 
+describe('duplo clique', () => {
+  it('emite o duplo clique do Playwright, e não dois cliques soltos', () => {
+    const spec = emit([
+      emitEvent('dblclick', { selectors: selectors({ dataTestId: 'linha' }), label: 'Linha' })
+    ])
+
+    expect(spec).toContain('await alvo.dblclick()')
+    expect(spec).not.toContain('await alvo.click()')
+  })
+
+  it('nomeia o passo do duplo clique pelo elemento', () => {
+    const spec = emit([
+      emitEvent('dblclick', { selectors: selectors({ dataTestId: 'linha' }), label: 'Linha' })
+    ])
+
+    expect(spec).toContain('Clica duas vezes em "Linha"')
+  })
+
+  it('descarta o submit que o duplo clique já disparou', () => {
+    const spec = emit([
+      emitEvent('fill', {
+        selectors: selectors({ dataTestId: 'busca' }),
+        value: 'cadeira',
+        tagName: 'input',
+        inputType: 'text'
+      }),
+      emitEvent('dblclick', { selectors: selectors({ dataTestId: 'salvar' }), label: 'Salvar' }),
+      emitEvent('submit', { selectors: selectors({ cssStable: '#form' }) })
+    ])
+
+    expect(spec).not.toContain('Enter')
+  })
+
+  it('não repete o duplo clique como marcação do checkbox que ele alternou', () => {
+    const spec = emit([
+      emitEvent('dblclick', { selectors: selectors({ dataTestId: 'aceite' }), label: 'Aceite' }),
+      emitEvent('fill', {
+        selectors: selectors({ dataTestId: 'aceite' }),
+        tagName: 'input',
+        inputType: 'checkbox',
+        checked: true,
+        value: 'on'
+      })
+    ])
+
+    expect(spec).not.toContain('.check()')
+  })
+})
+
 describe('envio do formulário', () => {
   it('descarta o submit que o clique no botão já disparou', () => {
     const spec = emit([
