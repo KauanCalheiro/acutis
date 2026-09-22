@@ -296,7 +296,7 @@ it('mascara a senha revelada depois de digitada', async () => {
 
 it('mascara a senha revelada antes de ser digitada', async () => {
   mountRecorder()
-  page('<input id="campo-oculto" type="password" />')
+  page('<input id="campo-oculto" name="campo-revelado" type="password" />')
   const senha = document.querySelector<HTMLInputElement>('#campo-oculto')!
 
   senha.type = 'text'

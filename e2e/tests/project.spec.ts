@@ -422,6 +422,103 @@ test.describe('project settings', { tag: ['@write', '@project'] }, () => {
 
         await expect(page.getByTestId('ambientes-variaveis-chave-0')).toHaveValue('URL', { timeout: 10_000 })
     })
+
+    /** O id que o framework regenera a cada carga é o motivo de a ordem ser configurável. */
+    test('reorders the selector priority by dragging, and keeps it in the manifest', async ({ page }) => {
+        await page.goto('/projects/alpha-store')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('projeto-ambientes').click()
+        await page.getByRole('tab', { name: 'Seletores' }).click()
+
+        await expect(page.getByTestId('seletores-item-0')).toHaveAttribute('data-key', 'dataTestId')
+
+        /** Arrasto longo: prova que a acomodação animada não devolve o card para trás no caminho. */
+        await test.step('drag the fifth card up to the first position, passing over the others', async () => {
+            const source = page.getByTestId('seletores-item-4')
+            const target = page.getByTestId('seletores-item-0')
+
+            await source.scrollIntoViewIfNeeded()
+
+            const from = (await source.boundingBox())!
+            const to = (await target.boundingBox())!
+
+            await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+            await page.mouse.down()
+
+            for (let step = 1; step <= 8; step++) {
+                const y = from.y + ((to.y - from.y) * step) / 8
+
+                await page.mouse.move(to.x + to.width / 2, y + from.height / 2, { steps: 5 })
+                await page.waitForTimeout(120)
+            }
+
+            await page.mouse.up()
+
+            await expect(page.getByTestId('seletores-item-0')).toHaveAttribute('data-key', 'cssStable')
+            await expect(page.getByText('Prioridade salva', { exact: true }).first()).toBeVisible()
+        })
+
+        await test.step('restore the default before the short drag that the manifest check uses', async () => {
+            await page.getByTestId('seletores-restaurar').click()
+            await page.getByTestId('seletores-restaurar').click()
+
+            await expect(page.getByTestId('seletores-item-0')).toHaveAttribute('data-key', 'dataTestId')
+        })
+
+        await test.step('drag the second card onto the first position', async () => {
+            const source = page.getByTestId('seletores-item-1')
+            const target = page.getByTestId('seletores-item-0')
+
+            await source.scrollIntoViewIfNeeded()
+
+            const from = (await source.boundingBox())!
+            const to = (await target.boundingBox())!
+
+            await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+            await page.mouse.down()
+            await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 20 })
+            await page.mouse.up()
+
+            await expect(page.getByTestId('seletores-item-0')).toHaveAttribute('data-key', 'dataCy')
+            await expect(page.getByTestId('seletores-item-1')).toHaveAttribute('data-key', 'dataTestId')
+        })
+
+        await test.step('the order goes to the manifest on its own, with no save button', async () => {
+            await expect(page.getByText('Prioridade salva', { exact: true }).first()).toBeVisible()
+            await expect(page.getByTestId('seletores-salvar')).toHaveCount(0)
+
+            const manifest = JSON.parse(readFileSync(join(tmpProjects, 'alpha-store', 'acutis.json'), 'utf8'))
+
+            expect(manifest.selectors[0]).toBe('dataCy')
+            expect(manifest.selectors).toHaveLength(9)
+        })
+    })
+
+    test('reopens the priority tab on the order the project saved', async ({ page }) => {
+        await page.goto('/projects/alpha-store')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('projeto-ambientes').click()
+        await page.getByRole('tab', { name: 'Seletores' }).click()
+
+        await expect(page.getByTestId('seletores-item-0')).toHaveAttribute('data-key', 'dataCy')
+
+        await test.step('restoring the default asks for confirmation, then saves it', async () => {
+            await page.getByTestId('seletores-restaurar').click()
+
+            await expect(page.getByTestId('seletores-restaurar')).toContainText('Confirmar')
+
+            await page.getByTestId('seletores-restaurar').click()
+
+            await expect(page.getByTestId('seletores-item-0')).toHaveAttribute('data-key', 'dataTestId')
+            await expect(page.getByTestId('seletores-restaurar')).toHaveCount(0)
+
+            const manifest = JSON.parse(readFileSync(join(tmpProjects, 'alpha-store', 'acutis.json'), 'utf8'))
+
+            expect(manifest.selectors[0]).toBe('dataTestId')
+        })
+    })
 })
 
 test.describe('project management', { tag: ['@write', '@project'] }, () => {

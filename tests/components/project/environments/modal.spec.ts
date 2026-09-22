@@ -291,3 +291,38 @@ describe('ProjectEnvironmentsModal', () => {
     expect(state.value).toBe(false)
   })
 })
+
+describe('ProjectEnvironmentsModal: a aba de seletores', () => {
+  it('abre nos ambientes, que é o que o modal sempre fez', async () => {
+    await open()
+
+    expect(field('ambientes-nome')).toBeTruthy()
+    expect(field('seletores-item-0')).toBeFalsy()
+  })
+
+  it('explica os ambientes dentro da aba deles, e não no alto do modal', async () => {
+    await open()
+
+    expect(field('ambientes-descricao')!.textContent).toContain('cenários rodam')
+  })
+
+  it('explica os seletores na aba deles', async () => {
+    const { wrapper } = await open()
+
+    wrapper.findComponent({ name: 'UTabs' }).vm.$emit('update:modelValue', 'seletores')
+    await settle()
+
+    expect(field('seletores-descricao')!.textContent).toContain('nesta ordem')
+    expect(field('ambientes-descricao')).toBeFalsy()
+  })
+
+  it('mostra a prioridade de seletores do projeto na outra aba', async () => {
+    const { wrapper } = await open()
+
+    wrapper.findComponent({ name: 'UTabs' }).vm.$emit('update:modelValue', 'seletores')
+    await settle()
+
+    expect(field('seletores-item-0')!.getAttribute('data-key')).toBe('dataTestId')
+    expect(field('ambientes-nome')).toBeFalsy()
+  })
+})

@@ -39,12 +39,14 @@ describe('useSelectorCapture', () => {
     expect(extractSelectors(el).hiddenTwins).toBe(false)
   })
 
-  it('falls back to id-based css selector', () => {
+  /** O id tem entrada própria na prioridade: repetido dentro do css estável, ele furaria a ordem. */
+  it('deixa o id fora do css estável, que sem name não tem o que oferecer', () => {
     setBody('<input id="email" />')
     const el = document.querySelector('input')!
     const selectors = extractSelectors(el)
+
     expect(selectors.id).toBe('email')
-    expect(selectors.cssStable).toBe('#email')
+    expect(selectors.cssStable).toBeNull()
   })
 
   it('prefere o name ao id gerado pelo framework no css estável', () => {

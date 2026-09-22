@@ -6,6 +6,7 @@ import { checkAuth } from '../../rules/auth-rules.js'
 import { checkSpec } from '../../rules/spec-rules.js'
 import { violated } from '../../rules/violation.js'
 import { Recording } from '../recording.js'
+import { selectorOrder } from '../selector-priority.js'
 import { SpecEmitter } from '../spec-emitter.js'
 import type { EnvironmentVar } from '../../environment/providers/environment-var.js'
 import type { RecordedEvent } from '../events.js'
@@ -18,6 +19,37 @@ function emit(events: RecordedEvent[], extraEnv: EnvironmentVar[] = []): string 
     .spec('Cadastro de produto', 'cria um produto')
     .value
 }
+
+describe('prioridade de seletores do projeto', () => {
+  function emitWith(order: string[], events: RecordedEvent[]): string {
+    return new SpecEmitter(Recording.make(events), specUrl(), specActiveVars([]), selectorOrder(order))
+      .spec('Cadastro de produto', 'cria um produto')
+      .value
+  }
+
+  const clicked = [
+    emitEvent('click', {
+      selectors: selectors({ dataTestId: 'salvar', id: 'btn-9f3a', xpath: '/html[1]/body[1]/button[1]' })
+    })
+  ]
+
+  it('segue a ordem padrão quando o projeto não configurou nada', () => {
+    expect(emitWith([], clicked)).toContain('page.getByTestId(\'salvar\')')
+  })
+
+  it('escolhe o xpath quando o projeto o pôs na frente, deixando o test id de lado', () => {
+    const spec = emitWith(['xpath'], clicked)
+
+    expect(spec).toContain('page.locator(\'xpath=/html[1]/body[1]/button[1]\')')
+    expect(spec).not.toContain('getByTestId')
+  })
+
+  it('cai para a entrada seguinte da ordem quando o elemento não gravou a primeira', () => {
+    const semXpath = [emitEvent('click', { selectors: selectors({ id: 'btn-9f3a' }) })]
+
+    expect(emitWith(['xpath', 'id'], semXpath)).toContain('page.locator(\'[id="btn-9f3a"]\')')
+  })
+})
 
 describe('abertura da gravação', () => {
   it('abre com um goto montado a partir da variável de URL base', () => {

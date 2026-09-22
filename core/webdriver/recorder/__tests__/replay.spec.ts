@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest'
 import type { RecordingEvent } from '../../../common/types/recording.js'
 import { replaySteps } from '../replay.js'
+import { selectorOrder } from '../../../modules/recording/selector-priority.js'
 
 function event(partial: Partial<RecordingEvent>): RecordingEvent {
   return {
@@ -39,6 +40,16 @@ describe('replaySteps', () => {
       { action: 'fill', selector: '[id="email"]', value: 'ana@loja.test', label: 'Preenche o campo', at: 1 },
       { action: 'click', selector: '[data-testid="entrar"]', label: 'Clica no elemento', at: 2 }
     ])
+  })
+
+  it('refaz o clique pelo seletor que o projeto pôs na frente', () => {
+    const gravado = [
+      event({ type: 'click', selectors: selectors({ dataTestId: 'salvar', xpath: '/html[1]/body[1]/button[1]' }) })
+    ]
+
+    expect(replaySteps(gravado)[0]).toMatchObject({ selector: '[data-testid="salvar"]' })
+    expect(replaySteps(gravado, selectorOrder(['xpath']))[0])
+      .toMatchObject({ selector: 'xpath=/html[1]/body[1]/button[1]' })
   })
 
   it('refaz o duplo clique como duplo clique, não como clique simples', () => {
