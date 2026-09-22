@@ -308,10 +308,26 @@ export class Environments {
     return values
   }
 
-  /** Um arquivo de sessão por ambiente: trocar de ambiente não reusa a sessão do anterior. */
+  /**
+   * Um arquivo de sessão por ambiente e por host: nem trocar de ambiente nem apontar a URL para
+   * outro endereço reaproveita os cookies do anterior, que não valem lá.
+   */
   storageState(): string {
-    const slug = this.activeSlug()
+    const parts = ['storage-state', this.activeSlug(), this.host()].filter(part => part !== null)
 
-    return slug ? `storage-state.${slug}.json` : 'storage-state.json'
+    return `${parts.join('.')}.json`
+  }
+
+  /** O host da URL ativa como pedaço de nome de arquivo; null quando não há URL ou ela não é uma. */
+  private host(): string | null {
+    const url = this.value(EnvKey.URL)
+
+    if (url === null || url === '') return null
+
+    try {
+      return new URL(url).host.replace(/[^a-z0-9]+/gi, '-')
+    } catch {
+      return null
+    }
   }
 }
