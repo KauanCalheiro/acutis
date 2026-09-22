@@ -665,12 +665,14 @@ async function remove() {
       v-model:open="filteredRunOpen"
       :running="filteredRun.running.value"
       :passed="filteredRun.passed.value"
+      :cancelled="filteredRun.cancelled.value"
       :tests="filteredRun.tests.value"
       :project-name="project!.name"
       :slug="slug"
       :filter="search"
       :tested-at="filteredRun.testedAt.value"
       :output="filteredRun.output.value"
+      @cancel="filteredRun.cancel()"
     />
 
     <ScenarioTestRunModal
