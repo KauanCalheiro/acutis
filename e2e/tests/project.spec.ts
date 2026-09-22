@@ -106,11 +106,18 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
         await expect(page.getByTestId('projeto-auth-aviso')).toBeVisible()
     })
 
-    test('opens the auth scenario page from the alert', async ({ page }) => {
-        await page.getByTestId('projeto-auth-configurar').click()
+    /** O alerta leva à gravação do login, e chegar lá com `?gravar` já abre o navegador. */
+    test('points the alert at the login recording', async ({ page }) => {
+        await expect(page.getByTestId('projeto-auth-configurar')).toHaveAttribute(
+            'href',
+            '/projects/alpha-store/scenarios/auth?gravar',
+        )
 
-        await expect(page).toHaveURL('/projects/alpha-store/scenarios/auth')
+        await page.goto('/projects/alpha-store/scenarios/auth')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
         await expect(page.getByTestId('auth-intro')).toBeVisible()
+        await expect(page.getByTestId('auth-gravar-vazio')).toBeVisible()
     })
 
     test('opens the auth scenario page from the header button', async ({ page }) => {

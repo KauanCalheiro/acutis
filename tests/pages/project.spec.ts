@@ -800,3 +800,40 @@ describe('ProjectPage', () => {
     expect(FakeEventSource.last!.url).toContain('spec=tests%2Fauth.setup.ts')
   })
 })
+
+describe('ProjectPage: primeiro cenário de um projeto sem login', () => {
+  it('convida a gravar o login no lugar do cenário', async () => {
+    api.project = project({ auth_status: 'unset', scenarios: [] })
+    const wrapper = await mount()
+
+    expect(wrapper.find('[data-testid="cenario-vazio-login"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="cenario-vazio-gravar"]').exists()).toBe(false)
+  })
+
+  it('leva para a tela de autenticação já gravando', async () => {
+    api.project = project({ auth_status: 'unset', scenarios: [] })
+    const wrapper = await mount()
+
+    await wrapper.get('[data-testid="cenario-vazio-login"]').trigger('click')
+
+    expect(navigate).toHaveBeenCalledWith('/projects/alpha-store/scenarios/auth?gravar')
+  })
+
+  it('dispensa o login pelo próprio convite', async () => {
+    api.project = project({ auth_status: 'unset', scenarios: [] })
+    const wrapper = await mount()
+
+    await wrapper.get('[data-testid="cenario-vazio-sem-login"]').trigger('click')
+    await settle(4)
+
+    expect(api.skipped).toBe(true)
+  })
+
+  it('oferece gravar o login pelo aviso, sem passar pela tela de configuração', async () => {
+    api.project = project({ auth_status: 'unset' })
+    const wrapper = await mount()
+
+    expect(wrapper.get('[data-testid="projeto-auth-configurar"]').attributes('href'))
+      .toBe('/projects/alpha-store/scenarios/auth?gravar')
+  })
+})

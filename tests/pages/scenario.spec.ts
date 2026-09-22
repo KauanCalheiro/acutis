@@ -876,3 +876,66 @@ describe('ScenarioPage: sessão da gravação retomada', () => {
     expect(useWebdriver().state.value.recording).toBe(true)
   })
 })
+
+describe('ScenarioPage: o convite da autenticação', () => {
+  const route = '/projects/alpha-store/scenarios/auth'
+
+  function semLogin() {
+    api.authScenario = scenario({ spec: 'tests/auth.setup.ts', is_auth: true, playwright: '', gherkin: null, events: [] })
+    api.project = project({ auth_status: 'unset' })
+  }
+
+  it('usa o mesmo card dos outros convites da ferramenta', async () => {
+    semLogin()
+    const wrapper = await mount(route)
+
+    const card = wrapper.findAllComponents({ name: 'BaseEmptyAction' })
+      .find(item => item.props('testid') === 'auth-gravar-vazio')
+
+    expect(card).toBeDefined()
+    expect(card!.props('title')).toBe('Gravar o login')
+  })
+
+  it('grava o login pelo clique no card', async () => {
+    semLogin()
+    const wrapper = await mount(route)
+
+    await wrapper.get('[data-testid="auth-gravar-vazio"]').trigger('click')
+    await settle()
+
+    expect(useWebdriver().state.value.recording).toBe(true)
+  })
+
+  it('não grava pelo card enquanto o gravador não está conectado', async () => {
+    semLogin()
+    recorder({ connected: false })
+    const wrapper = await mount(route)
+
+    await wrapper.get('[data-testid="auth-gravar-vazio"]').trigger('click')
+    await settle()
+
+    expect(useWebdriver().state.value.recording).toBe(false)
+  })
+})
+
+describe('ScenarioPage: chegar na autenticação já gravando', () => {
+  it('abre o navegador quando a tela é aberta com ?gravar', async () => {
+    api.authScenario = scenario({ spec: 'tests/auth.setup.ts', is_auth: true, playwright: '', gherkin: null, events: [] })
+    api.project = project({ auth_status: 'unset' })
+
+    await mount('/projects/alpha-store/scenarios/auth?gravar')
+    await settle()
+
+    expect(useWebdriver().state.value.recording).toBe(true)
+  })
+
+  it('não grava sozinha quando a tela é aberta sem o pedido', async () => {
+    api.authScenario = scenario({ spec: 'tests/auth.setup.ts', is_auth: true, playwright: '', gherkin: null, events: [] })
+    api.project = project({ auth_status: 'unset' })
+
+    await mount('/projects/alpha-store/scenarios/auth')
+    await settle()
+
+    expect(useWebdriver().state.value.recording).toBe(false)
+  })
+})
