@@ -245,6 +245,34 @@ describe('ScenarioReviewModal', () => {
     expect(field('revisao-erro')!.textContent).toContain('Nenhuma navegação registrada')
   })
 
+  it('não salva o cenário com um contexto obrigatório em branco', async () => {
+    const { state } = await open()
+
+    field('revisao-gerar')!.click()
+    await settle(6)
+    await type('contexto-titulo', '')
+    field('contexto-enviar')!.click()
+    await settle(6)
+
+    expect(api.committed).toBeNull()
+    expect(document.body.textContent).toContain('O título do cenário é obrigatório.')
+    expect(state.value).toBe(true)
+  })
+
+  it('não salva o cenário sem domínio, e diz qual mensagem o backend cobraria', async () => {
+    const { state } = await open()
+
+    field('revisao-gerar')!.click()
+    await settle(6)
+    await type('contexto-dominio', '')
+    field('contexto-enviar')!.click()
+    await settle(6)
+
+    expect(api.committed).toBeNull()
+    expect(document.body.textContent).toContain('O domínio do cenário é obrigatório.')
+    expect(state.value).toBe(true)
+  })
+
   it('cancela na revisão dos contextos, sem salvar', async () => {
     const { state } = await open()
 
@@ -326,6 +354,7 @@ describe('ScenarioReviewModal: gravação retomada', () => {
 
     field('revisao-gerar')!.click()
     await settle(6)
+    await type('contexto-dominio', 'login')
     field('contexto-enviar')!.click()
     await settle(6)
 
@@ -342,6 +371,7 @@ describe('ScenarioReviewModal: gravação retomada', () => {
 
     field('revisao-gerar')!.click()
     await settle(6)
+    await type('contexto-dominio', 'login')
     field('contexto-enviar')!.click()
     await settle(6)
 

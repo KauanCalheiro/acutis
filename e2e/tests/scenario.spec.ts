@@ -75,7 +75,7 @@ test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
 
     /** O Gherkin é opcional: sem arquivo .feature a aba não existe, em vez de existir dizendo "vazio". */
     test('shows an empty state for a scenario without events or runs, and no gherkin tab at all', async ({ page }) => {
-        await page.goto('/projects/alpha-store/scenarios/cadastro-de-produto')
+        await page.goto('/projects/alpha-store/scenarios/catalogo/cadastro-de-produto')
         await page.locator('[data-hydrated="true"]').waitFor()
 
         await expect(page.getByTestId('cenario-eventos-vazio')).toContainText('Nenhum evento gravado')
@@ -311,23 +311,46 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
         expect(existsSync(join(tmpProjects, 'alpha-store', 'features', 'login-do-cliente.feature'))).toBe(false)
     })
 
-    test('edits the scenario content without renaming it', async ({ page }) => {
+    /** O cenário na raiz de tests/ é anterior ao domínio obrigatório: salvá-lo agora cobra a pasta. */
+    test('edits the scenario content, and the domain it never had is now required', async ({ page }) => {
         await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
         await page.locator('[data-hydrated="true"]').waitFor()
 
-        await test.step('change the title and save', async () => {
+        await test.step('saving without a domain is refused', async () => {
             await page.getByTestId('cenario-editar').click()
             await page.getByTestId('contexto-titulo').fill('Login do cliente atualizado')
             await page.getByTestId('cenario-editar-salvar').click()
+
+            await expect(page.getByRole('dialog')).toContainText('O domínio do cenário é obrigatório.')
+            await expect(page).toHaveURL('/projects/alpha-store/scenarios/login-do-cliente')
         })
 
-        await expect(page).toHaveURL('/projects/alpha-store/scenarios/login-do-cliente')
+        await test.step('filling the domain lets it through', async () => {
+            await page.getByTestId('contexto-dominio').fill('acesso')
+            await page.getByTestId('cenario-editar-salvar').click()
+        })
+
+        await expect(page).toHaveURL('/projects/alpha-store/scenarios/acesso/login-do-cliente')
         await expect(page.getByTestId('cenario-titulo')).toHaveText('Login do cliente atualizado')
+    })
+
+    /** O asterisco do obrigatório é desenhado pelo `::after` do label, então é a classe que o denuncia. */
+    test('marks title, file, domain and the playwright test as required', async ({ page }) => {
+        await page.goto('/projects/alpha-store/scenarios/login-do-cliente')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await page.getByTestId('cenario-editar').click()
+
+        for (const label of [/^Título do cenário$/, /^Arquivo$/, /^Domínio$/, /^Teste \(Playwright\)$/]) {
+            await expect(page.locator('label', { hasText: label })).toHaveClass(/after:content-\['\*'\]/)
+        }
+
+        await expect(page.locator('label', { hasText: /^Tags$/ })).not.toHaveClass(/after:content-\['\*'\]/)
     })
 
     /** O cenário sem .feature guarda o título no describe do spec: editá-lo tem de sobreviver ao reload. */
     test('saves the title of a scenario that has no gherkin at all', async ({ page }) => {
-        await page.goto('/projects/alpha-store/scenarios/cadastro-de-produto')
+        await page.goto('/projects/alpha-store/scenarios/catalogo/cadastro-de-produto')
         await page.locator('[data-hydrated="true"]').waitFor()
 
         await page.getByTestId('cenario-editar').click()
@@ -364,6 +387,7 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
 
         await page.getByTestId('cenario-editar').click()
         await page.getByTestId('contexto-path').fill('cadastro-de-produto')
+        await page.getByTestId('contexto-dominio').fill('catalogo')
         await page.getByTestId('cenario-editar-salvar').click()
 
         await expect(page.getByRole('dialog')).toContainText('Já existe um cenário')

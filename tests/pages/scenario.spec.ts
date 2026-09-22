@@ -6,7 +6,7 @@ import { defineComponent, h } from 'vue'
 import { UApp } from '#components'
 import ScenarioPage from '~/pages/projects/[projectSlug]/scenarios/[...scenario].vue'
 import { useWebdriver, type RecorderEvent } from '~/composables/webdriver'
-import { settle } from '../support/modal'
+import { settle, type } from '../support/modal'
 import type { ProjectDetail, ScenarioDetail, ScenarioRun } from '~/types/project'
 
 const navigate = vi.hoisted(() => vi.fn())
@@ -477,13 +477,14 @@ describe('ScenarioPage', () => {
     expect((api.drafted as { events: unknown[] }).events).toHaveLength(3)
     expect((field('contexto-titulo') as HTMLInputElement).value).toBe('Login do cliente')
 
+    await type('contexto-dominio', 'login')
     field('contexto-enviar')!.click()
     await settle(6)
 
     expect(api.patched).toMatchObject({
       title: 'Login do cliente',
       path: 'login',
-      domain: '',
+      domain: 'login',
       playwright: 'test("login refeito", async () => {})',
       gherkin: '@read\nFuncionalidade: Entrar'
     })
