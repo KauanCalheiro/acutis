@@ -63,7 +63,8 @@ export async function openModal(component: Component, props: Record<string, unkn
           'onGenerated': record('generated'),
           'onUpdated': record('updated'),
           'onRerecord': record('rerecord'),
-          'onResume': record('resume')
+          'onResume': record('resume'),
+          'onCancel': record('cancel')
         })
       })
     }

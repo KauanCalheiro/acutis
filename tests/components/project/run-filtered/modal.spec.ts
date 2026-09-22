@@ -71,10 +71,10 @@ describe('ProjectRunFilteredModal', () => {
     expect(field('execucao-detalhes')!.textContent).toContain('Cenários: 0')
   })
 
-  it('leva ao relatório do Playwright e fecha', async () => {
+  it('leva ao relatório do acutis e fecha', async () => {
     const { state } = await open({ tests: [test()] })
 
-    expect(field('execucao-relatorio')!.getAttribute('href')).toContain('alpha-store')
+    expect(field('execucao-relatorio')!.getAttribute('href')).toBe('/projects/alpha-store/report')
 
     field('execucao-fechar')!.click()
     await settle()
@@ -99,5 +99,37 @@ describe('ProjectRunFilteredModal', () => {
     await settle()
 
     expect(document.body.textContent).not.toContain('Nenhum passo reportado.')
+  })
+})
+
+describe('ProjectRunFilteredModal: cancelamento', () => {
+  it('oferece cancelar enquanto a execução corre', async () => {
+    await open({ running: true })
+
+    expect(field('execucao-cancelar')).toBeDefined()
+  })
+
+  it('pede o cancelamento para a tela, sem fechar o modal sozinho', async () => {
+    const { state, events } = await open({ running: true })
+
+    field('execucao-cancelar')!.click()
+    await settle()
+
+    expect(events.cancel).toHaveLength(1)
+    expect(state.value).toBe(true)
+  })
+
+  it('não oferece cancelar quando a execução já terminou', async () => {
+    await open({ tests: [test()], testedAt: '01/01/2026 10:00' })
+
+    expect(field('execucao-cancelar')).toBeUndefined()
+    expect(field('execucao-fechar')).toBeDefined()
+  })
+
+  it('diz que a execução foi interrompida, em vez de anunciar falha', async () => {
+    await open({ cancelled: true, tests: [test({ status: 'running' })] })
+
+    expect(field('execucao-status')!.textContent).toContain('Cancelada')
+    expect(field('execucao-fechar')).toBeDefined()
   })
 })

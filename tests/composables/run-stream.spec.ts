@@ -298,3 +298,82 @@ describe('useRunStream', () => {
     expect(stream.videoUrl.value).toBeNull()
   })
 })
+
+describe('useRunStream: cancelamento', () => {
+  it('fecha o stream e sai do estado de rodando', () => {
+    const stream = started(['abre o login'])
+
+    stream.cancel()
+
+    expect(source().closed).toBe(true)
+    expect(stream.running.value).toBe(false)
+  })
+
+  it('anuncia que foi o usuário que interrompeu, e não uma falha do teste', () => {
+    const stream = started(['abre o login'])
+
+    stream.cancel()
+
+    expect(stream.cancelled.value).toBe(true)
+    expect(stream.passed.value).toBe(false)
+  })
+
+  it('para de reagir aos eventos que ainda cheguem do stream fechado', () => {
+    const stream = started(['abre o login'])
+
+    stream.cancel()
+    source().send({ event: 'run:finished', passed: true, output: 'tudo verde' })
+
+    expect(stream.running.value).toBe(false)
+    expect(stream.passed.value).toBe(false)
+    expect(stream.output.value).toBeNull()
+  })
+
+  it('limpa o cancelamento quando a próxima execução começa', () => {
+    const stream = started(['abre o login'])
+    stream.cancel()
+
+    stream.start({ spec: 'login.spec.ts' })
+
+    expect(stream.cancelled.value).toBe(false)
+    expect(stream.running.value).toBe(true)
+  })
+})
+
+describe('useRunStream: o que sobra na tela depois do cancelamento', () => {
+  function halfway() {
+    const stream = started(['abre o login', 'preenche o email'])
+
+    source().send({ event: 'test', id: 't1', title: 'Login do cliente', status: 'pending', steps: ['abre o login', 'preenche o email'] })
+    source().send({ event: 'step', testId: 't1', title: 'abre o login', status: 'pending' })
+    source().send({ event: 'step', testId: 't1', title: 'abre o login', status: 'success', durationMs: 100 })
+    source().send({ event: 'step', testId: 't1', title: 'preenche o email', status: 'pending' })
+
+    return stream
+  }
+
+  it('não deixa passo nenhum rodando ou esperando', () => {
+    const stream = halfway()
+
+    stream.cancel()
+
+    expect(stream.steps.value.map(step => step.status)).toEqual(['success'])
+  })
+
+  it('tira da lista o cenário que ficou pela metade', () => {
+    const stream = halfway()
+
+    stream.cancel()
+
+    expect(stream.tests.value).toEqual([])
+  })
+
+  it('mantém o cenário que terminou antes do corte', () => {
+    const stream = halfway()
+    source().send({ event: 'test', id: 't1', title: 'Login do cliente', status: 'success', durationMs: 300 })
+
+    stream.cancel()
+
+    expect(stream.tests.value.map(item => item.status)).toEqual(['success'])
+  })
+})
