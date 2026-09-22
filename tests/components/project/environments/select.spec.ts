@@ -39,12 +39,34 @@ function mount(slug: string) {
 }
 
 describe('ProjectEnvironmentsSelect', () => {
-  it('vira um atalho para editar quando só existe um ambiente', async () => {
+  it('nomeia o ambiente único sem esconder o botão de configurar', async () => {
     const wrapper = await mount('solo')
 
-    expect(wrapper.get('[data-testid="projeto-ambientes"]').text()).toContain('Homologação')
+    expect(wrapper.get('[data-testid="projeto-ambiente-nome"]').text()).toContain('Homologação')
+    expect(wrapper.find('[data-testid="projeto-ambientes"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="projeto-ambiente-ativo"]').exists()).toBe(false)
+  })
+
+  it('chama o botão de configurações, que é o que a tela abre', async () => {
+    const wrapper = await mount('solo')
+
+    expect(wrapper.get('[data-testid="projeto-ambientes"]').attributes('aria-label'))
+      .toBe('Configurações')
+  })
+
+  it('leva à edição pelo botão de configurar, mesmo com um ambiente só', async () => {
+    const wrapper = await mount('solo')
 
     await wrapper.get('[data-testid="projeto-ambientes"]').trigger('click')
+
+    expect(wrapper.findComponent(ProjectEnvironmentsSelect).emitted('edit')).toHaveLength(1)
+  })
+
+  it('mantém o nome do ambiente como atalho para a mesma edição', async () => {
+    const wrapper = await mount('solo')
+
+    await wrapper.get('[data-testid="projeto-ambiente-nome"]').trigger('click')
+
     expect(wrapper.findComponent(ProjectEnvironmentsSelect).emitted('edit')).toHaveLength(1)
   })
 
