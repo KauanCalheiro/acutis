@@ -44,22 +44,19 @@ async function activate(environment?: string) {
 </script>
 
 <template>
-  <UTooltip
-    v-if="items.length < 2"
-    text="Editar as variáveis deste ambiente"
-  >
+  <UFieldGroup>
     <UButton
+      v-if="items.length < 2"
       icon="i-ic-round-layers"
       :label="items[0]?.label ?? 'Ambientes'"
       color="neutral"
       variant="soft"
-      data-testid="projeto-ambientes"
+      data-testid="projeto-ambiente-nome"
       @click="emit('edit')"
     />
-  </UTooltip>
 
-  <UFieldGroup v-else>
     <USelectMenu
+      v-else
       v-model="active"
       :items="items"
       value-key="value"
@@ -76,7 +73,7 @@ async function activate(environment?: string) {
 
     <BaseButtonIcon
       icon="i-ic-round-tune"
-      label="Editar ambientes"
+      label="Configurações"
       color="neutral"
       variant="soft"
       data-testid="projeto-ambientes"
