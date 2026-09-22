@@ -474,6 +474,10 @@ describe('ScenarioPage', () => {
     await corte.trigger('click')
     await settle()
 
+    // O cenário é autenticado: o login roda antes de o navegador abrir.
+    FakeEventSource.last!.send({ event: 'run:finished', passed: true, output: 'ok' })
+    await settle()
+
     expect(useWebdriver().state.value.recording).toBe(true)
     expect(useWebdriver().state.value.events).toHaveLength(2)
 
@@ -806,5 +810,69 @@ describe('ScenarioPage: autenticação', () => {
     await settle(8)
 
     expect(field('revisao-erro')!.textContent).toContain('Não foi possível gerar a autenticação')
+  })
+})
+
+describe('ScenarioPage: sessão da gravação retomada', () => {
+  function withEvents() {
+    api.scenario = scenario({
+      events: [
+        { type: 'navigate', url: 'http://loja.test/login', timestamp: 1000 },
+        { type: 'fill', label: 'E-mail', value: 'a@b.c', timestamp: 2000 },
+        { type: 'submit', timestamp: 3000 }
+      ] as unknown as RecorderEvent[]
+    })
+  }
+
+  /** O duplo clique com a pausa é o que a timeline exige para confirmar o corte. */
+  async function cut(wrapper: Awaited<ReturnType<typeof mount>>) {
+    const corte = wrapper.findAll('[data-testid="revisao-retomar"]')[1]!
+
+    await corte.trigger('click')
+    await new Promise(resolve => setTimeout(resolve, 700))
+    await corte.trigger('click')
+    await settle()
+  }
+
+  it('roda o login antes de abrir o navegador para retomar um cenário autenticado', async () => {
+    withEvents()
+    const wrapper = await mount()
+
+    await cut(wrapper)
+
+    expect(FakeEventSource.last!.url).toContain('spec=tests%2Fauth.setup.ts')
+    expect(useWebdriver().state.value.recording).toBe(false)
+
+    FakeEventSource.last!.send({ event: 'run:finished', passed: true, output: 'ok' })
+    await settle()
+
+    expect(useWebdriver().state.value.recording).toBe(true)
+  })
+
+  it('não abre o navegador quando o login falha', async () => {
+    withEvents()
+    const wrapper = await mount()
+
+    await cut(wrapper)
+    FakeEventSource.last!.send({ event: 'run:finished', passed: false, output: 'login falhou' })
+    await settle()
+
+    expect(useWebdriver().state.value.recording).toBe(false)
+  })
+
+  it('retoma direto o cenário público, que não usa sessão', async () => {
+    api.scenario = scenario({
+      tags: ['@publico'],
+      events: [
+        { type: 'navigate', url: 'http://loja.test/login', timestamp: 1000 },
+        { type: 'fill', label: 'E-mail', value: 'a@b.c', timestamp: 2000 },
+        { type: 'submit', timestamp: 3000 }
+      ] as unknown as RecorderEvent[]
+    })
+    const wrapper = await mount()
+
+    await cut(wrapper)
+
+    expect(useWebdriver().state.value.recording).toBe(true)
   })
 })
