@@ -189,6 +189,9 @@ onMounted(() => {
   if (typeof asked === 'string' && tabs.value.some(item => item.value === asked)) tab.value = asked
   if (route.query.editar !== undefined) editOpen.value = true
 
+  // `?gravar` é como o projeto manda quem ainda não tem login direto para a gravação dele.
+  if (route.query.gravar !== undefined && isAuth.value && !written.value) recordLogin()
+
   if (!fromReport.value) return
 
   tab.value = 'execucoes'
@@ -583,29 +586,25 @@ async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
       class="mt-8 flex flex-col items-center gap-3 py-10 text-center"
       data-testid="auth-intro"
     >
-      <div class="flex size-12 items-center justify-center rounded-lg bg-elevated">
-        <UIcon
-          name="i-ic-round-lock"
-          class="size-7 text-dimmed"
-        />
-      </div>
-      <p class="font-semibold">
+      <p class="text-xl font-semibold">
         Autenticação ainda não gravada
       </p>
-      <p class="max-w-md text-sm text-muted">
-        Vamos gravar o login de verdade: clique em "Gravar login" e entre normalmente na aba que abrir. A IA transforma essa gravação num teste de autenticação, sem adivinhar seletor e sem você digitar sua senha em formulário nenhum.
+      <p class="max-w-md text-muted mb-3">
+        Vamos gravar o login de verdade: entre normalmente na aba que abrir. A IA transforma essa gravação num teste de autenticação, sem adivinhar seletor e sem você digitar sua senha em formulário nenhum.
       </p>
+
+      <BaseEmptyAction
+        icon="i-ic-round-lock"
+        title="Gravar o login"
+        description="Abre o navegador para você entrar no sistema uma vez. A partir daí os cenários gravam já autenticados."
+        testid="auth-gravar-vazio"
+        :disabled="!webdriver.connected"
+        @click="recordLogin"
+      />
+
       <p class="max-w-md text-xs text-dimmed">
         A senha digitada na gravação fica salva localmente no <code>.env</code> do projeto, nunca no script gerado nem versionada. Assim que o teste estiver escrito, ele é executado para confirmar que o login funciona.
       </p>
-      <UButton
-        label="Gravar login"
-        trailing-icon="i-ic-round-fiber-manual-record"
-        class="mt-2"
-        :disabled="!webdriver.connected"
-        data-testid="auth-gravar-vazio"
-        @click="recordLogin"
-      />
       <UButton
         v-if="project!.auth_status === 'unset'"
         label="Não precisa de login"
