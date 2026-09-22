@@ -6,6 +6,7 @@ import ProjectReportStacked from '~/components/project/report/stacked.vue'
 import ProjectReportMatrix from '~/components/project/report/matrix.vue'
 import ProjectReportRanking from '~/components/project/report/ranking.vue'
 import ProjectReportRuns from '~/components/project/report/runs.vue'
+import ProjectReportMetric from '~/components/project/report/metric.vue'
 import { mountInApp } from '../../support/app'
 import type { SuiteRun } from '#shared/contracts/report'
 import type { ScenarioStat } from '~/utils/report'
@@ -272,5 +273,47 @@ describe('ProjectReportRuns', () => {
     expect(item.text()).toContain('2 cenários filtrados')
     expect(item.text()).toContain('main')
     expect(item.attributes('data-status')).toBe('failed')
+  })
+})
+
+describe('ProjectReportMetric', () => {
+  it('explica o dado num tooltip, para quem não conhece o termo', async () => {
+    const wrapper = await mountInApp(ProjectReportMetric, {
+      props: {
+        name: 'ultima',
+        label: 'Última rodada',
+        value: '3/4',
+        explanation: 'Uma rodada é uma execução dos cenários do projeto de uma vez só.'
+      }
+    })
+
+    expect(wrapper.findComponent({ name: 'UTooltip' }).props('text'))
+      .toBe('Uma rodada é uma execução dos cenários do projeto de uma vez só.')
+  })
+
+  /** O balão do Nuxt UI nasce com altura fixa e texto truncado, que a frase inteira estoura. */
+  it('deixa o balão crescer em linhas, em vez de esticar numa tira só', async () => {
+    const wrapper = await mountInApp(ProjectReportMetric, {
+      props: {
+        name: 'ultima',
+        label: 'Última rodada',
+        value: '3/4',
+        explanation: 'Uma rodada é uma execução dos cenários do projeto de uma vez só.'
+      }
+    })
+
+    const ui = wrapper.findComponent({ name: 'UTooltip' }).props('ui') as Record<string, string>
+
+    expect(ui.content).toContain('h-auto')
+    expect(ui.content).toContain('max-w-xs')
+    expect(ui.text).toContain('whitespace-normal')
+  })
+
+  it('dispensa o tooltip quando a métrica não tem explicação', async () => {
+    const wrapper = await mountInApp(ProjectReportMetric, {
+      props: { name: 'ultima', label: 'Última rodada', value: '3/4' }
+    })
+
+    expect(wrapper.findComponent({ name: 'UTooltip' }).exists()).toBe(false)
   })
 })
