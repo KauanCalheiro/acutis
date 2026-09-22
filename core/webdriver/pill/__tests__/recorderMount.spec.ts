@@ -223,3 +223,64 @@ it('no modo hover o clique grava a passagem do mouse', async () => {
   expect(types()).toEqual(['hover'])
   expect(captureMode.value).toBeNull()
 })
+
+/** Revelar a senha troca o `type` para `text`: o valor não pode deixar de ser tratado como sensível. */
+it('mascara a senha revelada depois de digitada', async () => {
+  mountRecorder()
+  page('<input id="senha" type="password" />')
+  const senha = document.querySelector<HTMLInputElement>('#senha')!
+
+  senha.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+  senha.value = 'segredo'
+  senha.type = 'text'
+  senha.dispatchEvent(new Event('change', { bubbles: true }))
+  await flush()
+
+  expect(enviados[0]!.value).toBe('••••')
+  expect(enviados[0]!.inputType).toBe('password')
+})
+
+it('mascara a senha revelada antes de ser digitada', async () => {
+  mountRecorder()
+  page('<input id="campo-oculto" type="password" />')
+  const senha = document.querySelector<HTMLInputElement>('#campo-oculto')!
+
+  senha.type = 'text'
+  await flush()
+  senha.value = 'outro-segredo'
+  senha.dispatchEvent(new Event('change', { bubbles: true }))
+  await flush()
+
+  expect(enviados[0]!.value).toBe('••••')
+  expect(enviados[0]!.inputType).toBe('password')
+})
+
+it('mascara o campo que o nome denuncia como segredo, mesmo nascendo como texto', async () => {
+  mountRecorder()
+  page('<input id="email" /><input name="user_token" /><input id="campo-senha" /><input data-testid="segredo-do-app" />')
+
+  for (const selector of ['#email', '[name="user_token"]', '#campo-senha', '[data-testid="segredo-do-app"]']) {
+    const campo = document.querySelector<HTMLInputElement>(selector)!
+
+    campo.value = 'valor-digitado'
+    campo.dispatchEvent(new Event('change', { bubbles: true }))
+  }
+  await flush()
+
+  expect(enviados.map(event => event.value)).toEqual(['valor-digitado', '••••', '••••', '••••'])
+})
+
+it('não confunde o campo que só lembra a palavra com um segredo de verdade', async () => {
+  mountRecorder()
+  page('<input id="tokenizacao-nota" /><input name="senhorio" />')
+
+  for (const selector of ['#tokenizacao-nota', '[name="senhorio"]']) {
+    const campo = document.querySelector<HTMLInputElement>(selector)!
+
+    campo.value = 'valor-digitado'
+    campo.dispatchEvent(new Event('change', { bubbles: true }))
+  }
+  await flush()
+
+  expect(enviados.map(event => event.value)).toEqual(['valor-digitado', 'valor-digitado'])
+})

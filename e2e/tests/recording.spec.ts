@@ -241,6 +241,33 @@ test.describe('recording gateway events', { tag: ['@write', '@recording'] }, () 
         }
     })
 
+    /** O olhinho troca o `type` para `text`: o campo continua sendo senha para quem grava. */
+    test('masks the password even after the user reveals it on screen', async ({ request }) => {
+        const gateway = await connectGateway()
+
+        try {
+            gateway.send('START_RECORDING')
+
+            const goto = await request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: fixtureBaseUrl } })
+            expect(goto.ok()).toBe(true)
+
+            const reveal = await request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#reveal-password' } })
+            expect(reveal.ok()).toBe(true)
+
+            const fill = await request.post(`${WEBDRIVER_URL}/debug/fill`, { data: { selector: '#password', value: 'revelada-123' } })
+            expect(fill.ok()).toBe(true)
+
+            const message = await gateway.waitForMessage((m) => m.event === 'recorder:fill')
+            expect(message.value).toBe('••••')
+            expect(message.inputType).toBe('password')
+
+            gateway.send('STOP_RECORDING')
+            await gateway.waitForMessage((m) => m.event === 'recorder:stop')
+        } finally {
+            gateway.close()
+        }
+    })
+
     test('reports the real password value when recording in auth mode', async ({ request }) => {
         const gateway = await connectGateway()
 
