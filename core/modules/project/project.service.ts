@@ -12,6 +12,7 @@ import { AUTH_ID, authExists } from '../auth/providers/auth.js'
 import { EnvKey } from '../environment/providers/env-key.js'
 import { Environments } from '../environment/providers/environments.js'
 import type { ProjectDetail as ProjectShowResponse } from '#shared/contracts/project'
+import { selectorOrder, type SelectorKey } from '../recording/selector-priority.js'
 import { Project, type ProjectManifest } from './entities/project.entity.js'
 import { patchManifest, readManifest } from './providers/manifest.js'
 import { ProjectReport } from './providers/project-report.js'
@@ -166,8 +167,18 @@ export class ProjectService {
       storage_state: join(path, environments.storageState()),
       requires_url: !baseUrl && !manifest.url_skipped,
       vscode_url: `vscode://file${path}`,
-      has_report: new ProjectReport(path).exists()
+      has_report: new ProjectReport(path).exists(),
+      selectors: selectorOrder(manifest.selectors)
     }
+  }
+
+  /** Guarda a ordem em que a gravação tenta os seletores. @returns a ordem completa que ficou. */
+  async setSelectorPriority(slug: string, selectors: SelectorKey[]): Promise<SelectorKey[]> {
+    const order = selectorOrder(selectors)
+
+    patchManifest(this.pathOf(slug), { selectors: order })
+
+    return order
   }
 
   /**

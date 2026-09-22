@@ -6,6 +6,11 @@
 import { pathOf } from '../../common/playwright/url.js'
 import type { RecordingEvent, RecordingSelectors } from '../../common/types/recording.js'
 import { describeElement, MASK } from '../../modules/recording/recording.js'
+import {
+  chooseSelector,
+  DEFAULT_SELECTOR_PRIORITY,
+  type SelectorKey
+} from '../../modules/recording/selector-priority.js'
 
 /** O que a cortina da pill pergunta: se a ferramenta ainda está agindo, e em que passo travou. */
 export interface ReplayState {
@@ -25,22 +30,26 @@ function attribute(name: string, value: string): string {
 }
 
 /** O seletor mais estável que o evento gravou, na mesma ordem de preferência do spec emitido. */
-export function replaySelector(selectors: RecordingSelectors | null): string | null {
-  if (!selectors) return null
+export function replaySelector(
+  selectors: RecordingSelectors | null,
+  order: SelectorKey[] = DEFAULT_SELECTOR_PRIORITY
+): string | null {
+  const chosen = chooseSelector(selectors, order)
 
-  if (selectors.dataTestId) {
-    return attribute('data-testid', selectors.dataTestId) + (selectors.hiddenTwins ? ':visible' : '')
+  if (!selectors || chosen === null) return null
+
+  switch (chosen) {
+    case 'dataTestId':
+      return attribute('data-testid', selectors.dataTestId!) + (selectors.hiddenTwins ? ':visible' : '')
+    case 'dataCy': return attribute('data-cy', selectors.dataCy!)
+    case 'ariaLabel': return attribute('aria-label', selectors.ariaLabel!)
+    case 'placeholder': return attribute('placeholder', selectors.placeholder!)
+    case 'cssStable': return selectors.cssStable!
+    case 'id': return attribute('id', selectors.id!)
+    case 'text': return `text=${JSON.stringify(selectors.text)}`
+    case 'finder': return selectors.finder!
+    case 'xpath': return `xpath=${selectors.xpath}`
   }
-  if (selectors.dataCy) return attribute('data-cy', selectors.dataCy)
-  if (selectors.ariaLabel) return attribute('aria-label', selectors.ariaLabel)
-  if (selectors.placeholder) return attribute('placeholder', selectors.placeholder)
-  if (selectors.cssStable) return selectors.cssStable
-  if (selectors.id) return attribute('id', selectors.id)
-  if (selectors.text) return `text=${JSON.stringify(selectors.text)}`
-  if (selectors.finder) return selectors.finder
-  if (selectors.xpath) return `xpath=${selectors.xpath}`
-
-  return null
 }
 
 /** Valor que o navegador ainda consegue digitar: o mascarado e o marcador de ambiente não são. */
@@ -48,7 +57,10 @@ function typeable(value: string | null): value is string {
   return value !== null && value !== '' && value !== MASK && !/^\{\{.+\}\}$/.test(value)
 }
 
-export function replaySteps(events: RecordingEvent[]): ReplayStep[] {
+export function replaySteps(
+  events: RecordingEvent[],
+  order: SelectorKey[] = DEFAULT_SELECTOR_PRIORITY
+): ReplayStep[] {
   const steps: ReplayStep[] = []
 
   events.forEach((event, at) => {
@@ -59,7 +71,7 @@ export function replaySteps(events: RecordingEvent[]): ReplayStep[] {
       return
     }
 
-    const selector = replaySelector(event.selectors)
+    const selector = replaySelector(event.selectors, order)
 
     if (!selector) return
 

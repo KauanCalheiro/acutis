@@ -7,6 +7,7 @@ import type { ActiveVars } from '../../common/playwright/active-vars.js'
 import { Playwright } from '../../common/playwright/playwright.js'
 import { pathOf, type Url } from '../../common/playwright/url.js'
 import type { RecordedEvent, Selectors } from './events.js'
+import { chooseSelector, DEFAULT_SELECTOR_PRIORITY, type SelectorKey } from './selector-priority.js'
 import type { Recording } from './recording.js'
 import { describeElement, SENSITIVE_PREFIX } from './recording.js'
 
@@ -44,7 +45,8 @@ export class SpecEmitter {
   constructor(
     private readonly recording: Recording,
     private readonly base: Url,
-    private readonly environments: ActiveVars
+    private readonly environments: ActiveVars,
+    private readonly order: SelectorKey[] = DEFAULT_SELECTOR_PRIORITY
   ) {}
 
   spec(title: string, scenario: string): Playwright {
@@ -344,23 +346,25 @@ export class SpecEmitter {
   private locator(event: RecordedEvent): string | null {
     const selectors: Partial<Selectors> | null | undefined = event.selectors
 
-    if (!selectors) return null
+    const chosen = chooseSelector(selectors, this.order)
 
-    if (selectors.dataTestId) {
-      const visible = selectors.hiddenTwins ? '.filter({ visible: true })' : ''
+    if (!selectors || chosen === null) return null
 
-      return `page.getByTestId(${this.literal(selectors.dataTestId)})${visible}`
+    switch (chosen) {
+      case 'dataTestId': {
+        const visible = selectors.hiddenTwins ? '.filter({ visible: true })' : ''
+
+        return `page.getByTestId(${this.literal(selectors.dataTestId!)})${visible}`
+      }
+      case 'dataCy': return `page.locator(${this.literal(`[data-cy="${selectors.dataCy}"]`)})`
+      case 'ariaLabel': return `page.locator(${this.literal(`[aria-label="${selectors.ariaLabel}"]`)})`
+      case 'placeholder': return `page.getByPlaceholder(${this.literal(selectors.placeholder!)})`
+      case 'cssStable': return `page.locator(${this.literal(selectors.cssStable!)})`
+      case 'id': return `page.locator(${this.literal(`[id="${selectors.id}"]`)})`
+      case 'text': return `page.getByText(${this.literal(selectors.text!)}, { exact: true })`
+      case 'finder': return `page.locator(${this.literal(selectors.finder!)})`
+      case 'xpath': return `page.locator(${this.literal(`xpath=${selectors.xpath}`)})`
     }
-    if (selectors.dataCy) return `page.locator(${this.literal(`[data-cy="${selectors.dataCy}"]`)})`
-    if (selectors.ariaLabel) return `page.locator(${this.literal(`[aria-label="${selectors.ariaLabel}"]`)})`
-    if (selectors.placeholder) return `page.getByPlaceholder(${this.literal(selectors.placeholder)})`
-    if (selectors.cssStable) return `page.locator(${this.literal(selectors.cssStable)})`
-    if (selectors.id) return `page.locator(${this.literal(`[id="${selectors.id}"]`)})`
-    if (selectors.text) return `page.getByText(${this.literal(selectors.text)}, { exact: true })`
-    if (selectors.finder) return `page.locator(${this.literal(selectors.finder)})`
-    if (selectors.xpath) return `page.locator(${this.literal(`xpath=${selectors.xpath}`)})`
-
-    return null
   }
 
   private timeout(slow: boolean): string {

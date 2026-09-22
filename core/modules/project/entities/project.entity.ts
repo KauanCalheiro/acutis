@@ -20,4 +20,6 @@ export interface ProjectManifest {
   slug: string
   created_at: string
   version: number
+  /** A ordem em que a gravação tenta os seletores; ausente, vale a padrão. */
+  selectors?: string[]
 }

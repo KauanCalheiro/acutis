@@ -1,11 +1,20 @@
 <script setup lang="ts">
+import { selectorKeySchema, type SelectorKey } from '#shared/contracts/project'
 import type { EditableVar, Environment, EnvironmentList, EnvironmentVar } from '~/types/project'
 
 interface ProjectEnvironmentsModal {
   slug: string
+  selectors?: SelectorKey[]
 }
 
-const { slug } = defineProps<ProjectEnvironmentsModal>()
+const { slug, selectors = selectorKeySchema.options } = defineProps<ProjectEnvironmentsModal>()
+
+const tab = ref('ambientes')
+
+const tabs = [
+  { value: 'ambientes', label: 'Ambientes', icon: 'i-ic-round-layers' },
+  { value: 'seletores', label: 'Seletores', icon: 'i-ic-round-my-location' }
+]
 
 const open = defineModel<boolean>('open', {
   default: false
@@ -195,11 +204,36 @@ async function remove() {
     v-model:open="open"
     wide
     :dismissable="!dirty"
-    title="Ambientes"
-    description="Cada ambiente diz contra o que os cenários rodam. Os arquivos ficam fora do git, então cada máquina tem os seus."
   >
+    <template #header>
+      <UTabs
+        v-model="tab"
+        :items="tabs"
+        :content="false"
+        class="w-full pt-4"
+      />
+    </template>
+
     <template #body>
-      <div @click.capture="dismissConfirmations">
+      <ProjectSelectorsPriority
+        v-if="tab === 'seletores'"
+        :slug="slug"
+        :selectors="selectors"
+        @saved="emit('saved')"
+      />
+
+      <div
+        v-else
+        @click.capture="dismissConfirmations"
+      >
+        <p
+          class="mb-4 text-sm text-muted"
+          data-testid="ambientes-descricao"
+        >
+          Cada ambiente diz contra o que os cenários rodam. Os arquivos ficam fora do git, então
+          cada máquina tem os seus.
+        </p>
+
         <div class="flex flex-col gap-4 sm:flex-row">
           <div class="flex flex-col gap-3 sm:w-56 shrink-0">
             <UButton

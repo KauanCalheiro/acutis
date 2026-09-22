@@ -657,6 +657,7 @@ async function remove() {
     <ProjectEnvironmentsModal
       v-model:open="environmentsOpen"
       :slug="slug"
+      :selectors="project!.selectors"
       @saved="reloadProjectAndEnvironments"
     />
 

@@ -10,6 +10,7 @@ import { ActiveVars } from '../../common/playwright/active-vars.js'
 import { Playwright } from '../../common/playwright/playwright.js'
 import { Url } from '../../common/playwright/url.js'
 import { Recording } from '../recording/recording.js'
+import { selectorOrder } from '../recording/selector-priority.js'
 import { SpecEmitter } from '../recording/spec-emitter.js'
 import { checkAuth } from '../rules/auth-rules.js'
 import type { Violation } from '../rules/violation.js'
@@ -17,7 +18,7 @@ import type { RunnerService, RunResult } from '../../webdriver/runner/runner.ser
 import { EnvKey } from '../environment/providers/env-key.js'
 import { environmentVar } from '../environment/providers/environment-var.js'
 import type { Environments } from '../environment/providers/environments.js'
-import { patchManifest } from '../project/providers/manifest.js'
+import { patchManifest, readManifest } from '../project/providers/manifest.js'
 import { Git } from '../git/providers/git.js'
 import { eventsPathOf, htmlPathOf } from '../scenario/providers/scenario.js'
 import type { ProjectService } from '../project/project.service.js'
@@ -137,7 +138,7 @@ export class AuthService {
     const recording = Recording.make(input.events)
     const credentials = recording.credentials()
 
-    const generated = await this.generate(environments, input, recording)
+    const generated = await this.generate(environments, input, recording, path)
 
     ensureAuthConfig(path)
     put(join(path, AUTH_SPEC), generated.authSetup)
@@ -168,13 +169,15 @@ export class AuthService {
   private async generate(
     environments: Environments,
     input: AuthRecordingDto,
-    recording: Recording
+    recording: Recording,
+    path: string
   ): Promise<GeneratedAuthSetup> {
     const vars = this.activeVars(environments, input, recording)
     const base = new Url(vars.get(EnvKey.URL)?.value || input.baseUrl)
     const run = this.runFor(input, vars)
 
-    const emitted = new SpecEmitter(recording, base, vars).authSetup()
+    const order = selectorOrder(readManifest(path).selectors)
+    const emitted = new SpecEmitter(recording, base, vars, order).authSetup()
     const [settled, warnings] = await this.settle(recording, base, vars, run, emitted)
 
     await run?.ensure(settled.value)
