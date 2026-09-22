@@ -80,7 +80,7 @@ const timeSlices = computed(() => {
 })
 
 function runLink(test: SuiteRunTest) {
-  return `/projects/${slug.value}/scenarios/${test.id}?tab=execucoes&run=${encodeURIComponent(run.value!.started_at)}`
+  return `/projects/${slug.value}/scenarios/${test.id}?tab=execucoes&run=${encodeURIComponent(run.value!.started_at)}&de=relatorio`
 }
 
 interface Change {

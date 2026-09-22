@@ -169,7 +169,11 @@ const fromReport = computed(() => {
   return scenario.value!.runs.find(previous => previous.started_at === asked)
 })
 
-const backTo = computed(() => fromReport.value
+/**
+ * Quem volta ao relatório é quem veio de lá, e isso a URL declara em `?de=`. Inferir pelo `run=`
+ * mandava para o relatório também quem abriu a execução pelo menu do card, que veio do projeto.
+ */
+const backTo = computed(() => route.query.de === 'relatorio'
   ? `/projects/${slug.value}/report`
   : `/projects/${slug.value}`)
 
