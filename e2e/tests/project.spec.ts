@@ -437,12 +437,21 @@ test.describe('project management', { tag: ['@write', '@project'] }, () => {
 
         const report = page.getByTestId('projeto-relatorio')
         await expect(report).toBeVisible()
-        await expect(report).toHaveAttribute('href', /\/api\/projects\/alpha-store\/report\/$/)
-        await expect(report).toHaveAttribute('target', '_blank')
+        await expect(report).toHaveAttribute('href', '/projects/alpha-store/report')
 
-        const response = await request.get('/api/projects/alpha-store/report/')
-        expect(response.status()).toBe(200)
-        expect(await response.text()).toContain('relatório')
+        await test.step('the button opens the report screen of the acutis itself', async () => {
+            await report.click()
+
+            await expect(page).toHaveURL('/projects/alpha-store/report')
+            await expect(page.getByTestId('relatorio-voltar')).toBeVisible()
+        })
+
+        await test.step('the playwright report the screen links to is still served', async () => {
+            const response = await request.get('/api/projects/alpha-store/report/')
+
+            expect(response.status()).toBe(200)
+            expect(await response.text()).toContain('relatório')
+        })
     })
 
     test('renames the project by editing the title itself', async ({ page }) => {
