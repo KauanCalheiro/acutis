@@ -104,7 +104,11 @@ watch(() => draft.value.title, (title, previous) => {
 <template>
   <div class="flex flex-col gap-5">
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <UFormField label="Título do cenário">
+      <UFormField
+        label="Título do cenário"
+        name="title"
+        required
+      >
         <UInput
           v-model="draft.title"
           :maxlength="TITLE_LIMIT"
@@ -115,6 +119,8 @@ watch(() => draft.value.title, (title, previous) => {
       <UFormField
         v-if="!isAuth"
         label="Arquivo"
+        name="path"
+        required
         help="Nome do .spec.ts / .feature"
       >
         <UInput
@@ -129,6 +135,8 @@ watch(() => draft.value.title, (title, previous) => {
     <UFormField
       v-if="!isAuth"
       label="Domínio"
+      name="domain"
+      required
       help="Pasta onde o cenário será salvo (ex.: login, checkout)"
     >
       <UInput
@@ -142,6 +150,7 @@ watch(() => draft.value.title, (title, previous) => {
     <UFormField
       v-if="!isAuth"
       label="Tags"
+      name="tags"
       help="Separadas por espaço (ex.: @read @criando)"
     >
       <UInput
@@ -151,7 +160,10 @@ watch(() => draft.value.title, (title, previous) => {
       />
     </UFormField>
 
-    <UFormField label="Cenário (Gherkin)">
+    <UFormField
+      label="Cenário (Gherkin)"
+      name="gherkin"
+    >
       <BaseCodefield
         v-model="draft.gherkin"
         language="gherkin"
@@ -159,7 +171,11 @@ watch(() => draft.value.title, (title, previous) => {
       />
     </UFormField>
 
-    <UFormField label="Teste (Playwright)">
+    <UFormField
+      label="Teste (Playwright)"
+      name="playwright"
+      required
+    >
       <BaseCodefield
         v-model="draft.playwright"
         language="typescript"

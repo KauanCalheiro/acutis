@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { GeneratedAuthSetup } from '#shared/contracts/auth'
+import { scenarioDraftSchema } from '#shared/schemas/scenario'
 import type { ScenarioDetail, TestDraft } from '~/types/project'
 import type { RecorderEvent } from '~/composables/webdriver'
 
@@ -31,6 +32,7 @@ function emptyDraft(): TestDraft {
   return { title: '', tags: [], domain: '', path: '', gherkin: '', playwright: '' }
 }
 
+const contextos = useTemplateRef('contextos')
 const step = ref<'review' | 'loading' | 'edit'>('review')
 const draft = ref<TestDraft>(emptyDraft())
 const error = ref<string | null>(null)
@@ -168,7 +170,13 @@ function resume(index: number) {
         :auth="isAuth"
       />
 
-      <template v-else-if="step === 'edit'">
+      <UForm
+        v-else-if="step === 'edit'"
+        ref="contextos"
+        :schema="scenarioDraftSchema"
+        :state="draft"
+        @submit="commit"
+      >
         <ScenarioWarnings
           :warnings="draft.warnings"
           :slug="slug"
@@ -179,7 +187,7 @@ function resume(index: number) {
           v-model:draft="draft"
           novo
         />
-      </template>
+      </UForm>
 
       <ScenarioReviewTimeline
         v-else
@@ -213,7 +221,7 @@ function resume(index: number) {
           label="Enviar"
           :loading="submitting"
           data-testid="contexto-enviar"
-          @click="commit"
+          @click="contextos?.submit()"
         />
       </template>
 
