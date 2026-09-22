@@ -108,8 +108,7 @@ const slowest = computed(() => [...stats.value]
         v-if="runs.length"
         icon="i-ic-round-assessment"
         label="Abrir o relatório do Playwright, com vídeo e trace. Ele guarda só a execução mais recente, a de cima na lista."
-        color="neutral"
-        variant="soft"
+        color="primary"
         :to="reportUrlFor(slug)"
         target="_blank"
         external

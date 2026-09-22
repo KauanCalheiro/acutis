@@ -23,11 +23,7 @@ const {
 /** Sem explicação o card não vira gatilho de tooltip: fica a div simples de antes. */
 const wrapper = computed(() => explanation ? UTooltip : 'div')
 
-/** O balão nasce com altura fixa e texto truncado, medida para rótulo curto, não para uma frase. */
-const tooltipUi = {
-  content: 'h-auto max-w-xs items-start px-3 py-2',
-  text: 'whitespace-normal overflow-visible leading-snug'
-}
+const tooltipUi = WRAPPED_TOOLTIP
 
 const toneClass = {
   neutral: 'text-highlighted',
