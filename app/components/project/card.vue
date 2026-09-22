@@ -103,9 +103,26 @@ async function remove() {
         class="transition-colors hover:bg-accented/75"
       >
         <div class="flex flex-col gap-2">
-          <p class="font-semibold truncate">
-            {{ project.name }}
-          </p>
+          <div class="flex items-center gap-2 -my-1">
+            <p class="font-semibold truncate flex-1">
+              {{ project.name }}
+            </p>
+
+            <UDropdownMenu :items="actions">
+              <UButton
+                icon="i-ic-round-more-vert"
+                color="neutral"
+                variant="ghost"
+                aria-label="Ações do projeto"
+                data-testid="projeto-acoes"
+                @click.stop.prevent
+              />
+
+              <template #item-label="{ item }">
+                <span :data-testid="item.testid">{{ item.label }}</span>
+              </template>
+            </UDropdownMenu>
+          </div>
           <p
             class="text-sm text-muted truncate"
             :title="project.repository ?? undefined"
