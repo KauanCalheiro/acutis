@@ -426,9 +426,24 @@ describe('ScenarioPage', () => {
 
   it('volta para o relatório quando o cenário foi aberto por ele', async () => {
     api.scenario = scenario({ runs: [run()] })
-    const wrapper = await mount('/projects/alpha-store/scenarios/login?tab=execucoes&run=2026-01-02T10%3A00%3A00.000Z')
+    const wrapper = await mount('/projects/alpha-store/scenarios/login?tab=execucoes&run=2026-01-02T10%3A00%3A00.000Z&de=relatorio')
 
     expect(wrapper.get('[data-testid="cenario-voltar"]').attributes('href')).toBe('/projects/alpha-store/report')
+  })
+
+  /** O menu do card do cenário também abre uma execução, e quem veio dele veio do projeto. */
+  it('volta para o projeto quando a execução foi aberta pelo card do cenário', async () => {
+    api.scenario = scenario({ runs: [run()] })
+    const wrapper = await mount('/projects/alpha-store/scenarios/login?tab=execucoes&run=ultima')
+
+    expect(wrapper.get('[data-testid="cenario-voltar"]').attributes('href')).toBe('/projects/alpha-store')
+  })
+
+  it('volta para o projeto quando ninguém apontou uma execução', async () => {
+    api.scenario = scenario({ runs: [run()] })
+    const wrapper = await mount()
+
+    expect(wrapper.get('[data-testid="cenario-voltar"]').attributes('href')).toBe('/projects/alpha-store')
   })
 
   it('exclui o cenário depois de confirmar', async () => {
