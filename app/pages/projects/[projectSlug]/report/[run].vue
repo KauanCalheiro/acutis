@@ -15,7 +15,7 @@ onMounted(() => {
 const { data: project } = await useFetch<ProjectDetail>(`/api/projects/${slug.value}`)
 const { data } = await useFetch<SuiteRunsResponse>(`/api/projects/${slug.value}/runs`)
 
-const runs = computed(() => data.value?.runs ?? [])
+const runs = computed(() => withScenarioTitles(data.value?.runs ?? [], project.value?.scenarios ?? []))
 const index = computed(() => runs.value.findIndex(run => Date.parse(run.started_at) === startedAt.value))
 const run = computed(() => runs.value[index.value])
 
@@ -226,6 +226,7 @@ const durationDelta = computed(() => previous.value
           :value="`${run.totals.passed}/${run.totals.tests}`"
           :tone="run.passed ? 'success' : 'error'"
           :hint="counted(run.totals.failed, 'falhou', 'falharam', 'nenhum falhou')"
+          explanation="Cenário é um teste seu, um arquivo .spec.ts. O número diz quantos passaram entre os que rodaram nesta rodada."
         />
         <ProjectReportMetric
           name="sucesso"
@@ -245,6 +246,7 @@ const durationDelta = computed(() => previous.value
           label="Steps"
           :value="`${run.totals.steps}`"
           :hint="`${(run.totals.steps / Math.max(run.totals.tests, 1)).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} por cenário`"
+          explanation="Step é cada passo dentro de um cenário, como abrir a tela, preencher um campo ou conferir um resultado."
         />
         <ProjectReportMetric
           name="mais-lento"

@@ -1,4 +1,5 @@
 import type { SuiteRun } from '#shared/contracts/report'
+import type { Scenario } from '#shared/contracts/scenario'
 
 export interface ReportSummary {
   runs: number
@@ -33,6 +34,16 @@ function percent(part: number, total: number): number {
 
 function average(values: number[]): number {
   return values.length === 0 ? 0 : values.reduce((total, value) => total + value, 0) / values.length
+}
+
+/** O nome do cenário no acutis no lugar do título do `test()` que o Playwright reportou. */
+export function withScenarioTitles(runs: SuiteRun[], scenarios: Scenario[]): SuiteRun[] {
+  const titles = new Map(scenarios.map(scenario => [scenario.spec, scenario.title]))
+
+  return runs.map(run => ({
+    ...run,
+    tests: run.tests.map(test => ({ ...test, title: titles.get(test.spec) ?? test.title }))
+  }))
 }
 
 /** As métricas da capa do relatório, tiradas das rodadas que vieram da API. */
