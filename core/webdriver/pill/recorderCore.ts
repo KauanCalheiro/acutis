@@ -23,6 +23,64 @@ export function shouldMaskPasswords(): boolean {
   return (window as unknown as { __acutisRecorderMode?: string }).__acutisRecorderMode !== 'auth'
 }
 
+/** Palavra inteira: `senhorio` e `tokenizacao` não são segredo, `user_token` e `campo-senha` são. */
+const SECRET_WORDS = /(^|[^a-z])(password|passwd|pwd|senha|segredo|secret|token|apikey|api_key)([^a-z]|$)/i
+
+const secretFields = new WeakSet<HTMLInputElement>()
+const secretKeys = new Set<string>()
+
+/** O que identifica o campo entre remontagens da tela; null quando ele não tem nada estável. */
+function fieldKey(el: HTMLInputElement): string | null {
+  return el.id || el.name || el.getAttribute('data-testid') || null
+}
+
+function rememberSecret(el: HTMLInputElement): void {
+  secretFields.add(el)
+
+  const key = fieldKey(el)
+
+  if (key !== null) secretKeys.add(key)
+}
+
+/** Um campo é segredo pelo tipo de agora, pelo que ele já foi, ou pelo nome que carrega. */
+export function isSecretField(el: Element): boolean {
+  if (!(el instanceof HTMLInputElement)) return false
+  if (el.type === 'password') return true
+  if (secretFields.has(el)) return true
+
+  const key = fieldKey(el)
+
+  if (key !== null && secretKeys.has(key)) return true
+
+  return [el.id, el.name, el.getAttribute('data-testid'), el.autocomplete]
+    .some(attribute => attribute !== null && attribute !== '' && SECRET_WORDS.test(attribute))
+}
+
+/**
+ * Guarda quem é senha antes que a tela possa disfarçar: no foco, e quando o `type` deixa de ser
+ * `password`, que é o que o botão de revelar faz.
+ */
+function watchSecretFields(): void {
+  document.addEventListener('focusin', (event) => {
+    const el = event.target
+
+    if (el instanceof HTMLInputElement && isSecretField(el)) rememberSecret(el)
+  }, true)
+
+  new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      const el = mutation.target
+
+      if (el instanceof HTMLInputElement && mutation.oldValue === 'password') rememberSecret(el)
+    }
+  }).observe(document.documentElement, {
+    subtree: true,
+    attributes: true,
+    attributeOldValue: true,
+    attributeFilter: ['type']
+  })
+}
+
 /**
  * Chama de volta em toda mudança de URL: pushState, replaceState, histórico e hash. Devolve o
  * desfazer.
@@ -184,6 +242,7 @@ export function mountRecorder(onClick?: () => void): void {
   }
 
   dispatch(buildNavigateEvent())
+  watchSecretFields()
 
   document.addEventListener('click', (e) => {
     onClick?.()
@@ -215,9 +274,12 @@ export function mountRecorder(onClick?: () => void): void {
     if (!(el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement)) return
     const raw = (el as HTMLInputElement).value
     if (!raw) return
-    const isPassword = el instanceof HTMLInputElement && el.type === 'password'
+    const isPassword = isSecretField(el)
     const value = isPassword && shouldMaskPasswords() ? '••••' : raw
-    dispatch({ ...buildBaseEvent('fill', el), value })
+    const base = buildBaseEvent('fill', el)
+
+    // O tipo de agora pode ser `text`, por revelar a senha: quem lê depois precisa do que ele é.
+    dispatch({ ...base, inputType: isPassword ? 'password' : base.inputType, value })
   }, true)
 
   document.addEventListener('submit', (e) => {
