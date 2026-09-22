@@ -95,6 +95,8 @@ onBeforeUnmount(() => {
 const filteredRun = useRunStream(() => slug.value)
 const filteredRunOpen = ref(false)
 
+const runConfirmOpen = ref(false)
+
 /** O que roda é o que está na tela: os títulos filtrados viram o `--grep` do Playwright. */
 function runFiltered() {
   filteredRunOpen.value = true
@@ -547,7 +549,13 @@ async function remove() {
         :disabled="!runnable.length"
         :loading="filteredRun.running.value"
         data-testid="projeto-rodar-filtrados"
-        @click="runFiltered"
+        @click="runConfirmOpen = true"
+      />
+      <ProjectRunFilteredConfirm
+        v-model:open="runConfirmOpen"
+        :count="runnable.length"
+        :filter="search.trim()"
+        @confirm="runFiltered"
       />
       <UDropdownMenu
         v-if="!webdriver.recording && hasAuth"
