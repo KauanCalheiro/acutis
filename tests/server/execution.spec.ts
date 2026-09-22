@@ -79,3 +79,55 @@ describe('execution Nitro API', () => {
     expect(response.status).toBe(404)
   })
 })
+
+describe('execução e a url do ambiente', () => {
+  function withEnvironment(url: string) {
+    const project = join(root, 'minha-loja')
+
+    mkdirSync(join(project, 'environments'), { recursive: true })
+    writeFileSync(join(project, 'environments/homolog.json'), JSON.stringify({
+      name: 'Homolog',
+      vars: [{ key: 'URL', value: url, secret: false }]
+    }))
+    writeFileSync(join(project, '.env'), 'ENVIRONMENT=homolog\n')
+  }
+
+  /** O relato do usuário: rodou apontando para a URL A, trocou o valor e rodou de novo. */
+  it('usa a url que o ambiente tem agora, e não a de quando o cenário foi gravado', async () => {
+    const received: Record<string, string>[] = []
+
+    vi.spyOn(RunnerService.prototype, 'streamProject').mockImplementation(async (_path, options, onEvent) => {
+      received.push(options.env ?? {})
+      onEvent({ event: 'run:finished', title: 'fim', status: 'success', passed: true })
+
+      return { passed: true, output: 'ok' }
+    })
+
+    withEnvironment('https://a.test')
+    await request('/api/projects/minha-loja/run-stream?grep=@smoke').then(response => response.text())
+
+    withEnvironment('https://b.test')
+    await request('/api/projects/minha-loja/run-stream?grep=@smoke').then(response => response.text())
+
+    expect(received.map(env => env.URL)).toEqual(['https://a.test', 'https://b.test'])
+  })
+
+  it('troca o arquivo de sessão junto com a url, para não levar cookie de outro domínio', async () => {
+    const received: Record<string, string>[] = []
+
+    vi.spyOn(RunnerService.prototype, 'streamProject').mockImplementation(async (_path, options, onEvent) => {
+      received.push(options.env ?? {})
+      onEvent({ event: 'run:finished', title: 'fim', status: 'success', passed: true })
+
+      return { passed: true, output: 'ok' }
+    })
+
+    withEnvironment('https://a.test')
+    await request('/api/projects/minha-loja/run-stream').then(response => response.text())
+
+    withEnvironment('https://b.test')
+    await request('/api/projects/minha-loja/run-stream').then(response => response.text())
+
+    expect(received[0]!.STORAGE_STATE).not.toBe(received[1]!.STORAGE_STATE)
+  })
+})

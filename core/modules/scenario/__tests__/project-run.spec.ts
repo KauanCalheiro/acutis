@@ -155,5 +155,30 @@ it('manda ao runner o ambiente ativo do projeto', async () => {
   await api.http.post(`/api/v1/projects/${slug}/run`).send({})
 
   expect(calls[0]!.env!.URL).toBe('https://homolog.test')
-  expect(calls[0]!.env!.STORAGE_STATE).toBe('storage-state.homolog.json')
+  expect(calls[0]!.env!.STORAGE_STATE).toBe('storage-state.homolog.homolog-test.json')
+})
+
+/** O relato do primeiro usuário: rodou com a URL A, trocou o valor e rodou de novo esperando a B. */
+it('roda com a url que o ambiente tem agora, e não com a de quando o cenário foi gravado', async () => {
+  const slug = await bareProject()
+  const dir = api.projectPath(slug)
+
+  mkdirSync(join(dir, 'environments'), { recursive: true })
+  writeFileSync(join(dir, 'environments/homolog.json'), JSON.stringify({
+    name: 'Homolog',
+    vars: [{ key: 'URL', value: 'https://a.test', secret: false }]
+  }))
+  writeFileSync(join(dir, '.env'), 'ENVIRONMENT=homolog\nURL=https://a.test\n')
+
+  await api.http.post(`/api/v1/projects/${slug}/run`).send({})
+  expect(calls[0]!.env!.URL).toBe('https://a.test')
+
+  await api.http
+    .put(`/api/v1/projects/${slug}/settings`)
+    .send({ baseUrl: 'https://b.test' })
+    .expect(200)
+
+  await api.http.post(`/api/v1/projects/${slug}/run`).send({})
+
+  expect(calls[1]!.env!.URL).toBe('https://b.test')
 })
