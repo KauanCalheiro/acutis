@@ -320,12 +320,36 @@ function recordLogin() {
 /** Retomar do passo escolhido: o navegador refaz os anteriores e a gravação continua dali. */
 const isPublic = computed(() => scenario.value!.tags.includes('@publico'))
 
-function resumeWith(events: RecorderEvent[]) {
-  recordStarted.value = true
+const AUTH_SPEC = 'tests/auth.setup.ts'
+const authRun = useRunStream(() => slug.value)
+const authRunOpen = ref(false)
+
+function openRecorder(events: RecorderEvent[]) {
   startRecording(isAuth.value ? 'auth' : 'scenario', {
     url: project.value!.base_url ?? undefined,
     storageState: isAuth.value ? undefined : sessionFor(project.value!, isPublic.value),
     replay: events
+  })
+}
+
+/** A sessão é de uma execução anterior e pode nem existir: o login roda antes de retomar. */
+function resumeWith(events: RecorderEvent[]) {
+  recordStarted.value = true
+
+  if (isAuth.value || sessionFor(project.value!, isPublic.value) === undefined) {
+    openRecorder(events)
+
+    return
+  }
+
+  authRunOpen.value = true
+  authRun.start({ spec: AUTH_SPEC }, async () => {
+    await refreshProject()
+
+    if (!authRun.passed.value) return
+
+    authRunOpen.value = false
+    openRecorder(events)
   })
 }
 
@@ -722,6 +746,21 @@ async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
       :playwright="executedPlaywright"
       :output="runOutput"
       @fix="requestFix"
+    />
+
+    <ScenarioTestRunModal
+      v-model:open="authRunOpen"
+      :running="authRun.running.value"
+      :passed="authRun.passed.value"
+      :steps="authRun.steps.value"
+      :video-url="authRun.videoUrl.value"
+      :project-name="project!.name"
+      kind="autenticacao"
+      running-title="Autenticando"
+      :scenario-name="AUTH_SPEC"
+      :branch="project!.branch"
+      :tested-at="authRun.testedAt.value"
+      :output="authRun.output.value"
     />
 
     <ProjectAuthCredentials
