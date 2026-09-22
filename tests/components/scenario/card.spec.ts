@@ -94,6 +94,22 @@ describe('ScenarioCard', () => {
     expect(card.emitted('remove')).toHaveLength(1)
   })
 
+  it('sinaliza as ações num botão, com o mesmo menu do clique com o botão direito', async () => {
+    const wrapper = await mount()
+
+    expect(wrapper.find('[data-testid="cenario-acoes"]').exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'UDropdownMenu' }).props('items'))
+      .toEqual(wrapper.findComponent({ name: 'UContextMenu' }).props('items'))
+  })
+
+  it('não abre o cenário ao clicar no botão de ações', async () => {
+    const wrapper = await mount()
+
+    await wrapper.get('[data-testid="cenario-acoes"]').trigger('click')
+
+    expect(navigate).not.toHaveBeenCalled()
+  })
+
   it('oferece voltar a rodar o cenário que está pulado', async () => {
     const wrapper = await mount({ skipped: true })
 
