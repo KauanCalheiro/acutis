@@ -635,7 +635,7 @@ async function remove() {
     </div>
 
     <ScenarioEmpty
-      v-else
+      v-if="!scenarios.length"
       :disabled="!webdriver.connected"
       @record="recordDefault"
     />
