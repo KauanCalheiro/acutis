@@ -32,6 +32,8 @@ export function useRunStream(slug: () => string) {
   const ran = ref<Omit<RunTest, 'steps'>[]>([])
   const running = ref(false)
   const passed = ref(false)
+  const cancelled = ref(false)
+  let current: EventSource | undefined
   const videoUrl = ref<string | null>(null)
   const testedAt = ref<string | null>(null)
   const output = ref<string | null>(null)
@@ -75,8 +77,25 @@ export function useRunStream(slug: () => string) {
     steps.value = seeded
   }
 
+  const finished = (status: RunStep['status']) => status === 'success' || status === 'failed'
+
+  /**
+   * Interrompe a execução em andamento: o servidor encerra o Playwright quando o stream fecha.
+   * O que não terminou sai da tela, porque ninguém vai saber como ele acabaria.
+   */
+  function cancel() {
+    current?.close()
+    current = undefined
+    running.value = false
+    cancelled.value = true
+    testedAt.value = formatTestedAt(new Date())
+    steps.value = steps.value.filter(step => finished(step.status))
+    ran.value = ran.value.filter(test => finished(test.status))
+  }
+
   function start({ spec, grep, filter }: { spec?: string, grep?: string, filter?: string }, onFinish?: () => void) {
     reset()
+    cancelled.value = false
     running.value = true
 
     const query = new URLSearchParams({
@@ -85,8 +104,11 @@ export function useRunStream(slug: () => string) {
       ...(filter ? { filter } : {})
     })
     const source = new EventSource(`/api/projects/${slug()}/run-stream?${query}`)
+    current = source
 
     source.onmessage = (message) => {
+      if (cancelled.value) return
+
       const data = JSON.parse(message.data) as RunStreamEvent
 
       if (data.event === 'run:started') {
@@ -166,5 +188,5 @@ export function useRunStream(slug: () => string) {
 
   const failedStep = computed(() => steps.value.find(step => step.status === 'failed'))
 
-  return { steps, tests, running, passed, videoUrl, testedAt, output, failedStep, start, reset }
+  return { steps, tests, running, passed, cancelled, videoUrl, testedAt, output, failedStep, start, cancel, reset }
 }

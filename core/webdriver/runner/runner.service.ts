@@ -26,6 +26,8 @@ export interface ProjectRunOptions {
   spec?: string
   grep?: string
   env?: Record<string, string>
+  /** Abortar encerra o Playwright: é o cancelamento pedido na tela, o F5 e a aba fechada. */
+  signal?: AbortSignal
 }
 
 const RUN_TIMEOUT_MS = 120_000
@@ -221,8 +223,13 @@ export class RunnerService {
 
       const timer = setTimeout(() => child.kill('SIGKILL'), PROJECT_RUN_TIMEOUT_MS)
 
+      /** Cancelar na tela, recarregar a página ou fechar a aba fecha o stream, e o Playwright vai junto. */
+      const abort = () => child.kill('SIGTERM')
+      options.signal?.addEventListener('abort', abort, { once: true })
+
       child.on('close', (code) => {
         clearTimeout(timer)
+        options.signal?.removeEventListener('abort', abort)
         resolvePromise({ passed: code === 0, output: withoutMarkers(output) })
       })
     })

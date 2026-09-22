@@ -12,6 +12,10 @@ export default defineEventHandler(async (event) => {
 
   const stream = createEventStream(event)
 
+  /** Quem fecha o stream desiste da execução: cancelou na tela, recarregou a página ou fechou a aba. */
+  const cancellation = new AbortController()
+  stream.onClosed(() => cancellation.abort())
+
   void (async () => {
     let finished: unknown = null
     let writes = Promise.resolve()
@@ -28,7 +32,7 @@ export default defineEventHandler(async (event) => {
         }
 
         writes = writes.then(() => stream.push({ data: JSON.stringify(message) }))
-      })
+      }, cancellation.signal)
 
       await writes
       if (finished !== null) await stream.push({ data: JSON.stringify(finished) })
