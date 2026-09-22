@@ -14,9 +14,14 @@ let lastFillKey: string | null = null
 let lastClickKey: string | null = null
 let lastClickAt = 0
 
+/** Quanto o clique espera pelo par antes de sair como clique simples. */
+export const DOUBLE_CLICK_WINDOW_MS = 150
+
 const pendingQueue: RecordingEvent[] = []
 let drainTimer: number | null = null
 let draining = false
+let heldClick: RecordingEvent | null = null
+let releaseTimer: number | null = null
 
 function scheduleDrain(delay: number): void {
   if (drainTimer !== null) {
@@ -42,6 +47,11 @@ async function drainQueue(): Promise<void> {
   try {
     while (pendingQueue.length > 0) {
       const event = pendingQueue[0]
+
+      if (event === heldClick) {
+        return
+      }
+
       try {
         await reportEvent(event)
         pendingQueue.shift()
@@ -58,6 +68,52 @@ async function drainQueue(): Promise<void> {
 function sendEvent(event: RecordingEvent): void {
   pendingQueue.push(event)
   void drainQueue()
+}
+
+/** Solta o clique que ainda espera pelo par e entrega o que está na fila. */
+export async function flushEvents(): Promise<void> {
+  releaseClick()
+
+  await drainQueue()
+}
+
+function releaseClick(): void {
+  if (releaseTimer !== null) {
+    window.clearTimeout(releaseTimer)
+    releaseTimer = null
+  }
+
+  heldClick = null
+}
+
+/** Segura o clique na fila pela janela do duplo clique, para o par poder tomar o lugar dele. */
+function holdClick(event: RecordingEvent): void {
+  releaseClick()
+  heldClick = event
+  pendingQueue.push(event)
+
+  releaseTimer = window.setTimeout(() => {
+    releaseTimer = null
+    heldClick = null
+    void drainQueue()
+  }, DOUBLE_CLICK_WINDOW_MS)
+}
+
+/** Tira da fila o clique que o duplo clique substitui; false quando ele já tinha saído. */
+function replaceHeldClick(key: string): boolean {
+  if (heldClick === null || clickKey(heldClick) !== key) return false
+
+  const at = pendingQueue.indexOf(heldClick)
+
+  if (at !== -1) pendingQueue.splice(at, 1)
+
+  releaseClick()
+
+  return true
+}
+
+function clickKey(event: RecordingEvent): string {
+  return event.selectors?.xpath ?? event.selectors?.cssStable ?? event.selectors?.finder ?? ''
 }
 
 export function useRecorderEvents() {
@@ -84,13 +140,25 @@ export function useRecorderEvents() {
     }
 
     if (event.type === 'click') {
-      const key = event.selectors?.xpath ?? event.selectors?.cssStable ?? event.selectors?.finder ?? ''
-      if (key === lastClickKey && event.timestamp - lastClickAt < 250) {
+      const key = clickKey(event)
+
+      if (key === lastClickKey && event.timestamp - lastClickAt < DOUBLE_CLICK_WINDOW_MS) {
         return
       }
 
       lastClickKey = key
       lastClickAt = event.timestamp
+
+      holdClick(event)
+      incrementEventCount()
+
+      return
+    }
+
+    if (event.type === 'dblclick' && replaceHeldClick(clickKey(event))) {
+      sendEvent(event)
+
+      return
     }
 
     sendEvent(event)

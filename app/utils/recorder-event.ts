@@ -58,6 +58,8 @@ export function describeRecorderEvent(event: RecorderEvent): string {
       return `Navega para ${page(event)}`
     case 'click':
       return what ? `Clica em ${quoted(what)}` : 'Clica no elemento'
+    case 'dblclick':
+      return what ? `Clica duas vezes em ${quoted(what)}` : 'Clica duas vezes no elemento'
     case 'hover':
       return what ? `Passa o mouse em ${quoted(what)}` : 'Passa o mouse no elemento'
     case 'fill': {

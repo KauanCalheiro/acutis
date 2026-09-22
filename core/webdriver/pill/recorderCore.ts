@@ -3,7 +3,7 @@ import RecorderApp from './RecorderApp.vue'
 import pillCss from './pill.css?inline'
 import { usePillState } from './usePillState'
 import { useOverlay } from './useOverlay'
-import { useRecorderEvents } from './useRecorderEvents'
+import { flushEvents, useRecorderEvents } from './useRecorderEvents'
 import { useAssertMode } from './useAssertMode'
 
 let hostElement: HTMLDivElement | null = null
@@ -241,6 +241,8 @@ export function mountRecorder(onClick?: () => void): void {
     return !!el.closest('button, a, [role="button"], [role="link"], [role="menuitem"], [role="tab"], [onclick]')
   }
 
+  window.__acutisFlushEvents = flushEvents
+
   dispatch(buildNavigateEvent())
   watchSecretFields()
 
@@ -266,6 +268,14 @@ export function mountRecorder(onClick?: () => void): void {
     if (!isInteractive(e.target)) return
 
     dispatch(buildBaseEvent('click', e.target))
+  }, true)
+
+  document.addEventListener('dblclick', (e) => {
+    if (!(e.target instanceof Element) || isHostEvent(e) || isPaused.value) return
+    if (captureMode.value !== null) return
+    if (!isInteractive(e.target)) return
+
+    dispatch(buildBaseEvent('dblclick', e.target))
   }, true)
 
   document.addEventListener('change', (e) => {

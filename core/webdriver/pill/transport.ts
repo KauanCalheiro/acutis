@@ -1,6 +1,7 @@
 declare global {
   interface Window {
     __acutisReportEvent?: (event: unknown) => void
+    __acutisFlushEvents?: () => Promise<void>
     __acutisRequestStop?: () => void
     __acutisCancelRecording?: () => void
   }

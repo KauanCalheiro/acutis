@@ -18,6 +18,7 @@ export type ReplayStep
   = | { action: 'goto', url: string, label: string, at: number }
     | { action: 'fill', selector: string, value: string, label: string, at: number }
     | { action: 'click', selector: string, label: string, at: number }
+    | { action: 'dblclick', selector: string, label: string, at: number }
 
 function attribute(name: string, value: string): string {
   return `[${name}=${JSON.stringify(value)}]`
@@ -69,6 +70,15 @@ export function replaySteps(events: RecordingEvent[]): ReplayStep[] {
         action: 'click',
         selector,
         label: name === null ? 'Clica no elemento' : `Clica em "${name}"`,
+        at
+      })
+    }
+
+    if (event.type === 'dblclick') {
+      steps.push({
+        action: 'dblclick',
+        selector,
+        label: name === null ? 'Clica duas vezes no elemento' : `Clica duas vezes em "${name}"`,
         at
       })
     }

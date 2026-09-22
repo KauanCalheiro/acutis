@@ -34,6 +34,8 @@ export interface ReplayHooks {
 const RECORDING_VIEWPORT = { width: 1280, height: 720 }
 const STORAGE_STATE_TIMEOUT_MS = 1500
 const SCREENCAST_STOP_TIMEOUT_MS = 2500
+
+const FLUSH_TIMEOUT_MS = 1000
 const CDP_CLOSE_TIMEOUT_MS = 1500
 const REPLAY_STEP_TIMEOUT_MS = 2500
 const REPLAY_RETRY_TIMEOUT_MS = 4000
@@ -263,6 +265,12 @@ export class RecorderService {
       } else if (step.action === 'fill') {
         await page.fill(step.selector, step.value, { timeout, force: true })
         await page.locator(step.selector).blur({ timeout }).catch(() => undefined)
+      } else if (step.action === 'dblclick') {
+        const alvo = page.locator(step.selector)
+
+        await alvo.dispatchEvent('click', { detail: 1 }, { timeout })
+        await alvo.dispatchEvent('click', { detail: 2 }, { timeout })
+        await alvo.dispatchEvent('dblclick', { detail: 2 }, { timeout })
       } else {
         await page.locator(step.selector).dispatchEvent('click', {}, { timeout })
       }
@@ -303,6 +311,8 @@ export class RecorderService {
     if (!this.context) {
       return { sessionId: null, storageState: null }
     }
+
+    await this.flushPendingEvents()
 
     this.stopping = true
     const sessionId = this.sessionId
@@ -355,6 +365,21 @@ export class RecorderService {
     this.ready = false
 
     return { sessionId: wasScreencasting ? sessionId : null, storageState }
+  }
+
+  /** Entrega o clique que a página ainda segurava à espera do par do duplo clique. */
+  private async flushPendingEvents(): Promise<void> {
+    if (!this.page || this.page.isClosed()) return
+
+    await this.withTimeout(
+      this.page.evaluate(() => {
+        const flush = (globalThis as { __acutisFlushEvents?: () => Promise<void> }).__acutisFlushEvents
+
+        return flush?.()
+      }).catch(() => undefined),
+      FLUSH_TIMEOUT_MS,
+      undefined
+    )
   }
 
   /** Relata a última navegação, que o script injetado pode não ter alcançado antes de parar. */
@@ -436,6 +461,11 @@ export class RecorderService {
   async debugClick(selector: string): Promise<void> {
     const page = await this.waitForPage()
     await page.click(selector)
+  }
+
+  async debugDblclick(selector: string): Promise<void> {
+    const page = await this.waitForPage()
+    await page.dblclick(selector)
   }
 
   async debugFill(selector: string, value: string): Promise<void> {

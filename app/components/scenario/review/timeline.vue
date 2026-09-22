@@ -33,6 +33,7 @@ let disarmTimer: ReturnType<typeof setTimeout> | undefined
 const eventIcons: Record<string, string> = {
   navigate: 'i-ic-round-public',
   click: 'i-ic-round-ads-click',
+  dblclick: 'i-ic-round-touch-app',
   fill: 'i-ic-round-edit',
   submit: 'i-ic-round-send',
   hover: 'i-ic-round-mouse',

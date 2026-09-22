@@ -166,7 +166,7 @@ export class SpecEmitter {
 
       if (type === 'navigate') {
         step = this.navigation(event, navigated, currentUrl)
-      } else if (type === 'click' || type === 'hover') {
+      } else if (type === 'click' || type === 'dblclick' || type === 'hover') {
         step = this.interaction(event, type, slow)
       } else if (type === 'fill') {
         const entry = this.entry(event, slow, lastClick)
@@ -183,7 +183,7 @@ export class SpecEmitter {
         currentUrl = event.url ?? ''
       }
 
-      if (type === 'click') {
+      if (type === 'click' || type === 'dblclick') {
         lastClick = this.locator(event)
       }
 
@@ -225,8 +225,10 @@ export class SpecEmitter {
 
     if (locator === null) return null
 
-    const verb = type === 'hover' ? 'hover' : 'click'
-    const prefix = type === 'hover' ? 'Passa o mouse' : 'Clica'
+    const verb = type === 'hover' ? 'hover' : type === 'dblclick' ? 'dblclick' : 'click'
+    const prefix = type === 'hover'
+      ? 'Passa o mouse'
+      : type === 'dblclick' ? 'Clica duas vezes' : 'Clica'
     const what = describeElement(event)
 
     return {
@@ -278,7 +280,7 @@ export class SpecEmitter {
 
   /** O passo do Enter no último campo, quando não houve clique de envio. */
   private submission(previousType: string | null, lastField: string | null): Step | null {
-    if (previousType === 'click' || lastField === null) return null
+    if (previousType === 'click' || previousType === 'dblclick' || lastField === null) return null
 
     return {
       title: 'Envia o formulário',
