@@ -462,8 +462,36 @@ describe('ProjectPage', () => {
     await wrapper.get('[data-testid="projeto-rodar-filtrados"]').trigger('click')
     await settle()
 
+    field('projeto-rodar-confirmar')!.click()
+    await settle()
+
     expect(FakeEventSource.last!.url).toContain('grep=Login+do+cliente')
     expect(field('execucao-iniciando')).toBeDefined()
+  })
+
+  it('pergunta antes de rodar, e não roda nada enquanto ninguém confirma', async () => {
+    const wrapper = await mount()
+
+    await wrapper.get('[data-testid="cenario-busca"]').setValue('login')
+    await wrapper.get('[data-testid="projeto-rodar-filtrados"]').trigger('click')
+    await settle()
+
+    expect(field('projeto-rodar-confirmar')).toBeDefined()
+    expect(FakeEventSource.last).toBeUndefined()
+    expect(field('execucao-iniciando')).toBeUndefined()
+  })
+
+  it('não roda quando o usuário desiste na confirmação', async () => {
+    const wrapper = await mount()
+
+    await wrapper.get('[data-testid="projeto-rodar-filtrados"]').trigger('click')
+    await settle()
+
+    field('confirmar-cancelar')!.click()
+    await settle()
+
+    expect(FakeEventSource.last).toBeUndefined()
+    expect(field('execucao-iniciando')).toBeUndefined()
   })
 
   it('deixa o cenário pulado fora da execução filtrada, e da contagem dela', async () => {
@@ -479,6 +507,9 @@ describe('ProjectPage', () => {
     expect(wrapper.findAll('[data-testid="cenario-card"]'), 'o pulado continua na listagem').toHaveLength(2)
 
     await wrapper.get('[data-testid="projeto-rodar-filtrados"]').trigger('click')
+    await settle()
+
+    field('projeto-rodar-confirmar')!.click()
     await settle()
 
     expect(FakeEventSource.last!.url).toContain('grep=Login+do+cliente')

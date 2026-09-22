@@ -185,6 +185,14 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
             await expect(page.getByTestId('projeto-rodar-filtrados')).toHaveText(/Rodar 1 filtrados/)
 
             await page.getByTestId('projeto-rodar-filtrados').click()
+
+            await expect(page.getByRole('dialog')).toContainText('@write')
+
+            await page.getByTestId('confirmar-cancelar').click()
+            await expect(page.getByTestId('projeto-rodar-confirmar')).toBeHidden()
+
+            await page.getByTestId('projeto-rodar-filtrados').click()
+            await page.getByTestId('projeto-rodar-confirmar').click()
         })
 
         await expect(page.getByTestId('execucao-status')).toContainText('Falha')
@@ -196,10 +204,10 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
         await expect(tests.nth(0)).toHaveAttribute('data-status', 'success')
         await expect(tests.nth(1)).toHaveAttribute('data-status', 'failed')
 
-        await test.step('offer the playwright report of the run', async () => {
+        await test.step('offer the acutis report of the run, not the playwright one', async () => {
             await expect(page.getByTestId('execucao-relatorio')).toHaveAttribute(
                 'href',
-                /\/api\/projects\/alpha-store\/report\/$/,
+                '/projects/alpha-store/report',
             )
         })
 
@@ -228,6 +236,7 @@ test.describe('project page', { tag: ['@read', '@project'] }, () => {
         })
 
         await page.getByTestId('projeto-rodar-filtrados').click()
+        await page.getByTestId('projeto-rodar-confirmar').click()
 
         const tests = page.getByTestId('execucao-teste')
         await expect(tests).toHaveCount(2)
