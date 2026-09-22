@@ -146,6 +146,14 @@ describe('ReportPage', () => {
       .toBe('/api/projects/alpha-store/report/')
   })
 
+  it('destaca o relatório do Playwright como a ação principal da tela', async () => {
+    const wrapper = await mount()
+
+    const playwright = wrapper.get('[data-testid="relatorio-playwright"]')
+
+    expect(playwright.classes().join(' ')).toContain('bg-primary')
+  })
+
   it('recorta os gráficos e pagina a lista quando o histórico é grande', async () => {
     api.runs = Array.from({ length: 40 }, (_value, index) => run(
       new Date(Date.parse('2026-08-01T09:00:00.000Z') + index * 3600_000).toISOString(),

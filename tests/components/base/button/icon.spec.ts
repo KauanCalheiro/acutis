@@ -21,3 +21,20 @@ describe('BaseButtonIcon', () => {
     expect(wrapper.get('button').attributes('disabled')).toBeDefined()
   })
 })
+
+describe('BaseButtonIcon: rótulo longo', () => {
+  it('deixa o balão quebrar em linhas, em vez de esticar numa tira só', async () => {
+    const wrapper = await mountInApp(BaseButtonIcon, {
+      props: {
+        icon: 'i-ic-round-assessment',
+        label: 'Abrir o relatório do Playwright, com vídeo e trace. Ele guarda só a execução mais recente.'
+      }
+    })
+
+    const ui = wrapper.findComponent({ name: 'UTooltip' }).props('ui') as Record<string, string>
+
+    expect(ui.content).toContain('h-auto')
+    expect(ui.content).toContain('max-w-xs')
+    expect(ui.text).toContain('whitespace-normal')
+  })
+})
