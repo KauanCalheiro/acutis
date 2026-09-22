@@ -379,3 +379,24 @@ it('marca o cenário público só no spec quando não há ia', async () => {
   expect(response.body.gherkin).toBe('')
   expect(response.body.playwright).toContain('@publico')
 })
+
+it('escreve o spec pelo seletor que o projeto pôs na frente', async () => {
+  await api.http.put(`/api/v1/projects/${SLUG}/selectors`).send({ selectors: ['xpath'] }).expect(200)
+
+  const response = await draft(payload({
+    events: [
+      { type: 'navigate', timestamp: 1, url: 'http://127.0.0.1:52346/', selectors: null, label: 'Home', value: null },
+      {
+        type: 'click',
+        timestamp: 2,
+        url: 'http://127.0.0.1:52346/',
+        selectors: { dataTestId: 'ir', xpath: '/html[1]/body[1]/button[1]' },
+        label: 'Ir',
+        value: null
+      }
+    ] as RecordedEvent[]
+  }))
+
+  expect(response.body.playwright).toContain('xpath=/html[1]/body[1]/button[1]')
+  expect(response.body.playwright).not.toContain('getByTestId')
+})

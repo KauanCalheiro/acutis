@@ -1,7 +1,7 @@
-import { createReadStream } from 'node:fs'
-import { defineEventHandler, getRouterParam, sendStream } from 'h3'
+import { defineEventHandler, getRouterParam } from 'h3'
 import { projectUseCases } from '../../../../utils/composition/project'
 import { execute } from '../../../../utils/http'
+import { sendReportFile } from '../../../../utils/report-file'
 
 export default defineEventHandler(async (event) => {
   const file = await execute(() => projectUseCases().projects.reportFile(
@@ -9,5 +9,5 @@ export default defineEventHandler(async (event) => {
     getRouterParam(event, 'path') ?? ''
   ))
 
-  return sendStream(event, createReadStream(file))
+  return sendReportFile(event, file)
 })

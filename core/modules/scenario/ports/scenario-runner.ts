@@ -9,6 +9,8 @@ export interface ScenarioRunOptions {
   spec?: string
   grep?: string
   env?: Record<string, string>
+  /** Abortar encerra o Playwright: é o cancelamento pedido na tela, o F5 e a aba fechada. */
+  signal?: AbortSignal
 }
 
 export abstract class ScenarioRunner {

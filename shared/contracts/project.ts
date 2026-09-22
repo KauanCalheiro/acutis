@@ -1,6 +1,21 @@
 import * as z from 'zod'
 import { scenarioSchema } from './scenario'
 
+/** Os seletores que a gravação captura, na ordem padrão em que são tentados. */
+export const selectorKeySchema = z.enum([
+  'dataTestId',
+  'dataCy',
+  'ariaLabel',
+  'placeholder',
+  'cssStable',
+  'id',
+  'text',
+  'finder',
+  'xpath'
+], { message: 'O valor informado não é um seletor que a gravação captura.' })
+
+export type SelectorKey = z.output<typeof selectorKeySchema>
+
 export const createProjectSchema = z.object({
   name: z.string().trim()
     .min(1, 'O nome é obrigatório.')
@@ -58,7 +73,8 @@ export const projectDetailSchema = projectSchema.extend({
   storage_state: z.string(),
   requires_url: z.boolean(),
   vscode_url: z.string(),
-  has_report: z.boolean()
+  has_report: z.boolean(),
+  selectors: z.array(selectorKeySchema)
 })
 
 export type ProjectDetail = z.output<typeof projectDetailSchema>
@@ -97,6 +113,14 @@ export type ProjectsResponse = z.output<typeof projectsResponseSchema>
 
 export const updateProjectSchema = z.object({ name: z.string() })
 export type UpdateProjectRequest = z.input<typeof updateProjectSchema>
+
+export const selectorPrioritySchema = z.object({
+  selectors: z.array(selectorKeySchema).min(1, 'A ordem precisa ter ao menos um seletor.')
+})
+export type SelectorPriorityRequest = z.input<typeof selectorPrioritySchema>
+
+export const selectorPriorityResponseSchema = z.object({ selectors: z.array(selectorKeySchema) })
+export type SelectorPriorityResponse = z.output<typeof selectorPriorityResponseSchema>
 
 export const projectSettingsSchema = z.object({
   baseUrl: z.url('A URL base deve ser uma URL válida.')

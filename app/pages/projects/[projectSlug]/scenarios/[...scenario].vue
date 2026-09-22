@@ -169,7 +169,11 @@ const fromReport = computed(() => {
   return scenario.value!.runs.find(previous => previous.started_at === asked)
 })
 
-const backTo = computed(() => fromReport.value
+/**
+ * Quem volta ao relatório é quem veio de lá, e isso a URL declara em `?de=`. Inferir pelo `run=`
+ * mandava para o relatório também quem abriu a execução pelo menu do card, que veio do projeto.
+ */
+const backTo = computed(() => route.query.de === 'relatorio'
   ? `/projects/${slug.value}/report`
   : `/projects/${slug.value}`)
 
@@ -184,6 +188,9 @@ onMounted(() => {
 
   if (typeof asked === 'string' && tabs.value.some(item => item.value === asked)) tab.value = asked
   if (route.query.editar !== undefined) editOpen.value = true
+
+  // `?gravar` é como o projeto manda quem ainda não tem login direto para a gravação dele.
+  if (route.query.gravar !== undefined && isAuth.value && !written.value) recordLogin()
 
   if (!fromReport.value) return
 
@@ -316,12 +323,36 @@ function recordLogin() {
 /** Retomar do passo escolhido: o navegador refaz os anteriores e a gravação continua dali. */
 const isPublic = computed(() => scenario.value!.tags.includes('@publico'))
 
-function resumeWith(events: RecorderEvent[]) {
-  recordStarted.value = true
+const AUTH_SPEC = 'tests/auth.setup.ts'
+const authRun = useRunStream(() => slug.value)
+const authRunOpen = ref(false)
+
+function openRecorder(events: RecorderEvent[]) {
   startRecording(isAuth.value ? 'auth' : 'scenario', {
     url: project.value!.base_url ?? undefined,
     storageState: isAuth.value ? undefined : sessionFor(project.value!, isPublic.value),
     replay: events
+  })
+}
+
+/** A sessão é de uma execução anterior e pode nem existir: o login roda antes de retomar. */
+function resumeWith(events: RecorderEvent[]) {
+  recordStarted.value = true
+
+  if (isAuth.value || sessionFor(project.value!, isPublic.value) === undefined) {
+    openRecorder(events)
+
+    return
+  }
+
+  authRunOpen.value = true
+  authRun.start({ spec: AUTH_SPEC }, async () => {
+    await refreshProject()
+
+    if (!authRun.passed.value) return
+
+    authRunOpen.value = false
+    openRecorder(events)
   })
 }
 
@@ -555,29 +586,25 @@ async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
       class="mt-8 flex flex-col items-center gap-3 py-10 text-center"
       data-testid="auth-intro"
     >
-      <div class="flex size-12 items-center justify-center rounded-lg bg-elevated">
-        <UIcon
-          name="i-ic-round-lock"
-          class="size-7 text-dimmed"
-        />
-      </div>
-      <p class="font-semibold">
+      <p class="text-xl font-semibold">
         Autenticação ainda não gravada
       </p>
-      <p class="max-w-md text-sm text-muted">
-        Vamos gravar o login de verdade: clique em "Gravar login" e entre normalmente na aba que abrir. A IA transforma essa gravação num teste de autenticação, sem adivinhar seletor e sem você digitar sua senha em formulário nenhum.
+      <p class="max-w-md text-muted mb-3">
+        Vamos gravar o login de verdade: entre normalmente na aba que abrir. A IA transforma essa gravação num teste de autenticação, sem adivinhar seletor e sem você digitar sua senha em formulário nenhum.
       </p>
+
+      <BaseEmptyAction
+        icon="i-ic-round-lock"
+        title="Gravar o login"
+        description="Abre o navegador para você entrar no sistema uma vez. A partir daí os cenários gravam já autenticados."
+        testid="auth-gravar-vazio"
+        :disabled="!webdriver.connected"
+        @click="recordLogin"
+      />
+
       <p class="max-w-md text-xs text-dimmed">
         A senha digitada na gravação fica salva localmente no <code>.env</code> do projeto, nunca no script gerado nem versionada. Assim que o teste estiver escrito, ele é executado para confirmar que o login funciona.
       </p>
-      <UButton
-        label="Gravar login"
-        trailing-icon="i-ic-round-fiber-manual-record"
-        class="mt-2"
-        :disabled="!webdriver.connected"
-        data-testid="auth-gravar-vazio"
-        @click="recordLogin"
-      />
       <UButton
         v-if="project!.auth_status === 'unset'"
         label="Não precisa de login"
@@ -718,6 +745,21 @@ async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
       :playwright="executedPlaywright"
       :output="runOutput"
       @fix="requestFix"
+    />
+
+    <ScenarioTestRunModal
+      v-model:open="authRunOpen"
+      :running="authRun.running.value"
+      :passed="authRun.passed.value"
+      :steps="authRun.steps.value"
+      :video-url="authRun.videoUrl.value"
+      :project-name="project!.name"
+      kind="autenticacao"
+      running-title="Autenticando"
+      :scenario-name="AUTH_SPEC"
+      :branch="project!.branch"
+      :tested-at="authRun.testedAt.value"
+      :output="authRun.output.value"
     />
 
     <ProjectAuthCredentials

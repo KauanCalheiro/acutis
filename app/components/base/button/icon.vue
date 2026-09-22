@@ -21,6 +21,7 @@ const {
     :text="label"
     :delay-duration="0"
     arrow
+    :ui="WRAPPED_TOOLTIP"
     :content="{
       side
     }"

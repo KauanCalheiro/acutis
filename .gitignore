@@ -31,3 +31,4 @@ logs
 .idea
 .env.*
 !.env.example
+tasks/*

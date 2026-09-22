@@ -6,6 +6,7 @@ import { UApp } from '#components'
 import ReportPage from '~/pages/projects/[projectSlug]/report/index.vue'
 import { settle } from '../support/modal'
 import type { SuiteRun, SuiteRunTest } from '#shared/contracts/report'
+import type { Scenario } from '#shared/contracts/scenario'
 
 function test(overrides: Partial<SuiteRunTest> = {}): SuiteRunTest {
   return {
@@ -38,7 +39,7 @@ function run(startedAt: string, tests: SuiteRunTest[], filter: string | null = n
   }
 }
 
-const api = { runs: [] as SuiteRun[] }
+const api = { runs: [] as SuiteRun[], scenarios: [] as Scenario[] }
 
 registerEndpoint('/api/projects/alpha-store', () => ({
   name: 'Alpha Store',
@@ -49,7 +50,7 @@ registerEndpoint('/api/projects/alpha-store', () => ({
   created_at: '2026-01-01T00:00:00+00:00',
   branch: 'main',
   updated_at: '2026-01-02T10:00:00+00:00',
-  scenarios: [],
+  scenarios: api.scenarios,
   auth_status: 'configured',
   base_url: 'https://loja.test',
   storage_state: '/tmp/storage-state.json',
@@ -64,6 +65,7 @@ let mounted: { unmount: () => void } | undefined
 
 beforeEach(() => {
   clearNuxtData()
+  api.scenarios = []
   api.runs = [
     run('2026-08-28T17:32:04.120Z', [
       test({ duration_ms: 900 }),
@@ -144,6 +146,14 @@ describe('ReportPage', () => {
       .toBe('/api/projects/alpha-store/report/')
   })
 
+  it('destaca o relatório do Playwright como a ação principal da tela', async () => {
+    const wrapper = await mount()
+
+    const playwright = wrapper.get('[data-testid="relatorio-playwright"]')
+
+    expect(playwright.classes().join(' ')).toContain('bg-primary')
+  })
+
   it('recorta os gráficos e pagina a lista quando o histórico é grande', async () => {
     api.runs = Array.from({ length: 40 }, (_value, index) => run(
       new Date(Date.parse('2026-08-01T09:00:00.000Z') + index * 3600_000).toISOString(),
@@ -163,6 +173,21 @@ describe('ReportPage', () => {
     const wrapper = await mount()
 
     expect(wrapper.get('[data-testid="relatorio-ranking-falhas"]').text()).toContain('Comprar')
+  })
+
+  it('chama o cenário pelo nome que ele tem no projeto, e não pelo título do test()', async () => {
+    api.scenarios = [{
+      title: 'Comprar no carrinho',
+      spec: 'tests/comprar.spec.ts',
+      feature: null,
+      tags: [],
+      domain: null,
+      skipped: false
+    }]
+
+    const wrapper = await mount()
+
+    expect(wrapper.get('[data-testid="relatorio-ranking-falhas"]').text()).toContain('Comprar no carrinho')
   })
 
   it('convida a rodar quando o projeto nunca teve execução agrupada', async () => {

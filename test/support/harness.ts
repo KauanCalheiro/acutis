@@ -50,6 +50,7 @@ import authSkip from '../../server/api/projects/[slug]/auth/skip.post.js'
 import authRecord from '../../server/api/projects/[slug]/auth/record.post.js'
 import authCredentials from '../../server/api/projects/[slug]/auth/credentials.post.js'
 import projectSettings from '../../server/api/projects/[slug]/settings.put.js'
+import projectSelectors from '../../server/api/projects/[slug]/selectors.put.js'
 import projectGitSync from '../../server/api/projects/[slug]/git/sync.post.js'
 import projectSettingsSkip from '../../server/api/projects/[slug]/settings/skip.post.js'
 import scenarioShow from '../../server/api/projects/[slug]/scenarios/[...scenario].get.js'
@@ -162,6 +163,7 @@ function mountRoutes() {
   router.post('/api/v1/projects/:slug/auth/record', authRecord)
   router.post('/api/v1/projects/:slug/auth/credentials', noContent(authCredentials))
   router.put('/api/v1/projects/:slug/settings', projectSettings)
+  router.put('/api/v1/projects/:slug/selectors', projectSelectors)
   router.post('/api/v1/projects/:slug/git/sync', projectGitSync)
   router.post('/api/v1/projects/:slug/settings/skip', noContent(projectSettingsSkip))
 

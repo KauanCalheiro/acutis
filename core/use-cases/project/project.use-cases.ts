@@ -1,4 +1,5 @@
 import type { ProjectService, ListQuery } from '../../modules/project/project.service.js'
+import type { SelectorKey } from '../../modules/recording/selector-priority.js'
 
 export class ProjectUseCases {
   constructor(private readonly service: ProjectService) {}
@@ -9,6 +10,10 @@ export class ProjectUseCases {
   remove(slug: string) { return this.service.remove(slug) }
   setBaseUrl(slug: string, url: string) { return this.service.setBaseUrl(slug, url) }
   skipUrl(slug: string) { return this.service.skipUrl(slug) }
+  setSelectorPriority(slug: string, selectors: SelectorKey[]) {
+    return this.service.setSelectorPriority(slug, selectors)
+  }
+
   sync(slug: string) { return this.service.sync(slug) }
   saveCredentials(slug: string, username: string, password: string) { return this.service.saveCredentials(slug, username, password) }
 }

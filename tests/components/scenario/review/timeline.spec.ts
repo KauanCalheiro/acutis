@@ -27,6 +27,15 @@ describe('ScenarioReviewTimeline', () => {
     expect(wrapper.text()).not.toContain('0.0s')
   })
 
+  it('mostra o duplo clique com ícone próprio, e não como evento sem tipo', async () => {
+    const wrapper = await mount({
+      events: [{ type: 'dblclick', label: 'Linha', timestamp: 1000 }] as unknown as RecorderEvent[]
+    })
+
+    expect(wrapper.text()).toContain('Clica duas vezes em "Linha"')
+    expect(wrapper.get('[data-testid="revisao-evento"]').html()).toContain('i-ic:round-touch-app')
+  })
+
   it('marca o instante de cada evento junto do vídeo', async () => {
     const wrapper = await mount({ videoSrc: 'blob:video', recordingStartedAt: 1000 })
 

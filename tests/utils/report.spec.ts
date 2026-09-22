@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { scenarioStats, summarizeRuns } from '~/utils/report'
+import { scenarioStats, summarizeRuns, withScenarioTitles } from '~/utils/report'
 import type { SuiteRun, SuiteRunTest } from '#shared/contracts/report'
+import type { Scenario } from '#shared/contracts/scenario'
 
 function test(overrides: Partial<SuiteRunTest> = {}): SuiteRunTest {
   return {
@@ -115,5 +116,55 @@ describe('scenarioStats', () => {
     ])
 
     expect(stats.map(stat => stat.id)).toEqual(['comprar', 'entrar'])
+  })
+})
+
+describe('withScenarioTitles', () => {
+  function scenario(overrides: Partial<Scenario> = {}): Scenario {
+    return {
+      title: 'Entrar no sistema',
+      spec: 'tests/entrar.spec.ts',
+      feature: null,
+      tags: [],
+      domain: null,
+      skipped: false,
+      ...overrides
+    }
+  }
+
+  it('troca o título do test() do Playwright pelo nome do cenário', () => {
+    const [first] = withScenarioTitles([run({ tests: [test({ title: 'faz login' })] })], [scenario()])
+
+    expect(first!.tests[0]!.title).toBe('Entrar no sistema')
+  })
+
+  it('mantém o título gravado quando o cenário não está mais no projeto', () => {
+    const [first] = withScenarioTitles([run({ tests: [test({ title: 'faz login' })] })], [])
+
+    expect(first!.tests[0]!.title).toBe('faz login')
+  })
+
+  it('casa cada teste pelo spec dele, e não pela ordem', () => {
+    const rodada = run({
+      tests: [
+        test({ id: 'comprar', spec: 'tests/comprar.spec.ts', title: 'compra um item' }),
+        test({ title: 'faz login' })
+      ]
+    })
+
+    const [first] = withScenarioTitles([rodada], [
+      scenario(),
+      scenario({ title: 'Comprar no carrinho', spec: 'tests/comprar.spec.ts' })
+    ])
+
+    expect(first!.tests.map(item => item.title)).toEqual(['Comprar no carrinho', 'Entrar no sistema'])
+  })
+
+  it('não altera as rodadas que recebeu', () => {
+    const rodada = run({ tests: [test({ title: 'faz login' })] })
+
+    withScenarioTitles([rodada], [scenario()])
+
+    expect(rodada.tests[0]!.title).toBe('faz login')
   })
 })

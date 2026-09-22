@@ -30,6 +30,7 @@ const NETWORK_REASONS: Record<string, string> = {
 
 const ACTIONS: Record<string, string> = {
   click: 'clicar em',
+  dblclick: 'clicar duas vezes em',
   fill: 'preencher',
   check: 'marcar',
   uncheck: 'desmarcar',

@@ -37,7 +37,8 @@ describe('contrato de projetos', () => {
       storage_state: '/tmp/alpha-store/storage-state.json',
       requires_url: true,
       vscode_url: 'vscode://file/tmp/alpha-store',
-      has_report: false
+      has_report: false,
+      selectors: ['dataTestId', 'xpath']
     })
 
     expect(projectsResponseSchema.parse({

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { RunTest } from '~/composables/run-stream'
-import { reportUrlFor } from '~/composables/run-stream'
 
 interface ProjectRunFilteredModal {
   running?: boolean
   passed?: boolean
+  /** A execução que o usuário interrompeu: não é falha do teste, e não tem resultado para mostrar. */
+  cancelled?: boolean
   tests?: RunTest[]
   projectName: string
   slug: string
@@ -17,6 +18,7 @@ interface ProjectRunFilteredModal {
 const {
   running = false,
   passed = false,
+  cancelled = false,
   tests = [],
   projectName,
   slug,
@@ -27,6 +29,20 @@ const {
 
 const open = defineModel<boolean>('open', {
   default: false
+})
+
+const emit = defineEmits<{
+  cancel: []
+}>()
+
+const status = computed(() => {
+  if (cancelled) {
+    return { color: 'neutral' as const, icon: 'i-ic-round-stop-circle', label: 'Cancelada' }
+  }
+
+  return passed
+    ? { color: 'success' as const, icon: 'i-ic-round-check-circle', label: 'Sucesso' }
+    : { color: 'error' as const, icon: 'i-ic-round-error', label: 'Falha' }
 })
 
 const testIcons: Record<RunTest['status'], string> = {
@@ -87,13 +103,13 @@ function ownError(test: RunTest) {
         <template v-else>
           <UBadge
             class="self-start"
-            :color="passed ? 'success' : 'error'"
-            :icon="passed ? 'i-ic-round-check-circle' : 'i-ic-round-error'"
-            :label="passed ? 'Sucesso' : 'Falha'"
+            :color="status.color"
+            :icon="status.icon"
+            :label="status.label"
             data-testid="execucao-status"
           />
           <p class="mt-2 text-xl font-bold">
-            Resultado dos testes
+            {{ cancelled ? 'Execução interrompida' : 'Resultado dos testes' }}
           </p>
         </template>
       </div>
@@ -191,7 +207,21 @@ function ownError(test: RunTest) {
     </template>
 
     <template
-      v-if="!running"
+      v-if="running"
+      #footer
+    >
+      <UButton
+        label="Cancelar execução"
+        color="neutral"
+        variant="soft"
+        icon="i-ic-round-stop-circle"
+        data-testid="execucao-cancelar"
+        @click="emit('cancel')"
+      />
+    </template>
+
+    <template
+      v-else
       #footer
     >
       <UButton
@@ -202,12 +232,11 @@ function ownError(test: RunTest) {
         @click="open = false"
       />
       <UButton
-        label="Relatório do Playwright"
+        label="Ver o relatório"
         trailing-icon="i-ic-round-assessment"
-        :to="reportUrlFor(slug)"
-        target="_blank"
-        external
+        :to="`/projects/${slug}/report`"
         data-testid="execucao-relatorio"
+        @click="open = false"
       />
     </template>
   </BaseModal>

@@ -49,3 +49,32 @@ it('ignora arquivo de ambiente corrompido', () => {
 
   expect(environments().all()).toEqual([])
 })
+
+/** Trocar a URL dentro do mesmo ambiente não pode reaproveitar a sessão do domínio anterior. */
+it('nomeia a sessão pelo host da url, e não só pelo ambiente', () => {
+  environments().set('URL', 'https://a.test')
+
+  const antes = environments().storageState()
+
+  environments().set('URL', 'https://b.test')
+
+  expect(environments().storageState()).not.toBe(antes)
+  expect(antes).toContain('a-test')
+  expect(environments().storageState()).toContain('b-test')
+})
+
+it('mantém a mesma sessão enquanto a url não muda', () => {
+  environments().set('URL', 'https://a.test')
+
+  expect(environments().storageState()).toBe(environments().storageState())
+})
+
+it('volta a usar a sessão do domínio anterior quando a url volta para ele', () => {
+  environments().set('URL', 'https://a.test')
+  const primeira = environments().storageState()
+
+  environments().set('URL', 'https://b.test')
+  environments().set('URL', 'https://a.test')
+
+  expect(environments().storageState()).toBe(primeira)
+})

@@ -140,10 +140,7 @@ function buildCssStableSelector(el: Element): string | null {
     const scoped = scopedSelector(el, own)
     if (scoped) return scoped
   }
-  if (el.id) {
-    const sel = `#${CSS.escape(el.id)}`
-    if (isUnique(sel)) return sel
-  }
+
   return null
 }
 

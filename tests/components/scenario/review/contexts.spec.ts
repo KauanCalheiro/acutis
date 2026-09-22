@@ -18,6 +18,13 @@ function draft(overrides: Partial<TestDraft> = {}): TestDraft {
   })
 }
 
+/** O asterisco do obrigatório é desenhado pelo `::after` do label, então é a classe que o denuncia. */
+function marcadoObrigatorio(root: HTMLElement, label: string): boolean {
+  const found = [...root.querySelectorAll('label')].find(el => el.textContent?.trim() === label)
+
+  return found?.className.includes('after:content-[\'*\']') ?? false
+}
+
 describe('ScenarioReviewContexts', () => {
   it('renders the domain field seeded from the draft', async () => {
     const wrapper = await mountSuspended(ScenarioReviewContexts, {
@@ -62,6 +69,34 @@ describe('ScenarioReviewContexts', () => {
     expect(wrapper.get('[data-testid="contexto-titulo"]').attributes('maxlength')).toBe('120')
     expect(wrapper.get('[data-testid="contexto-path"]').attributes('maxlength')).toBe('80')
     expect(wrapper.get('[data-testid="contexto-dominio"]').attributes('maxlength')).toBe('80')
+  })
+
+  it('marca como obrigatórios os contextos que o cenário exige', async () => {
+    const wrapper = await mountSuspended(ScenarioReviewContexts, {
+      props: { draft: draft() }
+    })
+
+    for (const label of ['Título do cenário', 'Arquivo', 'Domínio', 'Teste (Playwright)']) {
+      expect(marcadoObrigatorio(wrapper.element as HTMLElement, label)).toBe(true)
+    }
+  })
+
+  it('cobra domínio também na edição de um cenário que já está em disco', async () => {
+    const wrapper = await mountSuspended(ScenarioReviewContexts, {
+      props: { draft: draft() }
+    })
+
+    expect(marcadoObrigatorio(wrapper.element as HTMLElement, 'Domínio')).toBe(true)
+  })
+
+  it('deixa tags e gherkin sem marca de obrigatório', async () => {
+    const wrapper = await mountSuspended(ScenarioReviewContexts, {
+      props: { draft: draft() }
+    })
+
+    for (const label of ['Tags', 'Cenário (Gherkin)']) {
+      expect(marcadoObrigatorio(wrapper.element as HTMLElement, label)).toBe(false)
+    }
   })
 
   it('esconde arquivo, domínio e tags na autenticação', async () => {

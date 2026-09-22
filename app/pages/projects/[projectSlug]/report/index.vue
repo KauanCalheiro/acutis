@@ -15,7 +15,7 @@ onMounted(() => {
 const { data: project } = await useFetch<ProjectDetail>(`/api/projects/${slug.value}`)
 const { data } = await useFetch<SuiteRunsResponse>(`/api/projects/${slug.value}/runs`)
 
-const runs = computed(() => data.value?.runs ?? [])
+const runs = computed(() => withScenarioTitles(data.value?.runs ?? [], project.value?.scenarios ?? []))
 const summary = computed(() => summarizeRuns(runs.value))
 const stats = computed(() => scenarioStats(runs.value))
 
@@ -108,8 +108,7 @@ const slowest = computed(() => [...stats.value]
         v-if="runs.length"
         icon="i-ic-round-assessment"
         label="Abrir o relatório do Playwright, com vídeo e trace. Ele guarda só a execução mais recente, a de cima na lista."
-        color="neutral"
-        variant="soft"
+        color="primary"
         :to="reportUrlFor(slug)"
         target="_blank"
         external
@@ -134,24 +133,28 @@ const slowest = computed(() => [...stats.value]
           :value="`${last!.totals.passed}/${last!.totals.tests}`"
           :tone="last!.passed ? 'success' : 'error'"
           :hint="`${new Date(last!.started_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} · ${seconds(last!.duration_ms)}`"
+          explanation="Rodada é uma execução em que vários cenários rodam juntos, como a do botão Rodar filtrados. O número diz quantos cenários passaram na rodada mais recente."
         />
         <ProjectReportMetric
           name="sucesso-rodadas"
           label="Rodadas verdes"
           :value="`${summary.successRate}%`"
           :hint="`${summary.runs} ${plural(summary.runs, 'rodada guardada', 'rodadas guardadas')}`"
+          explanation="De todas as rodadas guardadas, quantas terminaram com todos os cenários passando. Basta um cenário falhar para a rodada inteira contar como vermelha."
         />
         <ProjectReportMetric
           name="sucesso-cenarios"
           label="Cenários verdes"
           :value="`${summary.testSuccessRate}%`"
           :hint="`${summary.totalSteps} ${plural(summary.totalSteps, 'step', 'steps')} · ${summary.averageSteps.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} por cenário`"
+          explanation="Cenário é um teste seu, um arquivo .spec.ts. Aqui a conta é por cenário executado, somando todas as rodadas, e não por rodada inteira."
         />
         <ProjectReportMetric
           name="duracao"
           label="Duração média"
           :value="seconds(summary.averageDurationMs)"
           :hint="`rodada mais longa: ${seconds(longest)}`"
+          explanation="Quanto uma rodada demora, em média, do começo ao fim. Serve para perceber quando a suíte começou a ficar lenta."
         />
         <ProjectReportMetric
           name="instaveis"
@@ -161,6 +164,7 @@ const slowest = computed(() => [...stats.value]
           :hint="summary.flaky === 0
             ? 'nenhum trocou de resultado entre rodadas'
             : plural(summary.flaky, 'trocou de resultado entre rodadas', 'trocaram de resultado entre rodadas')"
+          explanation="Cenários que passaram numa rodada e falharam em outra, sem ninguém mexer neles. Vale olhar mesmo quando o último resultado foi verde, porque o teste não está confiável."
         />
       </div>
 

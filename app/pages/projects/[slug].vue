@@ -95,6 +95,8 @@ onBeforeUnmount(() => {
 const filteredRun = useRunStream(() => slug.value)
 const filteredRunOpen = ref(false)
 
+const runConfirmOpen = ref(false)
+
 /** O que roda é o que está na tela: os títulos filtrados viram o `--grep` do Playwright. */
 function runFiltered() {
   filteredRunOpen.value = true
@@ -217,6 +219,9 @@ const skippingAuth = ref(false)
 
 const AUTH_SPEC = 'tests/auth.setup.ts'
 const authPage = computed(() => `/projects/${slug.value}/scenarios/auth`)
+
+/** A tela de autenticação já abrindo o navegador, para quem ainda não gravou o login. */
+const authRecordingPage = computed(() => `${authPage.value}?gravar`)
 
 const authRun = useRunStream(() => slug.value)
 const authRunOpen = ref(false)
@@ -500,10 +505,10 @@ async function remove() {
           @click="skipAuth"
         />
         <UButton
-          label="Configurar"
+          label="Gravar o login"
           size="md"
           color="warning"
-          :to="authPage"
+          :to="authRecordingPage"
           data-testid="projeto-auth-configurar"
         />
       </template>
@@ -547,7 +552,13 @@ async function remove() {
         :disabled="!runnable.length"
         :loading="filteredRun.running.value"
         data-testid="projeto-rodar-filtrados"
-        @click="runFiltered"
+        @click="runConfirmOpen = true"
+      />
+      <ProjectRunFilteredConfirm
+        v-model:open="runConfirmOpen"
+        :count="runnable.length"
+        :filter="search.trim()"
+        @confirm="runFiltered"
       />
       <UDropdownMenu
         v-if="!webdriver.recording && hasAuth"
@@ -635,14 +646,18 @@ async function remove() {
     </div>
 
     <ScenarioEmpty
-      v-else
+      v-if="!scenarios.length"
       :disabled="!webdriver.connected"
+      :needs-login="project!.auth_status === 'unset'"
       @record="recordDefault"
+      @login="navigateTo(authRecordingPage)"
+      @skip="skipAuth"
     />
 
     <ProjectEnvironmentsModal
       v-model:open="environmentsOpen"
       :slug="slug"
+      :selectors="project!.selectors"
       @saved="reloadProjectAndEnvironments"
     />
 
@@ -657,12 +672,14 @@ async function remove() {
       v-model:open="filteredRunOpen"
       :running="filteredRun.running.value"
       :passed="filteredRun.passed.value"
+      :cancelled="filteredRun.cancelled.value"
       :tests="filteredRun.tests.value"
       :project-name="project!.name"
       :slug="slug"
       :filter="search"
       :tested-at="filteredRun.testedAt.value"
       :output="filteredRun.output.value"
+      @cancel="filteredRun.cancel()"
     />
 
     <ScenarioTestRunModal

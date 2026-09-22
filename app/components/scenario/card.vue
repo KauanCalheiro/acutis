@@ -77,9 +77,26 @@ const actions = computed(() => [
       @click="navigateTo(page)"
     >
       <div class="flex flex-col gap-2">
-        <p class="font-semibold truncate">
-          {{ scenario.title }}
-        </p>
+        <div class="flex items-center gap-2 -my-1">
+          <p class="font-semibold truncate flex-1">
+            {{ scenario.title }}
+          </p>
+
+          <UDropdownMenu :items="actions">
+            <UButton
+              icon="i-ic-round-more-vert"
+              color="neutral"
+              variant="ghost"
+              aria-label="Ações do cenário"
+              data-testid="cenario-acoes"
+              @click.stop.prevent
+            />
+
+            <template #item-label="{ item }">
+              <span :data-testid="item.testid">{{ item.label }}</span>
+            </template>
+          </UDropdownMenu>
+        </div>
         <p class="text-sm text-muted italic truncate">
           {{ scenario.spec }}
         </p>

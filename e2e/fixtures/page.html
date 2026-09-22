@@ -14,9 +14,13 @@
 <button id="btn">Click me</button>
 <input id="name" placeholder="Name" />
 <input id="password" type="password" placeholder="Password" />
+<button id="reveal-password" type="button" aria-label="Show password">Show</button>
 <script>
   document.getElementById('btn').addEventListener('click', () => {
     localStorage.setItem('token', 'abc')
+  })
+  document.getElementById('reveal-password').addEventListener('click', () => {
+    document.getElementById('password').type = 'text'
   })
 </script>
 </body>

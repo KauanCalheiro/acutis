@@ -10,6 +10,8 @@ import { ActiveVars } from '../../common/playwright/active-vars.js'
 import { Url } from '../../common/playwright/url.js'
 import { Recording, SENSITIVE_PREFIX } from '../recording/recording.js'
 import type { RecordedEvent } from '../recording/events.js'
+import { selectorOrder, type SelectorKey } from '../recording/selector-priority.js'
+import { readManifest } from '../project/providers/manifest.js'
 import { SpecEmitter } from '../recording/spec-emitter.js'
 import { checkSpec } from '../rules/spec-rules.js'
 import type { Violation } from '../rules/violation.js'
@@ -89,7 +91,7 @@ export class GenerationService {
     const gherkin = written?.gherkin ?? ''
     const domain = written?.domain ?? ''
 
-    const emitter = new SpecEmitter(events, base, environments)
+    const emitter = new SpecEmitter(events, base, environments, this.selectorOrderOf(path))
     const playwright = emitter.spec(titleOf(gherkin), scenarioOf(gherkin))
     const envVars = emitter.envVars()
 
@@ -180,6 +182,11 @@ export class GenerationService {
     if (Object.keys(html).length > 0) {
       put(join(path, htmlPathOf(spec)), JSON.stringify(html))
     }
+  }
+
+  /** A ordem de seletores que o projeto configurou, ou a padrão. */
+  private selectorOrderOf(path: string): SelectorKey[] {
+    return selectorOrder(readManifest(path).selectors)
   }
 
   /** As variáveis do ambiente ativo, com a URL desta gravação já preenchida. */

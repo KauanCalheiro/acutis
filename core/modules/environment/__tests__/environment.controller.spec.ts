@@ -548,7 +548,7 @@ it('roda contra o ambiente ativo', async () => {
     [EnvKey.URL]: 'https://homolog.loja.test',
     [EnvKey.PASSWORD]: 'segredo',
     CUPOM_VALIDO: 'ABC',
-    [EnvKey.STORAGE_STATE]: 'storage-state.homolog.json'
+    [EnvKey.STORAGE_STATE]: 'storage-state.homolog.homolog-loja-test.json'
   })
 })
 

@@ -7,6 +7,7 @@ import type { ActiveVars } from '../../common/playwright/active-vars.js'
 import { Playwright } from '../../common/playwright/playwright.js'
 import { pathOf, type Url } from '../../common/playwright/url.js'
 import type { RecordedEvent, Selectors } from './events.js'
+import { chooseSelector, DEFAULT_SELECTOR_PRIORITY, type SelectorKey } from './selector-priority.js'
 import type { Recording } from './recording.js'
 import { describeElement, SENSITIVE_PREFIX } from './recording.js'
 
@@ -44,7 +45,8 @@ export class SpecEmitter {
   constructor(
     private readonly recording: Recording,
     private readonly base: Url,
-    private readonly environments: ActiveVars
+    private readonly environments: ActiveVars,
+    private readonly order: SelectorKey[] = DEFAULT_SELECTOR_PRIORITY
   ) {}
 
   spec(title: string, scenario: string): Playwright {
@@ -166,7 +168,7 @@ export class SpecEmitter {
 
       if (type === 'navigate') {
         step = this.navigation(event, navigated, currentUrl)
-      } else if (type === 'click' || type === 'hover') {
+      } else if (type === 'click' || type === 'dblclick' || type === 'hover') {
         step = this.interaction(event, type, slow)
       } else if (type === 'fill') {
         const entry = this.entry(event, slow, lastClick)
@@ -183,7 +185,7 @@ export class SpecEmitter {
         currentUrl = event.url ?? ''
       }
 
-      if (type === 'click') {
+      if (type === 'click' || type === 'dblclick') {
         lastClick = this.locator(event)
       }
 
@@ -225,8 +227,10 @@ export class SpecEmitter {
 
     if (locator === null) return null
 
-    const verb = type === 'hover' ? 'hover' : 'click'
-    const prefix = type === 'hover' ? 'Passa o mouse' : 'Clica'
+    const verb = type === 'hover' ? 'hover' : type === 'dblclick' ? 'dblclick' : 'click'
+    const prefix = type === 'hover'
+      ? 'Passa o mouse'
+      : type === 'dblclick' ? 'Clica duas vezes' : 'Clica'
     const what = describeElement(event)
 
     return {
@@ -278,7 +282,7 @@ export class SpecEmitter {
 
   /** O passo do Enter no último campo, quando não houve clique de envio. */
   private submission(previousType: string | null, lastField: string | null): Step | null {
-    if (previousType === 'click' || lastField === null) return null
+    if (previousType === 'click' || previousType === 'dblclick' || lastField === null) return null
 
     return {
       title: 'Envia o formulário',
@@ -342,23 +346,25 @@ export class SpecEmitter {
   private locator(event: RecordedEvent): string | null {
     const selectors: Partial<Selectors> | null | undefined = event.selectors
 
-    if (!selectors) return null
+    const chosen = chooseSelector(selectors, this.order)
 
-    if (selectors.dataTestId) {
-      const visible = selectors.hiddenTwins ? '.filter({ visible: true })' : ''
+    if (!selectors || chosen === null) return null
 
-      return `page.getByTestId(${this.literal(selectors.dataTestId)})${visible}`
+    switch (chosen) {
+      case 'dataTestId': {
+        const visible = selectors.hiddenTwins ? '.filter({ visible: true })' : ''
+
+        return `page.getByTestId(${this.literal(selectors.dataTestId!)})${visible}`
+      }
+      case 'dataCy': return `page.locator(${this.literal(`[data-cy="${selectors.dataCy}"]`)})`
+      case 'ariaLabel': return `page.locator(${this.literal(`[aria-label="${selectors.ariaLabel}"]`)})`
+      case 'placeholder': return `page.getByPlaceholder(${this.literal(selectors.placeholder!)})`
+      case 'cssStable': return `page.locator(${this.literal(selectors.cssStable!)})`
+      case 'id': return `page.locator(${this.literal(`[id="${selectors.id}"]`)})`
+      case 'text': return `page.getByText(${this.literal(selectors.text!)}, { exact: true })`
+      case 'finder': return `page.locator(${this.literal(selectors.finder!)})`
+      case 'xpath': return `page.locator(${this.literal(`xpath=${selectors.xpath}`)})`
     }
-    if (selectors.dataCy) return `page.locator(${this.literal(`[data-cy="${selectors.dataCy}"]`)})`
-    if (selectors.ariaLabel) return `page.locator(${this.literal(`[aria-label="${selectors.ariaLabel}"]`)})`
-    if (selectors.placeholder) return `page.getByPlaceholder(${this.literal(selectors.placeholder)})`
-    if (selectors.cssStable) return `page.locator(${this.literal(selectors.cssStable)})`
-    if (selectors.id) return `page.locator(${this.literal(`[id="${selectors.id}"]`)})`
-    if (selectors.text) return `page.getByText(${this.literal(selectors.text)}, { exact: true })`
-    if (selectors.finder) return `page.locator(${this.literal(selectors.finder)})`
-    if (selectors.xpath) return `page.locator(${this.literal(`xpath=${selectors.xpath}`)})`
-
-    return null
   }
 
   private timeout(slow: boolean): string {

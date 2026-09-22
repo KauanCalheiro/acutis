@@ -1,5 +1,5 @@
 export type RecordingEventType
-  = | 'click' | 'fill' | 'navigate' | 'submit' | 'assert' | 'hover'
+  = | 'click' | 'dblclick' | 'fill' | 'navigate' | 'submit' | 'assert' | 'hover'
 
 export type AssertType
   = | 'exists' | 'hidden' | 'visible' | 'text' | 'value' | 'contains' | 'checked' | 'disabled' | 'url'

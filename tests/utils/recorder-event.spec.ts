@@ -24,6 +24,12 @@ describe('describeRecorderEvent', () => {
     expect(describeRecorderEvent(event({ type: 'hover', innerText: 'Menu' }))).toBe('Passa o mouse em "Menu"')
   })
 
+  it('distingue o duplo clique do clique simples', () => {
+    expect(describeRecorderEvent(event({ type: 'dblclick', label: 'Linha' })))
+      .toBe('Clica duas vezes em "Linha"')
+    expect(describeRecorderEvent(event({ type: 'dblclick' }))).toBe('Clica duas vezes no elemento')
+  })
+
   it('fala do elemento genérico quando não há como nomeá-lo', () => {
     expect(describeRecorderEvent(event({ type: 'click' }))).toBe('Clica no elemento')
     expect(describeRecorderEvent(event({ type: 'hover', label: '   ' }))).toBe('Passa o mouse no elemento')

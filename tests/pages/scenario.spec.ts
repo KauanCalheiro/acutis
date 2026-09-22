@@ -6,7 +6,7 @@ import { defineComponent, h } from 'vue'
 import { UApp } from '#components'
 import ScenarioPage from '~/pages/projects/[projectSlug]/scenarios/[...scenario].vue'
 import { useWebdriver, type RecorderEvent } from '~/composables/webdriver'
-import { settle } from '../support/modal'
+import { settle, type } from '../support/modal'
 import type { ProjectDetail, ScenarioDetail, ScenarioRun } from '~/types/project'
 
 const navigate = vi.hoisted(() => vi.fn())
@@ -426,9 +426,24 @@ describe('ScenarioPage', () => {
 
   it('volta para o relatório quando o cenário foi aberto por ele', async () => {
     api.scenario = scenario({ runs: [run()] })
-    const wrapper = await mount('/projects/alpha-store/scenarios/login?tab=execucoes&run=2026-01-02T10%3A00%3A00.000Z')
+    const wrapper = await mount('/projects/alpha-store/scenarios/login?tab=execucoes&run=2026-01-02T10%3A00%3A00.000Z&de=relatorio')
 
     expect(wrapper.get('[data-testid="cenario-voltar"]').attributes('href')).toBe('/projects/alpha-store/report')
+  })
+
+  /** O menu do card do cenário também abre uma execução, e quem veio dele veio do projeto. */
+  it('volta para o projeto quando a execução foi aberta pelo card do cenário', async () => {
+    api.scenario = scenario({ runs: [run()] })
+    const wrapper = await mount('/projects/alpha-store/scenarios/login?tab=execucoes&run=ultima')
+
+    expect(wrapper.get('[data-testid="cenario-voltar"]').attributes('href')).toBe('/projects/alpha-store')
+  })
+
+  it('volta para o projeto quando ninguém apontou uma execução', async () => {
+    api.scenario = scenario({ runs: [run()] })
+    const wrapper = await mount()
+
+    expect(wrapper.get('[data-testid="cenario-voltar"]').attributes('href')).toBe('/projects/alpha-store')
   })
 
   it('exclui o cenário depois de confirmar', async () => {
@@ -459,6 +474,10 @@ describe('ScenarioPage', () => {
     await corte.trigger('click')
     await settle()
 
+    // O cenário é autenticado: o login roda antes de o navegador abrir.
+    FakeEventSource.last!.send({ event: 'run:finished', passed: true, output: 'ok' })
+    await settle()
+
     expect(useWebdriver().state.value.recording).toBe(true)
     expect(useWebdriver().state.value.events).toHaveLength(2)
 
@@ -477,13 +496,14 @@ describe('ScenarioPage', () => {
     expect((api.drafted as { events: unknown[] }).events).toHaveLength(3)
     expect((field('contexto-titulo') as HTMLInputElement).value).toBe('Login do cliente')
 
+    await type('contexto-dominio', 'login')
     field('contexto-enviar')!.click()
     await settle(6)
 
     expect(api.patched).toMatchObject({
       title: 'Login do cliente',
       path: 'login',
-      domain: '',
+      domain: 'login',
       playwright: 'test("login refeito", async () => {})',
       gherkin: '@read\nFuncionalidade: Entrar'
     })
@@ -790,5 +810,132 @@ describe('ScenarioPage: autenticação', () => {
     await settle(8)
 
     expect(field('revisao-erro')!.textContent).toContain('Não foi possível gerar a autenticação')
+  })
+})
+
+describe('ScenarioPage: sessão da gravação retomada', () => {
+  function withEvents() {
+    api.scenario = scenario({
+      events: [
+        { type: 'navigate', url: 'http://loja.test/login', timestamp: 1000 },
+        { type: 'fill', label: 'E-mail', value: 'a@b.c', timestamp: 2000 },
+        { type: 'submit', timestamp: 3000 }
+      ] as unknown as RecorderEvent[]
+    })
+  }
+
+  /** O duplo clique com a pausa é o que a timeline exige para confirmar o corte. */
+  async function cut(wrapper: Awaited<ReturnType<typeof mount>>) {
+    const corte = wrapper.findAll('[data-testid="revisao-retomar"]')[1]!
+
+    await corte.trigger('click')
+    await new Promise(resolve => setTimeout(resolve, 700))
+    await corte.trigger('click')
+    await settle()
+  }
+
+  it('roda o login antes de abrir o navegador para retomar um cenário autenticado', async () => {
+    withEvents()
+    const wrapper = await mount()
+
+    await cut(wrapper)
+
+    expect(FakeEventSource.last!.url).toContain('spec=tests%2Fauth.setup.ts')
+    expect(useWebdriver().state.value.recording).toBe(false)
+
+    FakeEventSource.last!.send({ event: 'run:finished', passed: true, output: 'ok' })
+    await settle()
+
+    expect(useWebdriver().state.value.recording).toBe(true)
+  })
+
+  it('não abre o navegador quando o login falha', async () => {
+    withEvents()
+    const wrapper = await mount()
+
+    await cut(wrapper)
+    FakeEventSource.last!.send({ event: 'run:finished', passed: false, output: 'login falhou' })
+    await settle()
+
+    expect(useWebdriver().state.value.recording).toBe(false)
+  })
+
+  it('retoma direto o cenário público, que não usa sessão', async () => {
+    api.scenario = scenario({
+      tags: ['@publico'],
+      events: [
+        { type: 'navigate', url: 'http://loja.test/login', timestamp: 1000 },
+        { type: 'fill', label: 'E-mail', value: 'a@b.c', timestamp: 2000 },
+        { type: 'submit', timestamp: 3000 }
+      ] as unknown as RecorderEvent[]
+    })
+    const wrapper = await mount()
+
+    await cut(wrapper)
+
+    expect(useWebdriver().state.value.recording).toBe(true)
+  })
+})
+
+describe('ScenarioPage: o convite da autenticação', () => {
+  const route = '/projects/alpha-store/scenarios/auth'
+
+  function semLogin() {
+    api.authScenario = scenario({ spec: 'tests/auth.setup.ts', is_auth: true, playwright: '', gherkin: null, events: [] })
+    api.project = project({ auth_status: 'unset' })
+  }
+
+  it('usa o mesmo card dos outros convites da ferramenta', async () => {
+    semLogin()
+    const wrapper = await mount(route)
+
+    const card = wrapper.findAllComponents({ name: 'BaseEmptyAction' })
+      .find(item => item.props('testid') === 'auth-gravar-vazio')
+
+    expect(card).toBeDefined()
+    expect(card!.props('title')).toBe('Gravar o login')
+  })
+
+  it('grava o login pelo clique no card', async () => {
+    semLogin()
+    const wrapper = await mount(route)
+
+    await wrapper.get('[data-testid="auth-gravar-vazio"]').trigger('click')
+    await settle()
+
+    expect(useWebdriver().state.value.recording).toBe(true)
+  })
+
+  it('não grava pelo card enquanto o gravador não está conectado', async () => {
+    semLogin()
+    recorder({ connected: false })
+    const wrapper = await mount(route)
+
+    await wrapper.get('[data-testid="auth-gravar-vazio"]').trigger('click')
+    await settle()
+
+    expect(useWebdriver().state.value.recording).toBe(false)
+  })
+})
+
+describe('ScenarioPage: chegar na autenticação já gravando', () => {
+  it('abre o navegador quando a tela é aberta com ?gravar', async () => {
+    api.authScenario = scenario({ spec: 'tests/auth.setup.ts', is_auth: true, playwright: '', gherkin: null, events: [] })
+    api.project = project({ auth_status: 'unset' })
+
+    await mount('/projects/alpha-store/scenarios/auth?gravar')
+    await settle()
+
+    expect(useWebdriver().state.value.recording).toBe(true)
+  })
+
+  it('não grava sozinha quando a tela é aberta sem o pedido', async () => {
+    api.authScenario = scenario({ spec: 'tests/auth.setup.ts', is_auth: true, playwright: '', gherkin: null, events: [] })
+    api.project = project({ auth_status: 'unset' })
+
+    await mount('/projects/alpha-store/scenarios/auth')
+    await settle()
+
+    expect(useWebdriver().state.value.recording).toBe(false)
   })
 })

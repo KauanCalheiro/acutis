@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { requestStop } from '../transport'
 import type { RecordingEvent } from '@/common/types/recording'
-import { useRecorderEvents } from '../useRecorderEvents'
+import { DOUBLE_CLICK_WINDOW_MS, flushEvents, useRecorderEvents } from '../useRecorderEvents'
 import { usePillState } from '../usePillState'
 
 function setBody(html: string) {
@@ -63,7 +63,7 @@ describe('useRecorderEvents', () => {
     dispatch(buildBaseEvent('hover', document.querySelector('#ensino')!))
     dispatch(buildBaseEvent('click', document.querySelector('#curso')!))
 
-    await new Promise(resolve => setTimeout(resolve, 0))
+    await new Promise(resolve => setTimeout(resolve, DOUBLE_CLICK_WINDOW_MS + 50))
 
     expect(enviados.map(event => event.selectors?.id)).toEqual(['ensino', 'curso'])
   })
@@ -80,8 +80,14 @@ function captured(): RecordingEvent[] {
   return enviados
 }
 
+/** Espera o envio de um evento que não fica retido, como preenchimento e navegação. */
 async function flush(): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, 0))
+}
+
+/** Espera o clique retido à espera do par sair da fila. */
+async function settle(): Promise<void> {
+  await new Promise(resolve => setTimeout(resolve, DOUBLE_CLICK_WINDOW_MS + 50))
 }
 
 describe('useRecorderEvents: o que não vale reenviar', () => {
@@ -120,7 +126,7 @@ describe('useRecorderEvents: o que não vale reenviar', () => {
     expect(enviados.map(event => event.value)).toEqual(['ana', 'ana maria'])
   })
 
-  it('ignora o clique repetido no mesmo elemento em menos de 250ms', async () => {
+  it('ignora o clique repetido no mesmo elemento em menos de 150ms', async () => {
     setBody('<button id="entrar">Entrar</button>')
     const el = document.querySelector('button')!
     const enviados = captured()
@@ -129,7 +135,7 @@ describe('useRecorderEvents: o que não vale reenviar', () => {
     dispatch({ ...base, timestamp: 1000 })
     dispatch({ ...base, timestamp: 1100 })
     dispatch({ ...base, timestamp: 1400 })
-    await flush()
+    await settle()
 
     expect(enviados.map(event => event.timestamp)).toEqual([1000, 1400])
   })
@@ -155,6 +161,10 @@ describe('useRecorderEvents: o que não vale reenviar', () => {
 describe('useRecorderEvents: a fila de envio', () => {
   const { dispatch, buildBaseEvent } = useRecorderEvents()
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('tenta de novo o evento que não conseguiu sair', async () => {
     vi.useFakeTimers()
     setBody('<button id="reenvio">Reenvio</button>')
@@ -178,7 +188,7 @@ describe('useRecorderEvents: a fila de envio', () => {
     await vi.advanceTimersByTimeAsync(500)
     expect(enviados).toEqual([])
 
-    await vi.advanceTimersByTimeAsync(500)
+    await vi.advanceTimersByTimeAsync(1000)
     expect(enviados).toHaveLength(1)
 
     vi.useRealTimers()
@@ -236,5 +246,70 @@ describe('useRecorderEvents: como o elemento é nomeado', () => {
     setBody('<div id="vazio"></div>')
 
     expect(buildBaseEvent('click', document.querySelector('div')!).label).toBeNull()
+  })
+})
+
+describe('useRecorderEvents: o duplo clique', () => {
+  const { dispatch, buildBaseEvent } = useRecorderEvents()
+
+  it('manda o duplo clique no lugar do primeiro clique, que ainda não tinha saído', async () => {
+    setBody('<button id="linha">Linha</button>')
+    const el = document.querySelector('button')!
+    const enviados = captured()
+
+    dispatch({ ...buildBaseEvent('click', el), timestamp: 90000 })
+    dispatch({ ...buildBaseEvent('dblclick', el), timestamp: 90090 })
+    await settle()
+
+    expect(enviados.map(event => event.type)).toEqual(['dblclick'])
+  })
+
+  it('manda o clique solto depois da janela do duplo clique passar', async () => {
+    setBody('<button id="sozinho">Sozinho</button>')
+    const el = document.querySelector('button')!
+    const enviados = captured()
+
+    dispatch({ ...buildBaseEvent('click', el), timestamp: 91000 })
+    await settle()
+
+    expect(enviados.map(event => event.type)).toEqual(['click'])
+  })
+
+  it('preserva a ordem do que foi gravado enquanto o clique espera pelo par', async () => {
+    setBody('<button id="abrir">Abrir</button><input id="nome" />')
+    const botao = document.querySelector('button')!
+    const campo = document.querySelector('input')!
+    const enviados = captured()
+
+    dispatch({ ...buildBaseEvent('click', botao), timestamp: 92000 })
+    dispatch({ ...buildBaseEvent('fill', campo), value: 'ana', timestamp: 92010 })
+    await settle()
+
+    expect(enviados.map(event => event.selectors?.id)).toEqual(['abrir', 'nome'])
+  })
+
+  it('entrega na hora o clique retido quando a gravação é encerrada', async () => {
+    setBody('<button id="ultimo">Último</button>')
+    const el = document.querySelector('button')!
+    const enviados = captured()
+
+    dispatch({ ...buildBaseEvent('click', el), timestamp: 94000 })
+    await flushEvents()
+
+    expect(enviados.map(event => event.type)).toEqual(['click'])
+  })
+
+  it('não deixa o duplo clique levar embora o clique de outro elemento', async () => {
+    setBody('<button id="primeiro">Primeiro</button><button id="segundo">Segundo</button>')
+    const primeiro = document.querySelector('#primeiro')!
+    const segundo = document.querySelector('#segundo')!
+    const enviados = captured()
+
+    dispatch({ ...buildBaseEvent('click', primeiro), timestamp: 95000 })
+    dispatch({ ...buildBaseEvent('dblclick', segundo), timestamp: 95050 })
+    await settle()
+
+    expect(enviados.map(event => `${event.type}:${event.selectors?.id}`))
+      .toEqual(['click:primeiro', 'dblclick:segundo'])
   })
 })

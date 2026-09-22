@@ -23,17 +23,21 @@ export class RunScenario {
   async stream(
     slug: string,
     { spec, grep, filter }: { spec?: string, grep?: string, filter?: string },
-    onEvent: (event: RunEvent) => void
+    onEvent: (event: RunEvent) => void,
+    signal?: AbortSignal
   ): Promise<ScenarioRunResult> {
     const path = this.projects.pathOf(slug)
     const env = this.projects.resolvedEnvironment(slug)
     const startedAt = new Date()
     const recorded: RunEventRecord[] = []
 
-    const result = await this.runner.streamProject(path, { spec, grep, env }, (event) => {
+    const result = await this.runner.streamProject(path, { spec, grep, env, signal }, (event) => {
       recorded.push(event as unknown as RunEventRecord)
       onEvent(event)
     })
+
+    /** A execução interrompida não é resultado: entra no histórico como uma rodada que nunca houve. */
+    if (signal?.aborted) return result
 
     await this.events.publish(new RunFinished(path, spec, recorded, startedAt, filter))
 

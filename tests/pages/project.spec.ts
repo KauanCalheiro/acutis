@@ -255,6 +255,14 @@ describe('ProjectPage', () => {
     expect(wrapper.get('[data-testid="projeto-rodar-filtrados"]').text()).toContain('14')
   })
 
+  it('esconde o convite de gravar quando o projeto já tem cenário, mesmo sem paginação', async () => {
+    api.project = project({ scenarios: [scenario('Login do cliente', 'tests/login.spec.ts')] })
+    const wrapper = await mount()
+
+    expect(wrapper.findAll('[data-testid="cenario-card"]')).toHaveLength(1)
+    expect(wrapper.find('[data-testid="cenario-vazio"]').exists()).toBe(false)
+  })
+
   it('recalcula quantos cenários cabem quando a janela muda de tamanho', async () => {
     api.project = project({
       scenarios: Array.from({ length: 30 }, (_value, index) =>
@@ -454,8 +462,36 @@ describe('ProjectPage', () => {
     await wrapper.get('[data-testid="projeto-rodar-filtrados"]').trigger('click')
     await settle()
 
+    field('projeto-rodar-confirmar')!.click()
+    await settle()
+
     expect(FakeEventSource.last!.url).toContain('grep=Login+do+cliente')
     expect(field('execucao-iniciando')).toBeDefined()
+  })
+
+  it('pergunta antes de rodar, e não roda nada enquanto ninguém confirma', async () => {
+    const wrapper = await mount()
+
+    await wrapper.get('[data-testid="cenario-busca"]').setValue('login')
+    await wrapper.get('[data-testid="projeto-rodar-filtrados"]').trigger('click')
+    await settle()
+
+    expect(field('projeto-rodar-confirmar')).toBeDefined()
+    expect(FakeEventSource.last).toBeUndefined()
+    expect(field('execucao-iniciando')).toBeUndefined()
+  })
+
+  it('não roda quando o usuário desiste na confirmação', async () => {
+    const wrapper = await mount()
+
+    await wrapper.get('[data-testid="projeto-rodar-filtrados"]').trigger('click')
+    await settle()
+
+    field('confirmar-cancelar')!.click()
+    await settle()
+
+    expect(FakeEventSource.last).toBeUndefined()
+    expect(field('execucao-iniciando')).toBeUndefined()
   })
 
   it('deixa o cenário pulado fora da execução filtrada, e da contagem dela', async () => {
@@ -471,6 +507,9 @@ describe('ProjectPage', () => {
     expect(wrapper.findAll('[data-testid="cenario-card"]'), 'o pulado continua na listagem').toHaveLength(2)
 
     await wrapper.get('[data-testid="projeto-rodar-filtrados"]').trigger('click')
+    await settle()
+
+    field('projeto-rodar-confirmar')!.click()
     await settle()
 
     expect(FakeEventSource.last!.url).toContain('grep=Login+do+cliente')
@@ -759,5 +798,42 @@ describe('ProjectPage', () => {
     await settle()
 
     expect(FakeEventSource.last!.url).toContain('spec=tests%2Fauth.setup.ts')
+  })
+})
+
+describe('ProjectPage: primeiro cenário de um projeto sem login', () => {
+  it('convida a gravar o login no lugar do cenário', async () => {
+    api.project = project({ auth_status: 'unset', scenarios: [] })
+    const wrapper = await mount()
+
+    expect(wrapper.find('[data-testid="cenario-vazio-login"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="cenario-vazio-gravar"]').exists()).toBe(false)
+  })
+
+  it('leva para a tela de autenticação já gravando', async () => {
+    api.project = project({ auth_status: 'unset', scenarios: [] })
+    const wrapper = await mount()
+
+    await wrapper.get('[data-testid="cenario-vazio-login"]').trigger('click')
+
+    expect(navigate).toHaveBeenCalledWith('/projects/alpha-store/scenarios/auth?gravar')
+  })
+
+  it('dispensa o login pelo próprio convite', async () => {
+    api.project = project({ auth_status: 'unset', scenarios: [] })
+    const wrapper = await mount()
+
+    await wrapper.get('[data-testid="cenario-vazio-sem-login"]').trigger('click')
+    await settle(4)
+
+    expect(api.skipped).toBe(true)
+  })
+
+  it('oferece gravar o login pelo aviso, sem passar pela tela de configuração', async () => {
+    api.project = project({ auth_status: 'unset' })
+    const wrapper = await mount()
+
+    expect(wrapper.get('[data-testid="projeto-auth-configurar"]').attributes('href'))
+      .toBe('/projects/alpha-store/scenarios/auth?gravar')
   })
 })

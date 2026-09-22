@@ -21,3 +21,37 @@ describe('ScenarioEmpty', () => {
     expect(wrapper.get('[data-testid="cenario-vazio-gravar"]').classes()).toContain('opacity-50')
   })
 })
+
+describe('ScenarioEmpty: projeto sem autenticação configurada', () => {
+  it('convida a gravar o login, que é o que vem antes de qualquer cenário autenticado', async () => {
+    const wrapper = await mountSuspended(ScenarioEmpty, { props: { needsLogin: true } })
+
+    expect(wrapper.text()).toContain('Gravar o login')
+    expect(wrapper.find('[data-testid="cenario-vazio-login"]').exists()).toBe(true)
+  })
+
+  it('pede a gravação do login ao clique', async () => {
+    const wrapper = await mountSuspended(ScenarioEmpty, { props: { needsLogin: true } })
+
+    await wrapper.get('[data-testid="cenario-vazio-login"]').trigger('click')
+
+    expect(wrapper.emitted('login')).toHaveLength(1)
+    expect(wrapper.emitted('record')).toBeUndefined()
+  })
+
+  it('deixa dizer que o sistema não tem login', async () => {
+    const wrapper = await mountSuspended(ScenarioEmpty, { props: { needsLogin: true } })
+
+    await wrapper.get('[data-testid="cenario-vazio-sem-login"]').trigger('click')
+
+    expect(wrapper.emitted('skip')).toHaveLength(1)
+  })
+
+  it('volta a convidar para o cenário quando o login já está configurado', async () => {
+    const wrapper = await mountSuspended(ScenarioEmpty)
+
+    expect(wrapper.find('[data-testid="cenario-vazio-login"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="cenario-vazio-sem-login"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="cenario-vazio-gravar"]').text()).toContain('Gravar cenário')
+  })
+})

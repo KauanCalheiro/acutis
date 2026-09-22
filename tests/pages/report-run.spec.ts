@@ -152,7 +152,7 @@ describe('ReportRunPage', () => {
     expect(broken[0]!.text()).toContain('Comprar')
     expect(broken[0]!.text()).toContain('Pagar')
     expect(broken[0]!.get('a').attributes('href'))
-      .toBe(`/projects/alpha-store/scenarios/comprar?tab=execucoes&run=${encodeURIComponent(LAST)}`)
+      .toBe(`/projects/alpha-store/scenarios/comprar?tab=execucoes&run=${encodeURIComponent(LAST)}&de=relatorio`)
   })
 
   it('agrupa o resto dos cenários numa fatia só e anota quem entrou e saiu', async () => {

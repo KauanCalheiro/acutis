@@ -1,12 +1,16 @@
 <script setup lang="ts">
 interface ScenarioEmpty {
   disabled?: boolean
+  /** O projeto ainda não tem login gravado: é ele que vem antes de qualquer cenário autenticado. */
+  needsLogin?: boolean
 }
 
-const { disabled = false } = defineProps<ScenarioEmpty>()
+const { disabled = false, needsLogin = false } = defineProps<ScenarioEmpty>()
 
 const emit = defineEmits<{
   record: []
+  login: []
+  skip: []
 }>()
 </script>
 
@@ -19,29 +23,39 @@ const emit = defineEmits<{
       Nenhum cenário ainda
     </p>
     <p class="text-muted mb-6">
-      Grave uma interação para gerar o primeiro teste.
+      {{ needsLogin
+        ? 'Comece pelo login: é ele que abre o sistema para os cenários seguintes.'
+        : 'Grave uma interação para gerar o primeiro teste.' }}
     </p>
 
-    <UCard
-      data-testid="cenario-vazio-gravar"
-      class="max-w-sm mx-auto transition-colors"
-      :class="disabled ? 'opacity-50' : 'cursor-pointer hover:bg-accented/75'"
-      @click="!disabled && emit('record')"
-    >
-      <div class="flex flex-col items-center gap-2">
-        <div class="flex size-15 items-center justify-center rounded-lg bg-primary/10">
-          <UIcon
-            name="i-ic-round-fiber-manual-record"
-            class="size-10 text-primary"
-          />
-        </div>
-        <p class="text-lg font-semibold">
-          Gravar cenário
-        </p>
-        <p class="text-sm text-muted">
-          Abre o navegador e grava sua interação pra virar um teste automático.
-        </p>
-      </div>
-    </UCard>
+    <BaseEmptyAction
+      v-if="needsLogin"
+      icon="i-ic-round-lock"
+      title="Gravar o login"
+      description="Abre o navegador para você entrar no sistema uma vez. A partir daí os cenários gravam já autenticados."
+      testid="cenario-vazio-login"
+      :disabled="disabled"
+      @click="emit('login')"
+    />
+
+    <BaseEmptyAction
+      v-else
+      icon="i-ic-round-fiber-manual-record"
+      title="Gravar cenário"
+      description="Abre o navegador e grava sua interação pra virar um teste automático."
+      testid="cenario-vazio-gravar"
+      :disabled="disabled"
+      @click="emit('record')"
+    />
+
+    <UButton
+      v-if="needsLogin"
+      label="Meu sistema não tem login"
+      color="neutral"
+      variant="link"
+      class="mt-3"
+      data-testid="cenario-vazio-sem-login"
+      @click="emit('skip')"
+    />
   </div>
 </template>

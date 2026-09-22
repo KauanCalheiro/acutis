@@ -104,6 +104,14 @@ describe('ProjectCard menu de contexto', () => {
     expect(navigate).toHaveBeenCalledWith('/projects/alpha-store?gravar=autenticado')
   })
 
+  it('sinaliza as ações num botão, com o mesmo menu do clique com o botão direito', async () => {
+    const wrapper = await mountInApp(ProjectCard, { props: { project } })
+
+    expect(wrapper.find('[data-testid="projeto-acoes"]').exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'UDropdownMenu' }).props('items'))
+      .toEqual(wrapper.findComponent({ name: 'UContextMenu' }).props('items'))
+  })
+
   it('abre o projeto no vs code pelo caminho absoluto', async () => {
     const wrapper = await mountInApp(ProjectCard, { props: { project } })
 

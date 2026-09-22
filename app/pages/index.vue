@@ -224,7 +224,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div
-        v-if="projects.length > 0"
+        v-if="total > pageSize"
         class="flex justify-center mt-8"
       >
         <UPagination

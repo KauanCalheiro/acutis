@@ -103,6 +103,27 @@ describe('ScenarioEditModal', () => {
     expect(api.saved).toMatchObject({ title: 'Entrar no sistema' })
   })
 
+  it('não salva com um contexto obrigatório em branco', async () => {
+    const { state } = await open()
+
+    await type('contexto-titulo', '')
+    field('cenario-editar-salvar')!.click()
+    await settle()
+
+    expect(api.saved).toBeNull()
+    expect(document.body.textContent).toContain('O título do cenário é obrigatório.')
+    expect(state.value).toBe(true)
+  })
+
+  it('não cobra arquivo nem domínio na autenticação', async () => {
+    const { state } = await open(scenario({ spec: 'tests/auth/login.setup.ts', is_auth: true }))
+
+    field('cenario-editar-salvar')!.click()
+    await settle()
+
+    expect(state.value).toBe(false)
+  })
+
   it('fecha pelo esc', async () => {
     const { state } = await open()
 

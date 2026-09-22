@@ -241,6 +241,33 @@ test.describe('recording gateway events', { tag: ['@write', '@recording'] }, () 
         }
     })
 
+    /** O olhinho troca o `type` para `text`: o campo continua sendo senha para quem grava. */
+    test('masks the password even after the user reveals it on screen', async ({ request }) => {
+        const gateway = await connectGateway()
+
+        try {
+            gateway.send('START_RECORDING')
+
+            const goto = await request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: fixtureBaseUrl } })
+            expect(goto.ok()).toBe(true)
+
+            const reveal = await request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#reveal-password' } })
+            expect(reveal.ok()).toBe(true)
+
+            const fill = await request.post(`${WEBDRIVER_URL}/debug/fill`, { data: { selector: '#password', value: 'revelada-123' } })
+            expect(fill.ok()).toBe(true)
+
+            const message = await gateway.waitForMessage((m) => m.event === 'recorder:fill')
+            expect(message.value).toBe('••••')
+            expect(message.inputType).toBe('password')
+
+            gateway.send('STOP_RECORDING')
+            await gateway.waitForMessage((m) => m.event === 'recorder:stop')
+        } finally {
+            gateway.close()
+        }
+    })
+
     test('reports the real password value when recording in auth mode', async ({ request }) => {
         const gateway = await connectGateway()
 
@@ -455,6 +482,50 @@ test.describe('scenario recording from the project page', { tag: ['@write', '@re
         await page.getByTestId('revisao-gerar').click()
 
         await expect(page.getByTestId('revisao-erro')).toContainText(refusal, { timeout: 10_000 })
+    })
+
+    /** O clique duplo humano cai dentro da janela de deduplicação: só o par gravado prova que ele sobrevive. */
+    test('records a real double click as one dblclick event, and not as a single click', async ({ page }) => {
+        let drafted: { events?: Array<{ type?: string, html?: string | null }> } | null = null
+
+        await page.route('**/api/projects/alpha-store/tests/draft', async (route) => {
+            drafted = route.request().postDataJSON()
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    title: 'Duplo clique',
+                    tags: [],
+                    domain: 'navegacao',
+                    path: 'duplo-clique',
+                    gherkin: '',
+                    playwright: "import { test } from '@playwright/test' // spec",
+                }),
+            })
+        })
+
+        await test.step('start a recording and double click the button in the recorded browser', async () => {
+            await page.goto('/projects/alpha-store')
+            await page.locator('[data-hydrated="true"]').waitFor()
+            await page.getByTestId('cenario-novo').click()
+            await expect(page.getByTestId('cenario-parar')).toBeVisible({ timeout: 10_000 })
+
+            const goto = await page.request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: scenarioBaseUrl } })
+            expect(goto.ok()).toBe(true)
+            const dblclick = await page.request.post(`${WEBDRIVER_URL}/debug/dblclick`, { data: { selector: '#btn' } })
+            expect(dblclick.ok()).toBe(true)
+        })
+
+        await test.step('stop the recording and send it for drafting', async () => {
+            await page.getByTestId('cenario-parar').click()
+            await expect(page.getByTestId('revisao-video')).toBeVisible({ timeout: 15_000 })
+            await page.getByTestId('revisao-gerar').click()
+            await expect(page.getByTestId('contexto-titulo')).toHaveValue('Duplo clique', { timeout: 15_000 })
+        })
+
+        const onButton = (drafted!.events ?? []).filter((e) => (e.html ?? '').includes('id="btn"'))
+
+        expect(onButton.map((e) => e.type)).toEqual(['dblclick'])
     })
 
     test('drafts the scenario, lets the user edit the contexts, then posts the edited draft', async ({ page }) => {

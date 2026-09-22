@@ -7,6 +7,7 @@ import { beforeEach, expect, it } from 'vitest'
 import { nextTick } from 'vue'
 import type { RecordingEvent } from '@/common/types/recording'
 import { mountRecorder } from '../recorderCore'
+import { DOUBLE_CLICK_WINDOW_MS } from '../useRecorderEvents'
 import { usePillState } from '../usePillState'
 import { useAssertMode } from '../useAssertMode'
 
@@ -29,8 +30,16 @@ function types(): string[] {
   return enviados.map(event => event.type)
 }
 
+/** Espera o envio, contando a janela em que o clique aguarda o par do duplo clique. */
 async function flush(): Promise<void> {
-  await new Promise(resolve => setTimeout(resolve, 0))
+  await new Promise(resolve => setTimeout(resolve, DOUBLE_CLICK_WINDOW_MS + 50))
+}
+
+/** O duplo clique real: os dois cliques do navegador e o evento que vem depois deles. */
+function doubleClick(el: HTMLElement): void {
+  el.click()
+  el.click()
+  el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, detail: 2 }))
 }
 
 beforeEach(() => {
@@ -82,6 +91,51 @@ it('grava o clique num elemento interativo, e ignora o resto da página', async 
 
   expect(types()).toEqual(['click'])
   expect(enviados[0]!.selectors?.id).toBe('entrar')
+})
+
+it('grava o duplo clique como um evento só, no lugar do clique simples', async () => {
+  mountRecorder()
+  page('<button id="linha">Linha</button>')
+
+  doubleClick(document.querySelector<HTMLElement>('#linha')!)
+  await flush()
+
+  expect(types()).toEqual(['dblclick'])
+  expect(enviados[0]!.selectors?.id).toBe('linha')
+})
+
+it('deixa a gravação encerrar sem perder o clique que esperava pelo par', async () => {
+  mountRecorder()
+  page('<button id="ultimo">Último</button>')
+
+  document.querySelector<HTMLElement>('#ultimo')!.click()
+  await window.__acutisFlushEvents!()
+
+  expect(types()).toEqual(['click'])
+})
+
+it('ignora o duplo clique em quem não é interativo', async () => {
+  mountRecorder()
+  page('<span id="texto">Só texto</span>')
+
+  doubleClick(document.querySelector<HTMLElement>('#texto')!)
+  await flush()
+
+  expect(types()).toEqual([])
+})
+
+it('não grava o duplo clique com a gravação pausada', async () => {
+  const { togglePause } = usePillState()
+
+  mountRecorder()
+  page('<button id="pausado">Pausado</button>')
+  togglePause()
+
+  doubleClick(document.querySelector<HTMLElement>('#pausado')!)
+  await flush()
+  togglePause()
+
+  expect(types()).toEqual([])
 })
 
 it('grava o clique em quem tem papel de botão', async () => {
@@ -222,4 +276,65 @@ it('no modo hover o clique grava a passagem do mouse', async () => {
 
   expect(types()).toEqual(['hover'])
   expect(captureMode.value).toBeNull()
+})
+
+/** Revelar a senha troca o `type` para `text`: o valor não pode deixar de ser tratado como sensível. */
+it('mascara a senha revelada depois de digitada', async () => {
+  mountRecorder()
+  page('<input id="senha" type="password" />')
+  const senha = document.querySelector<HTMLInputElement>('#senha')!
+
+  senha.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+  senha.value = 'segredo'
+  senha.type = 'text'
+  senha.dispatchEvent(new Event('change', { bubbles: true }))
+  await flush()
+
+  expect(enviados[0]!.value).toBe('••••')
+  expect(enviados[0]!.inputType).toBe('password')
+})
+
+it('mascara a senha revelada antes de ser digitada', async () => {
+  mountRecorder()
+  page('<input id="campo-oculto" name="campo-revelado" type="password" />')
+  const senha = document.querySelector<HTMLInputElement>('#campo-oculto')!
+
+  senha.type = 'text'
+  await flush()
+  senha.value = 'outro-segredo'
+  senha.dispatchEvent(new Event('change', { bubbles: true }))
+  await flush()
+
+  expect(enviados[0]!.value).toBe('••••')
+  expect(enviados[0]!.inputType).toBe('password')
+})
+
+it('mascara o campo que o nome denuncia como segredo, mesmo nascendo como texto', async () => {
+  mountRecorder()
+  page('<input id="email" /><input name="user_token" /><input id="campo-senha" /><input data-testid="segredo-do-app" />')
+
+  for (const selector of ['#email', '[name="user_token"]', '#campo-senha', '[data-testid="segredo-do-app"]']) {
+    const campo = document.querySelector<HTMLInputElement>(selector)!
+
+    campo.value = 'valor-digitado'
+    campo.dispatchEvent(new Event('change', { bubbles: true }))
+  }
+  await flush()
+
+  expect(enviados.map(event => event.value)).toEqual(['valor-digitado', '••••', '••••', '••••'])
+})
+
+it('não confunde o campo que só lembra a palavra com um segredo de verdade', async () => {
+  mountRecorder()
+  page('<input id="tokenizacao-nota" /><input name="senhorio" />')
+
+  for (const selector of ['#tokenizacao-nota', '[name="senhorio"]']) {
+    const campo = document.querySelector<HTMLInputElement>(selector)!
+
+    campo.value = 'valor-digitado'
+    campo.dispatchEvent(new Event('change', { bubbles: true }))
+  }
+  await flush()
+
+  expect(enviados.map(event => event.value)).toEqual(['valor-digitado', 'valor-digitado'])
 })

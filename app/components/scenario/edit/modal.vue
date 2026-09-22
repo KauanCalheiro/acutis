@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { authDraftSchema, scenarioDraftSchema } from '#shared/schemas/scenario'
 import type { ScenarioDetail, TestDraft } from '~/types/project'
 import type { RecorderEvent } from '~/composables/webdriver'
 
@@ -19,6 +20,7 @@ const emit = defineEmits<{
   updated: [scenario: ScenarioDetail]
 }>()
 
+const contextos = useTemplateRef('contextos')
 const draft = ref<TestDraft>(resumed?.draft ?? draftFromScenario(scenario))
 const saving = ref(false)
 const error = ref<string | null>(null)
@@ -58,10 +60,17 @@ async function save() {
     wide
   >
     <template #body>
-      <ScenarioReviewContexts
-        v-model:draft="draft"
-        :is-auth="scenario.is_auth"
-      />
+      <UForm
+        ref="contextos"
+        :schema="scenario.is_auth ? authDraftSchema : scenarioDraftSchema"
+        :state="draft"
+        @submit="save"
+      >
+        <ScenarioReviewContexts
+          v-model:draft="draft"
+          :is-auth="scenario.is_auth"
+        />
+      </UForm>
 
       <UAlert
         v-if="error"
@@ -84,7 +93,7 @@ async function save() {
         label="Salvar"
         :loading="saving"
         data-testid="cenario-editar-salvar"
-        @click="save"
+        @click="contextos?.submit()"
       />
     </template>
   </BaseModal>
