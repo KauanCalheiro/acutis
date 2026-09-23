@@ -9,13 +9,15 @@
  */
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { homedir } from 'node:os'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { splash } from './splash.mjs'
 import { ensureChromium } from './ensure-chromium.js'
 import { DEFAULT_PORT, resolvePort } from './port.js'
 import { serverEntryUrl } from './server-entry.js'
+import { resolveTelemetryConsent } from './telemetry-consent.js'
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SERVER_ENTRY = join(PACKAGE_ROOT, '.output/server/index.mjs')
@@ -58,6 +60,9 @@ async function main() {
     fail('a aplicação não veio no pacote. Se você está rodando do repositório, use `pnpm cli:build` antes.')
   }
 
+  const acutisRoot = resolve(process.env.ACUTIS_PROJECTS_PATH || join(homedir(), '.acutis'))
+  const telemetryConsent = await resolveTelemetryConsent({ root: acutisRoot })
+
   await ensureChromium()
 
   const webPort = await resolvePort({ preferred: Number(process.env.PORT) || DEFAULT_PORT })
@@ -69,6 +74,7 @@ async function main() {
   process.env.NITRO_HOST = '127.0.0.1'
   // Só aqui a raiz do pacote é medível: dentro do bundle do Nitro `import.meta.url` é placeholder.
   process.env.ACUTIS_PACKAGE_ROOT = PACKAGE_ROOT
+  process.env.ACUTIS_TELEMETRY = telemetryConsent ? '1' : '0'
   await import(SERVER_ENTRY_URL)
 
   if (!await waitFor(webUrl)) fail('a aplicação não respondeu em 60s')

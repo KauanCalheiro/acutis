@@ -16,8 +16,8 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true })
 })
 
-function service(send: typeof fetch, url = 'https://telemetry.test/reports') {
-  return new TelemetryService({ url, key: 'chave', root, home: '/Users/kauan' }, send)
+function service(send: typeof fetch, url = 'https://telemetry.test/reports', consent = true) {
+  return new TelemetryService({ url, key: 'chave', root, home: '/Users/kauan', consent }, send)
 }
 
 describe('installId', () => {
@@ -94,5 +94,43 @@ describe('TelemetryService', () => {
     const send = vi.fn().mockResolvedValue(new Response(null, { status: 429 }))
 
     await expect(service(send).report({ message: 'boom' })).resolves.toBe(false)
+  })
+
+  it('não envia nada sem o consentimento da pessoa', async () => {
+    const send = vi.fn()
+
+    await expect(service(send, undefined, false).report({ message: 'boom' })).resolves.toBe(false)
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('envia uma vez só o mesmo erro repetido', async () => {
+    const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }))
+    const telemetry = service(send)
+
+    await telemetry.report({ message: 'boom', stack: 'at x', context: 'runner' })
+    await expect(telemetry.report({ message: 'boom', stack: 'at x', context: 'runner' })).resolves.toBe(false)
+
+    expect(send).toHaveBeenCalledOnce()
+  })
+
+  it('envia erros diferentes em sequência', async () => {
+    const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }))
+    const telemetry = service(send)
+
+    await telemetry.report({ message: 'boom' })
+    await telemetry.report({ message: 'outro boom' })
+
+    expect(send).toHaveBeenCalledTimes(2)
+  })
+
+  it('tenta de novo o erro cujo envio falhou', async () => {
+    const send = vi.fn()
+      .mockRejectedValueOnce(new Error('sem rede'))
+      .mockResolvedValue(new Response(null, { status: 202 }))
+    const telemetry = service(send)
+
+    await telemetry.report({ message: 'boom' })
+
+    await expect(telemetry.report({ message: 'boom' })).resolves.toBe(true)
   })
 })

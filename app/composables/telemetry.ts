@@ -8,15 +8,9 @@ function stackOf(error: unknown): string | undefined {
   return doServidor ?? (error instanceof Error ? error.stack : undefined)
 }
 
-/** O envio manual de um relato de erro, sempre disparado por clique da pessoa. */
+/** O envio de um relato de erro, que o servidor só repassa quando a pessoa consentiu. */
 export function useTelemetry() {
-  const config = useRuntimeConfig()
-
   return {
-    get enabled(): boolean {
-      return config.public.telemetry.enabled
-    },
-
     async report(error: unknown, fallback: string, context?: string): Promise<boolean> {
       try {
         const response = await $fetch<ErrorReportResponse>('/api/telemetry/report', {

@@ -17,6 +17,7 @@ beforeEach(() => {
   process.env.ACUTIS_PROJECTS_PATH = root
   process.env.TELEMETRY_URL = 'https://telemetry.test/reports'
   process.env.TELEMETRY_KEY = 'chave'
+  process.env.ACUTIS_TELEMETRY = '1'
 })
 
 afterEach(() => {
@@ -38,17 +39,28 @@ describe('telemetry Nitro API', () => {
     const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }))
     vi.stubGlobal('fetch', send)
 
-    const response = await request({ message: 'boom', context: 'Gerar cenário' })
+    const response = await request({ message: 'encaminhado', context: 'Gerar cenário' })
 
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({ sent: true })
     expect(send).toHaveBeenCalledOnce()
   })
 
+  it('responde sem envio quando a pessoa não consentiu', async () => {
+    process.env.ACUTIS_TELEMETRY = '0'
+    const send = vi.fn()
+    vi.stubGlobal('fetch', send)
+
+    const response = await request({ message: 'sem consentimento' })
+
+    expect(await response.json()).toEqual({ sent: false })
+    expect(send).not.toHaveBeenCalled()
+  })
+
   it('responde sem envio quando a api de telemetria está fora', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('sem rede')))
 
-    const response = await request({ message: 'boom' })
+    const response = await request({ message: 'api fora' })
 
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({ sent: false })

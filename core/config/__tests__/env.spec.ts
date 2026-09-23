@@ -22,6 +22,18 @@ describe('configuração da aplicação', () => {
     })
   })
 
+  it('liga a telemetria quando o CLI repassa o consentimento', () => {
+    expect(readAppConfig({ ACUTIS_TELEMETRY: '1' }).telemetry.consent).toBe(true)
+  })
+
+  it('deixa a telemetria desligada sem consentimento repassado', () => {
+    expect(readAppConfig({}).telemetry.consent).toBe(false)
+  })
+
+  it('recusa valor de consentimento que não é 0 nem 1', () => {
+    expect(() => readAppConfig({ ACUTIS_TELEMETRY: 'sim' })).toThrow('Configuração inválida')
+  })
+
   it('recusa porta inválida no boot', () => {
     expect(() => readAppConfig({ PORT: 'porta' })).toThrow('Configuração inválida')
   })

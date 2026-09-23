@@ -332,7 +332,7 @@ Se a máquina não tem `git config user.name`, o Acutis assina os commits como `
 
 **O botão do relatório do Playwright sumiu.** Ele só aparece quando existe um relatório gerado naquela máquina. Rode um cenário e ele volta. As métricas do time continuam no relatório do projeto, que não depende disso.
 
-**Um erro apareceu na tela.** A notificação traz o motivo que o servidor deu e um botão **Enviar logs**. O envio é sempre por clique, nunca sozinho, e o que sai vai sem caminho de casa, sem variáveis de ambiente e sem valores sensíveis.
+**Um erro apareceu na tela.** A notificação traz o motivo que o servidor deu. Se você aceitou os relatos de erro na primeira execução, o erro já foi enviado sozinho, sem caminho de casa, sem variáveis de ambiente e sem valores sensíveis. Para mudar a resposta, apague `~/.acutis/runtime/telemetry-consent` e o Acutis pergunta de novo na próxima vez que subir. `DO_NOT_TRACK=1` desliga o envio sem perguntar.
 
 **O navegador não abre a página, ou todos os cenários falham na primeira navegação.** Se o alvo está atrás de VPN, confira se ela está conectada. A execução usa o navegador da sua máquina, então uma VPN que caiu deixa a URL base inalcançável para o teste, mesmo que a interface do Acutis continue funcionando normalmente.
 

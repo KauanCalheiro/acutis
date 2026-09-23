@@ -35,7 +35,7 @@ Os casos de uso vistos por ator estão em [USE-CASE-DIAGRAMS](USE-CASE-DIAGRAMS.
 | 25 | [Sugerir data-testid](#25-sugerir-data-testid) | `POST /api/projects/{slug}/scenario-suggestions` | Nada, a sugestão é para o sistema testado |
 | 26 | [Sincronizar com o repositório](#26-sincronizar-com-o-repositório) | `POST /api/projects/{slug}/git/sync` | Commits do time trazidos, os locais enviados |
 | 27 | [O commit que toda ação faz](#27-o-commit-que-toda-ação-faz) | qualquer uma das anteriores | Commit e push no repositório do projeto |
-| 28 | [Enviar os logs de um erro](#28-enviar-os-logs-de-um-erro) | `POST /api/telemetry/report` | Nada, o relato sai da máquina |
+| 28 | [Enviar os logs de um erro](#28-enviar-os-logs-de-um-erro) | `POST /api/telemetry/report` | Nada, o relato sai da máquina de quem consentiu |
 
 ## 1. Subir o acutis
 
@@ -974,20 +974,22 @@ O prefixo separa o que é teste do que é infraestrutura do projeto:
 ```mermaid
 sequenceDiagram
   actor Pessoa
+  participant CLI as bin/acutis.js
   participant App as Interface
   participant API as telemetry/report.post
   participant T as TelemetryService
   participant RD as redact
   participant EX as API de telemetria
 
+  CLI->>Pessoa: Enviar relatos de erro? [s/N], só na primeira execução
+  Pessoa-->>CLI: resposta guardada em ~/.acutis/runtime/telemetry-consent
+  CLI->>CLI: ACUTIS_TELEMETRY=1 ou 0 para o servidor
   App-->>Pessoa: erro na tela, com o motivo que o servidor deu
-  Pessoa->>App: Enviar logs
   App->>API: POST /api/telemetry/report com mensagem, stack e contexto
   API->>T: report(...)
+  T->>T: sem consentimento, ou erro já enviado nesta sessão, para aqui
   T->>RD: oculta caminho de casa, variáveis de ambiente e segredos
   T->>EX: mensagem, stack, versão do CLI, versão do Node, plataforma e installId
-  EX-->>App: enviado, ou a falha do envio
-  App-->>Pessoa: Logs enviados, ou não foi possível enviar
 ```
 
-Nada sai da máquina sozinho: o envio é sempre um clique, e a notificação de erro fica mais tempo na tela justamente para dar tempo de decidir.
+O envio é automático para quem aceitou no terminal, sem botão e sem aviso na tela. Erro de componente que escapa vai pelo plugin `telemetry.client`, e erro do processo fora de uma requisição vai pelo plugin Nitro `telemetry-capture`. Sem terminal interativo ou com `DO_NOT_TRACK=1`, nada é enviado.
