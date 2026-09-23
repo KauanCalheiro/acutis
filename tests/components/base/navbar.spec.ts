@@ -48,7 +48,7 @@ describe('BaseNavbar', () => {
 
   it('reabre as apresentações já vistas', async () => {
     const wrapper = await mountInApp(BaseNavbar)
-    useWalkthroughSeen().mark('projetos')
+    useWalkthroughSeen().mark('home')
 
     await wrapper.get('[data-testid="navbar-apresentacao"]').trigger('click')
 

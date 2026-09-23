@@ -1,7 +1,14 @@
 import { FRONTEND_URL } from './ports'
 
 /** As apresentações de primeira visita que a suíte já dá como vistas, para o fundo delas não travar os cliques. */
-const SEEN = ['projetos']
+const SEEN = [
+    'home',
+    'project',
+    'scenario',
+    'auth',
+    'report',
+    'run',
+]
 
 /** O estado inicial do navegador de cada teste: apresentações vistas e nada mais. */
 export const WALKTHROUGHS_SEEN = {

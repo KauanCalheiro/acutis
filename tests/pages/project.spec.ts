@@ -6,6 +6,7 @@ import { createError, readBody } from 'h3'
 import { UApp } from '#components'
 import ProjectPage from '~/pages/projects/[slug].vue'
 import { useWebdriver } from '~/composables/webdriver'
+import { useWalkthroughRunning, useWalkthroughSeen } from '~/composables/walkthrough'
 import { settle } from '../support/modal'
 import type { ProjectDetail, Scenario } from '~/types/project'
 
@@ -186,6 +187,7 @@ beforeEach(() => {
   api.removedScenario = undefined
   api.scenarioFails = false
   connected()
+  useWalkthroughSeen().mark('project')
 })
 
 // A tela vive num app montado; desmontar antes de limpar o body evita que o Vue do caso anterior
@@ -835,5 +837,203 @@ describe('ProjectPage: primeiro cenário de um projeto sem login', () => {
 
     expect(wrapper.get('[data-testid="projeto-auth-configurar"]').attributes('href'))
       .toBe('/projects/alpha-store/scenarios/auth?gravar')
+  })
+})
+
+describe('ProjectPage: apresentação', () => {
+  /** Monta a tela presa ao documento, porque a apresentação procura os alvos nele. */
+  async function mountAttached() {
+    document.body.innerHTML = ''
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+
+    const host = defineComponent({
+      setup() {
+        return () => h(UApp, null, {
+          default: () => h(ProjectPage)
+        })
+      }
+    })
+
+    mounted = await mountSuspended(host, {
+      route: '/projects/alpha-store',
+      attachTo: root
+    })
+    await settle(5)
+  }
+
+  function walkthroughText() {
+    return field('apresentacao')?.textContent ?? ''
+  }
+
+  async function advance() {
+    const before = field('apresentacao-posicao')?.textContent
+
+    field('apresentacao-avancar')!.click()
+    await vi.waitFor(() => {
+      expect(field('apresentacao-posicao')?.textContent).not.toBe(before)
+    })
+    await settle(3)
+  }
+
+  async function advanceTo(title: string) {
+    while (!walkthroughText().includes(title)) await advance()
+  }
+
+  /** Percorre a apresentação inteira e devolve o título de cada passo. */
+  async function titles() {
+    const seen = [field('apresentacao')!.querySelector('p')!.textContent!.trim()]
+
+    while (field('apresentacao-avancar')) {
+      await advance()
+      seen.push(field('apresentacao')!.querySelector('p')!.textContent!.trim())
+    }
+
+    return seen
+  }
+
+  beforeEach(() => {
+    useWalkthroughSeen().reset()
+    useWalkthroughRunning().value = false
+  })
+
+  it('apresenta o projeto na primeira visita', async () => {
+    await mountAttached()
+
+    expect(walkthroughText()).toContain('Este é o projeto')
+  })
+
+  it('espera a URL base ser resolvida antes de começar', async () => {
+    api.project = project({
+      requires_url: true,
+      base_url: null
+    })
+
+    await mountAttached()
+
+    expect(field('projeto-configuracoes-base-url')).toBeDefined()
+    expect(field('apresentacao')).toBeUndefined()
+  })
+
+  it('começa depois que a URL base é salva', async () => {
+    api.project = project({
+      requires_url: true,
+      base_url: null
+    })
+    await mountAttached()
+
+    const input = field('projeto-configuracoes-base-url') as HTMLInputElement
+    input.value = 'https://loja.test'
+    input.dispatchEvent(new Event('input'))
+    await settle()
+    field('projeto-configuracoes-salvar')!.click()
+
+    await vi.waitFor(() => {
+      expect(walkthroughText()).toContain('Este é o projeto')
+    })
+  })
+
+  it('pular desliga a apresentação em todos os projetos', async () => {
+    await mountAttached()
+
+    field('apresentacao-pular')!.click()
+    await settle()
+
+    expect(useWalkthroughSeen().seen.value).toEqual(['project'])
+  })
+
+  it('explica as variáveis com os ambientes abertos', async () => {
+    await mountAttached()
+
+    await advanceTo('Variáveis do ambiente')
+
+    expect(field('ambientes-descricao')).toBeDefined()
+  })
+
+  it('explica a prioridade de seletores na aba deles', async () => {
+    await mountAttached()
+
+    await advanceTo('Prioridade de seletores')
+
+    expect(field('seletores-descricao')).toBeDefined()
+  })
+
+  it('fecha os ambientes ao seguir para a autenticação', async () => {
+    await mountAttached()
+
+    await advanceTo('Autenticação')
+
+    expect(field('seletores-descricao')).toBeUndefined()
+    expect(field('ambientes-descricao')).toBeUndefined()
+  })
+
+  it('passa pelos cenários quando o projeto tem algum', async () => {
+    await mountAttached()
+
+    expect(await titles()).toEqual([
+      'Este é o projeto',
+      'Ambientes',
+      'Variáveis do ambiente',
+      'Prioridade de seletores',
+      'Autenticação',
+      'Novo cenário',
+      'Buscar cenário',
+      'Rodar os filtrados',
+      'Cada card é um cenário',
+      'Relatório das execuções',
+      'Abrir no VS Code',
+      'Remover projeto'
+    ])
+  })
+
+  it('aponta para gravar o login quando não há cenário nem autenticação', async () => {
+    api.project = project({
+      scenarios: [],
+      auth_status: 'unset',
+      has_report: false
+    })
+    await mountAttached()
+
+    const steps = await titles()
+
+    expect(steps).toContain('Comece pelo login')
+    expect(steps).not.toContain('Grave o primeiro cenário')
+  })
+
+  it('aponta para gravar o cenário quando não há cenário mas há autenticação', async () => {
+    api.project = project({
+      scenarios: [],
+      has_report: false
+    })
+    await mountAttached()
+
+    const steps = await titles()
+
+    expect(steps).toContain('Grave o primeiro cenário')
+    expect(steps).not.toContain('Comece pelo login')
+  })
+
+  it('deixa de fora busca, execução e card quando não há cenário', async () => {
+    api.project = project({
+      scenarios: [],
+      has_report: false
+    })
+    await mountAttached()
+
+    const steps = await titles()
+
+    expect(steps).not.toContain('Buscar cenário')
+    expect(steps).not.toContain('Rodar os filtrados')
+    expect(steps).not.toContain('Cada card é um cenário')
+  })
+
+  it('deixa de fora o relatório quando o projeto nunca rodou', async () => {
+    api.project = project({
+      has_report: false
+    })
+    await mountAttached()
+
+    expect(await titles()).not.toContain('Relatório das execuções')
   })
 })

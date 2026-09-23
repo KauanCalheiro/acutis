@@ -63,7 +63,7 @@ function listing(data: Project[], total = data.length) {
 describe('IndexPage', () => {
   beforeEach(() => {
     clearNuxtData()
-    useWalkthroughSeen().mark('projetos')
+    useWalkthroughSeen().mark('home')
   })
 
   it('renders a card per project from the API', async () => {
@@ -140,7 +140,7 @@ describe('IndexPage', () => {
 describe('IndexPage: busca e paginação', () => {
   beforeEach(() => {
     clearNuxtData()
-    useWalkthroughSeen().mark('projetos')
+    useWalkthroughSeen().mark('home')
     queries.length = 0
     vi.useFakeTimers()
     response = listing(projects, 20)
@@ -194,7 +194,7 @@ describe('IndexPage: busca e paginação', () => {
 describe('IndexPage: frase e medida da tela', () => {
   beforeEach(() => {
     clearNuxtData()
-    useWalkthroughSeen().mark('projetos')
+    useWalkthroughSeen().mark('home')
     vi.useFakeTimers()
     response = listing(projects)
   })
@@ -353,7 +353,7 @@ describe('IndexPage: apresentação', () => {
   })
 
   it('não repete a apresentação já vista', async () => {
-    useWalkthroughSeen().mark('projetos')
+    useWalkthroughSeen().mark('home')
 
     await mountHome()
 

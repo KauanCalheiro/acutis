@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, ref } from 'vue'
 import { UApp } from '#components'
 import BaseWalkthrough from '~/components/base/walkthrough.vue'
 import type { WalkthroughStep } from '~/composables/walkthrough'
@@ -19,7 +19,8 @@ function step(overrides: Partial<WalkthroughStep> = {}): WalkthroughStep {
 let mounted: { unmount: () => void } | undefined
 
 /** Monta a apresentação numa tela de mentira que tem os alvos pedidos. */
-async function mountWalkthrough(steps: WalkthroughStep[], targets: string[] = ['alvo-a', 'alvo-b', 'alvo-c'], id = 'teste') {
+async function mountWalkthrough(steps: WalkthroughStep[], targets: string[] = ['alvo-a', 'alvo-b', 'alvo-c'], ready = ref(true), id = 'teste') {
+  mounted?.unmount()
   document.body.innerHTML = ''
 
   const host = defineComponent({
@@ -31,7 +32,8 @@ async function mountWalkthrough(steps: WalkthroughStep[], targets: string[] = ['
           }, testid)),
           h(BaseWalkthrough, {
             id,
-            steps
+            steps,
+            ready: ready.value
           })
         ]
       })
@@ -401,5 +403,113 @@ describe('BaseWalkthrough', () => {
     await settle(5)
 
     expect(popover()?.textContent).toContain('De novo')
+  })
+
+  it('aponta para a alternativa que estiver na tela', async () => {
+    await mountWalkthrough([
+      step({
+        testid: ['alvo-sumido', 'alvo-b'],
+        title: 'Alternativa'
+      })
+    ])
+
+    expect(popover()?.textContent).toContain('Alternativa')
+  })
+
+  it('deixa de fora o passo cuja condição não vale', async () => {
+    await mountWalkthrough([
+      step(),
+      step({
+        testid: 'alvo-b',
+        when: () => false
+      })
+    ])
+
+    expect(field('apresentacao-posicao')?.textContent).toBe('1 de 1')
+  })
+
+  it('não começa enquanto a tela não está pronta', async () => {
+    await mountWalkthrough([step()], undefined, ref(false))
+
+    expect(popover()).toBeUndefined()
+  })
+
+  it('pular desliga a apresentação em todas as telas do tipo', async () => {
+    await mountWalkthrough([
+      step(),
+      step({
+        testid: 'alvo-b'
+      })
+    ])
+
+    await click('apresentacao-pular')
+
+    expect(useWalkthroughSeen().seen.value).toEqual(['teste'])
+  })
+
+  it('não abre numa outra tela do mesmo tipo depois de pulada', async () => {
+    await mountWalkthrough([
+      step(),
+      step({
+        testid: 'alvo-b'
+      })
+    ])
+    await click('apresentacao-pular')
+
+    await mountWalkthrough([step()])
+
+    expect(popover()).toBeUndefined()
+  })
+
+  it('abre numa tela de outro tipo depois de pulada', async () => {
+    await mountWalkthrough([
+      step(),
+      step({
+        testid: 'alvo-b'
+      })
+    ])
+    await click('apresentacao-pular')
+
+    await mountWalkthrough([step()], undefined, undefined, 'outro')
+
+    expect(popover()).toBeDefined()
+  })
+
+  it('o Esc desliga a apresentação em todas as telas do tipo', async () => {
+    await mountWalkthrough([
+      step(),
+      step({
+        testid: 'alvo-b'
+      })
+    ])
+
+    window.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Escape'
+    }))
+    await settle(5)
+
+    expect(useWalkthroughSeen().seen.value).toEqual(['teste'])
+  })
+
+  it('concluir desliga a apresentação em todas as telas do tipo', async () => {
+    await mountWalkthrough([step()])
+
+    await click('apresentacao-concluir')
+
+    expect(useWalkthroughSeen().seen.value).toEqual(['teste'])
+  })
+
+  it('começa quando a tela fica pronta', async () => {
+    const ready = ref(false)
+    await mountWalkthrough([
+      step({
+        title: 'Agora sim'
+      })
+    ], undefined, ready)
+
+    ready.value = true
+    await settle(5)
+
+    expect(popover()?.textContent).toContain('Agora sim')
   })
 })

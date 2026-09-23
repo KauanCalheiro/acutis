@@ -196,6 +196,19 @@ test.describe('project creation', { tag: ['@write', '@project'] }, () => {
         await expect(page.getByTestId('projeto-nome')).toContainText('Meu Projeto Novo')
     })
 
+    test('creating with a held enter does not submit the base url that opens next', async ({ page }) => {
+        await test.step('press enter on the name and release it on the next screen', async () => {
+            await page.getByTestId('projeto-form-nome').fill('Criado Pelo Enter')
+            await page.keyboard.down('Enter')
+            await page.getByTestId('projeto-configuracoes-base-url').waitFor()
+            await page.keyboard.up('Enter')
+            await page.waitForLoadState('networkidle')
+        })
+
+        await expect(page.getByText('A URL base deve ser uma URL válida.', { exact: true })).toBeHidden()
+        await expect(page.getByTestId('projeto-configuracoes-base-url')).toBeVisible()
+    })
+
     test('hides the header close button when the modal has a cancel action', async ({ page }) => {
         await expect(page.getByRole('dialog').getByRole('button', { name: 'Close' })).toHaveCount(0)
     })

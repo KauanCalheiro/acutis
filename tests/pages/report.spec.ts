@@ -4,7 +4,9 @@ import { clearNuxtData } from 'nuxt/app'
 import { defineComponent, h } from 'vue'
 import { UApp } from '#components'
 import ReportPage from '~/pages/projects/[projectSlug]/report/index.vue'
-import { settle } from '../support/modal'
+import { field, settle } from '../support/modal'
+import { mountAttached, walkthroughTitles } from '../support/walkthrough'
+import { useWalkthroughRunning, useWalkthroughSeen } from '~/composables/walkthrough'
 import type { SuiteRun, SuiteRunTest } from '#shared/contracts/report'
 import type { Scenario } from '#shared/contracts/scenario'
 
@@ -65,6 +67,7 @@ let mounted: { unmount: () => void } | undefined
 
 beforeEach(() => {
   clearNuxtData()
+  useWalkthroughSeen().mark('report')
   api.scenarios = []
   api.runs = [
     run('2026-08-28T17:32:04.120Z', [
@@ -196,5 +199,52 @@ describe('ReportPage', () => {
 
     expect(wrapper.find('[data-testid="relatorio-vazio"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="relatorio-execucao"]').exists()).toBe(false)
+  })
+})
+
+describe('ReportPage: apresentação', () => {
+  const route = '/projects/alpha-store/report'
+
+  beforeEach(() => {
+    useWalkthroughSeen().reset()
+    useWalkthroughRunning().value = false
+  })
+
+  it('explica cada card do relatório', async () => {
+    mounted = await mountAttached(ReportPage, route)
+
+    expect(await walkthroughTitles()).toEqual([
+      'Última rodada',
+      'Rodadas verdes',
+      'Cenários verdes',
+      'Duração média',
+      'Cenários instáveis',
+      'Resultado das rodadas',
+      'Duração das rodadas',
+      'Cenários que mais falham',
+      'Cenários mais lentos',
+      'Histórico por cenário',
+      'Execuções',
+      'Relatório do Playwright'
+    ])
+  })
+
+  it('aponta para como gerar a primeira rodada quando não há nenhuma', async () => {
+    api.runs = []
+
+    mounted = await mountAttached(ReportPage, route)
+
+    expect(await walkthroughTitles()).toEqual([
+      'Nenhuma rodada ainda'
+    ])
+  })
+
+  it('pular desliga a apresentação em todos os relatórios', async () => {
+    mounted = await mountAttached(ReportPage, route)
+
+    field('apresentacao-pular')!.click()
+    await settle()
+
+    expect(useWalkthroughSeen().seen.value).toEqual(['report'])
   })
 })

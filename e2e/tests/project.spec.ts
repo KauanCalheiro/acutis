@@ -1,8 +1,9 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { startBackend } from '../support/backend'
 import { projectsCopy } from '../support/projects'
+import { FIRST_VISIT } from '../support/walkthrough'
 
 test.describe('project API contract', { tag: ['@read', '@project'] }, () => {
     let stopBackend: () => Promise<void>
@@ -639,5 +640,183 @@ test.describe('project management', { tag: ['@write', '@project'] }, () => {
 
         await expect(page).toHaveURL('/')
         expect(existsSync(join(tmpProjects, 'casa-verde'))).toBe(false)
+    })
+})
+
+test.describe('project walkthrough', { tag: ['@write', '@project'] }, () => {
+    let stopBackend: () => Promise<void>
+    let tmpProjects: string
+
+    test.use({ storageState: FIRST_VISIT })
+
+    test.beforeAll(async () => {
+        tmpProjects = projectsCopy()
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
+    })
+
+    test.afterAll(async () => {
+        await stopBackend()
+        rmSync(tmpProjects, { recursive: true, force: true })
+    })
+
+    async function openProject(page: Page, slug: string) {
+        await page.goto(`/projects/${slug}`)
+        await page.locator('[data-hydrated="true"]').waitFor()
+    }
+
+    async function advanceTo(page: Page, title: string) {
+        const walkthrough = page.getByTestId('apresentacao')
+
+        while (!(await walkthrough.textContent())?.includes(title)) {
+            const position = await page.getByTestId('apresentacao-posicao').textContent()
+            await page.getByTestId('apresentacao-avancar').click()
+            await expect(page.getByTestId('apresentacao-posicao')).not.toHaveText(position ?? '')
+        }
+    }
+
+    test('introduces the project on the first visit', async ({ page }) => {
+        await openProject(page, 'beta-blog')
+
+        await expect(page.getByTestId('apresentacao')).toContainText('Este é o projeto')
+    })
+
+    test('waits for the base url before starting', async ({ page }) => {
+        writeFileSync(join(tmpProjects, 'echo-docs', '.env'), '')
+
+        await openProject(page, 'echo-docs')
+
+        await test.step('the url modal comes first, alone', async () => {
+            await expect(page.getByTestId('projeto-configuracoes-base-url')).toBeVisible()
+            await expect(page.getByTestId('apresentacao')).toBeHidden()
+        })
+
+        await test.step('save the url', async () => {
+            await page.getByTestId('projeto-configuracoes-base-url').fill('https://sistema.exemplo.com')
+            await page.getByTestId('projeto-configuracoes-salvar').click()
+        })
+
+        await expect(page.getByTestId('apresentacao')).toContainText('Este é o projeto')
+    })
+
+    test('skipping turns it off for every project', async ({ page }) => {
+        await test.step('skip on one project', async () => {
+            await openProject(page, 'beta-blog')
+            await page.getByTestId('apresentacao-pular').click()
+        })
+
+        await test.step('open another project', async () => {
+            await openProject(page, 'alpha-store')
+        })
+
+        await expect(page.getByTestId('apresentacao')).toBeHidden()
+    })
+
+    test('walks through the environments with the modal open', async ({ page }) => {
+        await openProject(page, 'beta-blog')
+
+        await test.step('advance to the variables', async () => {
+            await advanceTo(page, 'Variáveis do ambiente')
+        })
+
+        await expect(page.getByTestId('ambientes-descricao')).toBeVisible()
+
+        await test.step('advance to the selectors tab', async () => {
+            await page.getByTestId('apresentacao-avancar').click()
+        })
+
+        await expect(page.getByTestId('seletores-descricao')).toBeVisible()
+
+        await test.step('leave the environments behind', async () => {
+            await page.getByTestId('apresentacao-avancar').click()
+        })
+
+        await expect(page.getByTestId('apresentacao')).toContainText('Autenticação')
+        await expect(page.getByTestId('seletores-descricao')).toBeHidden()
+    })
+})
+
+const SUITE_RUN_STARTED_AT = '2026-08-28T17:32:04.120Z'
+
+/** Grava no histórico do alpha-store uma rodada com um cenário verde e um vermelho. */
+function seedSuiteRun(projects: string): void {
+    const suite = join(projects, 'alpha-store', 'runs', '_suite')
+    mkdirSync(suite, { recursive: true })
+    writeFileSync(join(suite, 'history.ndjson'), `${JSON.stringify({
+        started_at: SUITE_RUN_STARTED_AT,
+        duration_ms: 1900,
+        passed: false,
+        filter: null,
+        branch: 'main',
+        author: 'e2e',
+        totals: { tests: 2, passed: 1, failed: 1, steps: 6 },
+        tests: [
+            { id: 'entrar', title: 'Entrar', spec: 'tests/entrar.spec.ts', passed: true, duration_ms: 900, steps: 2, failed_step: null },
+            { id: 'comprar', title: 'Comprar', spec: 'tests/comprar.spec.ts', passed: false, duration_ms: 1000, steps: 4, failed_step: 'Pagar' },
+        ],
+    })}\n`)
+}
+
+test.describe('report layout', { tag: ['@read', '@project'] }, () => {
+    let stopBackend: () => Promise<void>
+    let tmpProjects: string
+
+    test.beforeAll(async () => {
+        tmpProjects = projectsCopy()
+        seedSuiteRun(tmpProjects)
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
+    })
+
+    test.afterAll(async () => {
+        await stopBackend()
+        rmSync(tmpProjects, { recursive: true, force: true })
+    })
+
+    test('lines up the metric cards of a single run at the same height', async ({ page }) => {
+        await page.setViewportSize({ width: 1440, height: 900 })
+        await page.goto(`/projects/alpha-store/report/${Date.parse(SUITE_RUN_STARTED_AT)}`)
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        const heights = await page.locator('[data-metrica]').evaluateAll(cards =>
+            cards.map(card => Math.round(card.getBoundingClientRect().height))
+        )
+
+        expect(heights).toHaveLength(5)
+        expect(new Set(heights).size).toBe(1)
+    })
+})
+
+test.describe('report walkthroughs', { tag: ['@read', '@project'] }, () => {
+    let stopBackend: () => Promise<void>
+    let tmpProjects: string
+
+    const STARTED_AT = SUITE_RUN_STARTED_AT
+
+    test.use({ storageState: FIRST_VISIT })
+
+    test.beforeAll(async () => {
+        tmpProjects = projectsCopy()
+        seedSuiteRun(tmpProjects)
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
+    })
+
+    test.afterAll(async () => {
+        await stopBackend()
+        rmSync(tmpProjects, { recursive: true, force: true })
+    })
+
+    test('explains the cards of the aggregate report', async ({ page }) => {
+        await page.goto('/projects/alpha-store/report')
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await expect(page.getByTestId('apresentacao')).toContainText('Última rodada')
+        await expect(page.getByTestId('apresentacao-posicao')).toHaveText('1 de 12')
+    })
+
+    test('explains the cards of a single run', async ({ page }) => {
+        await page.goto(`/projects/alpha-store/report/${Date.parse(STARTED_AT)}`)
+        await page.locator('[data-hydrated="true"]').waitFor()
+
+        await expect(page.getByTestId('apresentacao')).toContainText('Resultado da rodada')
+        await expect(page.getByTestId('apresentacao-posicao')).toHaveText('1 de 14')
     })
 })
