@@ -42,6 +42,13 @@ async function skip() {
   }
 }
 
+/** Salva só pelo Enter apertado aqui e com algo digitado, como o botão Salvar. */
+function saveOnEnter(event: KeyboardEvent) {
+  if (event.repeat || !url.value.trim()) return
+
+  save()
+}
+
 async function save() {
   saving.value = true
 
@@ -87,7 +94,7 @@ async function save() {
           class="w-full"
           placeholder="https://sistema.exemplo.com/app"
           data-testid="projeto-configuracoes-base-url"
-          @keyup.enter="save"
+          @keydown.enter="saveOnEnter"
         />
       </UFormField>
     </template>

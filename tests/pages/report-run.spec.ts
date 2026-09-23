@@ -4,7 +4,9 @@ import { clearNuxtData } from 'nuxt/app'
 import { defineComponent, h } from 'vue'
 import { UApp } from '#components'
 import ReportRunPage from '~/pages/projects/[projectSlug]/report/[run].vue'
-import { settle } from '../support/modal'
+import { field, settle } from '../support/modal'
+import { mountAttached, walkthroughTitles } from '../support/walkthrough'
+import { useWalkthroughRunning, useWalkthroughSeen } from '~/composables/walkthrough'
 import type { SuiteRun, SuiteRunTest } from '#shared/contracts/report'
 
 function test(overrides: Partial<SuiteRunTest> = {}): SuiteRunTest {
@@ -76,6 +78,7 @@ let mounted: { unmount: () => void } | undefined
 
 beforeEach(() => {
   clearNuxtData()
+  useWalkthroughSeen().mark('run')
   api.runs = [
     run(LAST, [test({ duration_ms: 900 }), comprar({ passed: false, failed_step: 'Pagar' })], 'checkout'),
     run(PREVIOUS, [test({ duration_ms: 800 }), comprar({ duration_ms: 4000 })])
@@ -213,5 +216,56 @@ describe('ReportRunPage', () => {
     const wrapper = await mount()
 
     expect(wrapper.get('[data-testid="execucao-inexistente"]').text()).toContain('não está mais')
+  })
+})
+
+describe('ReportRunPage: apresentação', () => {
+  const routeFor = (startedAt: string) => `/projects/alpha-store/report/${Date.parse(startedAt)}`
+
+  beforeEach(() => {
+    useWalkthroughSeen().reset()
+    useWalkthroughRunning().value = false
+  })
+
+  it('explica cada card da rodada mais recente', async () => {
+    mounted = await mountAttached(ReportRunPage, routeFor(LAST))
+
+    expect(await walkthroughTitles()).toEqual([
+      'Resultado da rodada',
+      'O que rodou',
+      'Cenários',
+      'Sucesso',
+      'Duração',
+      'Steps',
+      'Mais lento',
+      'O que quebrou',
+      'Resultado dos cenários',
+      'Onde o tempo foi gasto',
+      'Duração por cenário',
+      'Contra a rodada anterior',
+      'Cenários da rodada',
+      'Relatório do Playwright'
+    ])
+  })
+
+  it('deixa de fora o que quebrou numa rodada toda verde', async () => {
+    mounted = await mountAttached(ReportRunPage, routeFor(PREVIOUS))
+
+    expect(await walkthroughTitles()).not.toContain('O que quebrou')
+  })
+
+  it('deixa de fora o relatório do Playwright numa rodada antiga', async () => {
+    mounted = await mountAttached(ReportRunPage, routeFor(PREVIOUS))
+
+    expect(await walkthroughTitles()).not.toContain('Relatório do Playwright')
+  })
+
+  it('pular desliga a apresentação em todas as execuções', async () => {
+    mounted = await mountAttached(ReportRunPage, routeFor(LAST))
+
+    field('apresentacao-pular')!.click()
+    await settle()
+
+    expect(useWalkthroughSeen().seen.value).toEqual(['run'])
   })
 })

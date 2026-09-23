@@ -1,5 +1,6 @@
 import { defineConfig } from '@playwright/test'
 import { FRONTEND_URL } from './support/ports'
+import { WALKTHROUGHS_SEEN } from './support/walkthrough'
 
 /** Os testes que só funcionam com um modelo de verdade atrás do backend. */
 const AI_DEPENDENT = /@ia/
@@ -14,6 +15,7 @@ export default defineConfig({
     reporter: [['list'], ['html', { open: 'never' }]],
     use: {
         baseURL: FRONTEND_URL,
+        storageState: WALKTHROUGHS_SEEN,
         video: 'on',
     },
 })

@@ -43,6 +43,59 @@ function open(baseUrl: string | null = null) {
 }
 
 describe('ProjectSettingsModal', () => {
+  it('salva pelo Enter no campo', async () => {
+    await open()
+    await type('projeto-configuracoes-base-url', 'https://loja.test')
+
+    field('projeto-configuracoes-base-url')!.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true
+    }))
+    await settle()
+
+    expect(api.saved).toEqual({
+      baseUrl: 'https://loja.test'
+    })
+  })
+
+  it('não salva pelo Enter com o campo vazio', async () => {
+    await open()
+
+    field('projeto-configuracoes-base-url')!.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true
+    }))
+    await settle()
+
+    expect(api.saved).toBeNull()
+    expect(toasts).toHaveLength(0)
+  })
+
+  it('ignora o Enter solto no campo depois de apertado na tela anterior', async () => {
+    await open('https://loja.test')
+
+    field('projeto-configuracoes-base-url')!.dispatchEvent(new KeyboardEvent('keyup', {
+      key: 'Enter',
+      bubbles: true
+    }))
+    await settle()
+
+    expect(api.saved).toBeNull()
+  })
+
+  it('ignora o Enter que continua segurado desde a tela anterior', async () => {
+    await open('https://loja.test')
+
+    field('projeto-configuracoes-base-url')!.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Enter',
+      repeat: true,
+      bubbles: true
+    }))
+    await settle()
+
+    expect(api.saved).toBeNull()
+  })
+
   it('abre com a URL que o projeto já tinha', async () => {
     await open('https://loja.test')
 

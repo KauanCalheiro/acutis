@@ -325,4 +325,13 @@ describe('ProjectEnvironmentsModal: a aba de seletores', () => {
     expect(field('seletores-item-0')!.getAttribute('data-key')).toBe('dataTestId')
     expect(field('ambientes-nome')).toBeFalsy()
   })
+
+  it('abre na aba que quem abriu pediu', async () => {
+    await openModal(ProjectEnvironmentsModal, {
+      slug: 'alpha-store',
+      tab: 'seletores'
+    })
+
+    expect(field('seletores-descricao')).toBeTruthy()
+  })
 })

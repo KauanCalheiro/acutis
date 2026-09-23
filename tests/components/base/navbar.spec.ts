@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import BaseNavbar from '~/components/base/navbar.vue'
+import { useSettingsOpen } from '~/composables/settings'
+import { useWalkthroughSeen } from '~/composables/walkthrough'
 import { mountInApp } from '../../support/app'
 
 describe('BaseNavbar', () => {
@@ -31,6 +33,26 @@ describe('BaseNavbar', () => {
     await new Promise(resolve => setTimeout(resolve, 0))
 
     expect(modal.props('open')).toBe(false)
+  })
+
+  it('abre a configuração de IA quando a apresentação pede', async () => {
+    await mountInApp(BaseNavbar)
+
+    useSettingsOpen().value = true
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(document.body.textContent).toContain('Inteligência artificial')
+
+    useSettingsOpen().value = false
+  })
+
+  it('reabre as apresentações já vistas', async () => {
+    const wrapper = await mountInApp(BaseNavbar)
+    useWalkthroughSeen().mark('home')
+
+    await wrapper.get('[data-testid="navbar-apresentacao"]').trigger('click')
+
+    expect(useWalkthroughSeen().seen.value).toEqual([])
   })
 
   it('guarda a cor primária escolhida no cookie', async () => {

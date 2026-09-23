@@ -5,6 +5,7 @@ import { cpSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import { startBackend } from '../support/backend'
+import { FIRST_VISIT } from '../support/walkthrough'
 
 const FIXTURES_DIR = resolve(import.meta.dirname, '../fixtures/projects')
 
@@ -195,6 +196,19 @@ test.describe('project creation', { tag: ['@write', '@project'] }, () => {
         await expect(page.getByTestId('projeto-nome')).toContainText('Meu Projeto Novo')
     })
 
+    test('creating with a held enter does not submit the base url that opens next', async ({ page }) => {
+        await test.step('press enter on the name and release it on the next screen', async () => {
+            await page.getByTestId('projeto-form-nome').fill('Criado Pelo Enter')
+            await page.keyboard.down('Enter')
+            await page.getByTestId('projeto-configuracoes-base-url').waitFor()
+            await page.keyboard.up('Enter')
+            await page.waitForLoadState('networkidle')
+        })
+
+        await expect(page.getByText('A URL base deve ser uma URL válida.', { exact: true })).toBeHidden()
+        await expect(page.getByTestId('projeto-configuracoes-base-url')).toBeVisible()
+    })
+
     test('hides the header close button when the modal has a cancel action', async ({ page }) => {
         await expect(page.getByRole('dialog').getByRole('button', { name: 'Close' })).toHaveCount(0)
     })
@@ -294,5 +308,91 @@ test.describe('project creation', { tag: ['@write', '@project'] }, () => {
         })
 
         await expect(page.getByTestId('projeto-vazio')).toBeVisible()
+    })
+})
+
+test.describe('first visit walkthrough', { tag: ['@read', '@project'] }, () => {
+    let stopBackend: () => Promise<void>
+    let projects: string
+
+    test.use({ storageState: FIRST_VISIT })
+
+    test.beforeAll(async () => {
+        projects = fixturesCopy()
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: projects })
+    })
+
+    test.afterAll(async () => {
+        await stopBackend()
+        rmSync(projects, { recursive: true, force: true })
+    })
+
+    test.beforeEach(async ({ page }) => {
+        await test.step('open home and wait for hydration', async () => {
+            await page.goto('/')
+            await page.locator('[data-hydrated="true"]').waitFor()
+        })
+    })
+
+    async function advanceTo(page: Page, title: string) {
+        const walkthrough = page.getByTestId('apresentacao')
+
+        while (!(await walkthrough.textContent())?.includes(title)) {
+            const position = await page.getByTestId('apresentacao-posicao').textContent()
+            await page.getByTestId('apresentacao-avancar').click()
+            await expect(page.getByTestId('apresentacao-posicao')).not.toHaveText(position ?? '')
+        }
+    }
+
+    test('introduces the tool on the first visit', async ({ page }) => {
+        await expect(page.getByTestId('apresentacao')).toContainText('Isto é o Acutis')
+    })
+
+    test('explains both ways to create a project with the form open', async ({ page }) => {
+        await test.step('advance to the template tab', async () => {
+            await advanceTo(page, 'Começar do zero')
+        })
+
+        await expect(page.getByTestId('projeto-form-nome')).toBeVisible()
+
+        await test.step('advance to the git tab over the open form', async () => {
+            await page.getByTestId('apresentacao-avancar').click()
+        })
+
+        await expect(page.getByTestId('apresentacao')).toContainText('Importar de um Git')
+        await expect(page.getByTestId('projeto-form-url')).toBeVisible()
+    })
+
+    test('walks through the ai settings with the modal open', async ({ page }) => {
+        await test.step('advance to the settings step', async () => {
+            await advanceTo(page, 'Qual provedor escolher')
+        })
+
+        await expect(page.getByTestId('config-ia-provedor')).toBeVisible()
+
+        await test.step('leave the settings behind', async () => {
+            await page.getByTestId('apresentacao-avancar').click()
+        })
+
+        await expect(page.getByTestId('config-ia-provedor')).toBeHidden()
+    })
+
+    test('does not come back after being skipped', async ({ page }) => {
+        await test.step('skip and reload', async () => {
+            await page.getByTestId('apresentacao-pular').click()
+            await page.reload()
+            await page.locator('[data-hydrated="true"]').waitFor()
+        })
+
+        await expect(page.getByTestId('apresentacao')).toBeHidden()
+    })
+
+    test('comes back from the navbar', async ({ page }) => {
+        await test.step('skip and ask to see it again', async () => {
+            await page.getByTestId('apresentacao-pular').click()
+            await page.getByTestId('navbar-apresentacao').click()
+        })
+
+        await expect(page.getByTestId('apresentacao')).toContainText('Isto é o Acutis')
     })
 })

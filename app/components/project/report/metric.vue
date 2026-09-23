@@ -40,9 +40,10 @@ const toneClass = {
     :ui="tooltipUi"
   >
     <div
-      class="rounded-lg bg-elevated px-4 py-3"
+      class="h-full rounded-lg bg-elevated px-4 py-3"
       :class="explanation && 'cursor-help'"
       :data-metrica="name"
+      :data-testid="`metrica-${name}`"
     >
       <p class="text-xs uppercase tracking-wide text-dimmed">
         {{ label }}

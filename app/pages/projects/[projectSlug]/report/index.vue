@@ -116,6 +116,11 @@ const slowest = computed(() => [...stats.value]
       />
     </div>
 
+    <BaseWalkthrough
+      id="report"
+      :steps="reportWalkthroughSteps()"
+    />
+
     <BaseEmpty
       v-if="runs.length === 0"
       class="mt-10"

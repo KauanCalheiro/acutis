@@ -1,8 +1,9 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { existsSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { BACKEND_URL, startBackend } from '../support/backend'
 import { projectReset, projectsCopy } from '../support/projects'
+import { FIRST_VISIT } from '../support/walkthrough'
 
 test.describe('scenario detail page', { tag: ['@read', '@scenario'] }, () => {
     let stopBackend: () => Promise<void>
@@ -702,5 +703,61 @@ test.describe('scenario management', { tag: ['@write', '@scenario'] }, () => {
 
             await expect(page.getByTestId('projeto-auth-aviso')).toBeHidden()
         })
+    })
+})
+
+test.describe('scenario walkthrough', { tag: ['@read', '@scenario'] }, () => {
+    let stopBackend: () => Promise<void>
+    let tmpProjects: string
+
+    test.use({ storageState: FIRST_VISIT })
+
+    test.beforeAll(async () => {
+        tmpProjects = projectsCopy()
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: tmpProjects })
+    })
+
+    test.afterAll(async () => {
+        await stopBackend()
+        rmSync(tmpProjects, { recursive: true, force: true })
+    })
+
+    async function open(page: Page, path: string) {
+        await page.goto(path)
+        await page.locator('[data-hydrated="true"]').waitFor()
+    }
+
+    async function advanceTo(page: Page, title: string) {
+        const walkthrough = page.getByTestId('apresentacao')
+
+        while (!(await walkthrough.textContent())?.startsWith(title)) {
+            const position = await page.getByTestId('apresentacao-posicao').textContent()
+            await page.getByTestId('apresentacao-avancar').click()
+            await expect(page.getByTestId('apresentacao-posicao')).not.toHaveText(position ?? '')
+        }
+    }
+
+    test('walks through the tabs of a recorded scenario', async ({ page }) => {
+        await open(page, '/projects/alpha-store/scenarios/login-do-cliente')
+
+        await expect(page.getByTestId('apresentacao')).toContainText('Este é o cenário')
+
+        await test.step('advance to the recorded events', async () => {
+            await advanceTo(page, 'Eventos gravados')
+        })
+
+        await expect(page.getByTestId('cenario-eventos')).toBeVisible()
+
+        await test.step('advance to the script', async () => {
+            await advanceTo(page, 'O script')
+        })
+
+        await expect(page.getByTestId('cenario-playwright')).toBeVisible()
+    })
+
+    test('introduces the recorded login with its own tour', async ({ page }) => {
+        await open(page, '/projects/beta-blog/scenarios/auth')
+
+        await expect(page.getByTestId('apresentacao')).toContainText('Esta é a autenticação')
     })
 })

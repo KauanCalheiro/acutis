@@ -90,6 +90,21 @@ function openCreate(tab: ProjectFormTab) {
   createOpen.value = true
 }
 
+const settingsOpen = useSettingsOpen()
+
+const walkthroughSteps = projectsWalkthroughSteps({
+  createForm: {
+    open: () => (createOpen.value = true),
+    close: () => (createOpen.value = false)
+  },
+  settings: {
+    open: () => (settingsOpen.value = true),
+    close: () => (settingsOpen.value = false)
+  },
+  showTemplateTab: () => (createTab.value = 'template'),
+  showGitTab: () => (createTab.value = 'git')
+})
+
 const taglines = [
   'Testar na mão é coisa do passado',
   'Seu último deploy foi um ato de fé?',
@@ -192,6 +207,11 @@ onBeforeUnmount(() => {
       <ProjectFormModal
         v-model:open="createOpen"
         v-model:tab="createTab"
+      />
+
+      <BaseWalkthrough
+        id="home"
+        :steps="walkthroughSteps"
       />
 
       <div

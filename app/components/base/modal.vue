@@ -20,6 +20,8 @@ const {
 const open = defineModel<boolean>('open', {
   default: false
 })
+
+const walkthroughRunning = useWalkthroughRunning()
 </script>
 
 <template>
@@ -27,7 +29,8 @@ const open = defineModel<boolean>('open', {
     v-model:open="open"
     :title="loading ? '' : title"
     :description="loading ? '' : description"
-    :dismissible="dismissable"
+    :modal="!walkthroughRunning"
+    :dismissible="dismissable && !walkthroughRunning"
     :close="!loading && closable"
     :ui="{
       content: wide ? 'divide-y-0 sm:max-w-5xl' : 'divide-y-0',

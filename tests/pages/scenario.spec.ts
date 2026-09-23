@@ -6,6 +6,7 @@ import { defineComponent, h } from 'vue'
 import { UApp } from '#components'
 import ScenarioPage from '~/pages/projects/[projectSlug]/scenarios/[...scenario].vue'
 import { useWebdriver, type RecorderEvent } from '~/composables/webdriver'
+import { useWalkthroughRunning, useWalkthroughSeen } from '~/composables/walkthrough'
 import { settle, type } from '../support/modal'
 import type { ProjectDetail, ScenarioDetail, ScenarioRun } from '~/types/project'
 
@@ -268,6 +269,8 @@ beforeEach(() => {
   api.authWarnings = []
   api.scenarioMissing = false
   recorder()
+  useWalkthroughSeen().mark('scenario')
+  useWalkthroughSeen().mark('auth')
 })
 
 afterEach(() => {
@@ -937,5 +940,201 @@ describe('ScenarioPage: chegar na autenticação já gravando', () => {
     await settle()
 
     expect(useWebdriver().state.value.recording).toBe(false)
+  })
+})
+
+describe('ScenarioPage: apresentações', () => {
+  const authRoute = '/projects/alpha-store/scenarios/auth'
+
+  /** Monta a tela presa ao documento, porque a apresentação procura os alvos nele. */
+  async function mountAttached(route = '/projects/alpha-store/scenarios/login') {
+    document.body.innerHTML = ''
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+
+    const host = defineComponent({
+      setup() {
+        return () => h(UApp, null, {
+          default: () => h(ScenarioPage)
+        })
+      }
+    })
+
+    mounted = await mountSuspended(host, {
+      route,
+      attachTo: root
+    })
+    await settle(5)
+  }
+
+  function walkthroughText() {
+    return field('apresentacao')?.textContent ?? ''
+  }
+
+  function currentTitle() {
+    return field('apresentacao')?.querySelector('p')?.textContent?.trim()
+  }
+
+  async function advance() {
+    const before = field('apresentacao-posicao')?.textContent
+
+    field('apresentacao-avancar')!.click()
+    await vi.waitFor(() => {
+      expect(field('apresentacao-posicao')?.textContent).not.toBe(before)
+    })
+    await settle(3)
+  }
+
+  async function advanceTo(title: string) {
+    while (currentTitle() !== title) await advance()
+  }
+
+  /** Percorre a apresentação inteira e devolve o título de cada passo. */
+  async function titles() {
+    const seen = [currentTitle()]
+
+    while (field('apresentacao-avancar')) {
+      await advance()
+      seen.push(currentTitle())
+    }
+
+    return seen
+  }
+
+  beforeEach(() => {
+    useWalkthroughSeen().reset()
+    useWalkthroughRunning().value = false
+  })
+
+  it('apresenta o cenário na primeira visita', async () => {
+    await mountAttached()
+
+    expect(walkthroughText()).toContain('Este é o cenário')
+  })
+
+  it('passa pelos botões e por todas as abas do cenário', async () => {
+    await mountAttached()
+
+    expect(await titles()).toEqual([
+      'Este é o cenário',
+      'Testar',
+      'Ver sugestões',
+      'Pausar',
+      'Editar',
+      'Excluir',
+      'Eventos gravados',
+      'O cenário em Gherkin',
+      'O script',
+      'Execuções'
+    ])
+  })
+
+  it('mostra os eventos na aba deles', async () => {
+    await mountAttached()
+
+    await advanceTo('Eventos gravados')
+
+    expect(field('cenario-eventos')).toBeDefined()
+  })
+
+  it('troca para a aba do Gherkin', async () => {
+    await mountAttached()
+
+    await advanceTo('O cenário em Gherkin')
+
+    expect(field('cenario-gherkin')).toBeDefined()
+  })
+
+  it('troca para a aba do script', async () => {
+    await mountAttached()
+
+    await advanceTo('O script')
+
+    expect(field('cenario-playwright')).toBeDefined()
+  })
+
+  it('troca para a aba das execuções', async () => {
+    await mountAttached()
+
+    await advanceTo('Execuções')
+
+    expect(field('cenario-execucoes-vazio')).toBeDefined()
+  })
+
+  it('volta para a aba de eventos ao terminar', async () => {
+    await mountAttached()
+    await advanceTo('Execuções')
+
+    field('apresentacao-concluir')!.click()
+    await settle(5)
+
+    expect(field('cenario-eventos')).toBeDefined()
+  })
+
+  it('deixa de fora o Gherkin do cenário escrito direto em código', async () => {
+    api.scenario = scenario({
+      gherkin: null
+    })
+    await mountAttached()
+
+    expect(await titles()).not.toContain('O cenário em Gherkin')
+  })
+
+  it('espera o editar que a URL abriu', async () => {
+    await mountAttached('/projects/alpha-store/scenarios/login?editar')
+
+    expect(field('apresentacao')).toBeUndefined()
+  })
+
+  it('pular desliga a apresentação em todos os cenários', async () => {
+    await mountAttached()
+
+    field('apresentacao-pular')!.click()
+    await settle()
+
+    expect(useWalkthroughSeen().seen.value).toEqual(['scenario'])
+  })
+
+  it('apresenta a autenticação gravada com o roteiro dela', async () => {
+    await mountAttached(authRoute)
+
+    expect(await titles()).toEqual([
+      'Esta é a autenticação',
+      'Gravar novamente',
+      'Editar',
+      'Testar',
+      'Eventos gravados',
+      'O script',
+      'Execuções'
+    ])
+  })
+
+  it('convida a gravar o login na autenticação que ainda não existe', async () => {
+    api.authScenario = scenario({
+      spec: 'tests/auth.setup.ts',
+      is_auth: true,
+      playwright: '',
+      gherkin: null,
+      events: []
+    })
+    api.project = project({
+      auth_status: 'unset'
+    })
+    await mountAttached(authRoute)
+
+    expect(await titles()).toEqual([
+      'Grave o login',
+      'Não precisa de login'
+    ])
+  })
+
+  it('pular desliga a apresentação da autenticação em todos os projetos', async () => {
+    await mountAttached(authRoute)
+
+    field('apresentacao-pular')!.click()
+    await settle()
+
+    expect(useWalkthroughSeen().seen.value).toEqual(['auth'])
   })
 })
