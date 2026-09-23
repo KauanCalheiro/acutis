@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const colorPickerOpen = ref(false)
-const settingsOpen = ref(false)
+const settingsOpen = useSettingsOpen()
+const walkthroughSeen = useWalkthroughSeen()
 
 const colors = {
   red: 'bg-red-500',
@@ -109,6 +110,26 @@ const items = [
           square
           data-testid="navbar-configuracoes"
           @click="settingsOpen = true"
+        />
+      </UTooltip>
+
+      <UTooltip
+        text="Rever apresentação"
+        :delay-duration="0"
+        arrow
+        :content="{
+          side: 'right'
+        }"
+      >
+        <UButton
+          icon="i-ic-round-tour"
+          aria-label="Rever apresentação"
+          variant="ghost"
+          color="neutral"
+          block
+          square
+          data-testid="navbar-apresentacao"
+          @click="walkthroughSeen.reset()"
         />
       </UTooltip>
     </nav>
