@@ -327,6 +327,36 @@ const AUTH_SPEC = 'tests/auth.setup.ts'
 const authRun = useRunStream(() => slug.value)
 const authRunOpen = ref(false)
 
+const walkthroughTabs = {
+  tabs: {
+    open: () => {},
+    close: () => (tab.value = 'eventos')
+  },
+  showTab: (shown: string) => (tab.value = shown),
+  hasGherkin: () => Boolean(scenario.value!.gherkin)
+}
+
+const walkthroughSteps = computed(() => isAuth.value
+  ? authWalkthroughSteps({
+      ...walkthroughTabs,
+      written: () => written.value
+    })
+  : scenarioWalkthroughSteps(walkthroughTabs))
+
+/** A apresentação só começa com a tela livre: sem modal aberto e sem gravação em andamento. */
+const walkthroughReady = computed(() =>
+  hydrated.value
+  && !removeOpen.value
+  && !editOpen.value
+  && !suggestionsOpen.value
+  && !runOpen.value
+  && !fixOpen.value
+  && !reviewOpen.value
+  && !credentialsOpen.value
+  && !authRunOpen.value
+  && !webdriver.value.recording
+)
+
 function openRecorder(events: RecorderEvent[]) {
   startRecording(isAuth.value ? 'auth' : 'scenario', {
     url: project.value!.base_url ?? undefined,
@@ -692,6 +722,12 @@ async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
         />
       </template>
     </div>
+
+    <BaseWalkthrough
+      :id="isAuth ? 'auth' : 'scenario'"
+      :steps="walkthroughSteps"
+      :ready="walkthroughReady"
+    />
 
     <BaseConfirm
       v-model:open="removeOpen"

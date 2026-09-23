@@ -4,14 +4,18 @@ import type { WalkthroughStep } from '~/composables/walkthrough'
 interface BaseWalkthrough {
   id: string
   steps: WalkthroughStep[]
+  ready?: boolean
 }
 
 const {
   id,
-  steps
+  steps,
+  ready = true
 } = defineProps<BaseWalkthrough>()
 
-const walkthrough = useWalkthrough(id, () => steps)
+const walkthrough = useWalkthrough(id, () => steps, {
+  ready: () => ready
+})
 
 const FOLLOW_FRAMES = 40
 

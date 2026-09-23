@@ -210,7 +210,7 @@ onBeforeUnmount(() => {
       />
 
       <BaseWalkthrough
-        id="projetos"
+        id="home"
         :steps="walkthroughSteps"
       />
 

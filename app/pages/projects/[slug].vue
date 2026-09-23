@@ -249,6 +249,27 @@ async function skipAuth() {
 const { state: webdriver, startRecording, stopRecording } = useWebdriver()
 const reviewOpen = ref(false)
 
+const environmentsTab = ref<'ambientes' | 'seletores'>('ambientes')
+
+const walkthroughSteps = projectWalkthroughSteps({
+  environments: {
+    open: () => (environmentsOpen.value = true),
+    close: () => (environmentsOpen.value = false)
+  },
+  showVariablesTab: () => (environmentsTab.value = 'ambientes'),
+  showSelectorsTab: () => (environmentsTab.value = 'seletores'),
+  hasScenarios: () => Boolean(project.value?.scenarios.length)
+})
+
+/** A apresentação só começa com a tela livre: sem modal aberto sozinho e sem gravação em andamento. */
+const walkthroughReady = computed(() =>
+  hydrated.value
+  && !settingsOpen.value
+  && !environmentsOpen.value
+  && !reviewOpen.value
+  && !webdriver.value.recording
+)
+
 /** `public` marca o cenário com @publico e o faz rodar fora da sessão; `plain` não carimba nada. */
 type RecordingMode = 'plain' | 'public' | 'authenticated'
 
@@ -654,8 +675,15 @@ async function remove() {
       @skip="skipAuth"
     />
 
+    <BaseWalkthrough
+      id="project"
+      :steps="walkthroughSteps"
+      :ready="walkthroughReady"
+    />
+
     <ProjectEnvironmentsModal
       v-model:open="environmentsOpen"
+      v-model:tab="environmentsTab"
       :slug="slug"
       :selectors="project!.selectors"
       @saved="reloadProjectAndEnvironments"

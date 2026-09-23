@@ -12,15 +12,23 @@ export interface WalkthroughItem {
   text: string
 }
 
-/** Um passo da apresentação, apontando para o elemento de `data-testid` igual a `testid`; sem ele, fica centralizado. */
+/**
+ * Um passo da apresentação, apontando para o primeiro elemento na tela com um dos `data-testid` de `testid`.
+ * Sem `testid`, fica centralizado.
+ */
 export interface WalkthroughStep {
-  testid?: string
+  testid?: string | string[]
   title: string
   body: string
   items?: WalkthroughItem[]
   side?: 'top' | 'right' | 'bottom' | 'left'
   scene?: WalkthroughScene
   enter?: () => void
+  when?: () => boolean
+}
+
+interface WalkthroughOptions {
+  ready?: MaybeRefOrGetter<boolean>
 }
 
 const SEEN_KEY = 'acutis-walkthrough'
@@ -31,9 +39,17 @@ const TARGET_WAIT_MS = 2000
 
 const TARGET_POLL_MS = 20
 
-/** O elemento que o passo aponta, ou null quando ele não está na tela. */
-export function findWalkthroughTarget(testid: string) {
-  return document.querySelector<HTMLElement>(`[data-testid="${testid}"]`)
+/** O elemento que o passo aponta, ou null quando nenhuma das alternativas está na tela. */
+export function findWalkthroughTarget(testid: string | string[]) {
+  const alternatives = Array.isArray(testid) ? testid : [testid]
+
+  for (const alternative of alternatives) {
+    const target = document.querySelector<HTMLElement>(`[data-testid="${alternative}"]`)
+
+    if (target) return target
+  }
+
+  return null
 }
 
 /** As apresentações já vistas, guardadas em cookie. */
@@ -61,7 +77,7 @@ export function useWalkthroughSeen() {
 /** Se alguma apresentação está na tela agora. */
 export const useWalkthroughRunning = () => useState('walkthrough-running', () => false)
 
-async function waitForTarget(testid: string) {
+async function waitForTarget(testid: string | string[]) {
   const deadline = Date.now() + TARGET_WAIT_MS
 
   while (!findWalkthroughTarget(testid) && Date.now() < deadline) {
@@ -69,8 +85,8 @@ async function waitForTarget(testid: string) {
   }
 }
 
-/** Conduz a apresentação `id` pelos passos, abrindo sozinha na primeira visita. */
-export function useWalkthrough(id: string, steps: MaybeRefOrGetter<WalkthroughStep[]>) {
+/** Conduz a apresentação `id` pelos passos, abrindo sozinha na primeira visita assim que a tela estiver `ready`. */
+export function useWalkthrough(id: string, steps: MaybeRefOrGetter<WalkthroughStep[]>, options: WalkthroughOptions = {}) {
   const { seen, mark } = useWalkthroughSeen()
   const running = useWalkthroughRunning()
 
@@ -105,7 +121,8 @@ export function useWalkthrough(id: string, steps: MaybeRefOrGetter<WalkthroughSt
 
   function start() {
     visible.value = toValue(steps).filter(step =>
-      !step.testid || step.scene || step.enter || findWalkthroughTarget(step.testid)
+      (step.when?.() ?? true)
+      && (!step.testid || step.scene || step.enter || findWalkthroughTarget(step.testid))
     )
 
     if (!visible.value.length) return
@@ -130,14 +147,17 @@ export function useWalkthrough(id: string, steps: MaybeRefOrGetter<WalkthroughSt
     if (tour.hasPrev.value) go(tour.index.value - 1)
   }
 
-  const unseen = computed(() => !seen.value.includes(id))
+  const due = computed(() =>
+    !seen.value.includes(id)
+    && toValue(options.ready ?? true)
+  )
 
   onMounted(() => {
-    if (unseen.value) start()
+    if (due.value) start()
   })
 
-  watch(unseen, (again) => {
-    if (again && !tour.open.value) start()
+  watch(due, (nowDue) => {
+    if (nowDue && !tour.open.value) start()
   })
 
   onBeforeUnmount(() => {

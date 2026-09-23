@@ -159,6 +159,12 @@ const durationDelta = computed(() => previous.value
       </h1>
     </div>
 
+    <BaseWalkthrough
+      v-if="run"
+      id="run"
+      :steps="runWalkthroughSteps()"
+    />
+
     <BaseEmpty
       v-if="!run"
       class="mt-10"
@@ -259,6 +265,7 @@ const durationDelta = computed(() => previous.value
       <section
         v-if="broken.length"
         class="mt-4 rounded-lg bg-elevated p-4"
+        data-testid="execucao-quebras"
       >
         <p class="mb-3 text-sm font-semibold">
           O que quebrou
@@ -361,7 +368,10 @@ const durationDelta = computed(() => previous.value
         Cenários da rodada
       </h2>
 
-      <div class="overflow-x-auto rounded-lg bg-elevated px-4 py-3">
+      <div
+        class="overflow-x-auto rounded-lg bg-elevated px-4 py-3"
+        data-testid="execucao-cenarios"
+      >
         <table class="w-full text-sm">
           <thead class="text-xs uppercase tracking-wide text-dimmed">
             <tr>

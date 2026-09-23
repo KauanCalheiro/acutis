@@ -9,7 +9,9 @@ interface ProjectEnvironmentsModal {
 
 const { slug, selectors = selectorKeySchema.options } = defineProps<ProjectEnvironmentsModal>()
 
-const tab = ref('ambientes')
+const tab = defineModel<'ambientes' | 'seletores'>('tab', {
+  default: 'ambientes'
+})
 
 const tabs = [
   { value: 'ambientes', label: 'Ambientes', icon: 'i-ic-round-layers' },
