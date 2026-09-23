@@ -1,9 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
 import { clearNuxtData } from 'nuxt/app'
-import { nextTick } from 'vue'
+import { nextTick, defineComponent, h } from 'vue'
+import { enableAutoUnmount } from '@vue/test-utils'
+import { UApp } from '#components'
+import BaseNavbar from '~/components/base/navbar.vue'
 import IndexPage from '~/pages/index.vue'
+import { useWalkthroughRunning, useWalkthroughSeen } from '~/composables/walkthrough'
 import type { Project } from '~/types/project'
+import { field, settle } from '../support/modal'
 
 const projects: Project[] = [
   {
@@ -33,6 +38,8 @@ let response: { data: Project[], meta: { current_page: number, per_page: number,
   }
 }
 
+enableAutoUnmount(afterEach)
+
 /** As buscas que chegaram na API, para conferir o que a tela pediu. */
 const queries: string[] = []
 
@@ -56,6 +63,7 @@ function listing(data: Project[], total = data.length) {
 describe('IndexPage', () => {
   beforeEach(() => {
     clearNuxtData()
+    useWalkthroughSeen().mark('projetos')
   })
 
   it('renders a card per project from the API', async () => {
@@ -132,6 +140,7 @@ describe('IndexPage', () => {
 describe('IndexPage: busca e paginação', () => {
   beforeEach(() => {
     clearNuxtData()
+    useWalkthroughSeen().mark('projetos')
     queries.length = 0
     vi.useFakeTimers()
     response = listing(projects, 20)
@@ -185,6 +194,7 @@ describe('IndexPage: busca e paginação', () => {
 describe('IndexPage: frase e medida da tela', () => {
   beforeEach(() => {
     clearNuxtData()
+    useWalkthroughSeen().mark('projetos')
     vi.useFakeTimers()
     response = listing(projects)
   })
@@ -277,5 +287,148 @@ describe('IndexPage: frase e medida da tela', () => {
     await vi.advanceTimersByTimeAsync(0)
 
     expect(wrapper.findAll('[data-hydrated="true"]')).toHaveLength(1)
+  })
+})
+
+registerEndpoint('/api/settings/ai', () => ({
+  provider: '',
+  credentials: {},
+  providers: ['claude-code', 'ollama'],
+  provider_urls: {},
+  keyless_providers: ['ollama']
+}))
+
+describe('IndexPage: apresentação', () => {
+  /** Monta a tela como o app.vue monta, com a navbar ao lado, porque a apresentação passa por ela. */
+  async function mountHome() {
+    document.body.innerHTML = ''
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+
+    const host = defineComponent({
+      setup() {
+        return () => h(UApp, null, {
+          default: () => [
+            h(BaseNavbar),
+            h(IndexPage)
+          ]
+        })
+      }
+    })
+
+    await mountSuspended(host, {
+      attachTo: root
+    })
+    await settle(5)
+  }
+
+  function walkthroughText() {
+    return field('apresentacao')?.textContent ?? ''
+  }
+
+  async function advance(times: number) {
+    for (let step = 0; step < times; step++) {
+      const before = field('apresentacao-posicao')?.textContent
+
+      field('apresentacao-avancar')!.click()
+      await vi.waitFor(() => {
+        expect(field('apresentacao-posicao')?.textContent).not.toBe(before)
+      })
+      await settle(3)
+    }
+  }
+
+  beforeEach(() => {
+    clearNuxtData()
+    response = listing(projects)
+    useWalkthroughSeen().reset()
+    useWalkthroughRunning().value = false
+  })
+
+  it('apresenta a ferramenta na primeira visita', async () => {
+    await mountHome()
+
+    expect(walkthroughText()).toContain('Isto é o Acutis')
+  })
+
+  it('não repete a apresentação já vista', async () => {
+    useWalkthroughSeen().mark('projetos')
+
+    await mountHome()
+
+    expect(field('apresentacao')).toBeUndefined()
+  })
+
+  it('explica o começar do zero com o formulário aberto na aba Template', async () => {
+    await mountHome()
+
+    await advance(2)
+
+    expect(walkthroughText()).toContain('Começar do zero')
+    expect(field('projeto-form-nome')).toBeDefined()
+  })
+
+  it('explica a importação de um Git com o formulário na aba Git', async () => {
+    await mountHome()
+
+    await advance(3)
+
+    expect(walkthroughText()).toContain('Importar de um Git')
+    expect(field('projeto-form-url')).toBeDefined()
+  })
+
+  it('fecha o formulário ao seguir para os projetos', async () => {
+    await mountHome()
+
+    await advance(4)
+
+    expect(walkthroughText()).toContain('Cada card é um sistema')
+    expect(field('projeto-form-url')).toBeUndefined()
+  })
+
+  it('deixa de fora o card quando ainda não há projeto', async () => {
+    response = listing([])
+
+    await mountHome()
+
+    expect(field('apresentacao-posicao')?.textContent).toBe('1 de 11')
+  })
+
+  it('explica a configuração de IA com o modal aberto', async () => {
+    await mountHome()
+
+    await advance(7)
+
+    expect(walkthroughText()).toContain('Configurações: inteligência artificial')
+    expect(field('config-ia-provedor')).toBeDefined()
+  })
+
+  it('explica quando usar cada provedor', async () => {
+    await mountHome()
+
+    await advance(8)
+
+    expect(walkthroughText()).toContain('Sem IA')
+    expect(walkthroughText()).toContain('Claude Agent e Codex')
+    expect(walkthroughText()).toContain('Ollama')
+  })
+
+  it('fecha as configurações ao seguir para a cor', async () => {
+    await mountHome()
+
+    await advance(9)
+
+    expect(walkthroughText()).toContain('Cor da ferramenta')
+    expect(field('config-ia-provedor')).toBeUndefined()
+  })
+
+  it('termina apontando para onde rever a apresentação', async () => {
+    await mountHome()
+
+    await advance(11)
+
+    expect(walkthroughText()).toContain('Pronto para começar')
+    expect(field('apresentacao-concluir')).toBeDefined()
   })
 })
