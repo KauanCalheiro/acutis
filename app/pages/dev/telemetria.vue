@@ -31,7 +31,8 @@ async function provocarErro() {
       </h1>
       <p class="text-(--ui-text-muted)">
         O botão provoca uma falha real na API. A toast que aparece é a mesma que qualquer pessoa vê,
-        com a ação de enviar os logs.
+        e o relato vai sozinho quando a pessoa aceitou a telemetria no terminal. Em desenvolvimento,
+        suba com ACUTIS_TELEMETRY=1 para o envio acontecer.
       </p>
     </div>
 
@@ -49,7 +50,7 @@ async function provocarErro() {
       variant="subtle"
       icon="i-ic-round-cloud-upload"
       title="Para onde o relato vai"
-      :description="DEFAULT_TELEMETRY_URL || 'nenhum servidor configurado, o botão de envio não aparece'"
+      :description="DEFAULT_TELEMETRY_URL || 'nenhum servidor configurado, nada é enviado'"
     />
   </UContainer>
 </template>

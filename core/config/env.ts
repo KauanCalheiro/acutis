@@ -24,6 +24,10 @@ const environmentSchema = z.object({
   ACUTIS_APP_KEY: z.string().optional(),
   TELEMETRY_URL: z.string().default(DEFAULT_TELEMETRY_URL),
   TELEMETRY_KEY: z.string().default(DEFAULT_TELEMETRY_KEY),
+  ACUTIS_TELEMETRY: z.enum([
+    '0',
+    '1'
+  ]).default('0'),
   ANTHROPIC_URL: z.string().optional(),
   CLAUDE_AGENT_MODEL: z.string().optional(),
   CODEX_MODEL: z.string().optional(),
@@ -46,6 +50,7 @@ export interface AppConfig {
   telemetry: {
     url: string
     key: string
+    consent: boolean
   }
   providers: {
     anthropicUrl: string
@@ -84,7 +89,8 @@ export function readAppConfig(environment: Record<string, string | undefined>): 
     appKey: env.ACUTIS_APP_KEY,
     telemetry: {
       url: env.TELEMETRY_URL,
-      key: env.TELEMETRY_KEY
+      key: env.TELEMETRY_KEY,
+      consent: env.ACUTIS_TELEMETRY === '1'
     },
     providers: {
       anthropicUrl: env.ANTHROPIC_URL ?? 'https://api.anthropic.com/v1',

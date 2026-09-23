@@ -17,7 +17,7 @@ O que o acutis faz, visto por quem usa e por quem é usado. A ordem dos passos d
 | 9 | [Relatórios](#9-relatórios) | O que sobra de todas as execuções |
 | 10 | [Sincronização com o repositório](#10-sincronização-com-o-repositório) | Como o time compartilha os testes |
 | 11 | [Configuração de IA](#11-configuração-de-ia) | Escolher provedor, modelo e desligar |
-| 12 | [Telemetria](#12-telemetria) | O que sai da máquina, e só por clique |
+| 12 | [Telemetria](#12-telemetria) | O que sai da máquina, e só com consentimento |
 | 13 | [Quando a IA entra](#13-quando-a-ia-entra) | O que muda com e sem provedor |
 | 14 | [Os estados que a tela mostra](#14-os-estados-que-a-tela-mostra) | Autenticação, cenário e repositório |
 | 15 | [O que cada ação escreve no projeto](#15-o-que-cada-ação-escreve-no-projeto) | Qual arquivo nasce de qual caso de uso |
@@ -505,15 +505,15 @@ A instalação nasce sem IA. Os provedores por HTTP pedem chave (Ollama e os loc
 flowchart LR
   P(("Pessoa"))
 
-  ER["Erro na tela, com o motivo do servidor"]
-  BT["Clicar em Enviar logs"]
+  CS["Aceitar os relatos no terminal, na primeira execução"]
+  ER["Qualquer erro da aplicação"]
   RD["Ocultar caminho de casa, ambiente e segredo"]
   API["API de telemetria"]
 
-  P --> ER --> BT --> RD --> API
+  P --> CS --> ER --> RD --> API
 ```
 
-Nada sai da máquina sozinho: o envio é sempre um clique na notificação de erro, e o que vai é a mensagem, o stack, a versão do CLI, a do Node, a plataforma e um identificador da instalação. Caminho de casa, variáveis de ambiente e valores sensíveis são ocultados antes do envio.
+A pergunta aparece uma vez, no terminal, e a resposta fica guardada. Quem aceitou envia sozinho todo erro da aplicação: o que a tela mostra, o de componente que escapa e o do processo fora de uma requisição. O que vai é a mensagem, o stack, a versão do CLI, a do Node, a plataforma e um identificador da instalação. Caminho de casa, variáveis de ambiente e valores sensíveis são ocultados antes do envio, e o mesmo erro vai uma vez só por sessão.
 
 ## 13. Quando a IA entra
 
