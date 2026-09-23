@@ -4,18 +4,16 @@ import { useNotify } from '~/composables/notify'
 
 const add = vi.fn()
 const send = vi.fn()
-const telemetry = { enabled: true }
 
 mockNuxtImport('useToast', () => () => ({ add }))
 mockNuxtImport('useTelemetry', () => () => ({
-  get enabled() { return telemetry.enabled },
   report: (...args: unknown[]) => send(...args)
 }))
 
 beforeEach(() => {
-  telemetry.enabled = true
   add.mockClear()
-  send.mockClear()
+  send.mockReset()
+  send.mockResolvedValue(true)
 })
 
 describe('useNotify', () => {
@@ -47,68 +45,39 @@ describe('useNotify', () => {
 })
 
 describe('useNotify com telemetria', () => {
-  it('deixa a toast de erro na tela por mais tempo, para dar tempo de decidir', () => {
-    useNotify().failure(new Error('boom'), 'Não deu')
-
-    expect(add.mock.lastCall![0].duration).toBe(15_000)
-  })
-
-  it('oferece o envio do relato no erro', () => {
+  it('mostra o erro sem ação de envio', () => {
     useNotify().failure(new Error('boom'), 'Não deu', 'Gerar cenário')
-
-    const [toast] = add.mock.lastCall!
-    expect(toast.actions).toHaveLength(1)
-    expect(toast.actions[0]).toMatchObject({
-      label: 'Enviar logs',
-      variant: 'soft',
-      block: true
-    })
-  })
-
-  it('não oferece nada quando não há telemetria configurada', () => {
-    telemetry.enabled = false
-
-    useNotify().failure(new Error('boom'), 'Não deu')
 
     expect(add.mock.lastCall![0].actions).toBeUndefined()
   })
 
-  it('manda o erro e o contexto ao clicar', async () => {
-    send.mockResolvedValue(true)
+  it('deixa a toast de erro com a duração padrão', () => {
+    useNotify().failure(new Error('boom'), 'Não deu')
+
+    expect(add.mock.lastCall![0].duration).toBeUndefined()
+  })
+
+  it('envia o relato sozinho com o erro, o texto de reserva e o contexto', () => {
     const error = new Error('boom')
 
     useNotify().failure(error, 'Não deu', 'Gerar cenário')
-    await add.mock.lastCall![0].actions[0].onClick()
 
     expect(send).toHaveBeenCalledWith(error, 'Não deu', 'Gerar cenário')
   })
 
-  it('agradece quando o relato chega', async () => {
-    send.mockResolvedValue(true)
-
+  it('não mostra nada na tela sobre o envio', async () => {
     useNotify().failure(new Error('boom'), 'Não deu')
-    await add.mock.lastCall![0].actions[0].onClick()
+    await Promise.resolve()
 
-    expect(add).toHaveBeenLastCalledWith(expect.objectContaining({ color: 'success' }))
-  })
-
-  it('avisa quando o relato não chegou', async () => {
-    send.mockResolvedValue(false)
-
-    useNotify().failure(new Error('boom'), 'Não deu')
-    await add.mock.lastCall![0].actions[0].onClick()
-
-    expect(add).toHaveBeenLastCalledWith(expect.objectContaining({
-      title: 'Não foi possível enviar os logs.',
-      color: 'warning'
-    }))
+    expect(add).toHaveBeenCalledOnce()
   })
 
   it('não deixa a falha do envio virar outro erro na tela', async () => {
     send.mockRejectedValue(new Error('sem rede'))
 
-    useNotify().failure(new Error('boom'), 'Não deu')
+    expect(() => useNotify().failure(new Error('boom'), 'Não deu')).not.toThrow()
+    await new Promise(resolve => setTimeout(resolve, 0))
 
-    await expect(add.mock.lastCall![0].actions[0].onClick()).resolves.toBeUndefined()
+    expect(add).toHaveBeenCalledOnce()
   })
 })

@@ -1,6 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { mockNuxtImport } from '@nuxt/test-utils/runtime'
-import { DEFAULT_TELEMETRY_URL } from '@acutis/core/config/telemetry-endpoint'
 import { useTelemetry } from '~/composables/telemetry'
 
 const send = vi.fn()
@@ -12,10 +11,6 @@ beforeEach(() => {
 })
 
 describe('useTelemetry', () => {
-  it('segue a url que o build embutiu', () => {
-    expect(useTelemetry().enabled).toBe(DEFAULT_TELEMETRY_URL !== '')
-  })
-
   it('manda a mesma mensagem que a tela mostrou, com stack e contexto', async () => {
     send.mockResolvedValue({ sent: true })
     const error = new Error('boom')

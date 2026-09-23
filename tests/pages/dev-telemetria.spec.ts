@@ -37,4 +37,11 @@ describe('página de dev da telemetria', () => {
 
     expect(page.text()).toContain(DEFAULT_TELEMETRY_URL || 'nenhum servidor configurado')
   })
+
+  it('explica que o relato vai sozinho, sem botão de envio', async () => {
+    const page = await mountSuspended(DevTelemetria)
+
+    expect(page.text()).toContain('ACUTIS_TELEMETRY=1')
+    expect(page.text()).not.toContain('ação de enviar')
+  })
 })
