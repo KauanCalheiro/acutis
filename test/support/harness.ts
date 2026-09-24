@@ -13,8 +13,9 @@ import {
   toNodeListener,
   type EventHandler
 } from 'h3'
-import supertest from 'supertest'
+import type supertest from 'supertest'
 import { DataSource } from 'typeorm'
+import { loopback } from './loopback.js'
 import { SettingsService } from '../../core/modules/settings/settings.service.js'
 import { ScenarioService } from '../../core/modules/scenario/scenario.service.js'
 import { RunnerService } from '../../core/webdriver/runner/runner.service.js'
@@ -240,12 +241,15 @@ export async function startApi(
     ...providers.map(override => [override.provide, override.value] as [unknown, unknown])
   ])
 
+  const server = await loopback(toNodeListener(app))
+
   return {
     root,
-    http: supertest(toNodeListener(app)),
+    http: server.http,
     get: <T>(token: unknown) => registry.get(token) as T,
     projectPath: (slug: string) => join(root, slug),
     close: async () => {
+      await server.close()
       resetExecutionRunner()
       resetAuthUseCases()
       await closeSettings()

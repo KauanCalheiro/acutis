@@ -7,7 +7,8 @@ import { createServer, type Server } from 'node:http'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import supertest from 'supertest'
+import type supertest from 'supertest'
+import { loopback, type Loopback } from '../../../../test/support/loopback.js'
 import {
   createApp,
   createError,
@@ -25,6 +26,7 @@ import { logDir, withRequestLog, type RequestEntry } from '../request-log.interc
 let remote: Server
 let remoteUrl: string
 let http: ReturnType<typeof supertest>
+let app: Loopback
 let root: string
 let previousRoot: string | undefined
 
@@ -139,10 +141,12 @@ beforeEach(async () => {
   const port = (remote.address() as { port: number }).port
   remoteUrl = `http://127.0.0.1:${port}`
 
-  http = supertest(toNodeListener(application()))
+  app = await loopback(toNodeListener(application()))
+  http = app.http
 })
 
 afterEach(async () => {
+  await app.close()
   await new Promise<void>(resolve => remote.close(() => resolve()))
 
   if (previousRoot === undefined) {

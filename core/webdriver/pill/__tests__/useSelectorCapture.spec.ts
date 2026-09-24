@@ -39,6 +39,26 @@ describe('useSelectorCapture', () => {
     expect(extractSelectors(el).hiddenTwins).toBe(false)
   })
 
+  it('não marca gêmeo escondido quando o texto já é único', () => {
+    setBody('<button>Enviar</button>')
+
+    expect(extractSelectors(document.querySelector('button')!).textHiddenTwins).toBe(false)
+  })
+
+  it('não ancora no select visível o botão que só está logo depois dele', () => {
+    setBody('<select name="estado"><option>RS</option></select><div><button class="acao">Salvar</button></div>')
+
+    expect(extractSelectors(document.querySelector('button')!).cssStable).toBeNull()
+  })
+
+  it('recusa o texto que se repete em outro elemento visível', () => {
+    setBody('<button>Enviar</button><select aria-hidden="true"><option>Enviar</option></select><a href="#">Enviar</a>')
+    const selectors = extractSelectors(document.querySelector('button')!)
+
+    expect(selectors.text).toBeNull()
+    expect(selectors.textHiddenTwins).toBe(false)
+  })
+
   /** O id tem entrada própria na prioridade: repetido dentro do css estável, ele furaria a ordem. */
   it('deixa o id fora do css estável, que sem name não tem o que oferecer', () => {
     setBody('<input id="email" />')

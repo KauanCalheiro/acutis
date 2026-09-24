@@ -33,3 +33,32 @@ Voltar</span>
 </div>
 </form>
 `
+
+function combo(name: string, id: string): string {
+  return `<div class="form-group tformrow"><div class="fb-inline-field-container form-line">`
+    + `<select class="form-control tcombo select2-hidden-accessible" name="${name}" id="${id}" tabindex="-1" aria-hidden="true"><option value=""></option></select>`
+    + `<span class="select2 select2-container select2-container--default" dir="ltr"><span class="selection">`
+    + `<span class="select2-selection select2-selection--single" role="combobox" aria-labelledby="select2-${id}-container">`
+    + `<span class="select2-selection__rendered" id="select2-${id}-container" role="textbox" aria-readonly="true">`
+    + `<span class="select2-selection__placeholder">Buscar</span></span></span></span></span></div></div>`
+}
+
+/** Dois combos select2 do Adianti na mesma tela, o primeiro com o dropdown aberto. */
+export const DOIS_COMBOS = `
+<form name="form_equivalencia_aproveitamento" id="form_equivalencia_aproveitamento">
+${combo('aluno_origem', 'tdbmultisearch_1982232637')}
+${combo('curriculo_destino', 'tmultisearch_1281792668')}
+</form>
+`
+
+/** O combo com a lista de resultados aberta: o option escondido repete o texto da opção visível. */
+export const COMBO_COM_RESULTADOS = `
+<select class="select2-hidden-accessible" name="curriculo_destino" tabindex="-1" aria-hidden="true">
+<option value=""></option><option value="481221">481221 Engenharia de Software</option><option value="481206">481206 Engenharia de Computação</option>
+</select>
+<span class="select2-container select2-container--open"><span class="select2-dropdown"><span class="select2-results">
+<ul class="select2-results__options" role="listbox">
+<li class="select2-results__option select2-results__option--highlighted" role="option">481221 Engenharia de Software</li>
+<li class="select2-results__option" role="option">481206 Engenharia de Computação</li>
+</ul></span></span></span>
+`

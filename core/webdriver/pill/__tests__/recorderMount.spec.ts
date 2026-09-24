@@ -158,6 +158,62 @@ it('grava o clique no filho de um link', async () => {
   expect(types()).toEqual(['click'])
 })
 
+/** O que o navegador entrega quando o componente escolhe a opção no mouseup e a tira da tela. */
+function pressAndRelease(el: HTMLElement): void {
+  el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+  el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }))
+}
+
+it('grava a opção que o componente escolhe no mouseup e some antes do clique', async () => {
+  mountRecorder()
+  page('<ul role="listbox"><li id="aluno" role="option">733787 Fulano de Tal</li></ul>')
+  const opcao = document.querySelector<HTMLElement>('#aluno')!
+  opcao.addEventListener('mouseup', () => opcao.closest('ul')!.remove())
+
+  pressAndRelease(opcao)
+  await flush()
+
+  expect(types()).toEqual(['click'])
+  expect(enviados[0]!.selectors?.text).toBe('733787 Fulano de Tal')
+})
+
+it('grava uma vez só a opção que ainda recebe o clique depois do mouseup', async () => {
+  mountRecorder()
+  page('<ul role="listbox"><li id="curriculo" role="option">481221 Engenharia de Software</li></ul>')
+  const opcao = document.querySelector<HTMLElement>('#curriculo')!
+
+  pressAndRelease(opcao)
+  opcao.click()
+  await flush()
+
+  expect(types()).toEqual(['click'])
+})
+
+it('não grava a opção escolhida com o botão direito', async () => {
+  mountRecorder()
+  page('<ul role="listbox"><li id="direito" role="option">Opção</li></ul>')
+
+  document.querySelector<HTMLElement>('#direito')!
+    .dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 2 }))
+  await flush()
+
+  expect(types()).toEqual([])
+})
+
+it('não grava a opção escolhida com a gravação pausada', async () => {
+  const { togglePause } = usePillState()
+
+  mountRecorder()
+  page('<ul role="listbox"><li id="pausada" role="option">Opção</li></ul>')
+  togglePause()
+
+  pressAndRelease(document.querySelector<HTMLElement>('#pausada')!)
+  await flush()
+  togglePause()
+
+  expect(types()).toEqual([])
+})
+
 it('ignora o campo escondido', async () => {
   mountRecorder()
   page('<input id="token" type="hidden" value="x" />')
