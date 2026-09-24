@@ -680,3 +680,50 @@ describe('interações e asserções', () => {
     expect(spec).toMatch(/getByTestId\('fechar'\)\n\s+await expect\(alvo\)\.toBeVisible\(\)/)
   })
 })
+
+describe('tamanho da janela da gravação', () => {
+  const click = (testId: string, viewport?: { width: number, height: number }) =>
+    emitEvent('click', { selectors: selectors({ dataTestId: testId }), viewport })
+
+  it('não mexe na janela quando a gravação ficou no tamanho padrão da execução', () => {
+    const spec = emit([
+      emitEvent('navigate', { viewport: { width: 1280, height: 720 } }),
+      click('salvar', { width: 1280, height: 720 })
+    ])
+
+    expect(spec).not.toContain('setViewportSize')
+  })
+
+  it('não mexe na janela quando a gravação não diz o tamanho', () => {
+    expect(emit([emitEvent('navigate'), click('salvar')])).not.toContain('setViewportSize')
+  })
+
+  it('abre a execução no tamanho em que a gravação começou', () => {
+    const spec = emit([
+      emitEvent('navigate', { viewport: { width: 1920, height: 1080 } }),
+      click('salvar', { width: 1920, height: 1080 })
+    ])
+
+    expect(spec).toMatch(/Ajusta a janela para 1920x1080[\s\S]*setViewportSize\(\{ width: 1920, height: 1080 \}\)[\s\S]*page\.goto/)
+    expect(spec.match(/setViewportSize/g)).toHaveLength(1)
+  })
+
+  it('muda a janela no passo em que a pessoa redimensionou durante a gravação', () => {
+    const spec = emit([
+      emitEvent('navigate', { viewport: { width: 1280, height: 720 } }),
+      click('menu', { width: 1280, height: 720 }),
+      click('salvar', { width: 1600, height: 900 })
+    ])
+
+    expect(spec).toMatch(/getByTestId\('menu'\)[\s\S]*setViewportSize\(\{ width: 1600, height: 900 \}\)[\s\S]*getByTestId\('salvar'\)/)
+  })
+
+  it('continua passando nas regras do spec com o ajuste de janela', () => {
+    const spec = emit([
+      emitEvent('navigate', { viewport: { width: 1600, height: 900 } }),
+      click('salvar', { width: 1600, height: 900 })
+    ])
+
+    expect(violated(checkSpec(new Playwright(spec), specUrl(), specActiveVars()))).toEqual([])
+  })
+})

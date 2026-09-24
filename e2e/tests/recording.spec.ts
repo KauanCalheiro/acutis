@@ -152,6 +152,48 @@ test.describe('recording gateway events', { tag: ['@write', '@recording'] }, () 
         }
     })
 
+    test('opens the recorded window at 1280x720 and lets the page follow it when resized', async ({ request }) => {
+        const gateway = await connectGateway()
+
+        try {
+            await test.step('start recording on the fixture page', async () => {
+                gateway.send('START_RECORDING')
+                const res = await request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: fixtureBaseUrl } })
+                expect(res.ok()).toBe(true)
+            })
+
+            await test.step('click before resizing and read the size the page opened with', async () => {
+                const res = await request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#btn' } })
+                expect(res.ok()).toBe(true)
+                const click = await gateway.waitForMessage((m) => m.event === 'recorder:click')
+                expect(click.viewport).toEqual({ width: 1280, height: 720 })
+            })
+
+            await test.step('maximize the recorded window and click again', async () => {
+                const resize = await request.post(`${WEBDRIVER_URL}/debug/resize`, { data: { width: 1600, height: 900 } })
+                expect(resize.ok()).toBe(true)
+                const res = await request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#reveal-password' } })
+                expect(res.ok()).toBe(true)
+            })
+
+            await test.step('assert the click after resizing carries the new page size', async () => {
+                const click = await gateway.waitForMessage((m) => m.event === 'recorder:click'
+                    && (m.selectors as Record<string, unknown>)?.id === 'reveal-password')
+                const { width, height } = click.viewport as { width: number, height: number }
+
+                expect(width).toBeGreaterThan(1280)
+                expect(height).toBeGreaterThan(720)
+            })
+
+            await test.step('stop recording through the gateway', async () => {
+                gateway.send('STOP_RECORDING')
+                await gateway.waitForMessage((m) => m.event === 'recorder:stop')
+            })
+        } finally {
+            gateway.close()
+        }
+    })
+
     test('replays the steps it was given without recording them again', async ({ request }) => {
         const gateway = await connectGateway()
 

@@ -90,6 +90,14 @@ describe('describeRecorderEvent', () => {
     expect(gravados[0]).not.toHaveProperty('sessionId')
   })
 
+  it('guarda o tamanho da página em que o evento aconteceu', () => {
+    const gravados = toRecordedEvents([
+      { event: 'recorder:click', type: 'click', url: 'http://loja.test', viewport: { width: 1600, height: 900 } }
+    ] as unknown as RecorderEvent[])
+
+    expect(gravados[0]!.viewport).toEqual({ width: 1600, height: 900 })
+  })
+
   it('diz que o assert de URL é sobre a tela, e não sobre um elemento dela', () => {
     const naTela = event({
       type: 'assert',
