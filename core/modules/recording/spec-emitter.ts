@@ -157,12 +157,15 @@ export class SpecEmitter {
     let lastClick: string | null = null
     let previousType: string | null = null
     let previousAt: number | null = null
+    let arrivedOnPage = false
 
     for (const event of events) {
       const type = event.type ?? ''
       const at = event.timestamp ?? 0
-      const slow = previousAt !== null && at - previousAt >= NOTICEABLE_PAUSE_MS
+      const paused = previousAt !== null && at - previousAt >= NOTICEABLE_PAUSE_MS
+      const slow = paused || arrivedOnPage
       previousAt = at
+      arrivedOnPage = type === 'navigate'
 
       let step: Step | null = null
 
@@ -361,7 +364,11 @@ export class SpecEmitter {
       case 'placeholder': return `page.getByPlaceholder(${this.literal(selectors.placeholder!)})`
       case 'cssStable': return `page.locator(${this.literal(selectors.cssStable!)})`
       case 'id': return `page.locator(${this.literal(`[id="${selectors.id}"]`)})`
-      case 'text': return `page.getByText(${this.literal(selectors.text!)}, { exact: true })`
+      case 'text': {
+        const visible = selectors.textHiddenTwins ? '.filter({ visible: true })' : ''
+
+        return `page.getByText(${this.literal(selectors.text!)}, { exact: true })${visible}`
+      }
       case 'finder': return `page.locator(${this.literal(selectors.finder!)})`
       case 'xpath': return `page.locator(${this.literal(`xpath=${selectors.xpath}`)})`
     }

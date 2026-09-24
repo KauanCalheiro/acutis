@@ -23,6 +23,8 @@ export interface RecordingSelectors {
   finder: string | null
   /** O data-testid se repete em elemento escondido: o seletor precisa filtrar pelo visível. */
   hiddenTwins: boolean
+  /** O texto se repete em elemento escondido: o seletor precisa filtrar pelo visível. */
+  textHiddenTwins?: boolean
 }
 
 export interface RecordingEvent {

@@ -48,15 +48,21 @@ function normalizeText(value: string | null | undefined): string {
   return (value ?? '').replace(/\s+/g, ' ').trim()
 }
 
+interface TextSelector {
+  text: string | null
+  hiddenTwins: boolean
+}
+
 /**
- * O texto só serve de seletor quando um único elemento da página o carrega. O elemento cujo filho
- * repete o texto inteiro fica de fora.
+ * O texto só serve de seletor quando um único elemento visível da página o carrega. O elemento
+ * cujo filho repete o texto inteiro fica de fora.
  */
-function uniqueText(el: Element): string | null {
+function uniqueText(el: Element): TextSelector {
+  const none = { text: null, hiddenTwins: false }
   const text = normalizeText(el.textContent)
 
   if (!text || text.length > TEXT_SELECTOR_MAX) {
-    return null
+    return none
   }
 
   const carriers = Array.from(document.querySelectorAll('*')).filter((candidate) => {
@@ -65,14 +71,25 @@ function uniqueText(el: Element): string | null {
     return !Array.from(candidate.children).some(child => normalizeText(child.textContent) === text)
   })
 
-  return carriers.length === 1 ? text : null
+  if (carriers.length === 1) return { text, hiddenTwins: false }
+
+  const visible = carriers.filter(isVisible)
+
+  return visible.length === 1 && visible[0] === el ? { text, hiddenTwins: true } : none
+}
+
+const STATE_CLASS = /--(open|below|above|focus|highlighted|selected|disabled|active)$|^(active|open|show|focus|focused|hover|selected|disabled)$|^(is|has)-/
+
+/** A classe que descreve o elemento, e não o estado passageiro em que ele está. */
+function isStableClass(name: string): boolean {
+  return !STATE_CLASS.test(name)
 }
 
 function buildFinderSelector(el: Element): string | null {
   if (!el.isConnected) return null
 
   try {
-    const sel = finder(el, { idName: () => false })
+    const sel = finder(el, { idName: () => false, className: isStableClass })
     return uniqueOrNull(sel)
   } catch {
     return null
@@ -132,6 +149,31 @@ function scopedSelector(el: Element, own: string): string | null {
   return null
 }
 
+/** O elemento do widget que substitui um select nomeado e escondido, ancorado nele: `select[name="x"] + * .alvo`. */
+function siblingSelectAnchor(el: Element): string | null {
+  for (let wrapper: Element | null = el; wrapper; wrapper = wrapper.parentElement) {
+    const select = wrapper.previousElementSibling
+
+    if (!(select instanceof HTMLSelectElement) || isVisible(select)) continue
+
+    const own = nameSelector(select)
+
+    if (!own || !isUnique(own)) continue
+
+    try {
+      const inner = wrapper === el
+        ? ''
+        : ` ${finder(el, { root: wrapper, idName: () => false, className: isStableClass })}`
+
+      return uniqueOrNull(`${own} + *${inner}`)
+    } catch {
+      return null
+    }
+  }
+
+  return null
+}
+
 function buildCssStableSelector(el: Element): string | null {
   const own = nameSelector(el)
   if (own) {
@@ -141,7 +183,7 @@ function buildCssStableSelector(el: Element): string | null {
     if (scoped) return scoped
   }
 
-  return null
+  return siblingSelectAnchor(el)
 }
 
 export function useSelectorCapture() {
@@ -157,6 +199,7 @@ export function useSelectorCapture() {
     const placeholderSel = placeholder ? `[placeholder="${placeholder}"]` : null
 
     const testIdTwins = !!testIdSel && !isUnique(testIdSel) && uniqueAmongVisible(testIdSel)
+    const textSelector = uniqueText(el)
 
     return {
       dataTestId: testIdSel && (isUnique(testIdSel) || testIdTwins) ? dataTestId : null,
@@ -169,7 +212,8 @@ export function useSelectorCapture() {
       placeholder: placeholderSel && isUnique(placeholderSel) ? placeholder : null,
       cssStable: buildCssStableSelector(el),
       xpath: buildXPath(el),
-      text: uniqueText(el),
+      text: textSelector.text,
+      textHiddenTwins: textSelector.hiddenTwins,
       finder: buildFinderSelector(el)
     }
   }

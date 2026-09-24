@@ -46,7 +46,7 @@ export function replaySelector(
     case 'placeholder': return attribute('placeholder', selectors.placeholder!)
     case 'cssStable': return selectors.cssStable!
     case 'id': return attribute('id', selectors.id!)
-    case 'text': return `text=${JSON.stringify(selectors.text)}`
+    case 'text': return `text=${JSON.stringify(selectors.text)}` + (selectors.textHiddenTwins ? ' >> visible=true' : '')
     case 'finder': return selectors.finder!
     case 'xpath': return `xpath=${selectors.xpath}`
   }

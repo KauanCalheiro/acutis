@@ -13,7 +13,9 @@ export const selectorsSchema = z.object({
   text: z.string().nullish(),
   finder: z.string().nullish(),
   /** O data-testid se repete em elemento escondido: o seletor precisa filtrar pelo visível. */
-  hiddenTwins: z.boolean().nullish()
+  hiddenTwins: z.boolean().nullish(),
+  /** O texto se repete em elemento escondido: o seletor precisa filtrar pelo visível. */
+  textHiddenTwins: z.boolean().nullish()
 })
 
 export type Selectors = z.output<typeof selectorsSchema>
