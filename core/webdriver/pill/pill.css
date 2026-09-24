@@ -206,7 +206,10 @@
   z-index: 2147483646;
   pointer-events: auto;
   transform-origin: bottom center;
+  display: flex;
+  flex-direction: column;
 }
+.assert-popover > * { flex-shrink: 0; }
 
 .popover-enter-active { animation: popover-in 0.14s ease; }
 .popover-leave-active { animation: popover-in 0.1s ease reverse; }
@@ -277,6 +280,11 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
   padding: 12px 14px;
+}
+.assert-popover > .popover-options {
+  flex-shrink: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 .popover-option {
   display: flex;
