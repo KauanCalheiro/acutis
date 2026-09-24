@@ -62,6 +62,20 @@ async function launchChromium(): Promise<Browser> {
   }
 }
 
+export interface RecorderDiagnostics {
+  cdp: boolean
+  headless: boolean
+  chromiumInstalled: boolean
+}
+
+function chromiumInstalled(): boolean {
+  try {
+    return existsSync(chromium.executablePath())
+  } catch {
+    return false
+  }
+}
+
 export class RecorderService {
   private browser: Browser | null = null
   private overCdp = false
@@ -95,6 +109,15 @@ export class RecorderService {
     return this.context !== null
   }
 
+  /** Como o navegador do gravador está configurado nesta máquina. */
+  diagnostics(): RecorderDiagnostics {
+    return {
+      cdp: RECORDER_CDP_URL !== '',
+      headless: RECORDER_HEADLESS,
+      chromiumInstalled: chromiumInstalled()
+    }
+  }
+
   async start(
     onEvent: (event: RecordingEvent) => void,
     onStarted: (recordingStartedAt: number) => void,
@@ -115,10 +138,11 @@ export class RecorderService {
     if (RECORDER_CDP_URL) {
       try {
         this.browser = await chromium.connectOverCDP(await this.resolveCdpUrl(RECORDER_CDP_URL))
-      } catch {
+      } catch (error) {
         throw new Error(
           `Não foi possível conectar ao Chrome em ${RECORDER_CDP_URL}. `
-          + 'Abra o Chrome do host com --remote-debugging-port=9222 e um --user-data-dir dedicado.'
+          + 'Abra o Chrome do host com --remote-debugging-port=9222 e um --user-data-dir dedicado.',
+          { cause: error }
         )
       }
       this.overCdp = true
