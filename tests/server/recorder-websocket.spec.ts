@@ -174,3 +174,78 @@ describe('recorder WebSocket', () => {
     }))
   })
 })
+
+describe('recorder WebSocket: relato da falha ao iniciar', () => {
+  function failingRecorder(error: unknown) {
+    const service = recorder()
+    service.start.mockRejectedValueOnce(error)
+
+    return Object.assign(service, {
+      diagnostics: vi.fn(() => ({ cdp: false, headless: false, chromiumInstalled: true }))
+    })
+  }
+
+  it('relata a falha com a causa original no stack', async () => {
+    const cause = new Error('browserType.launch: Target page, context or browser has been closed')
+    const report = vi.fn().mockResolvedValue(true)
+    const hooks = createRecorderWebSocketHooks(failingRecorder(new Error('Chromium indisponível', { cause })), report)
+
+    await hooks.message(peer(), message({ type: 'START_RECORDING' }))
+
+    const [sent] = report.mock.lastCall!
+    expect(sent.message).toBe('Chromium indisponível')
+    expect(sent.context).toBe('recorder:start')
+    expect(sent.stack).toContain('Target page, context or browser has been closed')
+  })
+
+  it('relata como a gravação foi pedida, sem mandar a URL nem o caminho da sessão', async () => {
+    const report = vi.fn().mockResolvedValue(true)
+    const hooks = createRecorderWebSocketHooks(failingRecorder(new Error('falhou')), report)
+
+    await hooks.message(peer(), message({
+      type: 'START_RECORDING',
+      mode: 'auth',
+      storageState: '/tmp/storage-state.json',
+      url: 'https://sistema-do-cliente.test',
+      replay: [{ type: 'navigate' }, { type: 'click' }]
+    }))
+
+    const [sent] = report.mock.lastCall!
+    expect(sent.details).toMatchObject({ mode: 'auth', storageState: true, url: true, replaySteps: 2 })
+    expect(JSON.stringify(sent)).not.toContain('sistema-do-cliente')
+    expect(JSON.stringify(sent)).not.toContain('/tmp/storage-state.json')
+  })
+
+  it('relata como o navegador estava configurado', async () => {
+    const report = vi.fn().mockResolvedValue(true)
+    const hooks = createRecorderWebSocketHooks(failingRecorder(new Error('falhou')), report)
+
+    await hooks.message(peer(), message({ type: 'START_RECORDING' }))
+
+    expect(report.mock.lastCall![0].details).toMatchObject({ cdp: false, headless: false, chromiumInstalled: true })
+  })
+
+  it('avisa a tela mesmo quando o relato falha', async () => {
+    const report = vi.fn().mockRejectedValue(new Error('sem rede'))
+    const hooks = createRecorderWebSocketHooks(failingRecorder(new Error('Chromium indisponível')), report)
+    const socket = peer()
+
+    await hooks.message(socket, message({ type: 'START_RECORDING' }))
+
+    expect(socket.send).toHaveBeenCalledWith(expect.stringContaining('recorder:error'))
+  })
+
+  it('não relata a retomada que a pessoa cancelou', async () => {
+    const service = recorder()
+    service.start.mockImplementationOnce(async (...args: unknown[]) => {
+      const hooks = args[7] as { onCancelled: (step: string) => Promise<void> }
+      await hooks.onCancelled('clicar em Entrar')
+    })
+    const report = vi.fn()
+    const hooks = createRecorderWebSocketHooks(service, report)
+
+    await hooks.message(peer(), message({ type: 'START_RECORDING', replay: [] }))
+
+    expect(report).not.toHaveBeenCalled()
+  })
+})
