@@ -5,6 +5,7 @@ import { RunScenario } from '@acutis/core/use-cases/scenario/run-scenario.js'
 import { StoreRunHistory } from '@acutis/core/use-cases/scenario/store-run-history.js'
 import { RunnerService } from '@acutis/core/webdriver/runner/runner.service.js'
 import { scenarioUseCases } from './scenario'
+import { telemetryReporter } from './telemetry'
 
 const projects = new ProjectService()
 let runner: RunnerService = new RunnerService()
@@ -17,7 +18,7 @@ function composeExecution(): void {
   const history = new StoreRunHistory(events, scenarios)
 
   history.onModuleInit()
-  run = new RunScenario(projects, new WebdriverScenarioRunner(runner), events)
+  run = new RunScenario(projects, new WebdriverScenarioRunner(runner), events, report => telemetryReporter().report(report))
 }
 
 composeExecution()

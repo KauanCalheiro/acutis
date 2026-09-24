@@ -1,5 +1,7 @@
 import type { RecordingEvent } from '@acutis/core/common/types/recording'
-import type { StopResult } from '@acutis/core/webdriver/recorder/recorder.service'
+import { describeError } from '@acutis/core/modules/telemetry/describe-error'
+import type { ErrorReport } from '@acutis/core/modules/telemetry/telemetry.service'
+import type { RecorderDiagnostics, StopResult } from '@acutis/core/webdriver/recorder/recorder.service'
 
 interface RecorderPeer {
   send(data: string): unknown
@@ -27,7 +29,10 @@ interface RecorderPort {
     }
   ): Promise<void>
   stop(): Promise<StopResult>
+  diagnostics?(): RecorderDiagnostics
 }
+
+type ReportFailure = (report: ErrorReport) => Promise<unknown>
 
 interface RecorderCommand {
   type?: string
@@ -42,7 +47,7 @@ function send(peer: RecorderPeer, payload: Record<string, unknown>) {
   peer.send(JSON.stringify(payload))
 }
 
-export function createRecorderWebSocketHooks(recorder: RecorderPort) {
+export function createRecorderWebSocketHooks(recorder: RecorderPort, reportFailure: ReportFailure = async () => false) {
   async function stop(peer: RecorderPeer) {
     const result = await recorder.stop()
     send(peer, { event: 'recorder:stop', ...result })
@@ -99,6 +104,18 @@ export function createRecorderWebSocketHooks(recorder: RecorderPort) {
           event: 'recorder:error',
           error: error instanceof Error ? error.message : 'Erro ao iniciar a gravação.'
         })
+
+        await reportFailure({
+          ...describeError(error),
+          context: 'recorder:start',
+          details: {
+            mode: body.mode ?? 'scenario',
+            storageState: body.storageState !== undefined,
+            url: body.url !== undefined,
+            replaySteps: body.replay?.length ?? 0,
+            ...recorder.diagnostics?.()
+          }
+        }).catch(() => false)
       }
     }
   }

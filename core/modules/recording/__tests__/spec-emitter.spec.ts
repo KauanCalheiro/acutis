@@ -160,6 +160,14 @@ describe('escolha do seletor', () => {
     expect(spec).toContain('page.getByTestId(\'salvar\').filter({ visible: true })')
   })
 
+  it('filtra pelo visível quando o texto se repete em elemento escondido', () => {
+    const spec = emit([
+      emitEvent('click', { selectors: selectors({ text: '481221 Engenharia', textHiddenTwins: true }), label: '481221 Engenharia' })
+    ])
+
+    expect(spec).toContain('page.getByText(\'481221 Engenharia\', { exact: true }).filter({ visible: true })')
+  })
+
   it('escolhe o css estável quando o elemento não tem test id', () => {
     const spec = emit([emitEvent('click', { selectors: selectors({ cssStable: '#salvar' }) })])
 
@@ -649,5 +657,73 @@ describe('interações e asserções', () => {
     ])
 
     expect(spec).toContain('await expect(alvo).toBeVisible({ timeout: 15000 })')
+  })
+
+  it('dá prazo maior ao primeiro passo depois de uma navegação, mesmo que o usuário tenha sido rápido', () => {
+    const spec = emit([
+      emitEvent('navigate', { timestamp: 1000 }),
+      emitEvent('click', { timestamp: 1200, selectors: selectors({ dataTestId: 'menu' }) }),
+      emitEvent('navigate', { timestamp: 1300, url: `${EMIT_BASE}/lista` }),
+      emitEvent('click', { timestamp: 1900, selectors: selectors({ dataTestId: 'combo' }) })
+    ])
+
+    expect(spec).toMatch(/getByTestId\('combo'\)\n\s+await expect\(alvo\)\.toBeVisible\(\{ timeout: 15000 \}\)/)
+  })
+
+  it('mantém o prazo curto no passo rápido que não vem de uma navegação', () => {
+    const spec = emit([
+      emitEvent('navigate', { timestamp: 1000 }),
+      emitEvent('click', { timestamp: 4000, selectors: selectors({ dataTestId: 'abrir' }) }),
+      emitEvent('click', { timestamp: 4500, selectors: selectors({ dataTestId: 'fechar' }) })
+    ])
+
+    expect(spec).toMatch(/getByTestId\('fechar'\)\n\s+await expect\(alvo\)\.toBeVisible\(\)/)
+  })
+})
+
+describe('tamanho da janela da gravação', () => {
+  const click = (testId: string, viewport?: { width: number, height: number }) =>
+    emitEvent('click', { selectors: selectors({ dataTestId: testId }), viewport })
+
+  it('não mexe na janela quando a gravação ficou no tamanho padrão da execução', () => {
+    const spec = emit([
+      emitEvent('navigate', { viewport: { width: 1280, height: 720 } }),
+      click('salvar', { width: 1280, height: 720 })
+    ])
+
+    expect(spec).not.toContain('setViewportSize')
+  })
+
+  it('não mexe na janela quando a gravação não diz o tamanho', () => {
+    expect(emit([emitEvent('navigate'), click('salvar')])).not.toContain('setViewportSize')
+  })
+
+  it('abre a execução no tamanho em que a gravação começou', () => {
+    const spec = emit([
+      emitEvent('navigate', { viewport: { width: 1920, height: 1080 } }),
+      click('salvar', { width: 1920, height: 1080 })
+    ])
+
+    expect(spec).toMatch(/Ajusta a janela para 1920x1080[\s\S]*setViewportSize\(\{ width: 1920, height: 1080 \}\)[\s\S]*page\.goto/)
+    expect(spec.match(/setViewportSize/g)).toHaveLength(1)
+  })
+
+  it('muda a janela no passo em que a pessoa redimensionou durante a gravação', () => {
+    const spec = emit([
+      emitEvent('navigate', { viewport: { width: 1280, height: 720 } }),
+      click('menu', { width: 1280, height: 720 }),
+      click('salvar', { width: 1600, height: 900 })
+    ])
+
+    expect(spec).toMatch(/getByTestId\('menu'\)[\s\S]*setViewportSize\(\{ width: 1600, height: 900 \}\)[\s\S]*getByTestId\('salvar'\)/)
+  })
+
+  it('continua passando nas regras do spec com o ajuste de janela', () => {
+    const spec = emit([
+      emitEvent('navigate', { viewport: { width: 1600, height: 900 } }),
+      click('salvar', { width: 1600, height: 900 })
+    ])
+
+    expect(violated(checkSpec(new Playwright(spec), specUrl(), specActiveVars()))).toEqual([])
   })
 })

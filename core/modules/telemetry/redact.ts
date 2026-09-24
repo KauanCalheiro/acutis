@@ -5,11 +5,15 @@ const SENSITIVE_KEY
 /** Valor de ambiente curto demais para ser segredo, e comum demais para ser trocado sem estragar o texto. */
 const SHORTEST_SECRET = 8
 
+/** Segredo declarado do projeto, curto demais para ser mascarado sem estragar o texto. */
+const SHORTEST_DECLARED_SECRET = 4
+
 const MASK = '[redigido]'
 
 export interface RedactContext {
   home?: string
   env?: Record<string, string | undefined>
+  secrets?: string[]
 }
 
 function escapeRegExp(value: string): string {
@@ -17,7 +21,7 @@ function escapeRegExp(value: string): string {
 }
 
 /** O texto sem caminho de home, sem valor de chave sensível e sem valor de variável de ambiente. */
-export function redact(text: string | undefined, { home, env = {} }: RedactContext): string | undefined {
+export function redact(text: string | undefined, { home, env = {}, secrets = [] }: RedactContext): string | undefined {
   if (text === undefined) return undefined
 
   let safe = text
@@ -30,6 +34,11 @@ export function redact(text: string | undefined, { home, env = {} }: RedactConte
 
   for (const value of Object.values(env)) {
     if (value === undefined || value.length < SHORTEST_SECRET) continue
+    safe = safe.replaceAll(value, MASK)
+  }
+
+  for (const value of secrets) {
+    if (value.length < SHORTEST_DECLARED_SECRET) continue
     safe = safe.replaceAll(value, MASK)
   }
 

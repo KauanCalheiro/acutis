@@ -246,9 +246,30 @@ export function mountRecorder(onClick?: () => void): void {
   dispatch(buildNavigateEvent())
   watchSecretFields()
 
+  let optionChosenOnRelease: Element | null = null
+
+  /** Grava a opção de lista no mouseup, porque o componente que a escolhe ali a tira da tela antes do clique. */
+  document.addEventListener('mouseup', (e) => {
+    if (e.button !== 0 || !(e.target instanceof Element) || isHostEvent(e)) return
+    if (captureMode.value !== null || isPaused.value) return
+
+    const option = e.target.closest('[role="option"]')
+
+    if (!option) return
+
+    optionChosenOnRelease = option
+    dispatch(buildBaseEvent('click', option))
+  }, true)
+
   document.addEventListener('click', (e) => {
     onClick?.()
     if (!(e.target instanceof Element) || isHostEvent(e)) return
+
+    const alreadyRecorded = optionChosenOnRelease !== null
+      && e.target.closest('[role="option"]') === optionChosenOnRelease
+    optionChosenOnRelease = null
+
+    if (alreadyRecorded) return
     if (captureMode.value === 'assert') {
       e.stopPropagation()
       e.preventDefault()

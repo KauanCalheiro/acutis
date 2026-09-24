@@ -116,6 +116,11 @@ function clickKey(event: RecordingEvent): string {
   return event.selectors?.xpath ?? event.selectors?.cssStable ?? event.selectors?.finder ?? ''
 }
 
+/** O tamanho da página agora, que é o que a execução precisa reproduzir. */
+function currentViewport(): { width: number, height: number } {
+  return { width: window.innerWidth, height: window.innerHeight }
+}
+
 export function useRecorderEvents() {
   function dispatch(event: RecordingEvent, ignorePause = false) {
     if (!ignorePause && isPaused.value) {
@@ -204,7 +209,8 @@ export function useRecorderEvents() {
       innerText: (el as HTMLElement).innerText?.trim().slice(0, 200) || null,
       inputType: el instanceof HTMLInputElement ? el.type : null,
       checked: el instanceof HTMLInputElement && ['checkbox', 'radio'].includes(el.type) ? el.checked : null,
-      html: captureContext(el)
+      html: captureContext(el),
+      viewport: currentViewport()
     }
   }
 
@@ -221,7 +227,8 @@ export function useRecorderEvents() {
       innerText: null,
       inputType: null,
       checked: null,
-      html: null
+      html: null,
+      viewport: currentViewport()
     }
   }
 

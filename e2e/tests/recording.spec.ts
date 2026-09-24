@@ -10,6 +10,7 @@ import type { ChildProcess } from 'node:child_process'
 import { spawn } from 'node:child_process'
 
 const FIXTURE_HTML = readFileSync(resolve(import.meta.dirname, '../fixtures/page.html'))
+const SELECT2_HTML = readFileSync(resolve(import.meta.dirname, '../fixtures/select2.html'))
 
 let fixtureServer: Server
 let fixtureBaseUrl: string
@@ -60,9 +61,9 @@ async function connectGateway(): Promise<GatewayClient> {
 
 test.describe('recording gateway events', { tag: ['@write', '@recording'] }, () => {
     test.beforeAll(async () => {
-        fixtureServer = createServer((_req, res) => {
+        fixtureServer = createServer((req, res) => {
             res.writeHead(200, { 'Content-Type': 'text/html' })
-            res.end(FIXTURE_HTML)
+            res.end(req.url === '/select2' ? SELECT2_HTML : FIXTURE_HTML)
         })
         await new Promise<void>((r) => fixtureServer.listen(0, r))
         const { port } = fixtureServer.address() as { port: number }
@@ -98,6 +99,90 @@ test.describe('recording gateway events', { tag: ['@write', '@recording'] }, () 
                 const message = await gateway.waitForMessage((m) => m.event === 'recorder:fill')
                 expect(message.value).toBe('Ana')
                 expect(message.selectors).toMatchObject({ id: 'name' })
+            })
+
+            await test.step('stop recording through the gateway', async () => {
+                gateway.send('STOP_RECORDING')
+                await gateway.waitForMessage((m) => m.event === 'recorder:stop')
+            })
+        } finally {
+            gateway.close()
+        }
+    })
+
+    test('records the option a select2 combo picks on mouseup, anchored on its hidden select', async ({ request }) => {
+        const gateway = await connectGateway()
+
+        try {
+            await test.step('start recording on the select2 page', async () => {
+                gateway.send('START_RECORDING')
+                const res = await request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: `${fixtureBaseUrl}/select2` } })
+                expect(res.ok()).toBe(true)
+            })
+
+            await test.step('open the combo and pick the option with real mouse input', async () => {
+                const open = await request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '.select2-selection__rendered' } })
+                expect(open.ok()).toBe(true)
+                const pick = await request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '[role="option"]' } })
+                expect(pick.ok()).toBe(true)
+            })
+
+            await test.step('stop recording through the gateway', async () => {
+                gateway.send('STOP_RECORDING')
+                await gateway.waitForMessage((m) => m.event === 'recorder:stop')
+            })
+
+            await test.step('assert the combo click is anchored on the select, not on the open state', async () => {
+                const clicks = gateway.received().filter((m) => m.event === 'recorder:click')
+                const combo = clicks[0]!.selectors as Record<string, unknown>
+
+                expect(combo.cssStable).toBe('select[name="aluno_origem"] + * .select2-selection__rendered')
+                expect(String(combo.finder)).not.toMatch(/--open|--below/)
+            })
+
+            await test.step('assert the option is recorded once, by its visible text', async () => {
+                const options = gateway.received().filter((m) => m.event === 'recorder:click'
+                    && (m.selectors as Record<string, unknown>).text === '733787 Fulano de Tal')
+
+                expect(options).toHaveLength(1)
+                expect(options[0]!.selectors).toMatchObject({ textHiddenTwins: true })
+            })
+        } finally {
+            gateway.close()
+        }
+    })
+
+    test('opens the recorded window at 1280x720 and lets the page follow it when resized', async ({ request }) => {
+        const gateway = await connectGateway()
+
+        try {
+            await test.step('start recording on the fixture page', async () => {
+                gateway.send('START_RECORDING')
+                const res = await request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: fixtureBaseUrl } })
+                expect(res.ok()).toBe(true)
+            })
+
+            await test.step('click before resizing and read the size the page opened with', async () => {
+                const res = await request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#btn' } })
+                expect(res.ok()).toBe(true)
+                const click = await gateway.waitForMessage((m) => m.event === 'recorder:click')
+                expect(click.viewport).toEqual({ width: 1280, height: 720 })
+            })
+
+            await test.step('maximize the recorded window and click again', async () => {
+                const resize = await request.post(`${WEBDRIVER_URL}/debug/resize`, { data: { width: 1600, height: 900 } })
+                expect(resize.ok()).toBe(true)
+                const res = await request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#reveal-password' } })
+                expect(res.ok()).toBe(true)
+            })
+
+            await test.step('assert the click after resizing carries the new page size', async () => {
+                const click = await gateway.waitForMessage((m) => m.event === 'recorder:click'
+                    && (m.selectors as Record<string, unknown>)?.id === 'reveal-password')
+                const { width, height } = click.viewport as { width: number, height: number }
+
+                expect(width).toBeGreaterThan(1280)
+                expect(height).toBeGreaterThan(720)
             })
 
             await test.step('stop recording through the gateway', async () => {

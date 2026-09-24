@@ -1,3 +1,4 @@
+import { release } from 'node:os'
 import { installId } from './install-id.js'
 import { redact } from './redact.js'
 
@@ -17,6 +18,14 @@ export interface ErrorReport {
   message: string
   stack?: string
   context?: string
+  details?: Record<string, unknown>
+  secrets?: string[]
+}
+
+function originWithDetails(context: string | undefined, details: Record<string, unknown> | undefined): string | undefined {
+  if (details === undefined) return context
+
+  return `${context ?? ''}\n${JSON.stringify(details, null, 2)}`
 }
 
 /** Manda para a API de telemetria os erros de quem consentiu, uma vez cada. */
@@ -31,10 +40,10 @@ export class TelemetryService {
   async report(report: ErrorReport): Promise<boolean> {
     if (this.config.url === '' || !this.config.consent) return false
 
-    const context = { home: this.config.home, env: this.config.env }
+    const context = { home: this.config.home, env: this.config.env, secrets: report.secrets }
     const message = redact(report.message, context)
     const stack = redact(report.stack, context)
-    const origin = redact(report.context, context)
+    const origin = redact(originWithDetails(report.context, report.details), context)
     const fingerprint = JSON.stringify([message, stack, origin])
 
     if (this.alreadySent.has(fingerprint)) return false
@@ -45,7 +54,7 @@ export class TelemetryService {
       context: origin,
       cliVersion: this.config.version ?? 'desconhecida',
       nodeVersion: process.version,
-      platform: process.platform,
+      platform: `${process.platform} ${process.arch} ${release()}`,
       installId: this.identify(this.config.root)
     })
 

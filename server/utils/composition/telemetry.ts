@@ -1,6 +1,7 @@
 import { homedir } from 'node:os'
 import { acutis } from '@acutis/core/common/utils/acutis.js'
 import { readAppConfig } from '@acutis/core/config/env.js'
+import { describeError } from '@acutis/core/modules/telemetry/describe-error.js'
 import { installId } from '@acutis/core/modules/telemetry/install-id.js'
 import { TelemetryService } from '@acutis/core/modules/telemetry/telemetry.service.js'
 import { version } from '../../../package.json'
@@ -31,8 +32,7 @@ export async function captureUnhandledError(error: unknown, context: CapturedErr
   if (context.event !== undefined) return
 
   await telemetryReporter().report({
-    message: error instanceof Error ? error.message : String(error),
-    stack: error instanceof Error ? error.stack : undefined,
+    ...describeError(error),
     context: context.tags?.join(',')
   })
 }

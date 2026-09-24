@@ -70,6 +70,14 @@ describe('replaySteps', () => {
     expect(steps[0]).toMatchObject({ selector: '[data-testid="salvar"]:visible' })
   })
 
+  it('refaz o clique no visível quando o texto se repete em elemento escondido', () => {
+    const steps = replaySteps([
+      event({ type: 'click', selectors: selectors({ text: '481221 Engenharia', textHiddenTwins: true }) })
+    ])
+
+    expect(steps[0]).toMatchObject({ selector: 'text="481221 Engenharia" >> visible=true' })
+  })
+
   it('guarda de qual evento o passo veio, que é onde a gravação é cortada quando ele falha', () => {
     const steps = replaySteps([
       event({ type: 'navigate', url: 'http://loja.test' }),

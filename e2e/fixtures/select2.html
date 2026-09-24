@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>Combo</title></head>
+<body>
+<form name="form_aproveitamento">
+    <label>Selecione o aluno</label>
+    <select name="aluno_origem" aria-hidden="true" tabindex="-1" style="position:absolute;clip:rect(0 0 0 0);width:1px;height:1px">
+        <option value=""></option>
+        <option value="733787">733787 Fulano de Tal</option>
+    </select>
+    <span class="select2 select2-container">
+        <span class="select2-selection" role="combobox" tabindex="0">
+            <span class="select2-selection__rendered" id="select2-gerado-481516-container" role="textbox" aria-readonly="true">Buscar</span>
+        </span>
+    </span>
+</form>
+<script>
+    const select = document.querySelector('select[name="aluno_origem"]')
+    const container = select.nextElementSibling
+    const rendered = container.querySelector('.select2-selection__rendered')
+
+    function close() {
+        document.querySelector('.select2-dropdown')?.remove()
+        container.classList.remove('select2-container--open', 'select2-container--below')
+    }
+
+    container.addEventListener('mousedown', (event) => {
+        event.preventDefault()
+        if (document.querySelector('.select2-dropdown')) return close()
+
+        container.classList.add('select2-container--open', 'select2-container--below')
+        const dropdown = document.createElement('span')
+        dropdown.className = 'select2-dropdown'
+        dropdown.innerHTML = '<ul role="listbox"><li class="select2-results__option" role="option" data-value="733787">733787 Fulano de Tal</li></ul>'
+        dropdown.addEventListener('mouseup', (up) => {
+            const option = up.target.closest('[role="option"]')
+            if (!option) return
+            select.value = option.dataset.value
+            rendered.textContent = option.textContent
+            close()
+        })
+        document.body.appendChild(dropdown)
+    })
+</script>
+</body>
+</html>

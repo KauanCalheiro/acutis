@@ -10,7 +10,26 @@ function setBody(html: string) {
 }
 
 describe('useRecorderEvents', () => {
-  const { buildBaseEvent, dispatch } = useRecorderEvents()
+  const { buildBaseEvent, buildNavigateEvent, dispatch } = useRecorderEvents()
+
+  function resizeWindow(width: number, height: number) {
+    Object.defineProperty(window, 'innerWidth', { value: width, configurable: true })
+    Object.defineProperty(window, 'innerHeight', { value: height, configurable: true })
+  }
+
+  it('anota no evento o tamanho que a página tinha no momento da ação', () => {
+    resizeWindow(1600, 900)
+    setBody('<button id="salvar">Salvar</button>')
+
+    expect(buildBaseEvent('click', document.querySelector('button')!).viewport)
+      .toEqual({ width: 1600, height: 900 })
+  })
+
+  it('anota o tamanho também na navegação, que é onde a gravação começa', () => {
+    resizeWindow(1920, 1080)
+
+    expect(buildNavigateEvent().viewport).toEqual({ width: 1920, height: 1080 })
+  })
 
   it('records that a checkbox ended up checked', () => {
     setBody('<input type="checkbox" id="presente" checked />')

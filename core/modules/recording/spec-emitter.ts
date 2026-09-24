@@ -16,6 +16,9 @@ const NOTICEABLE_PAUSE_MS = 2000
 
 const SLOW_TIMEOUT = 15000
 
+/** O tamanho em que o Playwright executa o teste quando o projeto não diz outro. */
+const DEFAULT_VIEWPORT = { width: 1280, height: 720 }
+
 interface Step {
   title: string
   lines: string[]
@@ -157,12 +160,22 @@ export class SpecEmitter {
     let lastClick: string | null = null
     let previousType: string | null = null
     let previousAt: number | null = null
+    let arrivedOnPage = false
+    let viewport = DEFAULT_VIEWPORT
 
     for (const event of events) {
       const type = event.type ?? ''
       const at = event.timestamp ?? 0
-      const slow = previousAt !== null && at - previousAt >= NOTICEABLE_PAUSE_MS
+      const paused = previousAt !== null && at - previousAt >= NOTICEABLE_PAUSE_MS
+      const slow = paused || arrivedOnPage
       previousAt = at
+      arrivedOnPage = type === 'navigate'
+
+      const resized = event.viewport
+      if (resized && (resized.width !== viewport.width || resized.height !== viewport.height)) {
+        viewport = resized
+        steps.push(this.resize(viewport))
+      }
 
       let step: Step | null = null
 
@@ -196,6 +209,13 @@ export class SpecEmitter {
     }
 
     return steps
+  }
+
+  private resize({ width, height }: { width: number, height: number }): Step {
+    return {
+      title: `Ajusta a janela para ${width}x${height}`,
+      lines: [`await page.setViewportSize({ width: ${width}, height: ${height} })`]
+    }
   }
 
   private navigation(event: RecordedEvent, navigated: boolean, currentUrl: string | null): Step | null {
@@ -361,7 +381,11 @@ export class SpecEmitter {
       case 'placeholder': return `page.getByPlaceholder(${this.literal(selectors.placeholder!)})`
       case 'cssStable': return `page.locator(${this.literal(selectors.cssStable!)})`
       case 'id': return `page.locator(${this.literal(`[id="${selectors.id}"]`)})`
-      case 'text': return `page.getByText(${this.literal(selectors.text!)}, { exact: true })`
+      case 'text': {
+        const visible = selectors.textHiddenTwins ? '.filter({ visible: true })' : ''
+
+        return `page.getByText(${this.literal(selectors.text!)}, { exact: true })${visible}`
+      }
       case 'finder': return `page.locator(${this.literal(selectors.finder!)})`
       case 'xpath': return `page.locator(${this.literal(`xpath=${selectors.xpath}`)})`
     }

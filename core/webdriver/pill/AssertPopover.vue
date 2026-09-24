@@ -10,8 +10,11 @@ const {
   pendingElement,
   popoverPosition,
   deactivateAssertMode,
+  setPopoverHeight,
   confirmAssert
 } = useAssertMode()
+
+const popoverRef = ref<HTMLElement | null>(null)
 
 interface AssertOption {
   type: AssertType
@@ -103,10 +106,30 @@ const positionStyle = computed(() => {
   const pos = popoverPosition.value
   return {
     left: pos.left + 'px',
+    maxHeight: pos.maxHeight + 'px',
     ...(pos.above
       ? { bottom: pos.vertical + 'px' }
       : { top: pos.vertical + 'px' })
   }
+})
+
+/** A altura que o balão teria sem limite: a lista de opções conta inteira, mesmo se estiver rolando. */
+function naturalHeight(popover: HTMLElement): number {
+  const options = popover.querySelector<HTMLElement>('.popover-options')
+
+  if (!options) return popover.offsetHeight
+
+  return popover.offsetHeight - options.clientHeight + options.scrollHeight
+}
+
+function measure() {
+  if (popoverRef.value) setPopoverHeight(naturalHeight(popoverRef.value))
+}
+
+watch([isPopoverVisible, () => selectedType.value], async ([visible]) => {
+  if (!visible) return
+  await nextTick()
+  measure()
 })
 
 watch(selectedType, async (type) => {
@@ -153,8 +176,10 @@ function handleConfirm() {
   <Transition name="popover">
     <div
       v-if="isPopoverVisible"
+      ref="popoverRef"
       class="surface assert-popover"
       :style="positionStyle"
+      @transitionend="measure"
       @click.stop
       @mousedown.stop
       @keydown.esc.stop.prevent="deactivateAssertMode"

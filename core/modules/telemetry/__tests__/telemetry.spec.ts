@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { release, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { installId } from '../install-id.js'
@@ -65,7 +65,7 @@ describe('TelemetryService', () => {
     await service(send).report({ message: 'boom' })
 
     const body = JSON.parse(send.mock.calls[0]![1].body)
-    expect(body.platform).toBe(process.platform)
+    expect(body.platform).toBe(`${process.platform} ${process.arch} ${release()}`)
     expect(body.nodeVersion).toBe(process.version)
     expect(body.installId).toBe(installId(root))
     expect(typeof body.cliVersion).toBe('string')
@@ -121,6 +121,72 @@ describe('TelemetryService', () => {
     await telemetry.report({ message: 'outro boom' })
 
     expect(send).toHaveBeenCalledTimes(2)
+  })
+
+  it('leva os detalhes do erro junto do contexto, legíveis', async () => {
+    const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }))
+
+    await service(send).report({ message: 'boom', context: 'recorder:start', details: { mode: 'auth', replaySteps: 3 } })
+
+    const { context } = JSON.parse(send.mock.calls[0]![1].body)
+    expect(context.split('\n')[0]).toBe('recorder:start')
+    expect(JSON.parse(context.slice(context.indexOf('\n') + 1))).toEqual({ mode: 'auth', replaySteps: 3 })
+  })
+
+  it('mantém o contexto simples quando não há detalhes', async () => {
+    const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }))
+
+    await service(send).report({ message: 'boom', context: 'Gerar cenário' })
+
+    expect(JSON.parse(send.mock.calls[0]![1].body).context).toBe('Gerar cenário')
+  })
+
+  it('redige os detalhes antes de sair da máquina', async () => {
+    const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }))
+
+    await service(send).report({ message: 'boom', context: 'runner', details: { spec: '/Users/kauan/loja/tests/a.spec.ts' } })
+
+    expect(JSON.parse(send.mock.calls[0]![1].body).context).toContain('~/loja/tests/a.spec.ts')
+  })
+
+  it('mascara os segredos do projeto em toda parte do relato', async () => {
+    const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }))
+
+    await service(send).report({
+      message: 'login falhou com senha-do-cliente',
+      stack: 'fill("senha-do-cliente")',
+      context: 'runner',
+      details: { output: 'digitou senha-do-cliente' },
+      secrets: ['senha-do-cliente']
+    })
+
+    const body = send.mock.calls[0]![1].body
+    expect(body).not.toContain('senha-do-cliente')
+    expect(JSON.parse(body).message).toBe('login falhou com [redigido]')
+  })
+
+  it('mascara segredo do projeto mesmo curto', async () => {
+    const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }))
+
+    await service(send).report({ message: 'senha abc123 recusada', secrets: ['abc123'] })
+
+    expect(JSON.parse(send.mock.calls[0]![1].body).message).toBe('senha [redigido] recusada')
+  })
+
+  it('não mascara valor de projeto curto demais para ser segredo', async () => {
+    const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }))
+
+    await service(send).report({ message: 'passo 1 de 2', secrets: ['1'] })
+
+    expect(JSON.parse(send.mock.calls[0]![1].body).message).toBe('passo 1 de 2')
+  })
+
+  it('não manda a lista de segredos para o servidor', async () => {
+    const send = vi.fn().mockResolvedValue(new Response(null, { status: 202 }))
+
+    await service(send).report({ message: 'boom', secrets: ['segredo-longo'] })
+
+    expect(JSON.parse(send.mock.calls[0]![1].body)).not.toHaveProperty('secrets')
   })
 
   it('tenta de novo o erro cujo envio falhou', async () => {

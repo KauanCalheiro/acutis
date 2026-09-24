@@ -513,7 +513,7 @@ flowchart LR
   P --> CS --> ER --> RD --> API
 ```
 
-A pergunta aparece uma vez, no terminal, e a resposta fica guardada. Quem aceitou envia sozinho todo erro da aplicação: o que a tela mostra, o de componente que escapa e o do processo fora de uma requisição. O que vai é a mensagem, o stack, a versão do CLI, a do Node, a plataforma e um identificador da instalação. Caminho de casa, variáveis de ambiente e valores sensíveis são ocultados antes do envio, e o mesmo erro vai uma vez só por sessão.
+A pergunta aparece uma vez, no terminal, e a resposta fica guardada. Quem aceitou envia sozinho todo erro da aplicação: o que a tela mostra, o de componente que escapa, o do processo fora de uma requisição, o gravador que não abre e a execução que termina sem rodar nenhum teste. Esses dois últimos levam junto como a ação foi pedida, como o navegador está configurado e a causa original do Playwright; os valores do ambiente do projeto são mascarados. Teste da pessoa que roda e falha é resultado dela e não vira relato. O que vai é a mensagem, o stack, a versão do CLI, a do Node, a plataforma e um identificador da instalação. Caminho de casa, variáveis de ambiente e valores sensíveis são ocultados antes do envio, e o mesmo erro vai uma vez só por sessão.
 
 ## 13. Quando a IA entra
 

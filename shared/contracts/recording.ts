@@ -13,7 +13,9 @@ export const selectorsSchema = z.object({
   text: z.string().nullish(),
   finder: z.string().nullish(),
   /** O data-testid se repete em elemento escondido: o seletor precisa filtrar pelo visível. */
-  hiddenTwins: z.boolean().nullish()
+  hiddenTwins: z.boolean().nullish(),
+  /** O texto se repete em elemento escondido: o seletor precisa filtrar pelo visível. */
+  textHiddenTwins: z.boolean().nullish()
 })
 
 export type Selectors = z.output<typeof selectorsSchema>
@@ -24,6 +26,12 @@ export const recordedAssertSchema = z.object({
 })
 
 export type RecordedAssert = z.output<typeof recordedAssertSchema>
+
+/** O tamanho da página quando o evento aconteceu. */
+export const viewportSchema = z.object({
+  width: z.number().int().positive(),
+  height: z.number().int().positive()
+})
 
 export const recordedEventSchema = z.object({
   type: z.string(),
@@ -38,6 +46,7 @@ export const recordedEventSchema = z.object({
   inputType: z.string().nullable().optional(),
   html: z.string().nullable().optional(),
   checked: z.boolean().nullable().optional(),
+  viewport: viewportSchema.nullable().optional(),
   assert: recordedAssertSchema.optional()
 })
 
@@ -70,6 +79,7 @@ export const recorderEventSchema = z.object({
   inputType: z.string().nullable().optional(),
   tagName: z.string().nullable().optional(),
   checked: z.boolean().nullable().optional(),
+  viewport: viewportSchema.nullable().optional(),
   assert: recordedAssertSchema.optional()
 }).passthrough()
 
