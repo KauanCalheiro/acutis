@@ -42,5 +42,7 @@ export interface RecordingEvent {
   checked: boolean | null
   /** O DOM ao redor do elemento no instante da ação. Sai dos eventos ao persistir, para não inchá-los. */
   html: string | null
+  /** O tamanho da página quando o evento aconteceu. */
+  viewport?: { width: number, height: number }
   assert?: AssertPayload
 }

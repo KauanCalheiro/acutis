@@ -15,6 +15,7 @@ export function toRecordedEvents(events: RecorderEvent[]) {
     sensitive: event.sensitive ?? false,
     checked: event.checked ?? null,
     html: event.html ?? null,
+    viewport: event.viewport ?? null,
     assert: event.assert
   }))
 }

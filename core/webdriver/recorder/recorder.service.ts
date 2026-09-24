@@ -8,6 +8,7 @@ import { RECORDER_BUNDLE_PATH } from '../../config/paths.js'
 import type { VideoService } from '../video/video.service.js'
 import type { RecordingEvent } from '../../common/types/recording.js'
 import { replaySteps, type ReplayState, type ReplayStep } from './replay.js'
+import { windowBoundsFor } from './window-bounds.js'
 
 export interface StorageState {
   cookies: unknown[]
@@ -45,10 +46,45 @@ const DECISION_POLL_MS = 200
 const BLANK = 'about:blank'
 const MISSING_BROWSER = 'Executable doesn\'t exist'
 
+/** Muda o tamanho da janela que contém a página. */
+async function resizeWindow(page: Page, bounds: { width: number, height: number }): Promise<void> {
+  const cdp = await page.context().newCDPSession(page)
+  const { windowId } = await cdp.send('Browser.getWindowForTarget')
+
+  await cdp.send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'normal' } })
+  await cdp.send('Browser.setWindowBounds', { windowId, bounds })
+  await cdp.detach()
+}
+
+/** Ajusta a janela para a página, e não a janela inteira, ficar no tamanho pedido. */
+async function fitPageTo(page: Page, size: { width: number, height: number }): Promise<void> {
+  const measured = await page.evaluate(() => {
+    const view = globalThis as unknown as {
+      innerWidth: number
+      innerHeight: number
+      outerWidth: number
+      outerHeight: number
+    }
+
+    return {
+      innerWidth: view.innerWidth,
+      innerHeight: view.innerHeight,
+      outerWidth: view.outerWidth,
+      outerHeight: view.outerHeight
+    }
+  })
+  const bounds = windowBoundsFor(size, measured)
+
+  if (bounds) await resizeWindow(page, bounds)
+}
+
 /** Abre o Chromium do Playwright, trocando a falha de navegador ausente por uma instrução de recuperação. */
 async function launchChromium(): Promise<Browser> {
   try {
-    return await chromium.launch({ headless: RECORDER_HEADLESS })
+    return await chromium.launch({
+      headless: RECORDER_HEADLESS,
+      args: [`--window-size=${RECORDING_VIEWPORT.width},${RECORDING_VIEWPORT.height}`]
+    })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
 
@@ -158,12 +194,14 @@ export class RecorderService {
 
       this.browser = await launchChromium()
       this.overCdp = false
-      this.context = await this.browser.newContext(
-        storageStatePath ? { storageState: storageStatePath } : {}
-      )
+      this.context = await this.browser.newContext({
+        viewport: null,
+        ...(storageStatePath ? { storageState: storageStatePath } : {})
+      })
     }
     this.page = await this.context.newPage()
-    await this.page.setViewportSize(RECORDING_VIEWPORT)
+
+    if (!this.overCdp) await fitPageTo(this.page, RECORDING_VIEWPORT)
 
     // about:blank aparece ao abrir e ao fechar a janela, e não é passo de teste nenhum.
     this.lastUrl = null
@@ -496,6 +534,11 @@ export class RecorderService {
     const page = await this.waitForPage()
     await page.fill(selector, value)
     await page.locator(selector).blur()
+  }
+
+  /** Redimensiona a janela gravada como se o usuário a tivesse maximizado na mão. */
+  async debugResize(width: number, height: number): Promise<void> {
+    await resizeWindow(await this.waitForPage(), { width, height })
   }
 
   /** Fecha a página gravada como se o usuário tivesse fechado a janela na mão. */

@@ -27,6 +27,12 @@ export const recordedAssertSchema = z.object({
 
 export type RecordedAssert = z.output<typeof recordedAssertSchema>
 
+/** O tamanho da página quando o evento aconteceu. */
+export const viewportSchema = z.object({
+  width: z.number().int().positive(),
+  height: z.number().int().positive()
+})
+
 export const recordedEventSchema = z.object({
   type: z.string(),
   url: z.string(),
@@ -40,6 +46,7 @@ export const recordedEventSchema = z.object({
   inputType: z.string().nullable().optional(),
   html: z.string().nullable().optional(),
   checked: z.boolean().nullable().optional(),
+  viewport: viewportSchema.nullable().optional(),
   assert: recordedAssertSchema.optional()
 })
 
@@ -72,6 +79,7 @@ export const recorderEventSchema = z.object({
   inputType: z.string().nullable().optional(),
   tagName: z.string().nullable().optional(),
   checked: z.boolean().nullable().optional(),
+  viewport: viewportSchema.nullable().optional(),
   assert: recordedAssertSchema.optional()
 }).passthrough()
 

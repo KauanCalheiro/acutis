@@ -16,6 +16,9 @@ const NOTICEABLE_PAUSE_MS = 2000
 
 const SLOW_TIMEOUT = 15000
 
+/** O tamanho em que o Playwright executa o teste quando o projeto não diz outro. */
+const DEFAULT_VIEWPORT = { width: 1280, height: 720 }
+
 interface Step {
   title: string
   lines: string[]
@@ -158,6 +161,7 @@ export class SpecEmitter {
     let previousType: string | null = null
     let previousAt: number | null = null
     let arrivedOnPage = false
+    let viewport = DEFAULT_VIEWPORT
 
     for (const event of events) {
       const type = event.type ?? ''
@@ -166,6 +170,12 @@ export class SpecEmitter {
       const slow = paused || arrivedOnPage
       previousAt = at
       arrivedOnPage = type === 'navigate'
+
+      const resized = event.viewport
+      if (resized && (resized.width !== viewport.width || resized.height !== viewport.height)) {
+        viewport = resized
+        steps.push(this.resize(viewport))
+      }
 
       let step: Step | null = null
 
@@ -199,6 +209,13 @@ export class SpecEmitter {
     }
 
     return steps
+  }
+
+  private resize({ width, height }: { width: number, height: number }): Step {
+    return {
+      title: `Ajusta a janela para ${width}x${height}`,
+      lines: [`await page.setViewportSize({ width: ${width}, height: ${height} })`]
+    }
   }
 
   private navigation(event: RecordedEvent, navigated: boolean, currentUrl: string | null): Step | null {
