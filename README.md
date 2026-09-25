@@ -4,6 +4,32 @@ Grava, gera e roda testes Playwright a partir do navegador.
 
 Você navega pela aplicação que quer testar, o Acutis registra o que aconteceu e escreve o spec Playwright correspondente. Depois roda esse teste quando você pedir, mostrando cada passo em tempo real e gravando o vídeo da execução.
 
+## Trabalho de conclusão de curso
+
+O Acutis é o objeto do Trabalho de Conclusão de Curso *Acutis: plataforma local-first de testes automatizados*, do curso de Engenharia de Software da Universidade do Vale do Taquari (Univates).
+
+O trabalho é uma pesquisa aplicada: o produto é uma ferramenta funcional que ataca um problema concreto. O teste automatizado de ponta a ponta esbarra em três obstáculos:
+
+- **Barreira técnica:** exige domínio de framework, linguagem e estratégia de seletores.
+- **Dados fora de casa:** as soluções prontas costumam ser SaaS e enviam dados sensíveis a servidores externos.
+- **Artefatos presos:** os testes ficam em repositórios proprietários, longe do Git e do pipeline.
+
+O Acutis responde aos três: roda na máquina de quem testa, grava o fluxo no navegador, escreve o teste (e, com IA ligada, a documentação em Gherkin) e salva tudo no repositório do projeto.
+
+## Validação com usuários
+
+A etapa final do trabalho verifica se a ferramenta cumpre essa proposta nas mãos de quem não a construiu. Cada participante usa o Acutis contra um sistema web real que já conheça e percorre o roteiro abaixo sem ajuda do autor:
+
+1. **Criar o projeto** do sistema que vai ser testado.
+2. **Gravar a autenticação**, para que todos os cenários partam logados.
+3. **Gravar os cenários** dos fluxos principais do sistema, que viram a suíte de testes automatizados.
+4. **Gerar os relatórios** das execuções e interpretar o resultado.
+5. **Enquadrar a suíte em um CI/CD**, rodando os mesmos testes no pipeline do sistema (opcional).
+
+Ao fim, o participante responde um formulário de satisfação e sugestões. As respostas medem onde o roteiro travou e orientam as próximas iterações da ferramenta.
+
+As orientações de uso de cada passo estão no guia rápido, logo abaixo.
+
 ## Usar
 
 ```sh
