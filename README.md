@@ -33,7 +33,7 @@ As orientações de uso de cada passo estão no guia rápido, logo abaixo.
 ## Usar
 
 ```sh
-npx @acutis/cli
+npx @acutis/cli@latest
 ```
 
 Sobe a interface em `http://localhost:1991` e abre o navegador. Precisa de Node 22+; o Chromium do Playwright é baixado na primeira execução. Nada a aprovar, nada a configurar.
