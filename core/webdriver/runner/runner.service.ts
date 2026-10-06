@@ -3,8 +3,9 @@ import { randomUUID } from 'node:crypto'
 import type { Dirent, Stats } from 'node:fs'
 import { lstat, mkdir, readdir, readFile, readlink, rm, symlink, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
-import { dirname, join, relative } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 import { PACKAGE_ROOT, RUNNER_DIR, STREAM_REPORTER_PATH } from '../../config/paths.js'
+import { toPosixPath } from '../../common/utils/posix-path.js'
 import { REPORT_DIR } from '../../common/playwright/report.js'
 import { processEnvironment } from '../../config/env.js'
 import type { RunEvent } from '../../common/types/run.js'
@@ -88,12 +89,12 @@ export async function borrowNodeModules(dir: string): Promise<void> {
 
   if (entry !== undefined) {
     if (!entry.isSymbolicLink()) return
-    if (await readlink(link) === BORROWED_NODE_MODULES) return
+    if (resolve(await readlink(link)) === resolve(BORROWED_NODE_MODULES)) return
 
     await rm(link)
   }
 
-  await symlink(BORROWED_NODE_MODULES, link, 'dir')
+  await symlink(BORROWED_NODE_MODULES, link, 'junction')
 }
 const RUN_TAIL_MS = 1500
 const RUN_TAIL_ENV = 'ACUTIS_RUN_TAIL_MS'
@@ -318,7 +319,7 @@ export class RunnerService {
       const source = await readFile(file, 'utf8')
       if (!PLAYWRIGHT_IMPORT.test(source)) continue
 
-      const target = relative(entry.parentPath, join(dir, 'acutis-run'))
+      const target = toPosixPath(relative(entry.parentPath, join(dir, 'acutis-run')))
       const patched = source.replace(PLAYWRIGHT_IMPORT, `$1${target.startsWith('.') ? target : `./${target}`}$2`)
 
       if (patched !== source) await writeFile(file, patched)

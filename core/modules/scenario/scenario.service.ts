@@ -1,11 +1,13 @@
 /** As operações de cenário: ler, editar, remover e guardar o que cada execução deixou. */
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs'
 import { createHash } from 'node:crypto'
-import { isAbsolute, join, relative } from 'node:path'
+import { join, relative } from 'node:path'
 import { Git } from '../git/providers/git.js'
 import { ActiveVars } from '../../common/playwright/active-vars.js'
 import { Conflict, ValidationFailed } from '../../common/exceptions/errors.js'
 import { put } from '../../common/utils/file.js'
+import { isInside } from '../../common/utils/inside.js'
+import { toPosixPath } from '../../common/utils/posix-path.js'
 import { slug as toSlug } from '../../common/utils/slug.js'
 import { AUTH_FEATURE, AUTH_ID, AUTH_SPEC } from '../auth/providers/auth.js'
 import type { ProjectService } from '../project/project.service.js'
@@ -361,10 +363,7 @@ export class ScenarioService {
 
       const id = asString(event.id)
       const file = asString(event.file)
-      const spec = file === null ? null : relative(path, file)
-
-      // O histórico é do projeto: arquivo de fora dele não tem cenário aqui para receber a execução.
-      if (id && spec && !spec.startsWith('..') && !isAbsolute(spec)) specOf.set(id, spec)
+      if (id && file && isInside(path, file)) specOf.set(id, toPosixPath(relative(path, file)))
     }
 
     for (const event of events) {

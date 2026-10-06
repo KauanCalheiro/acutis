@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import { BadRequest } from '../../common/exceptions/errors.js'
 import { tokenUrl } from './providers/clone-url.js'
 import { Git } from './providers/git.js'
+import { sshKeyCommand } from './providers/ssh-command.js'
 
 /** O ambiente que impede o git de travar pedindo credencial num processo sem terminal. */
 const NON_INTERACTIVE = {
@@ -59,7 +60,7 @@ export class GitService {
       keyFile = join(mkdtempSync(join(tmpdir(), 'acutis-ssh-')), 'key')
       writeFileSync(keyFile, `${request.ssh_key.trimEnd()}\n`, { mode: 0o600 })
       env = {
-        GIT_SSH_COMMAND: `ssh -i ${keyFile} -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new`
+        GIT_SSH_COMMAND: sshKeyCommand(keyFile)
       }
     }
 
