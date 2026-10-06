@@ -27,6 +27,14 @@ it('não instala o que só serve para construir o pacote', () => {
   }
 })
 
+/** O gravador usa o Playwright do bundle; o `bin` e o runner, o da árvore de quem instalou. */
+it('fixa o Playwright na versão exata que o bundle embarca', () => {
+  const bundled = JSON.parse(readFileSync(new URL('../node_modules/playwright/package.json', import.meta.url), 'utf8')).version
+
+  expect(manifest.dependencies.playwright).toBe(bundled)
+  expect(manifest.dependencies['@playwright/test']).toBe(bundled)
+})
+
 it('instala o Playwright na máquina de quem usa: o spec do projeto importa @playwright/test', () => {
   expect(manifest.dependencies['@playwright/test']).toBeDefined()
   expect(manifest.devDependencies['@playwright/test']).toBeUndefined()
