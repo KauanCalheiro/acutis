@@ -14,6 +14,15 @@ const ROOT_NAMES = ['acutis', '@acutis/cli']
  */
 export const PACKAGE_ROOT_ENV = 'ACUTIS_PACKAGE_ROOT'
 
+/** O diretório deste módulo, ou vazio quando `import.meta.url` não vira caminho no sistema atual. */
+function moduleDirectory(): string {
+  try {
+    return dirname(fileURLToPath(import.meta.url))
+  } catch {
+    return ''
+  }
+}
+
 /**
  * A raiz de onde saem reporter, gravador, vídeos e runner.
  *
@@ -21,7 +30,7 @@ export const PACKAGE_ROOT_ENV = 'ACUTIS_PACKAGE_ROOT'
  * quem chamou o CLI, e apontariam tudo para a pasta errada.
  */
 export function packageRoot(starts: string[] = [
-  dirname(fileURLToPath(import.meta.url)),
+  moduleDirectory(),
   process.argv[1] ? dirname(resolve(process.argv[1])) : '',
   process.cwd()
 ]): string {
