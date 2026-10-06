@@ -3,15 +3,17 @@
  * `acutis.json` dentro.
  */
 import { existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { Git, providerFromUrl, type GitSync } from '../git/providers/git.js'
 import { acutis } from '../../common/utils/acutis.js'
+import { isInside } from '../../common/utils/inside.js'
 import { NotFound, ValidationFailed } from '../../common/exceptions/errors.js'
 import { slug as toSlug } from '../../common/utils/slug.js'
 import { AUTH_ID, authExists } from '../auth/providers/auth.js'
 import { EnvKey } from '../environment/providers/env-key.js'
 import { Environments } from '../environment/providers/environments.js'
 import type { ProjectDetail as ProjectShowResponse } from '#shared/contracts/project'
+import { vscodeUrl } from '#shared/utils/vscode'
 import { selectorOrder, type SelectorKey } from '../recording/selector-priority.js'
 import { Project, type ProjectManifest } from './entities/project.entity.js'
 import { patchManifest, readManifest } from './providers/manifest.js'
@@ -44,7 +46,7 @@ export class ProjectService {
     const root = acutis().root
     const path = join(root, slug)
 
-    if (!path.startsWith(`${root}/`) || !existsSync(join(path, 'acutis.json'))) {
+    if (!isInside(root, path) || !existsSync(join(path, 'acutis.json'))) {
       throw new NotFound('Projeto não encontrado.')
     }
 
@@ -73,7 +75,7 @@ export class ProjectService {
       }
     })()
 
-    const slug = manifest.slug ?? dir.split('/').pop()!
+    const slug = manifest.slug ?? basename(dir)
     const repository = await Git.in(dir).remoteUrl()
 
     return new Project(
@@ -166,7 +168,7 @@ export class ProjectService {
       base_url: baseUrl,
       storage_state: join(path, environments.storageState()),
       requires_url: !baseUrl && !manifest.url_skipped,
-      vscode_url: `vscode://file${path}`,
+      vscode_url: vscodeUrl(path),
       has_report: new ProjectReport(path).exists(),
       selectors: selectorOrder(manifest.selectors)
     }

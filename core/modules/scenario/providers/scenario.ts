@@ -3,7 +3,7 @@
  * spec sem `tests/` e sem a extensão.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { basename, dirname, join, relative } from 'node:path'
+import { basename, dirname, join, relative, sep } from 'node:path'
 import { NotFound } from '../../../common/exceptions/errors.js'
 import { AUTH_FEATURE, AUTH_ID, AUTH_SPEC } from '../../auth/providers/auth.js'
 
@@ -75,7 +75,7 @@ export function listScenarios(projectPath: string): ScenarioData[] {
     .filter(entry => entry.isFile() && entry.name.endsWith('.spec.ts'))
     .map(entry => join(entry.parentPath ?? testsDir, entry.name))
   // Só um nível de subpasta.
-    .filter(spec => relative(testsDir, dirname(spec)).split('/').filter(Boolean).length <= 1)
+    .filter(spec => relative(testsDir, dirname(spec)).split(sep).filter(Boolean).length <= 1)
     .sort()
 
   return specs.map((spec) => {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vscodeUrl } from '#shared/utils/vscode'
 import type { Project } from '~/types/project'
 
 interface ProjectCard {
@@ -50,7 +51,7 @@ const actions = computed(() => [
       label: 'Abrir no VS Code',
       icon: 'i-simple-icons-visualstudiocode',
       testid: 'projeto-menu-vscode',
-      to: `vscode://file${project.path}`,
+      to: vscodeUrl(project.path),
       target: '_blank'
     },
     {

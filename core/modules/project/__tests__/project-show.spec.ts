@@ -185,6 +185,16 @@ test('caso único', async ({ page }) => {})`)
     expect(response.body.scenarios[0].feature).toBeNull()
     expect(response.body.scenarios[0].tags).toEqual([])
   })
+
+  it('ignora o spec que está a mais de um nível de subpasta', async () => {
+    mkdirSync(join(dir, 'tests/loja/carrinho'), { recursive: true })
+    writeFileSync(join(dir, 'tests/loja/comprar.spec.ts'), 'test.describe(\'Comprar\', () => {})')
+    writeFileSync(join(dir, 'tests/loja/carrinho/esvaziar.spec.ts'), 'test.describe(\'Esvaziar\', () => {})')
+
+    const response = await show()
+
+    expect(response.body.scenarios.map((scenario: { spec: string }) => scenario.spec)).toEqual(['tests/loja/comprar.spec.ts'])
+  })
 })
 
 describe('link do editor', () => {
