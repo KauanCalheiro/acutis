@@ -10,7 +10,9 @@ export class Project {
     /** O `origin` do git, quando o diretório é um repositório. */
     readonly repository: string | null = null,
     /** GitHub, GitLab ou Bitbucket, deduzido da URL do remote. */
-    readonly provider: ProjectContract['provider'] = null
+    readonly provider: ProjectContract['provider'] = null,
+    /** O projeto de exemplo que a apresentação inicial cria e revoga. */
+    readonly demo: boolean = false
   ) {}
 }
 
@@ -22,4 +24,5 @@ export interface ProjectManifest {
   version: number
   /** A ordem em que a gravação tenta os seletores; ausente, vale a padrão. */
   selectors?: string[]
+  demo?: boolean
 }

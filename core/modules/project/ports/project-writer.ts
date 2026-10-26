@@ -3,5 +3,6 @@ import type { Project } from '../entities/project.entity.js'
 
 export abstract class ProjectWriter {
   abstract create(name: string): Project
+  abstract createDemo(name: string): Project
   abstract clone(request: CloneRequest): Promise<Project>
 }

@@ -5,6 +5,7 @@ import { configureTemplateFiles } from '@acutis/core/modules/project/providers/t
 import { GitUseCases } from '@acutis/core/use-cases/git/git.use-cases.js'
 import { CloneProject } from '@acutis/core/use-cases/project/clone-project.js'
 import { CreateProject } from '@acutis/core/use-cases/project/create-project.js'
+import { DemoProject } from '@acutis/core/use-cases/project/demo-project.js'
 import { ProjectUseCases } from '@acutis/core/use-cases/project/project.use-cases.js'
 import { Buffer } from 'node:buffer'
 
@@ -15,6 +16,7 @@ const writer = new FileSystemProjectWriter(gitService)
 const composition = {
   cloneProject: new CloneProject(writer),
   createProject: new CreateProject(writer),
+  demoProject: new DemoProject(writer, projectService),
   git: new GitUseCases(gitService),
   projects: new ProjectUseCases(projectService)
 }

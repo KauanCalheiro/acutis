@@ -6,6 +6,7 @@ import { enableAutoUnmount } from '@vue/test-utils'
 import { UApp } from '#components'
 import BaseNavbar from '~/components/base/navbar.vue'
 import IndexPage from '~/pages/index.vue'
+import { FIRST_WALKTHROUGH } from '~/composables/first-walkthrough'
 import { useWalkthroughRunning, useWalkthroughSeen } from '~/composables/walkthrough'
 import type { Project } from '~/types/project'
 import { field, settle } from '../support/modal'
@@ -64,6 +65,7 @@ describe('IndexPage', () => {
   beforeEach(() => {
     clearNuxtData()
     useWalkthroughSeen().mark('home')
+    useWalkthroughSeen().mark(FIRST_WALKTHROUGH)
   })
 
   it('renders a card per project from the API', async () => {
@@ -389,6 +391,7 @@ describe('IndexPage: apresentação', () => {
 
   it('deixa de fora o card quando ainda não há projeto', async () => {
     response = listing([])
+    useWalkthroughSeen().mark(FIRST_WALKTHROUGH)
 
     await mountHome()
 

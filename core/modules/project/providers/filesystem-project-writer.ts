@@ -8,7 +8,8 @@ import { Environments } from '../../environment/providers/environments.js'
 import { ValidationFailed } from '../../../common/exceptions/errors.js'
 import { Project } from '../entities/project.entity.js'
 import type { ProjectWriter } from '../ports/project-writer.js'
-import { writeManifest } from './manifest.js'
+import { writeDemoProjectFiles } from './demo/demo-project-files.js'
+import { patchManifest, writeManifest } from './manifest.js'
 import {
   DEFAULT_TEMPLATE,
   hasBundledTemplate,
@@ -53,6 +54,15 @@ export class FileSystemProjectWriter implements ProjectWriter {
     new Environments(path).ensure()
 
     return new Project(name, slug, path, createdAt)
+  }
+
+  createDemo(name: string): Project {
+    const project = this.create(name)
+
+    patchManifest(project.path, { demo: true })
+    writeDemoProjectFiles(project.path)
+
+    return new Project(project.name, project.slug, project.path, project.created_at, null, null, true)
   }
 
   async clone(request: CloneRequest): Promise<Project> {

@@ -59,7 +59,8 @@ export const projectSchema = z.object({
   path: z.string(),
   repository: z.string().nullable(),
   provider: z.enum(['github', 'gitlab']).nullable(),
-  created_at: z.string()
+  created_at: z.string(),
+  demo: z.boolean()
 })
 
 export type Project = z.output<typeof projectSchema>
