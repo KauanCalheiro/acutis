@@ -30,6 +30,7 @@ describe('contrato de projetos', () => {
       provider: null,
       branch: null,
       created_at: '2026-08-16T00:00:00.000Z',
+      demo: false,
       updated_at: '2026-08-16T00:00:00.000Z',
       scenarios: [],
       auth_status: 'unset',

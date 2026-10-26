@@ -1,10 +1,10 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from '@playwright/test'
 import { spawn } from 'node:child_process'
-import { cpSync, mkdtempSync, rmSync } from 'node:fs'
+import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
-import { startBackend } from '../support/backend'
+import { isolatedProjects, startBackend } from '../support/backend'
 import { FIRST_VISIT } from '../support/walkthrough'
 
 const FIXTURES_DIR = resolve(import.meta.dirname, '../fixtures/projects')
@@ -394,5 +394,132 @@ test.describe('first visit walkthrough', { tag: ['@read', '@project'] }, () => {
         })
 
         await expect(page.getByTestId('apresentacao')).toContainText('Isto é o Acutis')
+    })
+})
+
+test.describe('first visit with the demo project', { tag: ['@write', '@project'] }, () => {
+    let stopBackend: () => Promise<void>
+    let projects: string
+
+    test.use({ storageState: FIRST_VISIT })
+
+    test.beforeAll(async () => {
+        projects = isolatedProjects()
+        stopBackend = await startBackend({ ACUTIS_PROJECTS_PATH: projects })
+    })
+
+    test.afterAll(async () => {
+        await stopBackend()
+        rmSync(projects, { recursive: true, force: true })
+    })
+
+    test.beforeEach(async ({ page }) => {
+        for (const entry of readdirSync(projects).filter(name => name !== 'runtime')) {
+            rmSync(join(projects, entry), { recursive: true, force: true })
+        }
+
+        await test.step('open home and wait for the walkthrough', async () => {
+            await page.goto('/')
+            await page.locator('[data-hydrated="true"]').waitFor()
+            await expect(page.getByTestId('apresentacao')).toContainText('Isto é o Acutis')
+        })
+    })
+
+    /** Avança até o último passo e devolve, na ordem, cada caminho por onde a apresentação passou. */
+    async function walkToTheEnd(page: Page): Promise<string[]> {
+        const paths = [new URL(page.url()).pathname]
+
+        while (await page.getByTestId('apresentacao-avancar').isVisible()) {
+            const title = await page.getByTestId('apresentacao').textContent()
+            await page.getByTestId('apresentacao-avancar').click()
+            await expect(page.getByTestId('apresentacao')).not.toHaveText(title ?? '')
+
+            const path = new URL(page.url()).pathname
+            if (paths.at(-1) !== path) paths.push(path)
+        }
+
+        return paths
+    }
+
+    test('creates the demo project on the first visit', async ({ page }) => {
+        await expect(page.getByTestId('projeto-card')).toHaveCount(1)
+        await expect(page.getByTestId('projeto-card')).toContainText('Swag Labs')
+    })
+
+    test('walks through the whole demo project page by page', async ({ page }) => {
+        const paths = await test.step('advance to the last step', () => walkToTheEnd(page))
+
+        expect(paths.slice(0, 5)).toEqual([
+            '/',
+            '/projects/swag-labs',
+            '/projects/swag-labs/scenarios/auth',
+            '/projects/swag-labs/scenarios/adicionar-produto-ao-carrinho',
+            '/projects/swag-labs/report'
+        ])
+        expect(paths[5]).toMatch(/^\/projects\/swag-labs\/report\/\d+$/)
+        expect(paths).toHaveLength(6)
+    })
+
+    test('removes the demo project when the walkthrough is concluded', async ({ page }) => {
+        await test.step('advance to the end and conclude', async () => {
+            await walkToTheEnd(page)
+            await page.getByTestId('apresentacao-concluir').click()
+        })
+
+        await expect(page).toHaveURL('/')
+        await expect(page.getByTestId('projeto-vazio')).toBeVisible()
+        expect(existsSync(join(projects, 'swag-labs'))).toBe(false)
+    })
+
+    test('removes the demo project when the walkthrough is skipped', async ({ page }) => {
+        await test.step('advance into the project and skip', async () => {
+            while (new URL(page.url()).pathname === '/') {
+                await page.getByTestId('apresentacao-avancar').click()
+            }
+            await page.getByTestId('apresentacao-pular').click()
+        })
+
+        await expect(page).toHaveURL('/')
+        await expect(page.getByTestId('projeto-vazio')).toBeVisible()
+        expect(existsSync(join(projects, 'swag-labs'))).toBe(false)
+    })
+
+    test('starts over with the same demo project after a reload', async ({ page }) => {
+        await test.step('advance a step and reload', async () => {
+            await page.getByTestId('apresentacao-avancar').click()
+            await page.reload()
+            await page.locator('[data-hydrated="true"]').waitFor()
+        })
+
+        await expect(page.getByTestId('apresentacao')).toContainText('Isto é o Acutis')
+        await expect(page.getByTestId('projeto-card')).toHaveCount(1)
+    })
+
+    test('keeps the page walkthroughs closed after the first one', async ({ page }) => {
+        await test.step('skip the first walkthrough', async () => {
+            await page.getByTestId('apresentacao-pular').click()
+            await expect(page.getByTestId('projeto-vazio')).toBeVisible()
+        })
+
+        await test.step('create a project of my own', async () => {
+            await page.getByTestId('projeto-adicionar').click()
+            await page.getByTestId('projeto-form-nome').fill('Depois Da Inicial')
+            await page.getByTestId('projeto-form-salvar').click()
+            await expect(page).toHaveURL('/projects/depois-da-inicial')
+            await page.locator('[data-hydrated="true"]').waitFor()
+        })
+
+        await expect(page.getByTestId('apresentacao')).toBeHidden()
+    })
+
+    test('brings the demo project back from the navbar when there is no project', async ({ page }) => {
+        await test.step('skip and ask to see it again', async () => {
+            await page.getByTestId('apresentacao-pular').click()
+            await expect(page.getByTestId('projeto-vazio')).toBeVisible()
+            await page.getByTestId('navbar-apresentacao').click()
+        })
+
+        await expect(page.getByTestId('apresentacao')).toContainText('Isto é o Acutis')
+        await expect(page.getByTestId('projeto-card')).toContainText('Swag Labs')
     })
 })
