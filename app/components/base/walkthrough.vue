@@ -140,10 +140,13 @@ onBeforeUnmount(unlisten)
         </ul>
 
         <div class="mt-1 flex items-center justify-between gap-2">
-          <span
-            class="text-xs text-dimmed"
-            data-testid="apresentacao-posicao"
-          >{{ walkthrough.index.value + 1 }} de {{ walkthrough.total.value }}</span>
+          <div class="flex flex-col text-xs text-dimmed">
+            <span
+              v-if="walkthrough.chapterLabel.value"
+              data-testid="apresentacao-capitulo"
+            >{{ walkthrough.chapterLabel.value }}</span>
+            <span data-testid="apresentacao-posicao">{{ walkthrough.index.value + 1 }} de {{ walkthrough.total.value }}</span>
+          </div>
 
           <div class="flex gap-2">
             <UButton

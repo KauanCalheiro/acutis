@@ -84,7 +84,8 @@ export class ProjectService {
       dir,
       manifest.created_at ?? '',
       repository,
-      providerFromUrl(repository)
+      providerFromUrl(repository),
+      manifest.demo === true
     )
   }
 
@@ -162,6 +163,7 @@ export class ProjectService {
       provider: project.provider,
       branch: await Git.in(path).branch(),
       created_at: project.created_at,
+      demo: project.demo,
       updated_at: statSync(path).mtime.toISOString(),
       scenarios: listScenarios(path),
       auth_status: this.authStatus(path, manifest),
@@ -223,7 +225,8 @@ export class ProjectService {
       path,
       manifest.created_at ?? '',
       repository,
-      providerFromUrl(repository)
+      providerFromUrl(repository),
+      manifest.demo === true
     )
   }
 

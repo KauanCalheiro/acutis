@@ -89,6 +89,8 @@ async function waitForTarget(testid: string | string[]) {
 export function useWalkthrough(id: string, steps: MaybeRefOrGetter<WalkthroughStep[]>, options: WalkthroughOptions = {}) {
   const { seen, mark } = useWalkthroughSeen()
   const running = useWalkthroughRunning()
+  const first = useFirstWalkthrough()
+  const chained = computed(() => first.chapter.value === id)
 
   const visible = shallowRef<WalkthroughStep[]>([])
 
@@ -120,36 +122,54 @@ export function useWalkthrough(id: string, steps: MaybeRefOrGetter<WalkthroughSt
   }
 
   function start() {
-    visible.value = toValue(steps).filter(step =>
+    const all = chained.value ? first.chapterSteps(toValue(steps)) : toValue(steps)
+
+    visible.value = all.filter(step =>
       (step.when?.() ?? true)
       && (!step.testid || step.scene || step.enter || findWalkthroughTarget(step.testid))
     )
 
-    if (!visible.value.length) return
+    if (!visible.value.length) {
+      if (chained.value) first.advance()
+      return
+    }
 
     running.value = true
     go(0)
   }
 
-  function finish() {
+  function close() {
     current.value?.scene?.close()
     tour.finish()
     running.value = false
-    mark(id)
   }
+
+  function finish() {
+    close()
+
+    if (chained.value) first.end()
+    else mark(id)
+  }
+
+  const hasNext = computed(() => tour.hasNext.value || (chained.value && !first.isLastChapter.value))
 
   function next() {
     if (tour.hasNext.value) go(tour.index.value + 1)
-    else finish()
+    else if (chained.value) {
+      close()
+      first.advance()
+    } else finish()
   }
 
   function prev() {
     if (tour.hasPrev.value) go(tour.index.value - 1)
   }
 
+  const ready = computed(() => toValue(options.ready ?? true))
+
   const due = computed(() =>
-    !seen.value.includes(id)
-    && toValue(options.ready ?? true)
+    ready.value
+    && (chained.value || (first.idle.value && !seen.value.includes(id)))
   )
 
   onMounted(() => {
@@ -170,7 +190,8 @@ export function useWalkthrough(id: string, steps: MaybeRefOrGetter<WalkthroughSt
     total: tour.total,
     reference: tour.reference,
     hasPrev: tour.hasPrev,
-    hasNext: tour.hasNext,
+    hasNext,
+    chapterLabel: computed(() => chained.value ? first.chapterLabel.value : ''),
     current,
     next,
     prev,

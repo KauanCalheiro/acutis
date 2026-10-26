@@ -92,6 +92,25 @@ function openCreate(tab: ProjectFormTab) {
 
 const settingsOpen = useSettingsOpen()
 
+const firstWalkthrough = useFirstWalkthrough()
+const walkthroughSeen = useWalkthroughSeen()
+
+const firstWalkthroughDue = computed(() =>
+  status.value === 'success'
+  && !debouncedSearch.value
+  && firstWalkthrough.chapter.value === null
+  && !walkthroughSeen.seen.value.includes(FIRST_WALKTHROUGH)
+  && projects.value.every(project => project.demo)
+)
+
+onMounted(() => {
+  watch(firstWalkthroughDue, (due) => {
+    if (due) firstWalkthrough.begin(refresh)
+  }, {
+    immediate: true
+  })
+})
+
 const walkthroughSteps = projectsWalkthroughSteps({
   createForm: {
     open: () => (createOpen.value = true),
@@ -212,6 +231,7 @@ onBeforeUnmount(() => {
       <BaseWalkthrough
         id="home"
         :steps="walkthroughSteps"
+        :ready="!firstWalkthroughDue"
       />
 
       <div
