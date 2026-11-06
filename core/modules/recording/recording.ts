@@ -34,6 +34,11 @@ function marker(key: string): string {
   return `{{${key}}}`
 }
 
+/** Whether the value is something the user typed, not a marker that came back from a saved recording. */
+function isTyped(value: string | null | undefined): value is string {
+  return Boolean(value) && !/^\{\{[A-Z0-9_]+\}\}$/.test(value!)
+}
+
 export class Recording {
   private constructor(private readonly recorded: RecordedEvent[]) {}
 
@@ -132,7 +137,7 @@ export class Recording {
     const username = userIndex === null ? null : this.recorded[userIndex]?.value
     const password = this.recorded[passwordIndex]?.value
 
-    return username && password ? { username, password } : null
+    return isTyped(username) && isTyped(password) ? { username, password } : null
   }
 
   /** O valor real de cada marcador batizado, indexado pelo nome que ele recebeu. */

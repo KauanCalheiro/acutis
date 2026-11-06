@@ -124,6 +124,7 @@ export function useWebdriver() {
     url?: string
     /** Passos já gravados que o navegador refaz antes de o usuário continuar de onde parou. */
     replay?: RecorderEvent[]
+    project?: string
   }
 
   function startRecording(mode: 'scenario' | 'auth' = 'scenario', options: RecordingOptions = {}) {
