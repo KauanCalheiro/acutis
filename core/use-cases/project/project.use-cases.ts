@@ -6,6 +6,7 @@ export class ProjectUseCases {
   findAll(query: ListQuery) { return this.service.findAll(query) }
   findOne(slug: string) { return this.service.findOne(slug) }
   reportFile(slug: string, path?: string) { return this.service.reportFile(slug, path) }
+  resolvedEnvironment(slug: string) { return this.service.resolvedEnvironment(slug) }
   update(slug: string, name: string) { return this.service.update(slug, name) }
   remove(slug: string) { return this.service.remove(slug) }
   setBaseUrl(slug: string, url: string) { return this.service.setBaseUrl(slug, url) }

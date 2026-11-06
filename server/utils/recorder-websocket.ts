@@ -2,6 +2,7 @@ import type { RecordingEvent } from '@acutis/core/common/types/recording'
 import { describeError } from '@acutis/core/modules/telemetry/describe-error'
 import type { ErrorReport } from '@acutis/core/modules/telemetry/telemetry.service'
 import type { RecorderDiagnostics, StopResult } from '@acutis/core/webdriver/recorder/recorder.service'
+import { withEnvironmentValues } from '@acutis/core/webdriver/recorder/replay'
 
 interface RecorderPeer {
   send(data: string): unknown
@@ -41,13 +42,20 @@ interface RecorderCommand {
   url?: string
   /** Os passos já gravados que o navegador refaz antes de o usuário continuar. */
   replay?: RecordingEvent[]
+  project?: string
 }
+
+type EnvironmentOf = (project: string) => Record<string, string>
 
 function send(peer: RecorderPeer, payload: Record<string, unknown>) {
   peer.send(JSON.stringify(payload))
 }
 
-export function createRecorderWebSocketHooks(recorder: RecorderPort, reportFailure: ReportFailure = async () => false) {
+export function createRecorderWebSocketHooks(
+  recorder: RecorderPort,
+  reportFailure: ReportFailure = async () => false,
+  environmentOf: EnvironmentOf = () => ({})
+) {
   async function stop(peer: RecorderPeer) {
     const result = await recorder.stop()
     send(peer, { event: 'recorder:stop', ...result })
@@ -81,7 +89,7 @@ export function createRecorderWebSocketHooks(recorder: RecorderPort, reportFailu
           body.mode ?? 'scenario',
           body.storageState,
           body.url,
-          body.replay,
+          body.replay && body.project ? withEnvironmentValues(body.replay, environmentOf(body.project)) : body.replay,
           {
             onReplayed: keptEvents => send(peer, { event: 'recorder:replayed', kept: keptEvents }),
             onFailed: step => send(peer, { event: 'recorder:replay-failed', step }),

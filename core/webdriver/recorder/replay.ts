@@ -57,6 +57,16 @@ function typeable(value: string | null): value is string {
   return value !== null && value !== '' && value !== MASK && !/^\{\{.+\}\}$/.test(value)
 }
 
+/** The events with each `{{KEY}}` fill swapped for the value the environment holds for that key. */
+export function withEnvironmentValues(events: RecordingEvent[], environment: Record<string, string>): RecordingEvent[] {
+  return events.map((event) => {
+    const key = event.type === 'fill' ? event.value?.match(/^\{\{([A-Z0-9_]+)\}\}$/)?.[1] : undefined
+    const value = key === undefined ? undefined : environment[key]
+
+    return value ? { ...event, value } : event
+  })
+}
+
 export function replaySteps(
   events: RecordingEvent[],
   order: SelectorKey[] = DEFAULT_SELECTOR_PRIORITY

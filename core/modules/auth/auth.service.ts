@@ -184,7 +184,8 @@ export class AuthService {
 
     return {
       authSetup: settled.value,
-      credentialsNeeded: recording.credentials() === null,
+      credentialsNeeded: recording.credentials() === null
+        && (vars.isEmpty(EnvKey.USER) || vars.isEmpty(EnvKey.PASSWORD)),
       warnings: [...warnings, ...sessionWarning(run)]
     }
   }

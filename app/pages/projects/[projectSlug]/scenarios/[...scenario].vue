@@ -361,7 +361,8 @@ function openRecorder(events: RecorderEvent[]) {
   startRecording(isAuth.value ? 'auth' : 'scenario', {
     url: project.value!.base_url ?? undefined,
     storageState: isAuth.value ? undefined : sessionFor(project.value!, isPublic.value),
-    replay: events
+    replay: events,
+    project: slug.value
   })
 }
 
