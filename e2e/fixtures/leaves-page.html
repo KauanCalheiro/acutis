@@ -1,0 +1,12 @@
+<!doctype html>
+<html>
+<head><title>acutis-e2e-leaves-page</title></head>
+<body>
+<button id="leave" type="button">Continuar com o SSO</button>
+<script>
+  document.getElementById('leave').addEventListener('click', () => {
+    location.href = location.origin.replace('127.0.0.1', 'localhost') + '/'
+  })
+</script>
+</body>
+</html>

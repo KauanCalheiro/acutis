@@ -11,6 +11,7 @@ import { spawn } from 'node:child_process'
 
 const FIXTURE_HTML = readFileSync(resolve(import.meta.dirname, '../fixtures/page.html'))
 const SELECT2_HTML = readFileSync(resolve(import.meta.dirname, '../fixtures/select2.html'))
+const LEAVES_PAGE_HTML = readFileSync(resolve(import.meta.dirname, '../fixtures/leaves-page.html'))
 
 let fixtureServer: Server
 let fixtureBaseUrl: string
@@ -63,13 +64,49 @@ test.describe('recording gateway events', { tag: ['@write', '@recording'] }, () 
     test.beforeAll(async () => {
         fixtureServer = createServer((req, res) => {
             res.writeHead(200, { 'Content-Type': 'text/html' })
-            res.end(req.url === '/select2' ? SELECT2_HTML : FIXTURE_HTML)
+            const pages: Record<string, Buffer> = { '/select2': SELECT2_HTML, '/leaves': LEAVES_PAGE_HTML }
+            res.end(pages[req.url ?? ''] ?? FIXTURE_HTML)
         })
         await new Promise<void>((r) => fixtureServer.listen(0, r))
         const { port } = fixtureServer.address() as { port: number }
         fixtureBaseUrl = `http://127.0.0.1:${port}`
 
         stopWebdriver = await startWebdriver()
+    })
+
+    test('keeps the click that leaves the page before the double click window closes', async ({ request }) => {
+        const gateway = await connectGateway()
+
+        try {
+            await test.step('start recording on the page whose button leaves for another origin', async () => {
+                gateway.send('START_RECORDING')
+                const res = await request.post(`${WEBDRIVER_URL}/debug/goto`, { data: { url: `${fixtureBaseUrl}/leaves` } })
+                expect(res.ok()).toBe(true)
+            })
+
+            await test.step('click the button that replaces the page right away', async () => {
+                const res = await request.post(`${WEBDRIVER_URL}/debug/click`, { data: { selector: '#leave' } })
+                expect(res.ok()).toBe(true)
+                await gateway.waitForMessage((m) => m.event === 'recorder:navigate' && String(m.url).startsWith('http://localhost:'))
+            })
+
+            await test.step('stop recording through the gateway', async () => {
+                gateway.send('STOP_RECORDING')
+                await gateway.waitForMessage((m) => m.event === 'recorder:stop')
+            })
+
+            await test.step('assert the click arrives before the navigation it caused', async () => {
+                const steps = gateway.received()
+                    .filter((m) => m.event === 'recorder:click' || m.event === 'recorder:navigate')
+                    .map((m) => m.event === 'recorder:click'
+                        ? `click:${(m.selectors as Record<string, unknown>).id}`
+                        : `navigate:${new URL(String(m.url)).hostname}`)
+
+                expect(steps).toEqual(['navigate:127.0.0.1', 'click:leave', 'navigate:localhost'])
+            })
+        } finally {
+            gateway.close()
+        }
     })
 
     test.afterAll(async () => {

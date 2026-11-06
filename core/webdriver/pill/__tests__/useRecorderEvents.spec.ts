@@ -331,4 +331,20 @@ describe('useRecorderEvents: o duplo clique', () => {
     expect(enviados.map(event => `${event.type}:${event.selectors?.id}`))
       .toEqual(['click:primeiro', 'dblclick:segundo'])
   })
+
+  it('avisa o gravador do clique retido na hora, antes de a página poder sair', async () => {
+    setBody('<button id="sso">Continuar com o SSO</button>')
+    const el = document.querySelector('button')!
+    captured()
+    const avisados: RecordingEvent[] = []
+    window.__acutisHoldClick = (event) => {
+      avisados.push(event as RecordingEvent)
+    }
+
+    dispatch({ ...buildBaseEvent('click', el), timestamp: 96000 })
+    const avisadosAntesDeSoltar = avisados.map(event => `${event.type}:${event.timestamp}`)
+    await flushEvents()
+
+    expect(avisadosAntesDeSoltar).toEqual(['click:96000'])
+  })
 })
