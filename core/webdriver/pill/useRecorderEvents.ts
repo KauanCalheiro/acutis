@@ -2,7 +2,7 @@ import type { RecordingEvent, RecordingEventType } from '@/common/types/recordin
 import { captureContext } from './htmlContext'
 import { usePillState } from './usePillState'
 import { useSelectorCapture } from './useSelectorCapture'
-import { reportEvent } from './transport'
+import { reportEvent, reportHeldClick } from './transport'
 
 const { isPaused, incrementEventCount } = usePillState()
 const { extractSelectors } = useSelectorCapture()
@@ -91,6 +91,7 @@ function holdClick(event: RecordingEvent): void {
   releaseClick()
   heldClick = event
   pendingQueue.push(event)
+  reportHeldClick(event)
 
   releaseTimer = window.setTimeout(() => {
     releaseTimer = null
