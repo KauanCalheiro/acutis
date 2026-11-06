@@ -328,6 +328,45 @@ it('substitui as credenciais que o ambiente já tinha', async () => {
   expect(file('environments/ambiente.json')).not.toContain('antigo')
 })
 
+/** A gravação retomada: os preenchimentos voltam da gravação salva, já com os marcadores. */
+function resumedPayload(): Record<string, unknown> {
+  const payload = recordPayload()
+  const events = (payload.events as Record<string, unknown>[]).map(event => (
+    event.type !== 'fill'
+      ? event
+      : { ...event, value: event.inputType === 'password' ? `{{${EnvKey.PASSWORD}}}` : `{{${EnvKey.USER}}}` }
+  ))
+
+  return { ...payload, events }
+}
+
+it('mantém as credenciais do ambiente quando a gravação retomada traz só os marcadores', async () => {
+  await recordProject()
+
+  await api.http
+    .post(`/api/v1/projects/${SLUG}/auth/credentials`)
+    .send({ username: 'user1', password: 'topsecret123' })
+    .expect(204)
+
+  await record(resumedPayload()).expect(200)
+
+  expect(environmentVars()).toContainEqual({ key: EnvKey.USER, value: 'user1', secret: false })
+  expect(environmentVars()).toContainEqual({ key: EnvKey.PASSWORD, value: 'topsecret123', secret: true })
+})
+
+it('não pede as credenciais de novo quando a gravação retomada encontra o ambiente preenchido', async () => {
+  await recordProject()
+
+  await api.http
+    .post(`/api/v1/projects/${SLUG}/auth/credentials`)
+    .send({ username: 'user1', password: 'topsecret123' })
+    .expect(204)
+
+  const response = await record(resumedPayload()).expect(200)
+
+  expect(response.body.credentialsNeeded).toBe(false)
+})
+
 it('deixa intacta uma configuração que não consegue interpretar', async () => {
   await recordProject()
   writeFileSync(join(dir, 'playwright.config.ts'), '// configuração escrita pelo usuário')

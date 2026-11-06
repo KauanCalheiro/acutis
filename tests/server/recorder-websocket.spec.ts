@@ -76,6 +76,24 @@ describe('recorder WebSocket', () => {
     )
   })
 
+  it('replays the login with the values of the project environment instead of the saved markers', async () => {
+    const service = recorder()
+    const environmentOf = vi.fn(() => ({ AUTH_USER: 'user1', AUTH_PASSWORD: 'topsecret123' }))
+    const hooks = createRecorderWebSocketHooks(service, async () => false, environmentOf)
+    const replay = [
+      { type: 'navigate', url: 'http://store.test/login', value: null },
+      { type: 'fill', url: 'http://store.test/login', value: '{{AUTH_USER}}' },
+      { type: 'fill', url: 'http://store.test/login', value: '{{AUTH_PASSWORD}}' }
+    ]
+
+    await hooks.message(peer(), message({ type: 'START_RECORDING', mode: 'auth', project: 'alfa', replay }))
+
+    const replayed = (service.start.mock.calls[0] as unknown[])[6] as { value: string | null }[]
+
+    expect(environmentOf).toHaveBeenCalledWith('alfa')
+    expect(replayed.map(event => event.value)).toEqual([null, 'user1', 'topsecret123'])
+  })
+
   it('tells the screen when the replay is over, so nobody stops the recording mid-way', async () => {
     const service = recorder()
     service.start.mockImplementationOnce(async (...args: unknown[]) => {
