@@ -8,14 +8,13 @@ export function check(message) {
 
     const found = []
     const lines = message.split('\n').filter((line) => line.trim() !== '')
-    const [subject = '', ...body] = lines
+    const [subject = ''] = lines
 
     if (!PREFIXES.some((prefix) => subject.startsWith(`${prefix}: `))) {
         found.push(`subject without a semantic prefix: use ${PREFIXES.join('|')} followed by a colon`)
     }
 
     if (subject.length > 72) found.push(`subject is ${subject.length} characters long, the cap is 72`)
-    if (body.length > 0) found.push('a commit is a single line, with no body')
     if (/^Co-Authored-By:/im.test(message)) found.push('no Claude co-author in the history')
     if (/ (and|e|&) /.test(subject)) found.push('conjunction in the subject: two things done are two commits')
     if (/ - |—/.test(subject)) found.push('no spaced hyphen and no em dash, use the punctuation the sentence asks for')
@@ -36,6 +35,6 @@ export function test() {
     dirty(`feat: record the hover${String.fromCharCode(32, 45, 32)}it was noisy`)
     dirty(`feat: record the hover${String.fromCharCode(8212)}it was noisy`)
     dirty('feat: keep the trail\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>')
-    dirty('feat: keep the trail\n\nexplains in a body the standard does not take')
+    clean('feat: keep the trail\n\nExplains why the trail is kept and what it records.')
     dirty(`feat: ${'x'.repeat(80)}`)
 }

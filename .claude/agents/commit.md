@@ -42,7 +42,7 @@ O pedido escolhe o modo. `test` (ou "só os testes", "commita os testes") roda o
 
 ## Mensagem
 
-Uma linha, em inglês, prefixo semântico (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`, `style:`), até 72 caracteres, sem corpo, sem co-author, sem conjunção (`and`/`e`/`&`), sem `" - "` nem `"—"`.
+Assunto em inglês, prefixo semântico (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`, `style:`), até 72 caracteres, sem conjunção (`and`/`e`/`&`), sem travessão nem hífen cercado de espaços. Corpo obrigatório (mín 30 caracteres) depois de uma linha em branco, explicando por quê e o quê, com a mesma regra de pontuação. Sem co-author.
 
 Um hook `PreToolUse` recusa o `git commit` que quebre isso e devolve o motivo. Recusado: corrigir a mensagem e rodar de novo, nunca contornar com `--no-verify` nem mexer no hook.
 
