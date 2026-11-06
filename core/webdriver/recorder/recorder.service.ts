@@ -7,6 +7,7 @@ import { RECORDER_CDP_URL, RECORDER_HEADLESS } from '../../config/env.js'
 import { RECORDER_BUNDLE_PATH } from '../../config/paths.js'
 import type { VideoService } from '../video/video.service.js'
 import type { RecordingEvent } from '../../common/types/recording.js'
+import { HeldClickGuard } from './held-click.js'
 import { replaySteps, type ReplayState, type ReplayStep } from './replay.js'
 import { windowBoundsFor } from './window-bounds.js'
 
@@ -119,6 +120,7 @@ export class RecorderService {
   private page: Page | null = null
 
   private report: ((event: RecordingEvent) => void) | null = null
+  private heldClick: HeldClickGuard | null = null
 
   private lastUrl: string | null = null
   private sessionId: string | null = null
@@ -233,7 +235,13 @@ export class RecorderService {
       onEvent(event)
     }
 
-    await this.page.exposeFunction('__acutisReportEvent', this.report)
+    const heldClick = new HeldClickGuard(this.report)
+    this.heldClick = heldClick
+
+    await this.page.exposeFunction('__acutisReportEvent', (event: RecordingEvent) => heldClick.report(event))
+    await this.page.exposeFunction('__acutisHoldClick', (event: RecordingEvent) => {
+      if (!this.replaying) heldClick.hold(event)
+    })
     await this.page.exposeFunction('__acutisRequestStop', onRequestStop)
     await this.page.exposeFunction('__acutisCancelRecording', () => hooks.onCancelRequested?.())
     await this.page.exposeFunction('__acutisReplayState', () => this.replayState)
@@ -389,6 +397,7 @@ export class RecorderService {
     }
 
     await this.flushPendingEvents()
+    this.heldClick?.flush()
 
     this.stopping = true
     const sessionId = this.sessionId
