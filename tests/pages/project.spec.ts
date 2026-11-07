@@ -623,6 +623,21 @@ describe('ProjectPage', () => {
     expect(useWebdriver().state.value.recording).toBe(true)
   })
 
+  it('cancela o login que antecede a gravação autenticada, sem abrir o navegador', async () => {
+    const wrapper = await mount()
+
+    await wrapper.get('[data-testid="cenario-busca"]').setValue('nada casa')
+    await wrapper.get('[data-testid="cenario-vazio-gravar"]').trigger('click')
+    await settle()
+
+    field('execucao-cancelar')!.click()
+    await settle()
+
+    expect(FakeEventSource.last!.closed).toBe(true)
+    expect(field('execucao-status')!.textContent).toContain('Cancelada')
+    expect(useWebdriver().state.value.recording).toBe(false)
+  })
+
   it('não abre o navegador quando o login falha', async () => {
     const wrapper = await mount()
 

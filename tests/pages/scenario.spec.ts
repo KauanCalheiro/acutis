@@ -579,6 +579,21 @@ describe('ScenarioPage', () => {
     expect(document.body.textContent).toContain('locator não encontrado')
   })
 
+  it('cancela o cenário em execução e mostra que foi cancelado', async () => {
+    const wrapper = await mount()
+
+    await wrapper.get('[data-testid="cenario-testar"]').trigger('click')
+    await settle()
+    FakeEventSource.last!.send({ event: 'run:started', steps: ['abre o login'] })
+    await settle()
+
+    field('execucao-cancelar')!.click()
+    await settle()
+
+    expect(FakeEventSource.last!.closed).toBe(true)
+    expect(field('execucao-status')!.textContent).toContain('Cancelada')
+  })
+
   async function failedRun() {
     const wrapper = await mount()
 
@@ -850,6 +865,19 @@ describe('ScenarioPage: sessão da gravação retomada', () => {
     await settle()
 
     expect(useWebdriver().state.value.recording).toBe(true)
+  })
+
+  it('não abre o navegador quando o login que antecede a retomada é cancelado', async () => {
+    withEvents()
+    const wrapper = await mount()
+
+    await cut(wrapper)
+    field('execucao-cancelar')!.click()
+    await settle()
+
+    expect(FakeEventSource.last!.closed).toBe(true)
+    expect(field('execucao-status')!.textContent).toContain('Cancelada')
+    expect(useWebdriver().state.value.recording).toBe(false)
   })
 
   it('não abre o navegador quando o login falha', async () => {
