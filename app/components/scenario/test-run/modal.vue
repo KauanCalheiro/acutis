@@ -18,6 +18,7 @@ interface ScenarioTestRunModal {
   kind?: 'cenario' | 'autenticacao'
   /** Substitui o título padrão de execução e liga os pontinhos animados. */
   runningTitle?: string | null
+  cancelled?: boolean
 }
 
 const {
@@ -32,11 +33,13 @@ const {
   playwright = null,
   output = null,
   kind = 'cenario',
-  runningTitle = null
+  runningTitle = null,
+  cancelled = false
 } = defineProps<ScenarioTestRunModal>()
 
 const emit = defineEmits<{
   fix: []
+  cancel: []
 }>()
 
 const open = defineModel<boolean>('open', {
@@ -51,6 +54,14 @@ const title = computed(() => runningTitle ?? (isAuth.value ? 'Testando autentica
 const resultTitle = computed(() => isAuth.value ? 'Resultado da autenticação' : 'Resultado do teste')
 
 const failedStep = computed(() => steps.findIndex(step => step.status === 'failed'))
+
+const status = computed(() => {
+  if (cancelled) return { color: 'neutral' as const, icon: 'i-ic-round-stop-circle', label: 'Cancelada' }
+
+  return passed
+    ? { color: 'success' as const, icon: 'i-ic-round-check-circle', label: 'Sucesso' }
+    : { color: 'error' as const, icon: 'i-ic-round-error', label: 'Falha' }
+})
 
 function seekToPreviewFrame(event: Event) {
   const video = event.target as HTMLVideoElement
@@ -81,9 +92,9 @@ function seekToPreviewFrame(event: Event) {
           <template v-else>
             <UBadge
               class="self-start"
-              :color="passed ? 'success' : 'error'"
-              :icon="passed ? 'i-ic-round-check-circle' : 'i-ic-round-error'"
-              :label="passed ? 'Sucesso' : 'Falha'"
+              :color="status.color"
+              :icon="status.icon"
+              :label="status.label"
               data-testid="execucao-status"
             />
             <p class="mt-2 text-xl font-bold">
@@ -93,7 +104,7 @@ function seekToPreviewFrame(event: Event) {
         </div>
 
         <UTooltip
-          v-if="!running && !passed && failedStep !== -1"
+          v-if="!running && !passed && !cancelled && failedStep !== -1"
           :text="AI_OFF_HINT"
           :disabled="aiConfigured"
           :delay-duration="0"
@@ -186,7 +197,21 @@ function seekToPreviewFrame(event: Event) {
     </template>
 
     <template
-      v-if="!running"
+      v-if="running"
+      #footer
+    >
+      <UButton
+        label="Cancelar"
+        color="neutral"
+        variant="soft"
+        icon="i-ic-round-stop-circle"
+        data-testid="execucao-cancelar"
+        @click="emit('cancel')"
+      />
+    </template>
+
+    <template
+      v-else
       #footer
     >
       <UButton
