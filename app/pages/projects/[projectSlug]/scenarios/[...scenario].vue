@@ -134,7 +134,9 @@ const {
   testedAt,
   output: runOutput,
   failedStep,
-  start: startRun
+  cancelled: runCancelled,
+  start: startRun,
+  cancel: cancelRun
 } = useRunStream(() => slug.value)
 
 const runOpen = ref(false)
@@ -781,7 +783,9 @@ async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
       :tested-at="testedAt"
       :playwright="executedPlaywright"
       :output="runOutput"
+      :cancelled="runCancelled"
       @fix="requestFix"
+      @cancel="cancelRun"
     />
 
     <ScenarioTestRunModal
@@ -797,6 +801,8 @@ async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
       :branch="project!.branch"
       :tested-at="authRun.testedAt.value"
       :output="authRun.output.value"
+      :cancelled="authRun.cancelled.value"
+      @cancel="authRun.cancel()"
     />
 
     <ProjectAuthCredentials

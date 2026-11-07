@@ -723,7 +723,9 @@ async function remove() {
       :branch="project!.branch"
       :tested-at="authRun.testedAt.value"
       :output="authRun.output.value"
+      :cancelled="authRun.cancelled.value"
       @fix="navigateTo(authPage)"
+      @cancel="authRun.cancel()"
     />
 
     <BaseConfirm
