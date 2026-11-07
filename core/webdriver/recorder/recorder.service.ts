@@ -130,6 +130,7 @@ export class RecorderService {
   private bundlePath: string | null = null
   private bundleLoader: (() => Promise<string>) | null = null
   private stopping = false
+  private opening = false
 
   constructor(private readonly videoService: VideoService) { }
 
@@ -154,7 +155,20 @@ export class RecorderService {
     }
   }
 
-  async start(
+  /** Opens the recording browser, unless one is already open or opening. */
+  async start(...args: Parameters<RecorderService['open']>): Promise<void> {
+    if (this.opening || this.context) return
+
+    this.opening = true
+
+    try {
+      await this.open(...args)
+    } finally {
+      this.opening = false
+    }
+  }
+
+  private async open(
     onEvent: (event: RecordingEvent) => void,
     onStarted: (recordingStartedAt: number) => void,
     onRequestStop: () => void,
