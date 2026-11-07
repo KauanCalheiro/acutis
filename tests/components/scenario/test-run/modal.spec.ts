@@ -123,3 +123,37 @@ describe('ScenarioTestRunModal', () => {
     expect(state.value).toBe(false)
   })
 })
+
+describe('ScenarioTestRunModal: cancelamento', () => {
+  it('pede o cancelamento do cenário em execução para a tela, sem fechar o modal sozinho', async () => {
+    const { state, events } = await open({ running: true, steps: [{ title: 'abre o login', status: 'running' }] })
+
+    field('execucao-cancelar')!.click()
+    await settle()
+
+    expect(events.cancel).toHaveLength(1)
+    expect(state.value).toBe(true)
+  })
+
+  it('diz que a execução foi cancelada, em vez de anunciar falha', async () => {
+    await open({ cancelled: true, steps: [{ title: 'abre o login', status: 'success' }] })
+
+    expect(field('execucao-status')!.textContent).toContain('Cancelada')
+    expect(field('execucao-fechar')).toBeDefined()
+  })
+
+  it('oferece cancelar antes de o primeiro passo chegar', async () => {
+    await open({ running: true })
+
+    expect(field('execucao-iniciando')).toBeDefined()
+    expect(field('execucao-cancelar')).toBeDefined()
+  })
+
+  it('não oferece corrigir uma execução cancelada', async () => {
+    ai.configured.value = true
+
+    await open({ cancelled: true, steps: failedStep })
+
+    expect(field('execucao-corrigir')).toBeUndefined()
+  })
+})
