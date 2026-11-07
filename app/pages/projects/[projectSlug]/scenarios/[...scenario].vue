@@ -430,6 +430,8 @@ async function onReviewed(result?: ScenarioDetail | GeneratedAuthSetup) {
 
   await refreshScenario()
 
+  reviewOpen.value = false
+
   if (generated.credentialsNeeded) {
     credentialsOpen.value = true
     return

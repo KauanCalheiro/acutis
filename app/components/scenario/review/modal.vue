@@ -81,7 +81,6 @@ async function recordAuth() {
       method: 'POST',
       body: { baseUrl: baseUrl.value, events: mappedEvents.value }
     })
-    open.value = false
     emit('generated', generated)
   } catch (err) {
     console.error('Falha ao gravar a autenticação:', err)
