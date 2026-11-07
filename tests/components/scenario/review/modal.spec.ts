@@ -399,7 +399,7 @@ describe('ScenarioReviewModal: gravação de autenticação', () => {
     expect(api.authRecorded).toMatchObject({ baseUrl: 'http://loja.test' })
     expect((api.authRecorded as { events: unknown[] }).events).toHaveLength(2)
     expect(field('contexto-titulo')).toBeUndefined()
-    expect(state.value).toBe(false)
+    expect(state.value).toBe(true)
     expect(wrapper.findComponent(ScenarioReviewModal).emitted('generated')).toEqual([[
       { authSetup: 'tests/auth.setup.ts', credentialsNeeded: false, warnings: [] }
     ]])

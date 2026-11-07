@@ -105,6 +105,7 @@ const api = {
   gitSynced: false,
   authSkipped: false,
   authRecorded: null as unknown,
+  authScenarioHold: null as Promise<void> | null,
   credentialsNeeded: false,
   authRecordStatus: 200,
   authWarnings: [] as string[],
@@ -122,7 +123,11 @@ registerEndpoint('/api/projects/alpha-store/scenarios/login', {
 })
 registerEndpoint('/api/projects/alpha-store/scenarios/auth', {
   method: 'GET',
-  handler: () => api.authScenario
+  handler: async () => {
+    await api.authScenarioHold
+
+    return api.authScenario
+  }
 })
 registerEndpoint('/api/projects/alpha-store/scenarios/login', {
   method: 'DELETE',
@@ -264,6 +269,7 @@ beforeEach(() => {
   api.gitSynced = false
   api.authSkipped = false
   api.authRecorded = null
+  api.authScenarioHold = null
   api.credentialsNeeded = false
   api.authRecordStatus = 200
   api.authWarnings = []
@@ -778,6 +784,64 @@ describe('ScenarioPage: autenticação', () => {
     expect(api.authRecorded).toMatchObject({ baseUrl: 'http://loja.test' })
     // Sem credencial pendente, o login já é executado para confirmar que funciona.
     expect(FakeEventSource.last!.url).toContain('spec=tests%2Fauth.setup.ts')
+  })
+
+  /** Segura a próxima leitura do cenário de autenticação até `release` ser chamado. */
+  function holdAuthScenario(): () => void {
+    let release = () => {}
+
+    api.authScenarioHold = new Promise<void>((resolve) => {
+      release = resolve
+    })
+
+    return release
+  }
+
+  /** Grava um login de um passo e para, deixando a revisão aberta. */
+  async function recordedLogin(wrapper: Awaited<ReturnType<typeof mount>>, session: string) {
+    await wrapper.get('[data-testid="auth-gravar"]').trigger('click')
+    useWebdriver().state.value.events = [
+      { type: 'navigate', url: 'http://loja.test/login', timestamp: 1000 }
+    ] as unknown as RecorderEvent[]
+    useWebdriver().state.value.videoSessionId = session
+    await settle(8)
+  }
+
+  it('mantém a revisão aberta até o modal de execução abrir, sem tela no meio', async () => {
+    const wrapper = await mount(route)
+    await recordedLogin(wrapper, 'sessao-5')
+    const release = holdAuthScenario()
+
+    field('revisao-gerar')!.click()
+    await settle(8)
+
+    expect(field('auth-carregando')).toBeDefined()
+    expect(field('execucao-iniciando')).toBeUndefined()
+
+    release()
+    await settle(8)
+
+    expect(field('auth-carregando')).toBeUndefined()
+    expect(field('execucao-iniciando')).toBeDefined()
+  })
+
+  it('mantém a revisão aberta até o pedido de credenciais abrir, sem tela no meio', async () => {
+    api.credentialsNeeded = true
+    const wrapper = await mount(route)
+    await recordedLogin(wrapper, 'sessao-6')
+    const release = holdAuthScenario()
+
+    field('revisao-gerar')!.click()
+    await settle(8)
+
+    expect(field('auth-carregando')).toBeDefined()
+    expect(field('auth-credenciais')).toBeUndefined()
+
+    release()
+    await settle(8)
+
+    expect(field('auth-carregando')).toBeUndefined()
+    expect(field('auth-credenciais')).toBeDefined()
   })
 
   it('pede as credenciais quando a gravação não as revelou', async () => {
